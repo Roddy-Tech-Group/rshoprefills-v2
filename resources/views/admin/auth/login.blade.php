@@ -1,14 +1,7 @@
-<?php
+<x-layouts.auth>
+    <x-slot:title>Admin Login</x-slot:title>
 
-use Livewire\Attributes\Layout;
-use Livewire\Volt\Component;
-
-new #[Layout('components.layouts.auth')] class extends Component {
-    // The admin login view simply displays the login form.
-    // The actual submission goes to the AdminLoginController.
-}; ?>
-
-<div class="flex flex-1 flex-col">
+    <div class="flex flex-1 flex-col">
     {{-- Centered form --}}
     <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-8">
 
@@ -114,3 +107,4 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
     </div>
 </div>
+</x-layouts.auth>

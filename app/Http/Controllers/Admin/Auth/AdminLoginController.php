@@ -14,6 +14,14 @@ class AdminLoginController extends Controller
     ) {}
 
     /**
+     * Display the admin login view.
+     */
+    public function create()
+    {
+        return view('admin.auth.login');
+    }
+
+    /**
      * Handle an incoming admin authentication request.
      */
     public function store(Request $request): RedirectResponse
