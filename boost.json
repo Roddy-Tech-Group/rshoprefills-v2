@@ -9,6 +9,7 @@
     "sail": false,
     "skills": [
         "laravel-best-practices",
+        "socialite-development",
         "fluxui-development",
         "volt-development",
         "tailwindcss-development"
