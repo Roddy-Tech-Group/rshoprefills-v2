@@ -21,6 +21,8 @@ use Illuminate\Support\Str;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string|null $google_id
+ * @property string|null $avatar_url
  * @property Carbon|null $email_verified_at
  * @property string|null $password
  * @property string|null $remember_token
@@ -41,6 +43,9 @@ class User extends Authenticatable // implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'google_id',
+        'avatar_url',
+        'email_verified_at',
     ];
 
     /**
