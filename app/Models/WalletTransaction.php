@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Domain\Shared\Enums\Currency;
+use App\Domain\Shared\Enums\TransactionCategory;
 use App\Domain\Shared\Enums\WalletTransactionType;
 use Database\Factories\WalletTransactionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,11 +45,17 @@ class WalletTransaction extends Model
         'wallet_id',
         'user_id',
         'type',
+        'currency',
         'amount',
         'balance_before',
         'balance_after',
         'description',
         'reference',
+        'transaction_category',
+        'transaction_group',
+        'idempotency_key',
+        'source_type',
+        'source_id',
         'metadata',
     ];
 
@@ -60,9 +68,11 @@ class WalletTransaction extends Model
     {
         return [
             'type' => WalletTransactionType::class,
+            'currency' => Currency::class,
             'amount' => 'decimal:4',
             'balance_before' => 'decimal:4',
             'balance_after' => 'decimal:4',
+            'transaction_category' => TransactionCategory::class,
             'metadata' => 'array',
         ];
     }

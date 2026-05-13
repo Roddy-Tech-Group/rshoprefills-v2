@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Shared\Enums\Currency;
 use Database\Factories\WalletFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,8 +38,10 @@ class Wallet extends Model
     protected $fillable = [
         'user_id',
         'balance',
+        'locked_balance',
         'currency',
         'is_active',
+        'last_activity_at',
     ];
 
     /**
@@ -50,8 +53,19 @@ class Wallet extends Model
     {
         return [
             'balance' => 'decimal:4',
+            'locked_balance' => 'decimal:4',
+            'currency' => Currency::class,
             'is_active' => 'boolean',
+            'last_activity_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Helper to get total available balance (balance - locked).
+     */
+    public function availableBalance(): float
+    {
+        return max(0, (float) $this->balance - (float) $this->locked_balance);
     }
 
     /**

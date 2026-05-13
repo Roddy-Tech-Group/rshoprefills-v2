@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminFintechController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('revenue-chart', [AdminDashboardController::class, 'revenueChart'])->name('revenue-chart');
             Route::get('latest-users', [AdminDashboardController::class, 'latestUsers'])->name('latest-users');
             Route::get('latest-transactions', [AdminDashboardController::class, 'latestTransactions'])->name('latest-transactions');
+        });
+
+        // Admin Fintech Monitoring API
+        Route::prefix('api/monitoring')->name('api.monitoring.')->group(function () {
+            Route::get('transactions', [AdminFintechController::class, 'transactions'])->name('transactions');
+            Route::get('fundings', [AdminFintechController::class, 'fundings'])->name('fundings');
+            Route::get('wallets', [AdminFintechController::class, 'wallets'])->name('wallets');
         });
     });
 });

@@ -88,14 +88,19 @@ class User extends Authenticatable // implements MustVerifyEmail
     // ────────────────────────────────────────────────────────────
 
     /**
-     * Get the user's wallet.
-     *
-     * Each user has exactly one wallet, enforced by a unique
-     * constraint on wallets.user_id in the database.
+     * Get a specific wallet by currency. Defaults to USD for legacy support.
      */
-    public function wallet(): HasOne
+    public function wallet(string $currency = 'USD'): HasOne
     {
-        return $this->hasOne(Wallet::class);
+        return $this->hasOne(Wallet::class)->where('currency', $currency);
+    }
+
+    /**
+     * Get all wallets owned by this user across different currencies.
+     */
+    public function wallets(): HasMany
+    {
+        return $this->hasMany(Wallet::class);
     }
 
     /**
