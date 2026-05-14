@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use App\Jobs\SyncZenditEsimsJob;
 use App\Jobs\SyncZenditGiftCardsJob;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -17,6 +18,15 @@ class AdminCatalogController extends Controller
 
         return response()->json([
             'message' => 'Zendit catalog sync job dispatched successfully.',
+        ]);
+    }
+
+    public function syncZenditEsims()
+    {
+        SyncZenditEsimsJob::dispatch(1);
+
+        return response()->json([
+            'message' => 'Zendit eSIM catalog sync job dispatched successfully.',
         ]);
     }
 

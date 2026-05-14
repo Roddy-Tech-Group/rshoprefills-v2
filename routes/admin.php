@@ -36,6 +36,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Admin Catalog API
         Route::prefix('api/catalog')->name('api.catalog.')->group(function () {
             Route::post('sync/zendit', [AdminCatalogController::class, 'syncZendit'])->name('sync.zendit');
+            Route::post('sync/zendit-esims', [AdminCatalogController::class, 'syncZenditEsims'])->name('sync.zendit-esims');
             Route::get('products', [AdminCatalogController::class, 'products'])->name('products');
             Route::patch('products/{product}/toggle-active', [AdminCatalogController::class, 'toggleActive']);
             Route::patch('products/{product}/toggle-featured', [AdminCatalogController::class, 'toggleFeatured']);

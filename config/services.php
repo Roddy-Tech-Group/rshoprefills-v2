@@ -18,6 +18,18 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
+    'zendit' => [
+        'base_url' => env('ZENDIT_BASE_URL', 'https://api.zendit.io/v1'),
+        'api_key' => env('ZENDIT_API_KEY'),
+        'secret' => env('ZENDIT_SECRET'),
+    ],
+
+    'airalo' => [
+        'base_url' => env('AIRALO_BASE_URL', 'https://sandbox-partners-api.airalo.com/v2'),
+        'client_id' => env('AIRALO_CLIENT_ID'),
+        'client_secret' => env('AIRALO_CLIENT_SECRET'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

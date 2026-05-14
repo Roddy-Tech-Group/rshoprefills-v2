@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Storefront\CatalogController;
+use App\Http\Controllers\Api\Storefront\EsimCatalogController;
 use App\Http\Controllers\Api\UserDashboardController;
 use App\Http\Controllers\Api\UserTransactionController;
 use App\Http\Controllers\Api\UserWalletController;
@@ -27,6 +28,10 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
     Route::get('subcategories', [CatalogController::class, 'subcategories'])->name('subcategories');
     Route::get('products', [CatalogController::class, 'products'])->name('products');
     Route::get('products/{slug}', [CatalogController::class, 'product'])->name('product.show');
+
+    // eSIM Specific Flow
+    Route::get('esims/countries', [EsimCatalogController::class, 'countries'])->name('esims.countries');
+    Route::get('esims/{slug}', [EsimCatalogController::class, 'show'])->name('esims.show');
 });
 
 // Protected Dashboard & Wallet APIs
