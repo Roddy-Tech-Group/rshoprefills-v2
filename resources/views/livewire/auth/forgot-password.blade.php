@@ -22,15 +22,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
     }
 }; ?>
 
-<div class="flex flex-1 flex-col">
-    {{-- Top-right: back to login --}}
-    <div class="flex justify-end text-sm">
-        <span class="text-zinc-600">Remember your password?</span>
-        <a href="{{ route('login') }}" wire:navigate class="ml-1 font-semibold text-blue-600 hover:text-blue-700">Log in</a>
-    </div>
-
-    {{-- Centered form --}}
-    <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-8">
+<div class="flex flex-col sm:flex-1">
+    {{-- Form (top-aligned on mobile so logo and heading stay close) --}}
+    <div class="mx-auto flex w-full max-w-md flex-col py-3 sm:flex-1 sm:justify-center sm:py-8">
 
         <h1 class="flex items-center justify-center gap-2 text-3xl font-bold tracking-tight text-zinc-900">
             <span>Forgot password?</span>
@@ -42,7 +36,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 
-        <form wire:submit="sendPasswordResetLink" class="mt-6 flex flex-col gap-4">
+        <form wire:submit="sendPasswordResetLink" class="mt-4 flex flex-col gap-3 sm:mt-6 sm:gap-4">
 
             {{-- Email --}}
             <div>
@@ -65,7 +59,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
-                @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('email') <p class="mt-1 text-center text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- Submit --}}
@@ -80,8 +74,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
             </button>
         </form>
 
+        {{-- Back to login link --}}
+        <div class="mt-3 flex justify-center text-sm sm:mt-4">
+            <span class="text-zinc-600">Remember your password?</span>
+            <a href="{{ route('login') }}" wire:navigate class="ml-1 font-semibold text-blue-600 hover:text-blue-700">Log in</a>
+        </div>
+
         {{-- Security note --}}
-        <div class="mt-8 flex items-center justify-center gap-1.5 text-xs text-zinc-500">
+        <div class="mt-5 flex items-center justify-center gap-1.5 text-xs text-zinc-500 sm:mt-8">
             <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152A11.959 11.959 0 0 1 12 2.714Z" />
             </svg>

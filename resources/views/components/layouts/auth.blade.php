@@ -21,8 +21,8 @@
     </head>
     <body class="min-h-screen bg-zinc-100 text-zinc-900 antialiased">
 
-        <div class="flex min-h-screen p-3 sm:p-6 lg:p-[60px]">
-            <div class="auth-slide-up grid w-full overflow-hidden rounded-2xl lg:grid-cols-2">
+        <div class="flex min-h-screen items-start p-4 sm:items-stretch sm:p-6 lg:p-[60px]">
+            <div class="auth-slide-up my-auto grid w-full overflow-hidden rounded-2xl shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-900/5 sm:my-0 lg:grid-cols-2 lg:shadow-2xl lg:shadow-zinc-900/15">
 
             {{-- Left panel: marketing / phone mockup --}}
             <aside class="relative hidden flex-col overflow-hidden bg-blue-950 p-10 text-white lg:flex">
@@ -110,9 +110,9 @@
             </aside>
 
             {{-- Right panel: auth form --}}
-            <main class="relative flex flex-col bg-white px-6 py-10 sm:px-10 lg:px-16">
-                {{-- Mobile brand (visible only when left panel is hidden) --}}
-                <a href="{{ route('home') }}" wire:navigate class="flex flex-col rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
+            <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10 lg:px-16">
+                {{-- Mobile brand (inside the card) --}}
+                <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
                     <span class="flex h-9 items-center overflow-hidden">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"
@@ -120,7 +120,7 @@
                             class="h-[170px] w-auto max-w-none object-contain saturate-[1.25] transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
-                    <span class="pl-1 mt-0.5 text-[10px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
+                    <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
                 </a>
 
                 {{ $slot }}

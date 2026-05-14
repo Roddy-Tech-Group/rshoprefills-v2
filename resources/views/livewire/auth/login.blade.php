@@ -63,15 +63,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
     }
 }; ?>
 
-<div class="flex flex-1 flex-col">
-    {{-- Top-right: Sign up link --}}
-    <div class="flex justify-end text-sm">
-        <span class="text-zinc-600">Don't have an account?</span>
-        <a href="{{ route('register') }}" wire:navigate class="ml-1 font-semibold text-blue-600 hover:text-blue-700">Sign up</a>
-    </div>
-
+<div class="flex flex-col sm:flex-1">
     {{-- Centered form --}}
-    <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-8">
+    <div class="mx-auto flex w-full max-w-md flex-col py-3 sm:flex-1 sm:justify-center sm:py-8">
 
         <h1 class="flex items-center justify-center gap-2 text-3xl font-bold tracking-tight text-zinc-900">
             <span>Welcome back</span>
@@ -84,7 +78,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 
         {{-- OAuth buttons --}}
-        <div class="mt-6 flex flex-col gap-3">
+        <div class="mt-4 flex flex-col gap-3 sm:mt-6">
             <a href="{{ route('auth.google.redirect') }}" class="flex items-center justify-center gap-3 rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                 <svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -94,23 +88,17 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 </svg>
                 Continue with Google
             </a>
-            <a href="#" class="flex items-center justify-center gap-3 rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
-                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
-                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                </svg>
-                Continue with Apple
-            </a>
         </div>
 
         {{-- "or" divider --}}
-        <div class="my-6 flex items-center gap-4">
+        <div class="my-4 flex items-center gap-4 sm:my-6">
             <span class="h-px flex-1 bg-zinc-200"></span>
             <span class="text-xs uppercase tracking-wider text-zinc-400">or</span>
             <span class="h-px flex-1 bg-zinc-200"></span>
         </div>
 
         {{-- Email/password form --}}
-        <form wire:submit="login" class="flex flex-col gap-4">
+        <form wire:submit="login" class="flex flex-col gap-3 sm:gap-4">
 
             {{-- Email --}}
             <div>
@@ -133,7 +121,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
-                @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('email') <p class="mt-1 text-center text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- Password --}}
@@ -170,7 +158,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         </svg>
                     </button>
                 </div>
-                @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('password') <p class="mt-1 text-center text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- Remember + forgot --}}
@@ -196,8 +184,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
             </button>
         </form>
 
+        {{-- Sign up link --}}
+        <div class="mt-3 flex justify-center text-sm sm:mt-4">
+            <span class="text-zinc-600">Don't have an account?</span>
+            <a href="{{ route('register') }}" wire:navigate class="ml-1 font-semibold text-blue-600 hover:text-blue-700">Sign up</a>
+        </div>
+
         {{-- "or continue with" --}}
-        <div class="my-5 flex items-center gap-4">
+        <div class="my-3 flex items-center gap-4 sm:my-5">
             <span class="h-px flex-1 bg-zinc-200"></span>
             <span class="text-xs text-zinc-400">Connect with us on our socials</span>
             <span class="h-px flex-1 bg-zinc-200"></span>
@@ -228,7 +222,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
 
         {{-- Security note --}}
-        <div class="mt-6 flex items-center justify-center gap-1.5 text-xs text-zinc-500">
+        <div class="mt-4 flex items-center justify-center gap-1.5 text-xs text-zinc-500 sm:mt-6">
             <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152A11.959 11.959 0 0 1 12 2.714Z" />
             </svg>
