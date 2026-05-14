@@ -67,8 +67,7 @@
             <h1 style="font-family: 'Urbanist', sans-serif;" class="{{ $headingClass }}">
                 One Ecosystem<br>
                 All your Digital<br class="sm:hidden">
-                Solution And<br class="sm:hidden">
-                Opportunities
+                Solutions
             </h1>
 
             {{-- Glow overlay: bright green copy masked to a small circle that follows
@@ -82,8 +81,7 @@
                 <div style="font-family: 'Urbanist', sans-serif; color: #0044FF;" class="{{ $headingClass }}">
                     One Ecosystem<br>
                     All your Digital<br class="sm:hidden">
-                    Solution And<br class="sm:hidden">
-                    Opportunities
+                    Solutions
                 </div>
             </div>
         </div>

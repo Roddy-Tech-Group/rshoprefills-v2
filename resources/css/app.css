@@ -51,6 +51,29 @@
     @apply grid gap-2;
 }
 
+/* Gentle floating motion for illustrations (empty cart, etc.). Use with the .animate-float class. */
+@keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+}
+.animate-float {
+    animation: floatY 3s ease-in-out infinite;
+    will-change: transform;
+}
+
+/* Livewire wire:navigate top progress bar (NProgress) — taller + brand green. */
+#nprogress .bar {
+    background: #22c55e !important;
+    height: 4px !important;
+}
+#nprogress .peg {
+    box-shadow: 0 0 10px #22c55e, 0 0 5px #22c55e !important;
+}
+#nprogress .spinner-icon {
+    border-top-color: #22c55e !important;
+    border-left-color: #22c55e !important;
+}
+
 [data-flux-label] {
     @apply  !mb-0 !leading-tight;
 }

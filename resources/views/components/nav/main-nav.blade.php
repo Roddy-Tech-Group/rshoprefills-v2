@@ -21,6 +21,7 @@
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.png') }}"
                         alt="RshopRefills"
+                        fetchpriority="high"
                         class="h-[190px] md:h-[230px] w-auto max-w-none object-contain saturate-[1.25] group-hover:opacity-90 transition-opacity duration-200"
                     />
                 </span>
@@ -53,7 +54,7 @@
                 {{-- Mobile search trigger (icon-only on small screens) --}}
                 <button
                     type="button"
-                    class="md:hidden flex h-9 w-9 items-center justify-center rounded-md bg-zinc-100 text-zinc-900 transition-colors duration-150 hover:bg-zinc-200/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                    class="md:hidden flex h-9 w-9 items-center justify-center rounded-md bg-zinc-100 text-zinc-900 transition-colors duration-150 hover:bg-blue-600 hover:text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                     aria-label="Search"
                 >
                     <svg class="h-[22px] w-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -61,42 +62,235 @@
                     </svg>
                 </button>
 
+                {{-- Wallet — authed users go straight to the dashboard, guests are prompted to log in --}}
+                <a
+                    href="{{ auth()->check() ? route('dashboard') : route('login') }}"
+                    wire:navigate
+                    class="hidden md:inline-flex h-10 items-center gap-2 rounded-md bg-zinc-100 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-blue-600 hover:text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                >
+                    Wallet
+                </a>
+
                 {{-- Account --}}
                 @auth
-                    <a
-                        href="{{ route('settings.profile') }}"
-                        wire:navigate
-                        class="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-700 hover:bg-zinc-200/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 select-none"
-                        aria-label="Your account"
+                    {{-- Authenticated: hover/click opens the account dropdown.
+                         Hover toggles unless the user clicked the trigger — then it stays open until they click outside. --}}
+                    <div
+                        x-data="{ open: false, locked: false }"
+                        @mouseenter="if (!locked) open = true"
+                        @mouseleave="if (!locked) open = false"
+                        @click.outside="open = false; locked = false"
+                        @keydown.escape.window="open = false; locked = false"
+                        class="relative"
                     >
-                        <span class="text-[12px] font-bold text-blue-600 leading-none">{{ auth()->user()->initials() }}</span>
-                    </a>
+                        <button
+                            type="button"
+                            @click="locked = !locked; open = locked"
+                            :aria-expanded="open.toString()"
+                            aria-haspopup="menu"
+                            class="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                            aria-label="Your account"
+                        >
+                            <img src="{{ asset('assets/' . rawurlencode('new user svg.svg')) }}" alt="" class="h-[22px] w-[22px] md:h-6 md:w-6" loading="lazy">
+                        </button>
+
+                        <div
+                            x-show="open"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 -translate-y-1"
+                            style="display:none;"
+                            class="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl bg-white/85 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                            role="menu"
+                        >
+                            <div class="p-1.5">
+                                <a href="{{ route('settings.profile') }}" wire:navigate role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
+                                    <svg class="h-5 w-5 shrink-0 text-zinc-700 transition-colors group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+                                    </svg>
+                                    Account
+                                </a>
+                                <a href="#" role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
+                                    <svg class="h-5 w-5 shrink-0 text-zinc-700 transition-colors group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    My orders
+                                </a>
+                                <a href="#" role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
+                                    <svg class="h-5 w-5 shrink-0 text-zinc-700 transition-colors group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
+                                    </svg>
+                                    Redeem
+                                </a>
+                                <a href="{{ route('settings.profile') }}" wire:navigate role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
+                                    <svg class="h-5 w-5 shrink-0 text-zinc-700 transition-colors group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    Settings
+                                </a>
+                                <a href="#" role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
+                                    <svg class="h-5 w-5 shrink-0 text-zinc-700 transition-colors group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/>
+                                    </svg>
+                                    Limits
+                                </a>
+                            </div>
+
+                            <div class="border-t border-zinc-100 p-1.5">
+                                <form method="POST" action="{{ route('logout') }}" class="w-full">
+                                    @csrf
+                                    <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
+                                        </svg>
+                                        Logout
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 @else
-                    <a
-                        href="{{ route('login') }}"
-                        wire:navigate
-                        class="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-zinc-200/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
-                        aria-label="Sign in"
+                    {{-- Guest: hover/click opens a Login + Sign up dropdown.
+                         Hover toggles unless the user clicked the trigger — then it stays open until they click outside. --}}
+                    <div
+                        x-data="{ open: false, locked: false }"
+                        @mouseenter="if (!locked) open = true"
+                        @mouseleave="if (!locked) open = false"
+                        @click.outside="open = false; locked = false"
+                        @keydown.escape.window="open = false; locked = false"
+                        class="relative"
                     >
-                        <svg class="h-[22px] w-[22px] md:h-6 md:w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M10.264 9.757a4.752 4.752 0 1 0 0 -9.504 4.752 4.752 0 0 0 0 9.504Zm0.19 9.804c0 0.569 0.172 1.097 0.467 1.535H1.484c-0.575 0 -1.036 -0.486 -0.94 -1.053 0.753 -4.424 4.55 -8.18 9.715 -8.18 2.82 0 5.231 1.118 6.963 2.853a2.498 2.498 0 0 0 -0.437 1.412v0.683h-3.582a2.75 2.75 0 0 0 -2.75 2.75Zm8.081 -1.25V16.13a0.75 0.75 0 0 1 1.28 -0.53l3.435 3.433a0.75 0.75 0 0 1 0 1.061l-3.434 3.434a0.75 0.75 0 0 1 -1.28 -0.53v-2.186h-5.333a1.25 1.25 0 0 1 0 -2.5h5.332Z"/>
-                        </svg>
-                    </a>
+                        <button
+                            type="button"
+                            @click="locked = !locked; open = locked"
+                            :aria-expanded="open.toString()"
+                            aria-haspopup="menu"
+                            class="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                            aria-label="Sign in"
+                        >
+                            <img src="{{ asset('assets/' . rawurlencode('new user svg.svg')) }}" alt="" class="h-[22px] w-[22px] md:h-6 md:w-6" loading="lazy">
+                        </button>
+
+                        <div
+                            x-show="open"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 -translate-y-1"
+                            style="display:none;"
+                            class="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl bg-white/85 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                            role="menu"
+                        >
+                            <a
+                                href="{{ route('login') }}"
+                                wire:navigate
+                                role="menuitem"
+                                class="flex items-center gap-3 px-4 py-3 text-base font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white"
+                            >
+                                <img src="{{ asset('assets/' . rawurlencode('Login.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
+                                Login
+                            </a>
+                            <a
+                                href="{{ route('register') }}"
+                                wire:navigate
+                                role="menuitem"
+                                class="flex items-center gap-3 border-t border-zinc-100 px-4 py-3 text-base font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white"
+                            >
+                                <img src="{{ asset('assets/' . rawurlencode('create an account.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
+                                Create Account
+                            </a>
+                        </div>
+                    </div>
                 @endauth
 
-                {{-- Cart --}}
-                <a
-                    href="#"
-                    class="relative flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-zinc-200/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
-                    aria-label="Shopping cart"
+                {{-- Cart (click/hover opens an empty-cart dropdown until cart state ships).
+                     Hover toggles unless the user clicked the cart icon — then it stays open until they click outside.
+                     Backend hook: dispatch a Livewire event named "cart-added" whenever a product is added
+                     to auto-open this popup. Example: $this->dispatch('cart-added'); --}}
+                <div
+                    x-data="{ open: false, locked: false }"
+                    @mouseenter="if (!locked) open = true"
+                    @mouseleave="if (!locked) open = false"
+                    @click.outside="open = false; locked = false"
+                    @keydown.escape.window="open = false; locked = false"
+                    @cart-added.window="open = true; setTimeout(() => { if (!locked) open = false }, 3500)"
+                    class="relative"
                 >
-                    <svg class="h-[22px] w-[22px] md:h-6 md:w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M20.1 23.88a3.75 3.75 0 0 0 3.72 -4.22L22.24 7a1.1 1.1 0 0 0 0 -0.16l-1 -2.93a1.77 1.77 0 0 0 -1.64 -1.03h-1a0.75 0.75 0 0 0 -0.75 0.74 0.76 0.76 0 0 0 0.75 0.76h1a0.2 0.2 0 0 1 0.17 0.12l0.55 1.5a0.24 0.24 0 0 1 0 0.23 0.25 0.25 0 0 1 -0.21 0.11h-2.76a0.26 0.26 0 0 1 -0.25 -0.26v-1a5 5 0 0 0 -10 0v1a0.26 0.26 0 0 1 -0.25 0.26H4a0.27 0.27 0 0 1 -0.21 -0.12 0.24 0.24 0 0 1 0 -0.23l0.63 -1.5a0.26 0.26 0 0 1 0.19 -0.15h1a0.75 0.75 0 0 0 0.75 -0.76 0.74 0.74 0 0 0 -0.75 -0.74h-1a1.76 1.76 0 0 0 -1.55 1L1.81 6.83a0.65 0.65 0 0 0 -0.05 0.2L0.18 19.66a3.75 3.75 0 0 0 3.72 4.22ZM8.73 14.76a0.34 0.34 0 0 1 0.48 0l1.51 1.45a0.25 0.25 0 0 0 0.35 0l4.48 -4.47a0.33 0.33 0 0 1 0.48 0L17.26 13a0.33 0.33 0 0 1 0 0.48l-6.12 6.12a0.34 0.34 0 0 1 -0.48 0L7.5 16.48a0.34 0.34 0 0 1 0 -0.49Zm0.37 -9.64a3 3 0 1 1 6 0v1a0.26 0.26 0 0 1 -0.25 0.26h-5.5a0.26 0.26 0 0 1 -0.25 -0.26Z"/>
-                    </svg>
-                    @if(($cartCount ?? 0) > 0)
-                        <span class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-[10px] font-bold text-white leading-none">{{ $cartCount }}</span>
-                    @endif
-                </a>
+                    <button
+                        type="button"
+                        @click="locked = !locked; open = locked"
+                        :aria-expanded="open.toString()"
+                        aria-haspopup="menu"
+                        class="relative flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                        aria-label="Shopping cart"
+                    >
+                        <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-[22px] w-[22px] md:h-6 md:w-6" loading="lazy">
+                        @if(($cartCount ?? 0) > 0)
+                            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-[10px] font-bold text-white leading-none">{{ $cartCount }}</span>
+                        @endif
+                    </button>
+
+                    {{-- Cart popup (empty state) — glassmorphism, illustration only, no CTA --}}
+                    <div
+                        x-show="open"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 -translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 -translate-y-1"
+                        style="display:none;"
+                        class="absolute right-0 top-full z-50 mt-2 w-[320px] overflow-hidden rounded-2xl bg-white/85 backdrop-blur-md shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
+                        role="menu"
+                    >
+                        @if(($cartCount ?? 0) === 0)
+                            {{-- Empty state. Pure-CSS floating motion on the illustration (see .animate-float in app.css). --}}
+                            <div class="flex flex-col items-center px-6 py-7 text-center">
+                                <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
+                                <img
+                                    src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}"
+                                    alt=""
+                                    class="mt-4 h-40 w-auto object-contain animate-float"
+                                    loading="lazy"
+                                >
+                                <p class="mt-3 text-sm text-zinc-500">Your Cards needs items</p>
+                            </div>
+                        @else
+                            {{-- Populated state — backend will provide $cartItems (collection) and $cartSubtotal (decimal).
+                                 The illustration is intentionally NOT rendered here so it only shows on the empty state. --}}
+                            <div class="px-5 py-5">
+                                <div class="mb-4 flex items-center justify-between">
+                                    <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
+                                    <span class="text-sm text-zinc-500">{{ $cartCount }} {{ \Illuminate\Support\Str::plural('item', $cartCount) }}</span>
+                                </div>
+
+                                {{-- Item list — backend loops $cartItems and renders brand/quantity/price rows --}}
+                                <ul class="max-h-64 space-y-3 overflow-y-auto">
+                                    {{-- @foreach($cartItems as $item) ...row markup... @endforeach --}}
+                                </ul>
+
+                                <div class="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4">
+                                    <span class="text-sm font-medium text-zinc-700">Subtotal</span>
+                                    <span class="text-base font-bold text-zinc-900">${{ number_format($cartSubtotal ?? 0, 2) }}</span>
+                                </div>
+
+                                <a
+                                    href="#"
+                                    wire:navigate
+                                    class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                                >
+                                    Checkout
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
 
             </div>
 

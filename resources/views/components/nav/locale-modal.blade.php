@@ -49,6 +49,28 @@
         'Lithuanian', 'Macedonian', 'Malay', 'Maltese', 'Maori', 'Mongolian', 'Nepali', 'Punjabi', 'Sinhala', 'Slovenian',
         'Somali', 'Tajik', 'Turkmen', 'Uzbek', 'Welsh', 'Xhosa', 'Zulu', 'Esperanto',
     ];
+    $currencies = [
+        ['code' => 'USD', 'symbol' => '$',   'name' => 'United States Dollar'],
+        ['code' => 'EUR', 'symbol' => '€',   'name' => 'Euro'],
+        ['code' => 'GBP', 'symbol' => '£',   'name' => 'British Pound'],
+        ['code' => 'NGN', 'symbol' => '₦',   'name' => 'Nigerian Naira'],
+        ['code' => 'XAF', 'symbol' => 'FCFA','name' => 'Central African CFA Franc'],
+        ['code' => 'ZAR', 'symbol' => 'R',   'name' => 'South African Rand'],
+        ['code' => 'KES', 'symbol' => 'KSh', 'name' => 'Kenyan Shilling'],
+        ['code' => 'GHS', 'symbol' => '₵',   'name' => 'Ghanaian Cedi'],
+        ['code' => 'EGP', 'symbol' => 'E£',  'name' => 'Egyptian Pound'],
+        ['code' => 'MAD', 'symbol' => 'DH',  'name' => 'Moroccan Dirham'],
+        ['code' => 'CAD', 'symbol' => 'CA$', 'name' => 'Canadian Dollar'],
+        ['code' => 'AUD', 'symbol' => 'A$',  'name' => 'Australian Dollar'],
+        ['code' => 'JPY', 'symbol' => '¥',   'name' => 'Japanese Yen'],
+        ['code' => 'CNY', 'symbol' => '¥',   'name' => 'Chinese Yuan'],
+        ['code' => 'INR', 'symbol' => '₹',   'name' => 'Indian Rupee'],
+        ['code' => 'BRL', 'symbol' => 'R$',  'name' => 'Brazilian Real'],
+        ['code' => 'AED', 'symbol' => 'AED', 'name' => 'UAE Dirham'],
+        ['code' => 'SAR', 'symbol' => 'SAR', 'name' => 'Saudi Riyal'],
+        ['code' => 'TRY', 'symbol' => '₺',   'name' => 'Turkish Lira'],
+        ['code' => 'CHF', 'symbol' => 'Fr',  'name' => 'Swiss Franc'],
+    ];
 @endphp
 
 {{-- Backdrop — sits BELOW the nav (z-40 < nav z-50) so the nav's glassmorphism stays visible over it --}}
@@ -65,13 +87,14 @@
     class="fixed inset-0 z-40 bg-zinc-900/40"
 ></div>
 
-{{-- Card container — sits ABOVE the nav (z-[60] > nav z-50) so the modal floats on top --}}
+{{-- Card container — sits ABOVE the nav (z-[60] > nav z-50) so the modal floats on top.
+     The outer wrapper handles visibility; the inner card runs the slide-up sheet animation. --}}
 <div
     x-show="localeModalOpen"
-    x-transition:enter="transition-opacity ease-out duration-500"
+    x-transition:enter="transition-opacity ease-out duration-300"
     x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100"
-    x-transition:leave="transition-opacity ease-in duration-500"
+    x-transition:leave="transition-opacity ease-in duration-200"
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
     style="display:none;"
@@ -80,8 +103,17 @@
     aria-modal="true"
     aria-labelledby="locale-modal-title"
 >
-    {{-- Card --}}
-    <div class="pointer-events-auto relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px]">
+    {{-- Card — app-style slide-up sheet entrance, mirroring the auth pages. --}}
+    <div
+        x-show="localeModalOpen"
+        x-transition:enter="transition duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+        x-transition:enter-start="opacity-0 translate-y-24 scale-[0.97]"
+        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+        x-transition:leave="transition duration-200 ease-in"
+        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+        x-transition:leave-end="opacity-0 translate-y-8 scale-[0.98]"
+        class="pointer-events-auto relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] will-change-transform"
+    >
         {{-- Close button (positioned outside the card's top-right corner) --}}
         <button
             type="button"
@@ -253,6 +285,92 @@
                         </template>
                         <div
                             x-show="options.filter(l => l.toLowerCase().includes(search.toLowerCase())).length === 0"
+                            class="px-3 py-6 text-center text-base text-zinc-400"
+                        >
+                            No matches
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Currency picker --}}
+            <div
+                x-data="{ open: false, search: '', options: @js($currencies) }"
+                @click.outside="open = false"
+                class="relative"
+            >
+                <label class="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium text-zinc-500">
+                    <svg class="h-3.5 w-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Currency
+                </label>
+
+                <button
+                    type="button"
+                    @click="open = !open; if (open) $nextTick(() => $refs.currencySearch.focus())"
+                    :aria-expanded="open.toString()"
+                    aria-haspopup="listbox"
+                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
+                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
+                >
+                    <span class="min-w-[2.5rem] text-base font-semibold text-blue-600" x-text="currencySymbol">$</span>
+                    <span class="flex-1 text-left" x-text="currency">USD</span>
+                    <svg class="h-4 w-4 text-zinc-400 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 -translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    x-transition:leave="transition ease-in duration-100"
+                    x-transition:leave-start="opacity-100 translate-y-0"
+                    x-transition:leave-end="opacity-0 -translate-y-1"
+                    style="display:none;"
+                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
+                    role="listbox"
+                >
+                    {{-- Search --}}
+                    <div class="border-b border-zinc-100 p-2">
+                        <div class="relative">
+                            <svg class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                                x-ref="currencySearch"
+                                x-model="search"
+                                type="text"
+                                placeholder="Search currencies"
+                                aria-label="Search currencies"
+                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                            />
+                        </div>
+                    </div>
+
+                    {{-- Options --}}
+                    <div class="max-h-64 overflow-y-auto p-1">
+                        <template x-for="opt in options.filter(o => (o.code + ' ' + o.name).toLowerCase().includes(search.toLowerCase()))" :key="opt.code">
+                            <button
+                                type="button"
+                                role="option"
+                                :aria-selected="currency === opt.code ? 'true' : 'false'"
+                                @click="currency = opt.code; currencySymbol = opt.symbol; open = false; search = ''"
+                                :class="currency === opt.code ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
+                                class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-base font-medium transition-colors"
+                            >
+                                <span class="min-w-[2.5rem] text-base font-semibold" :class="currency === opt.code ? 'text-blue-600' : 'text-zinc-400'" x-text="opt.symbol"></span>
+                                <span class="flex-1" x-text="opt.code"></span>
+                                <span class="hidden truncate text-xs text-zinc-400 sm:inline" x-text="opt.name"></span>
+                                <svg x-show="currency === opt.code" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                            </button>
+                        </template>
+                        <div
+                            x-show="options.filter(o => (o.code + ' ' + o.name).toLowerCase().includes(search.toLowerCase())).length === 0"
                             class="px-3 py-6 text-center text-base text-zinc-400"
                         >
                             No matches

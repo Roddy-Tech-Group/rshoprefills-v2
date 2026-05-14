@@ -1,49 +1,42 @@
-{{-- Trust signals strip. 4 columns on desktop, 2x2 on mobile.
+{{-- Trust signals strip. 4 separate cards.
+     Mobile: 2 columns x 2 rows. Desktop (sm+): 4 columns x 1 row.
      Each icon is loaded as a file so it renders in its original colours. --}}
-<section data-reveal class="rounded-2xl bg-white p-5 ring-1 ring-zinc-200 sm:p-6" aria-label="Why shop with RshopRefills">
-    <ul class="grid grid-cols-2 gap-5 sm:grid-cols-4 sm:gap-6">
+<section data-reveal aria-label="Why shop with RshopRefills">
+    <ul class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">
 
         {{-- Best Prices --}}
-        <li class="flex items-center gap-3">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 ring-1 ring-blue-100">
-                <img src="{{ asset('assets/' . rawurlencode('best prices.svg')) }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
-            </span>
+        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-blue-50 p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-blue-200 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-100 hover:ring-blue-300 sm:min-h-0 sm:p-5">
+            <img src="{{ asset('assets/' . rawurlencode('best prices.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
-                <p class="truncate text-base font-semibold text-zinc-900">Best Prices</p>
-                <p class="truncate text-base text-zinc-500">Competitive rates</p>
+                <p class="text-base font-semibold text-zinc-900">Best Prices</p>
+                <p class="text-sm text-zinc-500">Competitive rates</p>
             </div>
         </li>
 
         {{-- Wide Selection --}}
-        <li class="flex items-center gap-3">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 ring-1 ring-blue-100">
-                <img src="{{ asset('assets/' . rawurlencode('wide selection.svg')) }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
-            </span>
+        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-blue-50 p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-blue-200 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-100 hover:ring-blue-300 sm:min-h-0 sm:p-5">
+            <img src="{{ asset('assets/' . rawurlencode('wide selection.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
-                <p class="truncate text-base font-semibold text-zinc-900">Wide Selection</p>
-                <p class="truncate text-base text-zinc-500">1000+ products</p>
+                <p class="text-base font-semibold text-zinc-900">Wide Selection</p>
+                <p class="text-sm text-zinc-500">14000+ products</p>
             </div>
         </li>
 
-        {{-- Trusted by Millions --}}
-        <li class="flex items-center gap-3">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 ring-1 ring-blue-100">
-                <img src="{{ asset('assets/' . rawurlencode('trusted by millions.svg')) }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
-            </span>
+        {{-- Trusted by Thousands --}}
+        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
+            <img src="{{ asset('assets/' . rawurlencode('trusted by millions.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
-                <p class="truncate text-base font-semibold text-zinc-900">Trusted by Thousands</p>
-                <p class="truncate text-base text-zinc-500">Join our global community</p>
+                <p class="text-base font-semibold text-zinc-900">Trusted by Thousands</p>
+                <p class="text-sm text-zinc-500">Join our global community</p>
             </div>
         </li>
 
         {{-- Easy & Fast --}}
-        <li class="flex items-center gap-3">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 ring-1 ring-blue-100">
-                <img src="{{ asset('assets/fast.png') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
-            </span>
+        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
+            <img src="{{ asset('assets/fast.png') }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
-                <p class="truncate text-base font-semibold text-zinc-900">Easy & Fast</p>
-                <p class="truncate text-base text-zinc-500">Simple 3-step checkout</p>
+                <p class="text-base font-semibold text-zinc-900">Easy & Fast</p>
+                <p class="text-sm text-zinc-500">Simple 3-step checkout</p>
             </div>
         </li>
 

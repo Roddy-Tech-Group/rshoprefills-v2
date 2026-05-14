@@ -27,8 +27,8 @@
         </a>
     </div>
 
-    {{-- Horizontal scroll on mobile, grid on tablet+ --}}
-    <div class="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
+    {{-- Horizontal scroll on mobile, grid on tablet+. Mobile py-2 keeps the card ring + shadow from being clipped by overflow-x. --}}
+    <div class="-mx-4 overflow-x-auto px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0 sm:py-0">
         <ul data-reveal-group class="flex w-max gap-4 sm:grid sm:w-full sm:grid-cols-3 sm:gap-5 {{ $gridCols }}">
             {{ $slot }}
         </ul>

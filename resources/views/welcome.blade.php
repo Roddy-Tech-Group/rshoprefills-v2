@@ -25,7 +25,7 @@
         >
 
             <x-home.brand-card name="Everything Apple" price-range="$10 - $500" card-class="bg-white">
-                <img src="{{ asset('assets/apple.png') }}" alt="Everything Apple gift card" class="h-full w-full object-cover" loading="lazy">
+                <img src="{{ asset('assets/apple.png') }}" alt="Everything Apple gift card" fetchpriority="high" class="h-full w-full object-cover">
             </x-home.brand-card>
 
             <x-home.brand-card name="Xbox" price-range="$10 - $500" card-class="bg-white">
@@ -90,7 +90,7 @@
     </div>
 
     {{-- Digital Apps Gift Cards --}}
-    <div class="mt-12 mb-4">
+    <div class="mt-12">
         <x-home.brand-row
             title="Digital Apps Gift Cards"
             subtitle="Subscriptions, games, and digital services"
@@ -128,6 +128,21 @@
             </x-home.brand-card>
 
         </x-home.brand-row>
+    </div>
+
+    {{-- How it works --}}
+    <div class="mt-12">
+        <x-home.how-it-works />
+    </div>
+
+    {{-- eSIMs, flights and stays --}}
+    <div class="mt-12">
+        <x-home.explore-row />
+    </div>
+
+    {{-- Customer reviews --}}
+    <div class="mt-12 mb-4">
+        <x-home.customer-reviews />
     </div>
 
 </div>

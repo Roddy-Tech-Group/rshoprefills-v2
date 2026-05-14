@@ -29,6 +29,8 @@
                 country: 'Cameroon',
                 countryFlag: '🇨🇲',
                 language: 'English',
+                currency: 'USD',
+                currencySymbol: '$',
                 activeCategory: 'Gift Cards'
             }"
             @keydown.escape.window="localeModalOpen = false"

@@ -39,9 +39,7 @@
 
             {{-- Help --}}
             <a href="#" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-medium text-zinc-900 hover:bg-zinc-100 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
-                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M12 2c5.5228 0 10 4.47715 10 10 0 5.5228 -4.4772 10 -10 10 -5.52285 0 -10 -4.4772 -10 -10C2 6.47715 6.47715 2 12 2m-2.5 9v2H11v2H9.5v2h5v-2H13v-3c0 -0.5523 -0.4477 -1 -1 -1zm2.25 -4c-0.6904 0 -1.25 0.55964 -1.25 1.25s0.5596 1.25 1.25 1.25S13 8.94036 13 8.25 12.4404 7 11.75 7"/>
-                </svg>
+                <img src="{{ asset('assets/' . rawurlencode('info white.png')) }}" alt="" class="w-5 h-5 shrink-0" loading="lazy">
                 <span>Help</span>
             </a>
 

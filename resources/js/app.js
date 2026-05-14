@@ -253,12 +253,57 @@ function initRoddyCustomHeroDots(gsap, hasInertia) {
     });
 }
 
+/**
+ * Lottie loader. Mounts any [data-lottie="/path.json"] container as an animation.
+ *
+ * Usage in blade:
+ *   <div data-lottie="{{ asset('lottie/empty-cart.json') }}"
+ *        data-lottie-loop="true"
+ *        data-lottie-autoplay="true"
+ *        class="h-40 w-40"></div>
+ *
+ * Drops the lottie-web import as a dynamic import so the page still works if
+ * the package isn't installed yet. Run `npm i lottie-web` to enable.
+ */
+async function initLottie() {
+    const targets = document.querySelectorAll('[data-lottie]:not([data-lottie-mounted])');
+    if (!targets.length) return;
+
+    let lottie;
+    try {
+        ({ default: lottie } = await import('lottie-web'));
+    } catch (err) {
+        console.warn('[lottie] lottie-web not available — skipping. Run `npm i lottie-web`.');
+        return;
+    }
+
+    targets.forEach((el) => {
+        try {
+            lottie.loadAnimation({
+                container: el,
+                renderer: 'svg',
+                loop: el.dataset.lottieLoop !== 'false',
+                autoplay: el.dataset.lottieAutoplay !== 'false',
+                path: el.dataset.lottie,
+            });
+            el.setAttribute('data-lottie-mounted', 'true');
+        } catch (err) {
+            console.warn('[lottie] failed to mount', el.dataset.lottie, err);
+        }
+    });
+}
+
 // First load (handle both pre- and post-DOMContentLoaded states)
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAnimations);
-} else {
+function bootAll() {
     initAnimations();
+    initLottie();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootAll);
+} else {
+    bootAll();
 }
 
 // Re-run on Livewire SPA navigation so animations replay on the new page.
-document.addEventListener('livewire:navigated', initAnimations);
+document.addEventListener('livewire:navigated', bootAll);
