@@ -4,14 +4,14 @@
         <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-zinc-200 dark:border-zinc-700"></div>
         </div>
-        <div class="relative bg-white px-4 text-sm text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+        <div class="relative bg-white px-4 text-base text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
             {{ __('or') }}
         </div>
     </div>
 </div>
 
 <a href="{{ route('auth.google.redirect') }}"
-   class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+   class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
     <svg class="h-5 w-5" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

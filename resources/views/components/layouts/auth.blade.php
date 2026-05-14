@@ -4,25 +4,43 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ $title ?? config('app.name', 'RshopRefills') }}</title>
+        <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
+
+        <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('assets/PWAicon.png') }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-        {{-- Slide-up entrance animation for the auth card --}}
+        {{-- App-style slide-up sheet entrance for the auth card.
+             Starts further below + slight scale-down for a true modal-sheet feel.
+             Replays on Livewire SPA navigation via livewire:navigated. --}}
         <style>
             @keyframes authSlideUp {
-                from { transform: translateY(60px); opacity: 0; }
-                to   { transform: translateY(0);    opacity: 1; }
+                from { transform: translateY(110px) scale(0.97); opacity: 0; }
+                to   { transform: translateY(0)     scale(1);    opacity: 1; }
             }
-            .auth-slide-up { animation: authSlideUp 1000ms cubic-bezier(0.22, 1, 0.36, 1); }
+            .auth-slide-up {
+                animation: authSlideUp 600ms cubic-bezier(0.16, 1, 0.3, 1);
+                will-change: transform, opacity;
+            }
         </style>
+        <script>
+            document.addEventListener('livewire:navigated', () => {
+                document.querySelectorAll('.auth-slide-up').forEach((el) => {
+                    el.classList.remove('auth-slide-up');
+                    void el.offsetWidth;
+                    el.classList.add('auth-slide-up');
+                });
+            });
+        </script>
     </head>
     <body class="min-h-screen bg-zinc-100 text-zinc-900 antialiased">
 
-        <div class="flex min-h-screen p-3 sm:p-6 lg:p-[60px]">
-            <div class="auth-slide-up grid w-full overflow-hidden rounded-2xl lg:grid-cols-2">
+        <div class="flex min-h-screen items-start p-4 sm:items-stretch sm:p-6 lg:p-[60px]">
+            <div class="auth-slide-up my-auto grid w-full overflow-hidden rounded-2xl shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-900/5 sm:my-0 lg:grid-cols-2 lg:shadow-2xl lg:shadow-zinc-900/15">
 
             {{-- Left panel: marketing / phone mockup --}}
             <aside class="relative hidden flex-col overflow-hidden bg-blue-950 p-10 text-white lg:flex">
@@ -33,6 +51,7 @@
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"
                             alt="RshopRefills"
+                            fetchpriority="high"
                             class="h-[230px] w-auto max-w-none object-contain brightness-0 invert transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
@@ -46,26 +65,29 @@
                             Your digital world,<br />
                             <span class="text-blue-300">all in one place.</span>
                         </h1>
-                        <p class="mt-4 max-w-md text-sm leading-relaxed text-blue-100/85">
+                        <p class="mt-4 max-w-md text-base leading-relaxed text-blue-100/85">
                             Buy gift cards, eSIMs, top-ups, flights and more. Instantly and securely, at the best rates.
                         </p>
 
                         {{-- Feature bullets --}}
                         <ul class="mt-8 space-y-4">
                             @foreach([
-                                ['Secure & Trusted',  'Your data and transactions are 100% secure', 'M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152A11.959 11.959 0 0 1 12 2.714Z'],
-                                ['Instant Delivery',  'Get your digital products in seconds',       'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z'],
-                                ['Global Access',     'Access products and services worldwide',     'M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3M3 12h18'],
-                                ['24/7 Support',      'We\'re here to help anytime, anywhere',      'M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-6a9 9 0 0 1 18 0v6a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3'],
-                            ] as [$title, $desc, $d])
+                                ['Secure & Trusted', 'Your data and transactions are 100% secure', 'secure payments.svg'],
+                                ['Instant Delivery', 'Get your digital products in seconds',       'fast.png'],
+                                ['Global Access',    'Access products and services worldwide',    'global svg.svg'],
+                                ['24/7 Support',     'We\'re here to help anytime, anywhere',     'support.svg'],
+                            ] as [$title, $desc, $icon])
                                 <li class="flex items-center gap-3">
                                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-                                        <svg class="h-5 w-5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $d }}" />
-                                        </svg>
+                                        <img
+                                            src="{{ asset('assets/' . rawurlencode($icon)) }}"
+                                            alt=""
+                                            class="h-5 w-5 shrink-0 brightness-0 invert"
+                                            loading="lazy"
+                                        >
                                     </span>
                                     <div class="leading-tight">
-                                        <p class="text-sm font-semibold text-white">{{ $title }}</p>
+                                        <p class="text-base font-semibold text-white">{{ $title }}</p>
                                         <p class="text-[12px] text-blue-100/70">{{ $desc }}</p>
                                     </div>
                                 </li>
@@ -94,6 +116,7 @@
                     <img
                         src="{{ asset('assets/graphic_rshoprefill.png') }}"
                         alt=""
+                        fetchpriority="high"
                         class="relative z-10 max-h-[560px] w-auto select-none drop-shadow-2xl"
                     />
                 </div>
@@ -110,9 +133,9 @@
             </aside>
 
             {{-- Right panel: auth form --}}
-            <main class="relative flex flex-col bg-white px-6 py-10 sm:px-10 lg:px-16">
-                {{-- Mobile brand (visible only when left panel is hidden) --}}
-                <a href="{{ route('home') }}" wire:navigate class="flex flex-col rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
+            <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10 lg:px-16">
+                {{-- Mobile brand (inside the card) --}}
+                <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
                     <span class="flex h-9 items-center overflow-hidden">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"
@@ -120,7 +143,7 @@
                             class="h-[170px] w-auto max-w-none object-contain saturate-[1.25] transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
-                    <span class="pl-1 mt-0.5 text-[10px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
+                    <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
                 </a>
 
                 {{ $slot }}
