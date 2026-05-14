@@ -17,7 +17,7 @@
             body.is-navigating main { opacity: 0; }
         </style>
     </head>
-    <body class="min-h-screen bg-white text-zinc-900 antialiased">
+    <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased">
 
         <div
             x-data="{
@@ -29,15 +29,18 @@
             }"
             @keydown.escape.window="localeModalOpen = false"
             x-effect="document.body.classList.toggle('overflow-hidden', localeModalOpen)"
+            class="flex flex-1 flex-col"
         >
             <header class="sticky top-0 z-50 w-full">
                 <x-nav.top-bar />
                 <x-nav.main-nav />
             </header>
 
-            <main>
+            <main class="flex-1">
                 {{ $slot }}
             </main>
+
+            <x-footer />
 
             <x-nav.locale-modal />
         </div>
