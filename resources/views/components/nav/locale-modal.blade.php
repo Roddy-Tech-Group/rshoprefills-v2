@@ -114,7 +114,7 @@
                     :aria-expanded="open.toString()"
                     aria-haspopup="listbox"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors"
+                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
                 >
                     <span class="text-base leading-none" x-text="countryFlag">🇨🇲</span>
                     <span class="flex-1 text-left" x-text="country">Cameroon</span>
@@ -147,7 +147,7 @@
                                 type="text"
                                 placeholder="Search countries"
                                 aria-label="Search countries"
-                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-sm text-zinc-800 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                             />
                         </div>
                     </div>
@@ -161,7 +161,7 @@
                                 :aria-selected="country === name ? 'true' : 'false'"
                                 @click="country = name; countryFlag = flag; open = false; search = ''"
                                 :class="country === name ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
-                                class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors"
+                                class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-base font-medium transition-colors"
                             >
                                 <span class="text-base leading-none" x-text="flag"></span>
                                 <span class="flex-1" x-text="name"></span>
@@ -172,7 +172,7 @@
                         </template>
                         <div
                             x-show="Object.entries(options).filter(([n]) => n.toLowerCase().includes(search.toLowerCase())).length === 0"
-                            class="px-3 py-6 text-center text-sm text-zinc-400"
+                            class="px-3 py-6 text-center text-base text-zinc-400"
                         >
                             No matches
                         </div>
@@ -187,7 +187,7 @@
                 class="relative"
             >
                 <label class="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium text-zinc-500">
-                    <img src="{{ asset('assets/World%20Global.png') }}" alt="" class="h-3.5 w-3.5 opacity-70" />
+                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-3.5 w-3.5 opacity-70" />
                     Language
                 </label>
 
@@ -197,7 +197,7 @@
                     :aria-expanded="open.toString()"
                     aria-haspopup="listbox"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors"
+                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
                 >
                     <span class="flex-1 text-left" x-text="language">English</span>
                     <svg class="h-4 w-4 text-zinc-400 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -229,7 +229,7 @@
                                 type="text"
                                 placeholder="Search languages"
                                 aria-label="Search languages"
-                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-sm text-zinc-800 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                             />
                         </div>
                     </div>
@@ -243,7 +243,7 @@
                                 :aria-selected="language === lang ? 'true' : 'false'"
                                 @click="language = lang; open = false; search = ''"
                                 :class="language === lang ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
-                                class="flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-medium transition-colors"
+                                class="flex w-full items-center rounded-md px-3 py-2 text-left text-base font-medium transition-colors"
                             >
                                 <span class="flex-1" x-text="lang"></span>
                                 <svg x-show="language === lang" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -253,7 +253,7 @@
                         </template>
                         <div
                             x-show="options.filter(l => l.toLowerCase().includes(search.toLowerCase())).length === 0"
-                            class="px-3 py-6 text-center text-sm text-zinc-400"
+                            class="px-3 py-6 text-center text-base text-zinc-400"
                         >
                             No matches
                         </div>
@@ -267,7 +267,7 @@
         <button
             type="button"
             @click="localeModalOpen = false"
-            class="mt-7 w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+            class="mt-7 w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-semibold text-white transition-colors duration-150 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
         >
             Save
         </button>

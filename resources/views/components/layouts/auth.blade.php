@@ -4,6 +4,10 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>{{ $title ?? config('app.name', 'RshopRefills') }}</title>
+        <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
+
+        <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('assets/PWAicon.png') }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
@@ -46,7 +50,7 @@
                             Your digital world,<br />
                             <span class="text-blue-300">all in one place.</span>
                         </h1>
-                        <p class="mt-4 max-w-md text-sm leading-relaxed text-blue-100/85">
+                        <p class="mt-4 max-w-md text-base leading-relaxed text-blue-100/85">
                             Buy gift cards, eSIMs, top-ups, flights and more. Instantly and securely, at the best rates.
                         </p>
 
@@ -65,7 +69,7 @@
                                         </svg>
                                     </span>
                                     <div class="leading-tight">
-                                        <p class="text-sm font-semibold text-white">{{ $title }}</p>
+                                        <p class="text-base font-semibold text-white">{{ $title }}</p>
                                         <p class="text-[12px] text-blue-100/70">{{ $desc }}</p>
                                     </div>
                                 </li>

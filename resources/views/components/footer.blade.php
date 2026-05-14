@@ -1,6 +1,6 @@
 {{-- Storefront footer. Used inside the <x-layouts.app.header> shell. --}}
 <footer class="border-t border-zinc-200 bg-white text-zinc-900">
-    <div class="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+    <div class="mx-auto max-w-[1550px] px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
 
         {{-- Top: brand + link columns --}}
         <div class="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-12 lg:gap-10">
@@ -18,7 +18,7 @@
                     <span class="pl-8 mt-1 text-[11px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
                 </a>
 
-                <p class="mt-6 max-w-sm text-sm leading-relaxed text-zinc-500">
+                <p class="mt-6 max-w-sm text-base leading-relaxed text-zinc-500">
                     Your digital world, all in one place. Gift cards, eSIMs, top-ups, flights and more. Instant, secure, worldwide.
                 </p>
 
@@ -49,8 +49,8 @@
 
             {{-- Shop --}}
             <nav class="lg:col-span-2" aria-label="Shop">
-                <h3 class="text-sm font-semibold text-zinc-900">Shop</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
+                <h3 class="text-base font-semibold text-zinc-900">Shop</h3>
+                <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Gift Cards</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">eSIMs</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Mobile top up</a></li>
@@ -62,8 +62,8 @@
 
             {{-- Help --}}
             <nav class="lg:col-span-2" aria-label="Help">
-                <h3 class="text-sm font-semibold text-zinc-900">Help</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
+                <h3 class="text-base font-semibold text-zinc-900">Help</h3>
+                <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Help center</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Contact us</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">How it works</a></li>
@@ -74,8 +74,8 @@
 
             {{-- Company --}}
             <nav class="lg:col-span-2" aria-label="Company">
-                <h3 class="text-sm font-semibold text-zinc-900">Company</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
+                <h3 class="text-base font-semibold text-zinc-900">Company</h3>
+                <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">About us</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Blog</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Careers</a></li>
@@ -85,8 +85,8 @@
 
             {{-- Legal --}}
             <nav class="lg:col-span-2" aria-label="Legal">
-                <h3 class="text-sm font-semibold text-zinc-900">Legal</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
+                <h3 class="text-base font-semibold text-zinc-900">Legal</h3>
+                <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Privacy</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Terms of Service</a></li>
                     <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Cookie Policy</a></li>
@@ -100,7 +100,7 @@
         <div class="my-10 h-px bg-zinc-200" aria-hidden="true"></div>
 
         {{-- Bottom bar --}}
-        <div class="flex flex-col gap-4 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-4 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
             <p>&copy; 2026 RshopRefills. All rights reserved.</p>
 
             <div class="flex flex-wrap items-center gap-x-6 gap-y-2">

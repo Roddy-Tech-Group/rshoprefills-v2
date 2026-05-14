@@ -21,7 +21,7 @@
                 <div class="relative z-20 mt-auto">
                     <blockquote class="space-y-2">
                         <p class="text-lg">&ldquo;{{ trim($message) }}&rdquo;</p>
-                        <footer class="text-sm">{{ trim($author) }}</footer>
+                        <footer class="text-base">{{ trim($author) }}</footer>
                     </blockquote>
                 </div>
             </div>

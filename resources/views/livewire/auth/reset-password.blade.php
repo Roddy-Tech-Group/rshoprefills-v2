@@ -78,7 +78,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
             </svg>
         </h1>
-        <p class="mt-2 text-center text-sm text-zinc-500">Choose a strong password for your account</p>
+        <p class="mt-2 text-center text-base text-zinc-500">Choose a strong password for your account</p>
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 
@@ -86,7 +86,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
             {{-- Email --}}
             <div>
-                <label for="email" class="mb-1.5 block text-sm font-medium text-zinc-700">Email Address</label>
+                <label for="email" class="mb-1.5 block text-base font-medium text-zinc-700">Email Address</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -101,15 +101,15 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="email"
                         placeholder="Enter your email address"
-                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
-                @error('email') <p class="mt-1 text-center text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('email') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- New Password --}}
             <div x-data="{ show: false }">
-                <label for="password" class="mb-1.5 block text-sm font-medium text-zinc-700">New Password</label>
+                <label for="password" class="mb-1.5 block text-base font-medium text-zinc-700">New Password</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -124,7 +124,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="new-password"
                         placeholder="Create a new password"
-                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                     <button
                         type="button"
@@ -141,12 +141,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         </svg>
                     </button>
                 </div>
-                @error('password') <p class="mt-1 text-center text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('password') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- Confirm Password --}}
             <div x-data="{ show: false }">
-                <label for="password_confirmation" class="mb-1.5 block text-sm font-medium text-zinc-700">Confirm New Password</label>
+                <label for="password_confirmation" class="mb-1.5 block text-base font-medium text-zinc-700">Confirm New Password</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -161,7 +161,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="new-password"
                         placeholder="Re-enter your new password"
-                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                     <button
                         type="button"
@@ -178,13 +178,13 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         </svg>
                     </button>
                 </div>
-                @error('password_confirmation') <p class="mt-1 text-center text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('password_confirmation') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- Submit --}}
             <button
                 type="submit"
-                class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
             >
                 <span>Reset password</span>
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -194,13 +194,13 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </form>
 
         {{-- Back to login link --}}
-        <div class="mt-3 flex justify-center text-sm sm:mt-4">
+        <div class="mt-3 flex justify-center text-base sm:mt-4">
             <span class="text-zinc-600">Changed your mind?</span>
             <a href="{{ route('login') }}" wire:navigate class="ml-1 font-semibold text-blue-600 hover:text-blue-700">Back to login</a>
         </div>
 
         {{-- Security note --}}
-        <div class="mt-5 flex items-center justify-center gap-1.5 text-xs text-zinc-500 sm:mt-8">
+        <div class="mt-5 flex items-center justify-center gap-1.5 text-sm text-zinc-500 sm:mt-8">
             <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152A11.959 11.959 0 0 1 12 2.714Z" />
             </svg>

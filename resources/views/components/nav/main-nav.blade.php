@@ -3,10 +3,10 @@
     shortcut bar that collapses on scroll. The row is a 3-column grid so the
     search bar is page-centred, aligned with the centred category bar below.
 --}}
-<div class="bg-white/75 backdrop-blur-xl">
+<div class="bg-white/70 backdrop-blur-md">
 
     {{-- Nav row --}}
-    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-[1350px] mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-[1fr_auto_1fr] items-center h-[64px] gap-4">
 
             {{-- Logo (the source PNG is square with whitespace padding, so the
@@ -43,7 +43,7 @@
                     aria-label="Search for brands or categories"
                     autocomplete="off"
                     spellcheck="false"
-                    class="flex-1 min-w-0 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-400 outline-none"
+                    class="flex-1 min-w-0 bg-transparent text-base text-zinc-800 placeholder:text-zinc-400 outline-none"
                 />
             </div>
 
@@ -78,8 +78,8 @@
                         class="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-zinc-200/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                         aria-label="Sign in"
                     >
-                        <svg class="h-[22px] w-[22px] md:h-6 md:w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                        <svg class="h-[22px] w-[22px] md:h-6 md:w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M10.264 9.757a4.752 4.752 0 1 0 0 -9.504 4.752 4.752 0 0 0 0 9.504Zm0.19 9.804c0 0.569 0.172 1.097 0.467 1.535H1.484c-0.575 0 -1.036 -0.486 -0.94 -1.053 0.753 -4.424 4.55 -8.18 9.715 -8.18 2.82 0 5.231 1.118 6.963 2.853a2.498 2.498 0 0 0 -0.437 1.412v0.683h-3.582a2.75 2.75 0 0 0 -2.75 2.75Zm8.081 -1.25V16.13a0.75 0.75 0 0 1 1.28 -0.53l3.435 3.433a0.75 0.75 0 0 1 0 1.061l-3.434 3.434a0.75 0.75 0 0 1 -1.28 -0.53v-2.186h-5.333a1.25 1.25 0 0 1 0 -2.5h5.332Z"/>
                         </svg>
                     </a>
                 @endauth
@@ -90,10 +90,8 @@
                     class="relative flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-zinc-200/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                     aria-label="Shopping cart"
                 >
-                    <svg class="h-[22px] w-[22px] md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="8" cy="21" r="1" />
-                        <circle cx="19" cy="21" r="1" />
-                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                    <svg class="h-[22px] w-[22px] md:h-6 md:w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M20.1 23.88a3.75 3.75 0 0 0 3.72 -4.22L22.24 7a1.1 1.1 0 0 0 0 -0.16l-1 -2.93a1.77 1.77 0 0 0 -1.64 -1.03h-1a0.75 0.75 0 0 0 -0.75 0.74 0.76 0.76 0 0 0 0.75 0.76h1a0.2 0.2 0 0 1 0.17 0.12l0.55 1.5a0.24 0.24 0 0 1 0 0.23 0.25 0.25 0 0 1 -0.21 0.11h-2.76a0.26 0.26 0 0 1 -0.25 -0.26v-1a5 5 0 0 0 -10 0v1a0.26 0.26 0 0 1 -0.25 0.26H4a0.27 0.27 0 0 1 -0.21 -0.12 0.24 0.24 0 0 1 0 -0.23l0.63 -1.5a0.26 0.26 0 0 1 0.19 -0.15h1a0.75 0.75 0 0 0 0.75 -0.76 0.74 0.74 0 0 0 -0.75 -0.74h-1a1.76 1.76 0 0 0 -1.55 1L1.81 6.83a0.65 0.65 0 0 0 -0.05 0.2L0.18 19.66a3.75 3.75 0 0 0 3.72 4.22ZM8.73 14.76a0.34 0.34 0 0 1 0.48 0l1.51 1.45a0.25 0.25 0 0 0 0.35 0l4.48 -4.47a0.33 0.33 0 0 1 0.48 0L17.26 13a0.33 0.33 0 0 1 0 0.48l-6.12 6.12a0.34 0.34 0 0 1 -0.48 0L7.5 16.48a0.34 0.34 0 0 1 0 -0.49Zm0.37 -9.64a3 3 0 1 1 6 0v1a0.26 0.26 0 0 1 -0.25 0.26h-5.5a0.26 0.26 0 0 1 -0.25 -0.26Z"/>
                     </svg>
                     @if(($cartCount ?? 0) > 0)
                         <span class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-[10px] font-bold text-white leading-none">{{ $cartCount }}</span>
@@ -107,28 +105,75 @@
 
     {{-- Category shortcut bar — visible on all devices --}}
     <div>
-        <nav aria-label="Product categories" class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav aria-label="Product categories" class="max-w-[1350px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex h-[40px] gap-1 overflow-x-auto justify-start md:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                @foreach([
-                    ['Gift Cards',    'M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18.375a1.5 1.5 0 0 0 0-3H3.375a1.5 1.5 0 0 0 0 3Z'],
-                    ['eSIMs',            'M7.5 3h7L18 6.5V19.5A1.5 1.5 0 0 1 16.5 21h-9A1.5 1.5 0 0 1 6 19.5V4.5A1.5 1.5 0 0 1 7.5 3ZM9.75 11.5h4.5v6h-4.5zM12 11.5v6M9.75 14.5h4.5'],
-                    ['Mobile top up',    'M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3'],
-                    ['Bill payments',    'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z'],
-                    ['Flights',          'M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'],
-                    ['Stays',            'M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4M12 4v6M2 18h20'],
-                ] as [$label, $d])
-                    <a
-                        href="#"
-                        @click.prevent="activeCategory = '{{ $label }}'"
-                        :class="activeCategory === '{{ $label }}' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'"
-                        class="group relative flex h-full shrink-0 items-center gap-2 px-3 text-sm font-medium transition-colors duration-150 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-0.5 after:w-[0.5cm] after:rounded-full"
-                    >
-                        <svg class="w-5 h-5 shrink-0 text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="{{ $d }}" />
-                        </svg>
-                        {{ $label }}
-                    </a>
-                @endforeach
+                @php
+                    $catLinkClass = "group relative flex h-full shrink-0 items-center gap-2 px-3 text-sm font-medium transition-colors duration-150 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-0.5 after:w-[0.5cm] after:rounded-full";
+                    $catSvgClass = "w-[25px] h-[25px] shrink-0 text-zinc-900";
+                @endphp
+
+                {{-- Gift Cards --}}
+                <a href="#" @click.prevent="activeCategory = 'Gift Cards'" :class="activeCategory === 'Gift Cards' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3H6a3 3 0 0 1 -3 -3z"/>
+                        <path d="m7 16 3 -3 3 3"/>
+                        <path d="M8 13c-0.789 0 -2 -0.672 -2 -1.5S6.711 10 7.5 10c1.128 -0.02 2.077 1.17 2.5 3 0.423 -1.83 1.372 -3.02 2.5 -3 0.789 0 1.5 0.672 1.5 1.5S12.789 13 12 13H8z"/>
+                    </svg>
+                    Gift Cards
+                </a>
+
+                {{-- eSIMs --}}
+                <a href="#" @click.prevent="activeCategory = 'eSIMs'" :class="activeCategory === 'eSIMs' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 3h8.5L19 7.5V20a1 1 0 0 1 -1 1H6a1 1 0 0 1 -1 -1V4a1 1 0 0 1 1 -1z"/>
+                        <path d="M9 11h3v6"/>
+                        <path d="M15 17v0.01"/>
+                        <path d="M15 14v0.01"/>
+                        <path d="M15 11v0.01"/>
+                        <path d="M9 14v0.01"/>
+                        <path d="M9 17v0.01"/>
+                    </svg>
+                    eSIMs
+                </a>
+
+                {{-- Mobile top up --}}
+                <a href="#" @click.prevent="activeCategory = 'Mobile top up'" :class="activeCategory === 'Mobile top up' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <svg viewBox="0 0 14 14" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10.5 0.5h-7c-0.55228 0 -1 0.447715 -1 1v11c0 0.5523 0.44772 1 1 1h7c0.5523 0 1 -0.4477 1 -1v-11c0 -0.552285 -0.4477 -1 -1 -1Z"/>
+                        <path d="M6.5 11h1"/>
+                    </svg>
+                    Mobile top up
+                </a>
+
+                {{-- Bill payments --}}
+                <a href="#" @click.prevent="activeCategory = 'Bill payments'" :class="activeCategory === 'Bill payments' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 21V5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2 -2 2 -2 -2 -2 2 -2 -2 -3 2"/>
+                        <path d="M14.8 8A2 2 0 0 0 13 7h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1 -1.8 -1"/>
+                        <path d="M12 6v10"/>
+                    </svg>
+                    Bill payments
+                </a>
+
+                {{-- Flights --}}
+                <a href="#" @click.prevent="activeCategory = 'Flights'" :class="activeCategory === 'Flights' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m14.5 6.5 3 -2.9a2.05 2.05 0 0 1 2.9 2.9l-2.9 3L20 17l-2.5 2.55L14 13l-3 3v3l-2 2 -1.5 -4.5L3 15l2 -2h3l3 -3 -6.5 -3.5L7 4l7.5 2.5z"/>
+                    </svg>
+                    Flights
+                </a>
+
+                {{-- Stays --}}
+                <a href="#" @click.prevent="activeCategory = 'Stays'" :class="activeCategory === 'Stays' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 9a2 2 0 1 0 4 0 2 2 0 1 0 -4 0"/>
+                        <path d="M22 17v-3H2"/>
+                        <path d="M2 8v9"/>
+                        <path d="M12 14h10v-2a3 3 0 0 0 -3 -3h-7v5z"/>
+                    </svg>
+                    Stays
+                </a>
+
             </div>
         </nav>
     </div>
