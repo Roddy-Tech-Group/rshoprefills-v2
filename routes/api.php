@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Storefront\CatalogController;
 use App\Http\Controllers\Api\UserDashboardController;
 use App\Http\Controllers\Api\UserTransactionController;
 use App\Http\Controllers\Api\UserWalletController;
@@ -19,6 +20,14 @@ use Illuminate\Support\Facades\Route;
 
 // Webhooks (No auth required)
 Route::post('webhooks/flutterwave', [FlutterwaveWebhookController::class, 'handle'])->name('webhooks.flutterwave');
+
+// Storefront Catalog APIs (Public)
+Route::prefix('storefront')->name('api.storefront.')->group(function () {
+    Route::get('categories', [CatalogController::class, 'categories'])->name('categories');
+    Route::get('subcategories', [CatalogController::class, 'subcategories'])->name('subcategories');
+    Route::get('products', [CatalogController::class, 'products'])->name('products');
+    Route::get('products/{slug}', [CatalogController::class, 'product'])->name('product.show');
+});
 
 // Protected Dashboard & Wallet APIs
 Route::middleware('auth:sanctum')->group(function () {
