@@ -5,20 +5,16 @@
     $totalOrders = Order::count();
 @endphp
 
-<x-layouts.app>
-    <div class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+<x-layouts.admin>
+    <x-slot:heading>Orders</x-slot:heading>
+    <x-slot:subheading>{{ number_format($totalOrders) }} orders total. Showing the latest 50.</x-slot:subheading>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-900 sm:text-3xl">Orders</h1>
-                <p class="mt-1 text-sm text-zinc-500">{{ number_format($totalOrders) }} orders total. Showing the latest 50.</p>
-            </div>
-        </div>
+    <div class="flex flex-1 flex-col gap-6">
 
         <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-[11px]">
-                    <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-500">
+                    <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-600">
                         <tr>
                             <th class="px-5 py-3 font-semibold">Order #</th>
                             <th class="px-5 py-3 font-semibold">Customer</th>
@@ -53,7 +49,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-5 py-12 text-center text-sm text-zinc-500">No orders yet.</td>
+                                <td colspan="6" class="px-5 py-12 text-center text-sm text-zinc-600">No orders yet.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -62,4 +58,4 @@
         </div>
 
     </div>
-</x-layouts.app>
+</x-layouts.admin>

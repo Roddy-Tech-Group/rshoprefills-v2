@@ -13,7 +13,7 @@
 >
     <button
         type="button"
-        class="group/disclosure-button mb-[2px] flex h-10 w-full items-center rounded-lg text-zinc-500 hover:bg-zinc-800/5 hover:text-zinc-800 lg:h-8 dark:text-white/80 dark:hover:bg-white/[7%] dark:hover:text-white"
+        class="group/disclosure-button mb-[2px] flex h-10 w-full items-center rounded-lg text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 lg:h-8 dark:text-white/80 dark:hover:bg-white/[7%] dark:hover:text-white"
     >
         <div class="pl-3 pr-4">
             <flux:icon.chevron-down class="hidden size-3! group-data-open/disclosure-button:block" />
@@ -34,7 +34,7 @@
 
 <div {{ $attributes->class('block space-y-[2px]') }}>
     <div class="px-1 py-2">
-        <div class="text-sm leading-none text-zinc-400">{{ $heading }}</div>
+        <div class="text-sm leading-none text-zinc-600">{{ $heading }}</div>
     </div>
 
     <div>

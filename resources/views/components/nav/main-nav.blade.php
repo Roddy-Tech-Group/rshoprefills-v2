@@ -17,58 +17,166 @@
                 class="col-start-1 justify-self-start -ml-3 relative flex items-center rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 aria-label="RshopRefills — Home"
             >
-                <span class="flex items-center h-9 md:h-11 overflow-hidden">
+                <span class="flex items-center h-10 md:h-12">
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.png') }}"
                         alt="RshopRefills"
                         fetchpriority="high"
-                        class="h-[190px] md:h-[230px] w-auto max-w-none object-contain saturate-[1.25] group-hover:opacity-90 transition-opacity duration-200"
+                        class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                     />
                 </span>
-                <span class="absolute left-1 top-full -mt-0.5 text-[10px] font-medium italic leading-none text-zinc-400" aria-hidden="true">Est. 2024</span>
+                <span class="absolute left-1 top-full -mt-0.5 text-[10px] font-medium italic leading-none text-zinc-600" aria-hidden="true">Est. 2024</span>
             </a>
 
-            {{-- Search (desktop) --}}
+            {{-- Live search (desktop). Hits /api/search/brands?q=… on every keystroke (debounced)
+                 and renders a dropdown of matching brands. Pressing Enter navigates to
+                 /gift-cards?q= for the full results page. --}}
             <div
-                role="search"
-                @click="$refs.search.focus()"
-                class="col-start-2 group hidden md:flex w-[420px] max-w-full items-center gap-3 cursor-text rounded-2xl border-2 border-zinc-400 bg-white px-4 py-2 transition-all duration-200 hover:border-zinc-500 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15"
+                x-data="navBrandSearch()"
+                @click.outside="open = false"
+                @keydown.escape.window="open = false"
+                class="col-start-2 hidden md:block w-[420px] max-w-full relative"
             >
-                <svg class="w-5 h-5 shrink-0 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                    x-ref="search"
-                    type="search"
-                    placeholder="Search for brands or categories"
-                    aria-label="Search for brands or categories"
-                    autocomplete="off"
-                    spellcheck="false"
-                    class="flex-1 min-w-0 bg-transparent text-base text-zinc-800 placeholder:text-zinc-400 outline-none"
-                />
+                <form
+                    role="search"
+                    method="GET"
+                    action="{{ route('shop.gift-cards') }}"
+                    @click="$refs.search.focus()"
+                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-400 hover:border-zinc-500'"
+                    class="group flex items-center gap-3 cursor-text rounded-2xl border-2 bg-white px-4 py-2 transition-all duration-200"
+                >
+                    <button type="submit" class="shrink-0 text-zinc-900 transition-colors hover:text-blue-600 focus:outline-none" aria-label="Search">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                    <input
+                        x-ref="search"
+                        x-model="query"
+                        @input="onInput()"
+                        @focus="if (query.length >= 2) open = true"
+                        name="q"
+                        type="search"
+                        placeholder="Search brands, categories, countries"
+                        aria-label="Search brands, categories, countries"
+                        autocomplete="off"
+                        spellcheck="false"
+                        class="flex-1 min-w-0 bg-transparent text-base text-zinc-800 placeholder:text-zinc-600 outline-none"
+                    />
+                    <button type="button" x-show="query.length > 0" @click="clear()" class="shrink-0 text-zinc-500 transition-colors hover:text-zinc-900 focus:outline-none" aria-label="Clear">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </form>
+
+                {{-- Results dropdown --}}
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 -translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    style="display:none;"
+                    class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/15"
+                >
+                    {{-- Loading state --}}
+                    <div x-show="loading && results.length === 0" class="px-5 py-6 text-center text-sm text-zinc-600">
+                        <svg class="mx-auto h-5 w-5 animate-spin text-zinc-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                        <p class="mt-2">Searching…</p>
+                    </div>
+
+                    {{-- Results list --}}
+                    <ul x-show="results.length > 0" class="max-h-[60vh] divide-y divide-zinc-100/80 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <template x-for="r in results" :key="r.slug">
+                            <li>
+                                <a
+                                    :href="'/gift-cards/' + r.slug"
+                                    wire:navigate
+                                    @click="open = false"
+                                    class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-100"
+                                >
+                                    <template x-if="r.logo">
+                                        <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-zinc-100">
+                                            <img :src="r.logo" :alt="r.name" class="max-h-[80%] max-w-[80%] object-contain">
+                                        </span>
+                                    </template>
+                                    <template x-if="!r.logo">
+                                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-xs font-black text-zinc-700" x-text="r.name.substring(0, 2).toUpperCase()"></span>
+                                    </template>
+                                    <span class="flex-1 truncate text-sm font-semibold text-zinc-900" x-text="r.name"></span>
+                                </a>
+                            </li>
+                        </template>
+                    </ul>
+
+                    {{-- No results --}}
+                    <div x-show="!loading && results.length === 0 && query.length >= 2" class="px-5 py-6 text-center text-sm text-zinc-600">
+                        No brands match "<span class="font-semibold text-zinc-900" x-text="query"></span>"
+                    </div>
+
+                    {{-- Show all results footer --}}
+                    <a
+                        x-show="results.length > 0"
+                        :href="'{{ route('shop.gift-cards') }}?q=' + encodeURIComponent(query)"
+                        wire:navigate
+                        @click="open = false"
+                        class="block border-t border-zinc-100 bg-white px-5 py-3 text-center text-sm font-semibold text-blue-600 transition-colors hover:bg-zinc-100 hover:text-blue-700"
+                    >
+                        Show all results
+                    </a>
+                </div>
             </div>
 
             {{-- Right actions --}}
             <div class="col-start-3 justify-self-end flex items-center gap-2">
 
-                {{-- Mobile search trigger (icon-only on small screens) --}}
-                <button
-                    type="button"
+                {{-- Mobile search trigger — navigates to /gift-cards (which has its own
+                     search input that lives in the page sidebar). On the customer flow,
+                     /gift-cards is the unified catalog so a tap on this is equivalent to
+                     "open the searchable catalog." --}}
+                <a
+                    href="{{ route('shop.gift-cards') }}"
+                    wire:navigate
                     class="md:hidden flex h-9 w-9 items-center justify-center rounded-md bg-zinc-100 text-zinc-900 transition-colors duration-150 hover:bg-blue-600 hover:text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                     aria-label="Search"
                 >
                     <svg class="h-[22px] w-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                </button>
+                </a>
 
-                {{-- Wallet — authed users go straight to the dashboard, guests are prompted to log in --}}
+                {{-- Wallet — authed users see their balance, guests see "Wallet" and get prompted to log in.
+                     Symbol resolution: prefers App\Domain\Shared\Enums\Currency::symbol() when the case exists,
+                     otherwise falls back to the raw code so any backend-added currency (KES, ZAR, EUR, etc.)
+                     renders gracefully without a frontend change. --}}
+                @php
+                    use App\Domain\Shared\Enums\Currency;
+
+                    $walletBalance = auth()->check() ? (float) (auth()->user()->wallet?->balance ?? 0) : null;
+                    $walletCurrency = auth()->check() ? (auth()->user()->wallet?->currency ?? 'USD') : null;
+                    $currencyCase = $walletCurrency ? Currency::tryFrom($walletCurrency) : null;
+                    $currencySymbol = $currencyCase?->symbol() ?? ($walletCurrency ? $walletCurrency.' ' : '');
+
+                    // Gender-aware default avatar for authed users. Resolved at render time so the right
+                    // portrait shows up everywhere the user's avatar is rendered until they upload one.
+                    $authUser = auth()->user();
+                    $accountAvatar = $authUser?->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($authUser?->gender ?? '')) {
+                        'female', 'f' => 'New Female Account Avatar.png',
+                        default       => 'New male account avatar.png',
+                    }));
+                @endphp
                 <a
                     href="{{ auth()->check() ? route('dashboard') : route('login') }}"
                     wire:navigate
-                    class="hidden md:inline-flex h-10 items-center gap-2 rounded-md bg-zinc-100 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-blue-600 hover:text-white/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                    class="hidden md:inline-flex h-10 items-center gap-2 rounded-md bg-zinc-100 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-blue-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                    aria-label="{{ auth()->check() ? 'Wallet balance' : 'Wallet — sign in to view balance' }}"
                 >
-                    Wallet
+                    <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
+                    @auth
+                        {{ $currencySymbol }}{{ number_format($walletBalance, 2) }}
+                    @else
+                        Wallet
+                    @endauth
                 </a>
 
                 {{-- Account --}}
@@ -88,10 +196,10 @@
                             @click="locked = !locked; open = locked"
                             :aria-expanded="open.toString()"
                             aria-haspopup="menu"
-                            class="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                            class="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 overflow-hidden rounded-full bg-zinc-100 transition-all duration-150 ring-1 ring-zinc-200 hover:ring-2 hover:ring-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                             aria-label="Your account"
                         >
-                            <img src="{{ asset('assets/' . rawurlencode('new user svg.svg')) }}" alt="" class="h-[22px] w-[22px] md:h-6 md:w-6" loading="lazy">
+                            <img src="{{ $accountAvatar }}" alt="{{ $authUser?->name ?? 'Account' }}" class="h-full w-full object-cover" loading="lazy">
                         </button>
 
                         <div
@@ -107,7 +215,7 @@
                             role="menu"
                         >
                             <div class="p-1.5">
-                                <a href="{{ route('settings.profile') }}" wire:navigate role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
+                                <a href="{{ route('dashboard') }}" wire:navigate role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
                                     <svg class="h-5 w-5 shrink-0 text-zinc-700 transition-colors group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
                                     </svg>
@@ -125,7 +233,7 @@
                                     </svg>
                                     Redeem
                                 </a>
-                                <a href="{{ route('settings.profile') }}" wire:navigate role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
+                                <a href="{{ route('dashboard.profile') }}" wire:navigate role="menuitem" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white">
                                     <svg class="h-5 w-5 shrink-0 text-zinc-700 transition-colors group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -259,7 +367,7 @@
                                     class="mt-4 h-40 w-auto object-contain animate-float"
                                     loading="lazy"
                                 >
-                                <p class="mt-3 text-sm text-zinc-500">Your Cards needs items</p>
+                                <p class="mt-3 text-sm text-zinc-600">Your Cards needs items</p>
                             </div>
                         @else
                             {{-- Populated state — backend will provide $cartItems (collection) and $cartSubtotal (decimal).
@@ -267,11 +375,11 @@
                             <div class="px-5 py-5">
                                 <div class="mb-4 flex items-center justify-between">
                                     <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
-                                    <span class="text-sm text-zinc-500">{{ $cartCount }} {{ \Illuminate\Support\Str::plural('item', $cartCount) }}</span>
+                                    <span class="text-sm text-zinc-600">{{ $cartCount }} {{ \Illuminate\Support\Str::plural('item', $cartCount) }}</span>
                                 </div>
 
                                 {{-- Item list — backend loops $cartItems and renders brand/quantity/price rows --}}
-                                <ul class="max-h-64 space-y-3 overflow-y-auto">
+                                <ul class="max-h-64 space-y-3 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                     {{-- @foreach($cartItems as $item) ...row markup... @endforeach --}}
                                 </ul>
 
@@ -297,8 +405,8 @@
         </div>
     </div>
 
-    {{-- Category shortcut bar — visible on all devices --}}
-    <div>
+    {{-- Category shortcut bar — desktop only. Hidden on mobile to remove the horizontal scroll noise. --}}
+    <div class="hidden md:block">
         <nav aria-label="Product categories" class="max-w-[1350px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex h-[40px] gap-1 overflow-x-auto justify-start md:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @php
@@ -306,65 +414,41 @@
                     $catSvgClass = "w-[25px] h-[25px] shrink-0 text-zinc-900";
                 @endphp
 
+                @php $catImgClass = 'w-[22px] h-[22px] shrink-0'; @endphp
+
                 {{-- Gift Cards --}}
-                <a href="#" @click.prevent="activeCategory = 'Gift Cards'" :class="activeCategory === 'Gift Cards' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
-                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3H6a3 3 0 0 1 -3 -3z"/>
-                        <path d="m7 16 3 -3 3 3"/>
-                        <path d="M8 13c-0.789 0 -2 -0.672 -2 -1.5S6.711 10 7.5 10c1.128 -0.02 2.077 1.17 2.5 3 0.423 -1.83 1.372 -3.02 2.5 -3 0.789 0 1.5 0.672 1.5 1.5S12.789 13 12 13H8z"/>
-                    </svg>
+                <a href="{{ route('shop.gift-cards') }}" wire:navigate @click="activeCategory = 'Gift Cards'" :class="activeCategory === 'Gift Cards' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <img src="{{ asset('assets/' . rawurlencode('gift cards.svg')) }}" alt="" class="{{ $catImgClass }}" loading="lazy">
                     Gift Cards
                 </a>
 
                 {{-- eSIMs --}}
-                <a href="#" @click.prevent="activeCategory = 'eSIMs'" :class="activeCategory === 'eSIMs' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
-                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M6 3h8.5L19 7.5V20a1 1 0 0 1 -1 1H6a1 1 0 0 1 -1 -1V4a1 1 0 0 1 1 -1z"/>
-                        <path d="M9 11h3v6"/>
-                        <path d="M15 17v0.01"/>
-                        <path d="M15 14v0.01"/>
-                        <path d="M15 11v0.01"/>
-                        <path d="M9 14v0.01"/>
-                        <path d="M9 17v0.01"/>
-                    </svg>
+                <a href="#" @click.prevent="activeCategory = 'eSIMs'" :class="activeCategory === 'eSIMs' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <img src="{{ asset('assets/' . rawurlencode('esim.svg')) }}" alt="" class="{{ $catImgClass }}" loading="lazy">
                     eSIMs
                 </a>
 
                 {{-- Mobile top up --}}
-                <a href="#" @click.prevent="activeCategory = 'Mobile top up'" :class="activeCategory === 'Mobile top up' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
-                    <svg viewBox="0 0 14 14" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M10.5 0.5h-7c-0.55228 0 -1 0.447715 -1 1v11c0 0.5523 0.44772 1 1 1h7c0.5523 0 1 -0.4477 1 -1v-11c0 -0.552285 -0.4477 -1 -1 -1Z"/>
-                        <path d="M6.5 11h1"/>
-                    </svg>
+                <a href="#" @click.prevent="activeCategory = 'Mobile top up'" :class="activeCategory === 'Mobile top up' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <img src="{{ asset('assets/' . rawurlencode('topup1.svg')) }}" alt="" class="{{ $catImgClass }}" loading="lazy">
                     Mobile top up
                 </a>
 
                 {{-- Bill payments --}}
-                <a href="#" @click.prevent="activeCategory = 'Bill payments'" :class="activeCategory === 'Bill payments' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
-                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M5 21V5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2 -2 2 -2 -2 -2 2 -2 -2 -3 2"/>
-                        <path d="M14.8 8A2 2 0 0 0 13 7h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1 -1.8 -1"/>
-                        <path d="M12 6v10"/>
-                    </svg>
+                <a href="#" @click.prevent="activeCategory = 'Bill payments'" :class="activeCategory === 'Bill payments' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <img :src="activeCategory === 'Bill payments' ? '{{ asset('assets/' . rawurlencode('bill payment.svg')) }}' : '{{ asset('assets/' . rawurlencode('Bills 2.svg')) }}'" alt="" class="{{ $catImgClass }}" loading="lazy">
                     Bill payments
                 </a>
 
                 {{-- Flights --}}
-                <a href="#" @click.prevent="activeCategory = 'Flights'" :class="activeCategory === 'Flights' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
-                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="m14.5 6.5 3 -2.9a2.05 2.05 0 0 1 2.9 2.9l-2.9 3L20 17l-2.5 2.55L14 13l-3 3v3l-2 2 -1.5 -4.5L3 15l2 -2h3l3 -3 -6.5 -3.5L7 4l7.5 2.5z"/>
-                    </svg>
+                <a href="#" @click.prevent="activeCategory = 'Flights'" :class="activeCategory === 'Flights' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <img :src="activeCategory === 'Flights' ? '{{ asset('assets/' . rawurlencode('flight.svg')) }}' : '{{ asset('assets/' . rawurlencode('flight 2.svg')) }}'" alt="" class="{{ $catImgClass }}" loading="lazy">
                     Flights
                 </a>
 
                 {{-- Stays --}}
-                <a href="#" @click.prevent="activeCategory = 'Stays'" :class="activeCategory === 'Stays' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-500 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
-                    <svg viewBox="0 0 24 24" class="{{ $catSvgClass }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M5 9a2 2 0 1 0 4 0 2 2 0 1 0 -4 0"/>
-                        <path d="M22 17v-3H2"/>
-                        <path d="M2 8v9"/>
-                        <path d="M12 14h10v-2a3 3 0 0 0 -3 -3h-7v5z"/>
-                    </svg>
+                <a href="#" @click.prevent="activeCategory = 'Stays'" :class="activeCategory === 'Stays' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                    <img :src="activeCategory === 'Stays' ? '{{ asset('assets/' . rawurlencode('stay.svg')) }}' : '{{ asset('assets/' . rawurlencode('stay 2.svg')) }}'" alt="" class="{{ $catImgClass }}" loading="lazy">
                     Stays
                 </a>
 

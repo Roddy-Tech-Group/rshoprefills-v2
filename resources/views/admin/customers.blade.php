@@ -5,20 +5,16 @@
     $totalCustomers = User::count();
 @endphp
 
-<x-layouts.app>
-    <div class="flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+<x-layouts.admin>
+    <x-slot:heading>Customers</x-slot:heading>
+    <x-slot:subheading>{{ number_format($totalCustomers) }} users total. Showing the latest 50.</x-slot:subheading>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-900 sm:text-3xl">Customers</h1>
-                <p class="mt-1 text-sm text-zinc-500">{{ number_format($totalCustomers) }} users total. Showing the latest 50.</p>
-            </div>
-        </div>
+    <div class="flex flex-1 flex-col gap-6">
 
         <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-[11px]">
-                    <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-500">
+                    <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-600">
                         <tr>
                             <th class="px-5 py-3 font-semibold">User</th>
                             <th class="px-5 py-3 font-semibold">Status</th>
@@ -32,10 +28,16 @@
                             <tr>
                                 <td class="px-5 py-3">
                                     <div class="flex items-center gap-3">
-                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">{{ $user->initials() }}</span>
+                                        @php
+                                            $rowAvatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
+                                                'female', 'f' => 'New Female Account Avatar.png',
+                                                default       => 'New male account avatar.png',
+                                            }));
+                                        @endphp
+                                        <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-blue-100">
                                         <div class="leading-tight">
                                             <p class="text-[11px] font-semibold text-zinc-900">{{ $user->name }}</p>
-                                            <p class="text-[10px] text-zinc-500">{{ $user->email }}</p>
+                                            <p class="text-[10px] text-zinc-600">{{ $user->email }}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -50,7 +52,7 @@
                                     @if ($user->wallet)
                                         ${{ number_format((float) $user->wallet->balance, 2) }} {{ $user->wallet->currency }}
                                     @else
-                                        <span class="text-zinc-400">No wallet</span>
+                                        <span class="text-zinc-600">No wallet</span>
                                     @endif
                                 </td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $user->created_at->format('M j, Y') }}</td>
@@ -60,7 +62,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-5 py-12 text-center text-sm text-zinc-500">No customers yet.</td>
+                                <td colspan="5" class="px-5 py-12 text-center text-sm text-zinc-600">No customers yet.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -69,4 +71,4 @@
         </div>
 
     </div>
-</x-layouts.app>
+</x-layouts.admin>

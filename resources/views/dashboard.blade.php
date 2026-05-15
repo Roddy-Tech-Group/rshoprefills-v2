@@ -1,518 +1,650 @@
+{{--
+    Customer dashboard overview — /dashboard.
+    Admin operator dashboard lives at /admin/dashboard with separate guard.
+
+    Backend hooks pending (placeholders used until wired):
+      - Wallet balance + multi-currency wallets (Wallet model exists, no UI binding yet)
+      - Recent orders (Order model exists, latest 3 will bind here)
+      - Recent transactions (Payment + WalletTransaction models exist)
+      - RShop Points + tier system (no model)
+      - Recommended products (Product model exists; recs engine pending)
+--}}
 @php
-    use App\Models\User;
-    use App\Models\Order;
-    use App\Models\Payment;
-    use App\Domain\Shared\Enums\PaymentStatus;
-    use App\Domain\Shared\Enums\OrderStatus;
+    use App\Domain\Shared\Enums\Currency;
 
-    // ── Real KPI data from shipped models ──────────────────────────────
-    $totalUsers       = User::count();
-    $totalOrders      = Order::count();
-    $totalRevenue     = (float) Payment::where('status', PaymentStatus::Completed)->sum('amount');
-    $totalTransactions = Payment::count();
-    $completedPayments = Payment::where('status', PaymentStatus::Completed)->count();
-    $successRate      = $totalTransactions > 0
-        ? round(($completedPayments / $totalTransactions) * 100, 2)
-        : 0;
+    $user = auth()->user();
+    $ordersCount = $user->orders()->count();
+    $memberSince = $user->created_at?->format('M Y') ?? '—';
 
-    // ── Tables (real data) ─────────────────────────────────────────────
-    $latestUsers  = User::latest()->take(5)->get();
-    $latestOrders = Order::with(['user', 'items'])->latest()->take(5)->get();
+    // ── Wallet data ──────────────────────────────────────────────────
+    // Default to the user's USD wallet (auto-created on registration).
+    // The card lets the customer switch between any wallet they hold.
+    $primaryWallet = $user->wallets()->where('currency', 'USD')->first()
+        ?? $user->wallets()->first();
 
-    // ── Placeholder trend deltas (no period-over-period math shipped yet)
-    $trendUsers        = '+32.54%';
-    $trendOrders       = '+28.16%';
-    $trendRevenue      = '+42.31%';
-    $trendTransactions = '+18.74%';
-    $trendSuccessRate  = '+6.35%';
+    $walletBalance = (float) ($primaryWallet?->balance ?? 0);
+    $walletCurrencyCode = $primaryWallet?->currency?->value ?? 'USD';
+    $walletCurrencyCase = Currency::tryFrom($walletCurrencyCode);
+    $walletSymbol = $walletCurrencyCase?->symbol() ?? '$';
+
+    // All user wallets across currencies. Backend hook: when crypto wallets
+    // (BTC, USDT, BUSD, SOL, BNB, LTC) are added to the Currency enum and
+    // user creates them, they'll appear in this collection automatically.
+    $allWallets = $user->wallets()->where('is_active', true)->get();
+
+    // Symbol/label map covering fiat + crypto. Fallback for codes the
+    // backend Currency enum doesn't have yet so the UI still renders nicely.
+    $symbolFor = function (string $code): string {
+        return match (strtoupper($code)) {
+            'USD' => '$',  'NGN'  => '₦', 'GHS'  => '₵', 'GBP' => '£',
+            'XAF' => 'FCFA','XOF' => 'CFA','EUR' => '€',
+            'KES' => 'KSh','ZAR'  => 'R', 'UGX'  => 'USh','TZS' => 'TSh',
+            'RWF' => 'FRw','ZMW'  => 'K', 'MWK'  => 'MK', 'ETB' => 'Br',
+            'EGP' => 'E£', 'MAD'  => 'DH',
+            'BTC' => '₿',  'USDT' => '₮', 'BUSD' => '$', 'SOL' => '◎',
+            'BNB' => 'B',  'LTC'  => 'Ł', 'ETH'  => 'Ξ',
+            default => '',
+        };
+    };
+
+    $isCryptoCode = fn (string $code) => in_array(strtoupper($code), ['BTC','USDT','BUSD','SOL','BNB','LTC','ETH','USDC'], true);
+
+    // Icon resolver: maps a currency code to an asset filename. Returns null
+    // for codes we don't have an icon for (chip then falls back to text-only).
+    $iconFor = function (string $code): ?string {
+        return match (strtoupper($code)) {
+            'NGN'  => 'NGN.svg',
+            'GHS'  => 'GH.svg',
+            'XAF'  => 'XAF.svg',
+            'BTC'  => 'BTC.svg',
+            'USDT' => 'USDT.svg',
+            'BUSD' => 'USDT.svg',     // USDT-pegged stablecoin; reuse the tether mark until a BUSD svg ships
+            'SOL'  => 'SOLANA.svg',
+            'BNB'  => 'BNB.png',
+            'LTC'  => 'LTC.png',
+            default => null,
+        };
+    };
+
+    // Brand color per currency — drives the wallet card bg when that wallet is active.
+    // Crypto follows the coin's brand; fiat uses flag-evoked tones.
+    $colorFor = function (string $code): string {
+        return match (strtoupper($code)) {
+            'USD'  => 'bg-blue-600',
+            'GBP'  => 'bg-indigo-600',
+            'EUR'  => 'bg-sky-600',
+            'NGN'  => 'bg-emerald-600',
+            'GHS'  => 'bg-rose-600',
+            'XAF'  => 'bg-teal-600',
+            'KES'  => 'bg-red-600',
+            'ZAR'  => 'bg-amber-600',
+            'BTC'  => 'bg-orange-500',
+            'USDT' => 'bg-teal-500',
+            'BUSD' => 'bg-yellow-500',
+            'SOL'  => 'bg-fuchsia-500',
+            'BNB'  => 'bg-yellow-500',
+            'LTC'  => 'bg-zinc-500',
+            'ETH'  => 'bg-indigo-500',
+            default => 'bg-blue-600',
+        };
+    };
+
+    // Build the wallet payload for Alpine. Each entry includes icon URL when one exists.
+    $walletsPayload = $allWallets->map(function ($w) use ($symbolFor, $isCryptoCode, $iconFor, $colorFor) {
+        $code = $w->currency?->value ?? 'USD';
+        $iconFile = $iconFor($code);
+
+        return [
+            'code'      => $code,
+            'symbol'    => $symbolFor($code),
+            'label'     => Currency::tryFrom((string) $code)?->label() ?? $code,
+            'balance'   => (float) $w->balance,
+            'formatted' => $symbolFor($code) . number_format((float) $w->balance, 2),
+            'type'      => $isCryptoCode((string) $code) ? 'crypto' : 'fiat',
+            'icon'      => $iconFile ? asset('assets/' . rawurlencode($iconFile)) : null,
+            'color'     => $colorFor($code),
+        ];
+    })->values();
+
+    // Default card color for first-render server-side (Alpine then takes over).
+    $initialWalletColor = $colorFor($walletCurrencyCode);
 @endphp
 
-<x-layouts.app>
+<x-layouts.dashboard>
 
-    {{-- Page content (top bar lives in components/layouts/app/sidebar.blade.php so all admin pages share it).
-         Padding is provided by the parent layout wrapper. --}}
-    <div class="flex flex-1 flex-col gap-6">
-
-        {{-- Heading moved to the top header. Just the date range picker stays here on the right.
-             Range presets are Alpine-driven UI for now; backend wires them with wire:click when period filtering ships. --}}
-        {{-- Date range selector (Alpine-driven). Custom range opens an inline date input pair. --}}
-        <div
-            x-data="{
-                open: false,
-                view: 'presets',
-                ranges: [
-                    { label: 'Today',        days: 0 },
-                    { label: 'Last 7 days',  days: 7 },
-                    { label: 'Last 30 days', days: 30 },
-                    { label: 'Last 90 days', days: 90 },
-                    { label: 'This year',    days: 365 },
-                ],
-                selected: 2,
-                isCustom: false,
-                customStart: '',
-                customEnd: '',
-                customLabel: '',
-                fmt(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); },
-                isoToday() { const d = new Date(); return d.toISOString().slice(0, 10); },
-                isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); },
-                openCustom() {
-                    this.view = 'custom';
-                    if (!this.customStart) this.customStart = this.isoDaysAgo(30);
-                    if (!this.customEnd)   this.customEnd   = this.isoToday();
-                },
-                applyCustom() {
-                    if (!this.customStart || !this.customEnd) return;
-                    const s = new Date(this.customStart);
-                    const e = new Date(this.customEnd);
-                    if (e < s) return;
-                    this.customLabel = `${this.fmt(s)} - ${this.fmt(e)}`;
-                    this.isCustom = true;
-                    this.selected = -1;
-                    this.open = false;
-                    this.view = 'presets';
-                },
-                get rangeLabel() {
-                    if (this.isCustom && this.customLabel) return this.customLabel;
-                    const end = new Date();
-                    const start = new Date();
-                    start.setDate(end.getDate() - this.ranges[this.selected].days);
-                    return this.ranges[this.selected].days === 0
-                        ? this.fmt(end)
-                        : `${this.fmt(start)} - ${this.fmt(end)}`;
-                }
-            }"
-            @click.outside="open = false; view = 'presets'"
-            @keydown.escape.window="open = false; view = 'presets'"
-            class="relative flex justify-end"
-        >
-            <button
-                type="button"
-                @click="open = !open"
-                :aria-expanded="open.toString()"
-                class="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 shadow-sm shadow-zinc-900/5 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-            >
-                <img src="{{ asset('assets/' . rawurlencode('calender.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
-                <span x-text="rangeLabel">{{ now()->subDays(30)->format('M j, Y') }} - {{ now()->format('M j, Y') }}</span>
-                <svg class="h-3.5 w-3.5 text-zinc-400 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-
-            <div
-                x-show="open"
-                x-transition:enter="transition ease-out duration-150"
-                x-transition:enter-start="opacity-0 -translate-y-1"
-                x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition ease-in duration-100"
-                x-transition:leave-start="opacity-100 translate-y-0"
-                x-transition:leave-end="opacity-0 -translate-y-1"
-                style="display:none;"
-                class="absolute right-0 top-full z-30 mt-2 w-[280px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
-                role="menu"
-            >
-                {{-- Presets view --}}
-                <div x-show="view === 'presets'" class="p-1.5">
-                    <template x-for="(r, i) in ranges" :key="r.label">
-                        <button
-                            type="button"
-                            @click="selected = i; isCustom = false; open = false"
-                            :class="selected === i && !isCustom ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                            class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
-                        >
-                            <span x-text="r.label"></span>
-                            <svg x-show="selected === i && !isCustom" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                            </svg>
-                        </button>
-                    </template>
+    {{-- ─────────────────────────────────────────────────────── --}}
+    {{-- MOBILE HERO (sits inside the layout's blue panel)        --}}
+    {{-- ─────────────────────────────────────────────────────── --}}
+    <x-slot:mobileHero>
+        <div class="rounded-2xl bg-blue-500/30 p-5 text-white ring-1 ring-white/15">
+            <div class="flex items-start justify-between">
+                <p class="text-sm font-medium text-blue-100">Wallet Balance</p>
+                @if ($allWallets->count() > 1)
+                    <p class="text-[11px] font-medium text-blue-100">{{ $allWallets->count() }} wallets</p>
+                @endif
+            </div>
+            <div class="mt-3 flex items-end justify-between gap-4">
+                <div class="min-w-0">
+                    <p class="truncate text-3xl font-bold tracking-tight sm:text-4xl">{{ $walletSymbol }}{{ number_format($walletBalance, 2) }}</p>
+                    <p class="mt-1 text-xs text-blue-100">{{ $walletCurrencyCode }} · {{ $walletCurrencyCase?->label() ?? 'Wallet' }}</p>
                 </div>
+                <button type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors active:bg-blue-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                    Top Up
+                </button>
+            </div>
+        </div>
+    </x-slot>
 
-                <div x-show="view === 'presets'" class="border-t border-zinc-100 p-1.5">
-                    <button
-                        type="button"
-                        @click="openCustom()"
-                        :class="isCustom ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
-                    >
-                        <span class="flex items-center gap-2">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            Custom range
-                        </span>
-                        <svg x-show="isCustom" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                    </button>
-                </div>
-
-                {{-- Custom range view --}}
-                <div x-show="view === 'custom'" class="p-3">
-                    <div class="mb-3 flex items-center justify-between">
-                        <button type="button" @click="view = 'presets'" class="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900">
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                            </svg>
-                            Back
-                        </button>
-                        <p class="text-sm font-semibold text-zinc-900">Custom range</p>
-                        <span class="w-10"></span>
+    {{-- Page-level skeleton wrap (closes right before </x-layouts.dashboard>). Shows shimmer placeholders during wire:navigate page transitions.
+         A single wrap keeps this large dashboard file readable. --}}
+    <div
+        x-data="{ navigating: false }"
+        x-on:livewire:navigate.window="navigating = true"
+        x-on:livewire:navigated.window="navigating = false"
+        class="relative"
+    >
+        {{-- Skeleton overlay (mobile + desktop generic layout) — children cascade in via .skeleton-stagger --}}
+        <div x-show="navigating" x-cloak class="skeleton-stagger absolute inset-0 z-10 flex flex-col gap-5 bg-[#eff6ff]" aria-hidden="true">
+            {{-- Heading row --}}
+            <div class="flex items-center justify-between" style="--i: 0">
+                <x-skeleton class="h-6 w-40" />
+                <x-skeleton class="h-4 w-16" />
+            </div>
+            {{-- 4 quick action tiles --}}
+            <div class="skeleton-stagger-fast grid grid-cols-2 gap-3 lg:grid-cols-4" style="--i: 1">
+                @for ($i = 0; $i < 4; $i++)
+                    <div class="rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: {{ $i }}">
+                        <x-skeleton shape="rect" class="h-10 w-10 rounded-xl" />
+                        <x-skeleton class="mt-3 h-3 w-20" />
                     </div>
-
-                    <label class="block">
-                        <span class="mb-1 block text-xs font-medium text-zinc-600">From</span>
-                        <input
-                            type="date"
-                            x-model="customStart"
-                            :max="customEnd || isoToday()"
-                            class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-                        />
-                    </label>
-
-                    <label class="mt-2 block">
-                        <span class="mb-1 block text-xs font-medium text-zinc-600">To</span>
-                        <input
-                            type="date"
-                            x-model="customEnd"
-                            :min="customStart"
-                            :max="isoToday()"
-                            class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-                        />
-                    </label>
-
-                    <button
-                        type="button"
-                        @click="applyCustom()"
-                        :disabled="!customStart || !customEnd"
-                        class="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Apply range
-                    </button>
-                </div>
+                @endfor
             </div>
-        </div>
-
-        {{-- ─── KPI cards (real data) ────────────────────────────────── --}}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-
-            {{-- Total Users --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-start justify-between">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
-                        <img src="{{ asset('assets/' . rawurlencode('trusted by millions.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
-                    </span>
-                </div>
-                <p class="mt-3 text-sm text-zinc-500">Total Users</p>
-                <p class="mt-0.5 text-2xl font-bold text-zinc-900">{{ number_format($totalUsers) }}</p>
-                <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="text-zinc-500">Last 30 days</span>
-                    <span class="font-semibold text-emerald-600">↑ {{ $trendUsers }}</span>
-                </div>
-            </div>
-
-            {{-- Total Orders --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-start justify-between">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50">
-                        <img src="{{ asset('assets/' . rawurlencode('total orders.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
-                    </span>
-                </div>
-                <p class="mt-3 text-sm text-zinc-500">Total Orders</p>
-                <p class="mt-0.5 text-2xl font-bold text-zinc-900">{{ number_format($totalOrders) }}</p>
-                <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="text-zinc-500">Last 30 days</span>
-                    <span class="font-semibold text-emerald-600">↑ {{ $trendOrders }}</span>
-                </div>
-            </div>
-
-            {{-- Total Revenue --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-start justify-between">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
-                        <img src="{{ asset('assets/' . rawurlencode('total revenue.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
-                    </span>
-                </div>
-                <p class="mt-3 text-sm text-zinc-500">Total Revenue</p>
-                <p class="mt-0.5 text-2xl font-bold text-zinc-900">${{ number_format($totalRevenue, 2) }}</p>
-                <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="text-zinc-500">Last 30 days</span>
-                    <span class="font-semibold text-emerald-600">↑ {{ $trendRevenue }}</span>
-                </div>
-            </div>
-
-            {{-- Total Transactions --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-start justify-between">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50">
-                        <img src="{{ asset('assets/' . rawurlencode('total transactions.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
-                    </span>
-                </div>
-                <p class="mt-3 text-sm text-zinc-500">Total Transactions</p>
-                <p class="mt-0.5 text-2xl font-bold text-zinc-900">{{ number_format($totalTransactions) }}</p>
-                <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="text-zinc-500">Last 30 days</span>
-                    <span class="font-semibold text-emerald-600">↑ {{ $trendTransactions }}</span>
-                </div>
-            </div>
-
-            {{-- Success Rate --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-start justify-between">
-                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-pink-50">
-                        <img src="{{ asset('assets/' . rawurlencode('Success rate.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
-                    </span>
-                </div>
-                <p class="mt-3 text-sm text-zinc-500">Success Rate</p>
-                <p class="mt-0.5 text-2xl font-bold text-zinc-900">{{ $successRate }}%</p>
-                <div class="mt-3 flex items-center justify-between text-xs">
-                    <span class="text-zinc-500">Last 30 days</span>
-                    <span class="font-semibold text-emerald-600">↑ {{ $trendSuccessRate }}</span>
-                </div>
-            </div>
-
-        </div>
-
-        {{-- ─── Charts row (placeholder UI — no aggregation endpoints yet) ─ --}}
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-
-            {{-- New Users chart --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            {{-- Big card --}}
+            <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: 2">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1.5">
-                        <h2 class="text-base font-semibold text-zinc-900">New Users</h2>
-                        <img src="{{ asset('assets/' . rawurlencode('info white.png')) }}" alt="" class="h-4 w-4" loading="lazy">
-                    </div>
-                    <button type="button" class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">
-                        6 Months
-                        <svg class="h-3 w-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
+                    <x-skeleton class="h-4 w-32" />
+                    <x-skeleton class="h-3 w-16" />
                 </div>
-
-                {{-- Placeholder bar chart --}}
-                <div class="mt-6 flex h-56 items-end justify-between gap-3 sm:gap-5">
-                    @foreach (['Dec' => 30, 'Jan' => 75, 'Feb' => 55, 'Mar' => 100, 'Apr' => 50, 'May' => 35] as $m => $h)
-                        <div class="flex flex-1 flex-col items-center gap-2">
-                            <div class="w-full rounded-md {{ $m === 'Mar' ? 'bg-blue-600' : 'bg-blue-200' }}" style="height: {{ $h }}%;"></div>
-                            <span class="text-xs text-zinc-500">{{ $m }}</span>
+                <div class="skeleton-stagger-fast mt-5 space-y-3">
+                    @for ($r = 0; $r < 4; $r++)
+                        <div class="flex items-center gap-3" style="--i: {{ $r }}">
+                            <x-skeleton shape="circle" class="h-9 w-9" />
+                            <div class="flex-1 space-y-1.5">
+                                <x-skeleton class="h-3 w-40" />
+                                <x-skeleton class="h-2.5 w-24" />
+                            </div>
+                            <x-skeleton class="h-3 w-14" />
                         </div>
-                    @endforeach
-                </div>
-
-                <div class="mt-4 flex items-center gap-2 text-xs text-zinc-500">
-                    <span class="h-2.5 w-2.5 rounded-sm bg-blue-600"></span>
-                    <span>New Registered Users</span>
+                    @endfor
                 </div>
             </div>
+        </div>
 
-            {{-- Revenue Overview chart --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1.5">
-                        <h2 class="text-base font-semibold text-zinc-900">Revenue Overview</h2>
-                        <img src="{{ asset('assets/' . rawurlencode('info white.png')) }}" alt="" class="h-4 w-4" loading="lazy">
-                    </div>
-                    {{-- Days selector (1 to 30) — Alpine-driven; backend wires to chart filter when ready --}}
-                    <div
-                        x-data="{ open: false, selected: 15 }"
-                        @click.outside="open = false"
-                        @keydown.escape.window="open = false"
-                        class="relative"
-                    >
-                        <button
-                            type="button"
-                            @click="open = !open"
-                            :aria-expanded="open.toString()"
-                            class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
-                        >
-                            <span x-text="selected + (selected === 1 ? ' Day' : ' Days')">15 Days</span>
-                            <svg class="h-3 w-3 text-zinc-400 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+    {{-- ─────────────────────────────────────────────────────── --}}
+    {{-- MOBILE VIEW (< lg)                                      --}}
+    {{-- ─────────────────────────────────────────────────────── --}}
+    <div class="flex min-h-[calc(100vh-200px)] flex-col gap-5 lg:hidden">
+
+        {{-- Quick Actions (mirrors the desktop card so customers can jump straight into a category). --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <h3 class="text-base font-bold text-zinc-900">Quick Actions</h3>
+            <div class="mt-4 grid grid-cols-3 gap-3">
+                @foreach ([
+                    ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    route('shop.gift-cards'), true],
+                    ['eSIMs',      'esim.svg',       'bg-sky-500',     '#',                      false],
+                    ['Topups',     'topup1.svg',     'bg-emerald-500', '#',                      false],
+                    ['Bills',      'Bills 2.svg',    'bg-teal-500',    '#',                      false],
+                    ['Flights',    'flight 2.svg',   'bg-indigo-500',  '#',                      false],
+                    ['Stays',      'stay 2.svg',     'bg-orange-500',  '#',                      false],
+                ] as [$label, $icon, $bg, $href, $live])
+                    <a href="{{ $href }}" @if ($live) wire:navigate @endif class="group flex flex-col items-center gap-1.5 text-center">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-full {{ $bg }} shadow-sm transition-transform group-hover:scale-105 group-active:scale-95">
+                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
+                        </span>
+                        <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Popular Services --}}
+        <div>
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-zinc-900">Popular Services</h3>
+                <a href="#" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View all</a>
+            </div>
+            <div class="mt-3 grid grid-cols-2 gap-3">
+                @foreach ([
+                    ['Gift Cards', 'Buy Now',  'gift cards.svg', route('shop.gift-cards'), true],
+                    ['eSIM',       'Buy Now',  'esim.svg',       '#',                      false],
+                    ['Top Ups',    'Buy Now',  'mobile.svg',     '#',                      false],
+                    ['Flights',    'Book Now', 'flight 2.svg',   '#',                      false],
+                ] as [$name, $cta, $icon, $href, $live])
+                    <a href="{{ $href }}" @if ($live) wire:navigate @endif class="group flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 transition-colors hover:bg-zinc-50">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6" loading="lazy">
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-bold text-zinc-900">{{ $name }}</p>
+                            <p class="truncate text-[11px] font-medium text-blue-600">{{ $cta }}</p>
+                        </div>
+                        <svg class="h-4 w-4 shrink-0 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                        </svg>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Recent Transactions --}}
+        <div>
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
+                <a href="#" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View all</a>
+            </div>
+            <div class="mt-3 divide-y divide-zinc-100 overflow-hidden rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                @foreach ([
+                    ['Netflix Gift Card', '$25.00', 'Completed', 'netflix.webp'],
+                    ['USDT Top Up',       '$50.00', 'Completed', 'global svg.svg'],
+                ] as [$name, $amount, $status, $icon])
+                    <a href="#" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50">
+                        <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
+                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-bold text-zinc-900">{{ $name }}</p>
+                            <span class="mt-1 inline-flex items-center rounded-[5px] bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{{ $status }}</span>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <p class="text-sm font-bold text-zinc-900">{{ $amount }}</p>
+                            <svg class="h-4 w-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
                             </svg>
-                        </button>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
 
-                        <div
-                            x-show="open"
-                            x-transition:enter="transition ease-out duration-150"
-                            x-transition:enter-start="opacity-0 -translate-y-1"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-100"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 -translate-y-1"
-                            style="display:none;"
-                            class="absolute right-0 top-full z-30 mt-2 w-[140px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
-                            role="menu"
-                        >
-                            <div class="max-h-64 overflow-y-auto p-1.5">
-                                <template x-for="i in 30" :key="i">
-                                    <button
-                                        type="button"
-                                        @click="selected = i; open = false"
-                                        :class="selected === i ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                                        class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors"
-                                    >
-                                        <span x-text="i + (i === 1 ? ' Day' : ' Days')"></span>
-                                        <svg x-show="selected === i" class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        {{-- Promo banner. mt-auto pushes it to the bottom of the column so the empty space sits ABOVE
+             the promo, not between it and the tab bar. Combined with min-h-[calc(100vh-200px)] on the
+             column wrapper, the layout always anchors the promo to the bottom of the visible area. --}}
+        <div class="relative mt-auto overflow-hidden rounded-2xl bg-blue-50 p-5 ring-1 ring-blue-100">
+            <div class="relative z-10 max-w-[60%]">
+                <h3 class="text-lg font-bold tracking-tight text-blue-900">Instant. Secure. Global.</h3>
+                <p class="mt-1 text-sm text-blue-900/70">Your trusted marketplace for digital products and services.</p>
+
+                {{-- 3-dot pagination --}}
+                <div class="mt-4 flex items-center gap-1.5">
+                    <span class="h-1.5 w-4 rounded-full bg-blue-600"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-blue-200"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-blue-200"></span>
+                </div>
+            </div>
+            <img
+                src="{{ asset('assets/' . rawurlencode('secured users.png')) }}"
+                alt=""
+                class="pointer-events-none absolute right-4 bottom-3 h-20 w-auto select-none object-contain"
+                loading="lazy"
+            >
+        </div>
+    </div>
+
+    {{-- ─────────────────────────────────────────────────────── --}}
+    {{-- DESKTOP VIEW (lg+)                                      --}}
+    {{-- ─────────────────────────────────────────────────────── --}}
+    <div class="hidden lg:block">
+
+        {{-- 12-col grid: heading + content live in left (cols 1-8), right rail (cols 9-12) starts at the top --}}
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+
+            {{-- LEFT: heading row, wallet/QA/orders, trust, shop by cat, recommended --}}
+            <div class="flex flex-col gap-6 lg:col-span-8">
+
+                {{-- Page heading row (sits inline with RShop Points on the right) --}}
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+                            Welcome back, {{ $user->name }}!
+                            <svg class="h-7 w-7 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15"/>
+                            </svg>
+                        </h1>
+                        <p class="mt-1 text-sm text-zinc-600">Here's what's happening with your account today.</p>
+                    </div>
+
+                    <button type="button" class="inline-flex items-center gap-2 self-start rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Customize
+                        <svg class="h-4 w-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Wallet + Quick Actions + Recent Order row --}}
+                <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+                    {{-- Wallet balance card. Switchable per-currency. Card bg adopts the active wallet's brand color. --}}
+                    <div
+                        x-data="{
+                            visible: true,
+                            active: 0,
+                            wallets: @js($walletsPayload),
+                            get current() { return this.wallets[this.active] ?? { code: 'USD', symbol: '$', label: 'US Dollar', formatted: '$0.00', type: 'fiat', color: 'bg-blue-600', icon: null }; }
+                        }"
+                        :class="current.color"
+                        class="flex flex-col justify-center gap-4 rounded-2xl {{ $initialWalletColor }} p-5 text-left text-white shadow-sm shadow-black/10 transition-colors duration-300"
+                    >
+                        <div class="flex items-start justify-between">
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-blue-100">Total Wallet Balance</p>
+                                <div class="mt-1.5 flex items-center gap-2">
+                                    <p class="truncate text-3xl font-bold tracking-tight" x-text="visible ? current.formatted : (current.symbol + ' ••••')">{{ $walletSymbol }}{{ number_format($walletBalance, 2) }}</p>
+                                    <button type="button" @click="visible = !visible" class="shrink-0 rounded-md p-1 text-blue-200 transition-colors hover:bg-white/10 hover:text-white" :aria-label="visible ? 'Hide balance' : 'Show balance'">
+                                        <svg x-show="visible" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.244 7.244L19.5 19.5m-2.876-2.876L13.875 13.875M9.878 9.878a3 3 0 105.249 5.249"/>
+                                        </svg>
+                                        <svg x-show="!visible" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true" style="display:none;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         </svg>
                                     </button>
+                                </div>
+                                <p class="mt-0.5 text-xs text-blue-100"><span x-text="current.code">{{ $walletCurrencyCode }}</span> · <span x-text="current.label">{{ $walletCurrencyCase?->label() ?? 'Wallet' }}</span></p>
+                            </div>
+
+                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15">
+                                {{-- Show active wallet's specific icon when available, otherwise the generic wallet glyph --}}
+                                <template x-if="current.icon">
+                                    <img :src="current.icon" alt="" class="h-7 w-7 object-contain" loading="lazy">
                                 </template>
+                                <template x-if="!current.icon">
+                                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
+                                </template>
+                            </span>
+                        </div>
+
+                        <button type="button" class="w-full rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">Fund Wallet</button>
+
+                        {{-- Currency switcher: user clicks a chip to swap the displayed wallet --}}
+                        @if ($walletsPayload->count() > 1)
+                            <div class="-mx-1 -mb-1 rounded-xl bg-white/10 p-2">
+                                <p class="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-blue-100">Switch wallet</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <template x-for="(w, i) in wallets" :key="w.code">
+                                        <button
+                                            type="button"
+                                            @click="active = i"
+                                            :class="active === i ? 'bg-white text-blue-700 shadow-sm' : 'bg-white/20 text-white hover:bg-white/30'"
+                                            class="inline-flex items-center gap-1.5 rounded-[5px] px-2 py-1 text-xs font-semibold transition-colors"
+                                        >
+                                            <img :src="w.icon" alt="" class="h-4 w-4 shrink-0 object-contain" x-show="w.icon" loading="lazy">
+                                            <span class="text-[10px]" :class="active === i ? 'text-blue-500' : 'text-blue-100'" x-text="w.code"></span>
+                                            <span x-text="w.formatted"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- Quick Actions card (mirrors the Shop by Category buckets so customers can jump straight in) --}}
+                    <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                        <h3 class="text-base font-semibold text-zinc-900">Quick Actions</h3>
+                        <div class="mt-4 grid grid-cols-3 gap-3">
+                            @foreach ([
+                                ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    null],
+                                ['eSIMs',      'esim.svg',       'bg-sky-500',     null],
+                                ['Topups',     'topup1.svg',     'bg-emerald-500', null],
+                                ['Bills',      'Bills 2.svg',    'bg-teal-500',    'bill payment.svg'],
+                                ['Flights',    'flight 2.svg',   'bg-indigo-500',  'flight.svg'],
+                                ['Stays',      'stay 2.svg',     'bg-orange-500',  'stay.svg'],
+                            ] as [$label, $icon, $bg, $hoverIcon])
+                                <a href="#" class="group flex flex-col items-center gap-1.5 text-center">
+                                    <span class="flex h-12 w-12 items-center justify-center rounded-2xl {{ $bg }} transition-transform group-hover:scale-105">
+                                        @if ($hoverIcon)
+                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
+                                            <img src="{{ asset('assets/' . rawurlencode($hoverIcon)) }}" alt="" class="hidden h-6 w-6 brightness-0 invert group-hover:block" loading="lazy">
+                                        @else
+                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
+                                        @endif
+                                    </span>
+                                    <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Recent Order card --}}
+                    <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
+                            <a href="#" class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                        </div>
+
+                        @php
+                            // Status badges follow the project rule: solid saturated bg + white text + rounded-[5px].
+                            $statusToneClasses = [
+                                'success'    => 'bg-emerald-500 text-white',
+                                'processing' => 'bg-amber-500 text-white',
+                                'neutral'    => 'bg-zinc-500 text-white',
+                            ];
+                        @endphp
+                        <ul class="mt-4 space-y-3">
+                            @foreach ([
+                                ['Apple iTunes Gift Card', '$50',         'Delivered',  'apple.png',  'success',    '2 mins ago'],
+                                ['MTN Ghana Airtime',      'GHS 100',     'Delivered',  'mobile.svg', 'success',    '1 hour ago'],
+                                ['Airalo eSIM',            'Turkey 10GB', 'Processing', 'esim.svg',   'processing', '3 hours ago'],
+                            ] as [$name, $amount, $status, $icon, $tone, $time])
+                                <li class="flex items-center gap-3">
+                                    <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
+                                        <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $name }}</p>
+                                            <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusToneClasses[$tone] }}">{{ $status }}</span>
+                                        </div>
+                                        <div class="mt-0.5 flex items-center justify-between gap-2">
+                                            <p class="truncate text-xs text-zinc-600">{{ $amount }}</p>
+                                            <p class="shrink-0 text-[10px] text-zinc-600">{{ $time }}</p>
+                                        </div>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+
+                {{-- Trust strip --}}
+                <div class="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100">
+                        <img src="{{ asset('assets/secure payments.svg') }}" alt="" class="h-6 w-6" loading="lazy">
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-zinc-900">Secure. Fast. Reliable.</p>
+                        <p class="mt-0.5 text-xs text-zinc-600">Your transactions are protected with bank-level security.</p>
+                    </div>
+                    <a href="#" class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+                        Learn more
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                        </svg>
+                    </a>
+                </div>
+
+                {{-- Shop by Category + Recommended for you (combined card with divider) --}}
+                <div class="rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+
+                    {{-- Shop by Category section --}}
+                    <div class="p-5 sm:p-6">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-semibold text-zinc-900">Shop by Category</h3>
+                            <a href="{{ route('home') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-8">
+                            @foreach ([
+                                ['Gift Cards', 'gift cards.svg',   'bg-pink-500',     null],
+                                ['eSIMs',      'esim.svg',         'bg-sky-500',      null],
+                                ['Flights',    'flight 2.svg',     'bg-indigo-500',   'flight.svg'],
+                                ['Stays',      'stay 2.svg',       'bg-orange-500',   'stay.svg'],
+                                ['Topups',     'topup1.svg',       'bg-emerald-500',  null],
+                                ['Bills',      'bill payment.svg', 'bg-teal-500',     'Bills 2.svg'],
+                                ['Gaming',     'Gaming.svg',       'bg-fuchsia-500',  'gaming two.svg'],
+                                ['More',       'More.svg',         'bg-blue-500',     'more two.svg'],
+                            ] as [$label, $icon, $bg, $hoverIcon])
+                                <a href="#" class="group flex flex-col items-center gap-2 text-center">
+                                    <span class="flex h-14 w-14 items-center justify-center rounded-full {{ $bg }} transition-transform group-hover:scale-105">
+                                        @if ($hoverIcon)
+                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
+                                            <img src="{{ asset('assets/' . rawurlencode($hoverIcon)) }}" alt="" class="hidden h-6 w-6 brightness-0 invert group-hover:block" loading="lazy">
+                                        @else
+                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
+                                        @endif
+                                    </span>
+                                    <span class="text-xs font-medium text-zinc-700 transition-colors group-hover:text-blue-700">{{ $label }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Divider --}}
+                    <div class="border-t border-zinc-100"></div>
+
+                    {{-- Recommended for you section --}}
+                    <div class="p-5 sm:p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-base font-semibold text-zinc-900">Recommended for you</h3>
+                                <p class="mt-0.5 text-xs text-zinc-600">Based on your recent activity</p>
+                            </div>
+                            <a href="#" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+                                View all
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                                </svg>
+                            </a>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            @foreach ([
+                                ['Netflix Gift Card',    'Worldwide',     '$15.00', 'netflix.webp'],
+                                ['Google Play Gift Card', 'USA',          '$10.00', 'googleplay.png'],
+                                ['Airalo eSIM',          'USA · 10GB',    '$4.50',  'esim.svg'],
+                                ['MTN Ghana Airtime',    'GHS 50',        '$12.50', 'mobile.svg'],
+                            ] as [$name, $tag, $price, $icon])
+                                <a href="#" class="group flex flex-col gap-3 rounded-2xl bg-blue-100 p-4 transition-colors hover:bg-blue-200">
+                                    <div class="flex items-start gap-3">
+                                        <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
+                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-10 w-10 object-contain" loading="lazy">
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $name }}</p>
+                                            <p class="truncate text-[11px] text-zinc-600">{{ $tag }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-end justify-between">
+                                        <div>
+                                            <p class="text-[10px] uppercase tracking-wider text-zinc-600">From</p>
+                                            <p class="text-base font-bold text-zinc-900">{{ $price }}</p>
+                                        </div>
+                                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 transition-colors group-hover:bg-blue-700">
+                                            <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 brightness-0 invert" loading="lazy">
+                                        </span>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- RIGHT RAIL: points, gift promo, recent transactions --}}
+            <div class="flex flex-col gap-6 lg:col-span-4">
+
+                {{-- RShop Points card --}}
+                <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-blue-100">
+                            <img src="{{ asset('assets/PWAicon.png') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-zinc-900">RShop Points</p>
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-2xl font-bold tracking-tight text-zinc-900">2,650</span>
+                                <span class="rounded-[5px] bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Gold Member</span>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                {{-- Placeholder line chart (SVG) — one line per category/service --}}
-                <svg viewBox="0 0 600 240" class="mt-6 h-56 w-full" preserveAspectRatio="none">
-                    {{-- Gridlines (horizontal) --}}
-                    @foreach ([0, 60, 120, 180, 240] as $y)
-                        <line x1="0" y1="{{ $y }}" x2="600" y2="{{ $y }}" stroke="#e4e4e7" stroke-width="1" stroke-dasharray="2,4"/>
-                    @endforeach
-
-                    {{-- Gift Cards (pink) --}}
-                    <polyline points="0,180 40,165 80,155 120,140 160,150 200,135 240,130 280,120 320,115 360,105 400,95 440,85 480,75 520,70 600,60" fill="none" stroke="#ec4899" stroke-width="2"/>
-                    {{-- eSIMs (blue) --}}
-                    <polyline points="0,170 40,160 80,150 120,135 160,140 200,125 240,115 280,108 320,110 360,100 400,90 440,85 480,80 520,72 600,68" fill="none" stroke="#3b82f6" stroke-width="2"/>
-                    {{-- Mobile Top-ups (emerald) --}}
-                    <polyline points="0,200 40,185 80,180 120,165 160,170 200,160 240,150 280,145 320,140 360,135 400,125 440,120 480,118 520,110 600,105" fill="none" stroke="#10b981" stroke-width="2"/>
-                    {{-- Bill Payments (amber) --}}
-                    <polyline points="0,215 40,210 80,205 120,200 160,205 200,200 240,195 280,193 320,188 360,185 400,182 440,178 480,175 520,170 600,168" fill="none" stroke="#f59e0b" stroke-width="2"/>
-                    {{-- Flights (red) --}}
-                    <polyline points="0,190 40,175 80,170 120,160 160,165 200,155 240,140 280,135 320,130 360,118 400,110 440,100 480,95 520,82 600,75" fill="none" stroke="#ef4444" stroke-width="2"/>
-                    {{-- Stays (teal) --}}
-                    <polyline points="0,205 40,195 80,188 120,175 160,180 200,170 240,160 280,155 320,148 360,140 400,135 440,128 480,122 520,118 600,110" fill="none" stroke="#14b8a6" stroke-width="2"/>
-                </svg>
-
-                <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-500">
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-pink-500"></span>Gift Cards</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-blue-500"></span>eSIMs</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Mobile Top-ups</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-amber-500"></span>Bill Payments</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-red-500"></span>Flights</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-teal-500"></span>Stays</span>
-                </div>
-            </div>
-
-        </div>
-
-        {{-- ─── Tables row (real data) ──────────────────────────────── --}}
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-
-            {{-- Latest Users --}}
-            <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-center justify-between border-b border-zinc-200 p-5">
-                    <div class="flex items-center gap-2">
-                        <img src="{{ asset('assets/' . rawurlencode('user.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
-                        <h2 class="text-base font-semibold text-zinc-900">Latest Users</h2>
+                    <p class="mt-4 text-xs text-zinc-600">You're 350 points away from Platinum level</p>
+                    <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                        <div class="h-full rounded-full bg-blue-600" style="width: 88%;"></div>
                     </div>
-                    <a href="#" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
+                    <p class="mt-1.5 text-right text-[10px] font-semibold text-zinc-600">2,650 / 3,000</p>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-[11px]">
-                        <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-500">
-                            <tr>
-                                <th class="px-5 py-3 font-semibold">User</th>
-                                <th class="px-5 py-3 font-semibold">Status</th>
-                                <th class="px-5 py-3 font-semibold">Registered</th>
-                                <th class="px-5 py-3 text-right font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-zinc-100">
-                            @forelse ($latestUsers as $user)
-                                <tr>
-                                    <td class="px-5 py-3">
-                                        <div class="flex items-center gap-3">
-                                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                                                {{ $user->initials() }}
-                                            </span>
-                                            <div class="leading-tight">
-                                                <p class="text-[11px] font-semibold text-zinc-900">{{ $user->name }}</p>
-                                                <p class="text-[10px] text-zinc-500">{{ $user->email }}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-5 py-3">
-                                        @if ($user->email_verified_at)
-                                            <span class="inline-flex items-center rounded-[5px] bg-emerald-400 px-2.5 py-0.5 text-xs font-semibold text-white">Active</span>
-                                        @else
-                                            <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Pending</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $user->created_at->format('M j, Y') }}</td>
-                                    <td class="px-5 py-3 text-right">
-                                        <a href="#" class="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View</a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="px-5 py-12 text-center text-sm text-zinc-500">No users yet.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {{-- Latest Transactions --}}
-            <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-center justify-between border-b border-zinc-200 p-5">
-                    <div class="flex items-center gap-2">
-                        <img src="{{ asset('assets/' . rawurlencode('Latest transactions.png')) }}" alt="" class="h-5 w-5" loading="lazy">
-                        <h2 class="text-base font-semibold text-zinc-900">Latest Transactions</h2>
+                {{-- Give the Perfect Gift promo --}}
+                <div class="relative overflow-hidden rounded-2xl bg-blue-950 p-5 text-white">
+                    <div class="relative z-10 max-w-[60%]">
+                        <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
+                        <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
+                        <button type="button" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-blue-100">
+                            Shop Now
+                            <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
+                        </button>
                     </div>
-                    <a href="#" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
+
+                    <img
+                        src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
+                        alt=""
+                        class="pointer-events-none absolute -right-6 -bottom-4 h-44 w-auto select-none object-contain drop-shadow-2xl"
+                        loading="lazy"
+                    >
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-[11px]">
-                        <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-500">
-                            <tr>
-                                <th class="px-5 py-3 font-semibold">ID</th>
-                                <th class="px-5 py-3 font-semibold">Customer</th>
-                                <th class="px-5 py-3 font-semibold">Product</th>
-                                <th class="px-5 py-3 font-semibold">Amount</th>
-                                <th class="px-5 py-3 font-semibold">Status</th>
-                                <th class="px-5 py-3 font-semibold">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-zinc-100">
-                            @forelse ($latestOrders as $order)
-                                @php
-                                    $product = $order->items->first()?->product_name ?? '—';
-                                    $statusValue = $order->status->value ?? 'pending';
-                                    $statusClasses = match ($statusValue) {
-                                        'completed' => 'bg-emerald-50 text-emerald-700',
-                                        'failed', 'cancelled' => 'bg-red-50 text-red-700',
-                                        'refunded' => 'bg-zinc-100 text-zinc-700',
-                                        default => 'bg-amber-50 text-amber-700',
-                                    };
-                                @endphp
-                                <tr>
-                                    <td class="px-5 py-3 text-[11px] font-mono text-zinc-600">#{{ $order->order_number }}</td>
-                                    <td class="px-5 py-3 text-[11px] font-medium text-zinc-900">{{ $order->user?->name ?? '—' }}</td>
-                                    <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $product }}</td>
-                                    <td class="px-5 py-3 text-[11px] font-semibold text-zinc-900">${{ number_format((float) $order->total, 2) }}</td>
-                                    <td class="px-5 py-3">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusClasses }}">
-                                            {{ $order->status->label() }}
-                                        </span>
-                                    </td>
-                                    <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $order->created_at->format('M j, Y') }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="px-5 py-12 text-center text-sm text-zinc-500">No transactions yet.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                {{-- Recent Transactions (stretches to match left column height) --}}
+                <div class="flex flex-1 flex-col rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-semibold text-zinc-900">Recent Transactions</h3>
+                        <a href="#" class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                    </div>
+
+                    <ul class="mt-4 flex-1 space-y-3">
+                        @foreach ([
+                            ['Wallet Funded',          'via Momo',         '+ $100.00', 'incoming', 'Today, 10:45 AM',    'global svg.svg'],
+                            ['Spotify Gift Card',      '$10',              '- $10.00',  'outgoing', 'Today, 09:15 AM',    'spotify.webp'],
+                            ['MTN Airtime Topup',      'GHS 50',           '- $6.25',   'outgoing', 'Yesterday, 6:20 PM', 'mobile.svg'],
+                            ['Apple iTunes Gift Card', '$25',              '- $25.00',  'outgoing', 'Yesterday, 2:10 PM', 'apple.png'],
+                            ['Wallet Funded',          'via Bank Transfer', '+ $50.00', 'incoming', 'May 13, 2026',       'global svg.svg'],
+                            ['Referral Bonus',         'From John D.',     '+ $5.00',   'incoming', 'May 12, 2026',       'new user svg.svg'],
+                        ] as [$name, $meta, $amount, $type, $time, $icon])
+                            <li class="flex items-center gap-3">
+                                <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
+                                    <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $name }}</p>
+                                    <p class="truncate text-[11px] text-zinc-600">{{ $meta }}</p>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <p class="text-sm font-bold {{ $type === 'incoming' ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $amount }}</p>
+                                    <p class="text-[10px] text-zinc-600">{{ $time }}</p>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
                 </div>
             </div>
-
         </div>
 
     </div>
-
-</x-layouts.app>
+    </div> {{-- /skeleton-wrap customer dashboard --}}
+</x-layouts.dashboard>

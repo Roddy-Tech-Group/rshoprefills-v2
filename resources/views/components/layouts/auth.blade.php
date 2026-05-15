@@ -47,15 +47,15 @@
 
                 {{-- Brand --}}
                 <a href="{{ route('home') }}" wire:navigate class="relative z-10 flex flex-col rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/40">
-                    <span class="flex h-11 items-center overflow-hidden">
+                    <span class="flex h-12 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"
                             alt="RshopRefills"
                             fetchpriority="high"
-                            class="h-[230px] w-auto max-w-none object-contain brightness-0 invert transition-opacity duration-200 group-hover:opacity-90"
+                            class="h-full w-auto object-contain brightness-0 invert transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
-                    <span class="pl-8 mt-1 text-[11px] font-medium leading-none text-blue-200/80">Digital Marketplace</span>
+                    <span class="mt-1 pl-1 text-[11px] font-medium leading-none text-blue-200/80">Digital Marketplace</span>
                 </a>
 
                 {{-- Middle: copy + phone --}}
@@ -136,14 +136,14 @@
             <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10 lg:px-16">
                 {{-- Mobile brand (inside the card) --}}
                 <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
-                    <span class="flex h-9 items-center overflow-hidden">
+                    <span class="flex h-10 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"
                             alt="RshopRefills"
-                            class="h-[170px] w-auto max-w-none object-contain saturate-[1.25] transition-opacity duration-200 group-hover:opacity-90"
+                            class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
-                    <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
+                    <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-600">Digital Marketplace</span>
                 </a>
 
                 {{ $slot }}

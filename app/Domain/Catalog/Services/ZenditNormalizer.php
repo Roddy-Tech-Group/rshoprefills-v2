@@ -19,8 +19,10 @@ class ZenditNormalizer implements CatalogNormalizerInterface
             ['name' => 'Gift Cards', 'type' => 'digital']
         );
 
-        // 2. Normalize Subtype -> Subcategory
-        $subtypeName = $rawItem['subtype'] ?? 'Uncategorized';
+        // 2. Normalize Subtype -> Subcategory.
+        // Zendit returns subTypes as an array; pick the first one (or fall back).
+        $subTypes = $rawItem['subTypes'] ?? [];
+        $subtypeName = is_array($subTypes) && ! empty($subTypes) ? $subTypes[0] : ($rawItem['subtype'] ?? 'Uncategorized');
         $subcategorySlug = Str::slug($subtypeName);
 
         $subcategory = Subcategory::firstOrCreate(
@@ -28,49 +30,69 @@ class ZenditNormalizer implements CatalogNormalizerInterface
             ['name' => $subtypeName, 'is_featured' => false]
         );
 
-        // 3. Determine Brand and Product Grouping
-        $brandName = $rawItem['brand'] ?? 'Unknown Brand';
+        // 3. Determine Brand and Product Grouping.
+        // Zendit exposes both a short machine key (brand) and a human label (brandName).
+        $brandKey = $rawItem['brand'] ?? 'unknown';
+        $brandLabel = $rawItem['brandName'] ?? $brandKey;
         $countryCode = strtoupper($rawItem['country'] ?? 'US');
-        $currencyCode = strtoupper($rawItem['currency'] ?? 'USD');
+
+        // Currency lives on the nested send/price objects (denominated in cents via currencyDivisor).
+        $priceBlock = $rawItem['price'] ?? [];
+        $sendBlock  = $rawItem['send']  ?? [];
+        $costBlock  = $rawItem['cost']  ?? [];
+        $currencyCode = strtoupper($priceBlock['currency'] ?? $sendBlock['currency'] ?? $rawItem['currency'] ?? 'USD');
 
         // Products are grouped by Brand + Country
-        $productSlug = Str::slug("{$brandName}-{$countryCode}-{$providerName}");
+        $productSlug = Str::slug("{$brandKey}-{$countryCode}-{$providerName}");
+
+        // Preserve any fields that were hydrated by ZenditBrandSyncService (logo, hero,
+        // brand_color, description, redeem_instructions, terms_and_conditions). The
+        // /vouchers/offers payload doesn't include those — only /brands/* does — so
+        // we mustn't blow them away on a routine catalog re-sync.
+        $existing = Product::where('slug', $productSlug)->first();
 
         $product = Product::updateOrCreate(
             [
                 'provider_name' => $providerName,
-                // We use slug as the unique grouping key here, or we could use brand + country
                 'slug' => $productSlug,
             ],
             [
                 'category_id' => $category->id,
                 'subcategory_id' => $subcategory->id,
-                'provider_reference' => null, // Grouping object has no single reference
+                'provider_reference' => null,
+                'brand_key' => $brandKey,
                 'country_code' => $countryCode,
                 'currency_code' => $currencyCode,
-                'name' => "{$brandName} ({$countryCode})",
-                'description' => $rawItem['description'] ?? "{$brandName} Gift Card for {$countryCode}",
-                'redeem_instructions' => $rawItem['redeem_instructions'] ?? null,
-                'terms_and_conditions' => $rawItem['terms'] ?? null,
-                // Keep existing logo if we already processed it, otherwise take the raw one
-                'logo_url' => Product::where('slug', $productSlug)->value('logo_url') ?? ($rawItem['logoUrl'] ?? null),
+                'name' => "{$brandLabel} ({$countryCode})",
+                'description' => $existing?->description
+                    ?: ($rawItem['shortNotes'] ?? $rawItem['notes'] ?? $rawItem['description'] ?? "{$brandLabel} Gift Card for {$countryCode}"),
+                'redeem_instructions' => $existing?->redeem_instructions ?: ($rawItem['redeem_instructions'] ?? null),
+                'terms_and_conditions' => $existing?->terms_and_conditions ?: ($rawItem['terms'] ?? null),
+                'logo_url' => $existing?->logo_url ?: ($rawItem['logoUrl'] ?? null),
+                'featured_image' => $existing?->featured_image,
+                'brand_color' => $existing?->brand_color,
             ]
         );
 
-        // 4. Create/Update Variant
+        // 4. Create/Update Variant. Zendit money fields are integer minor units; divide by currencyDivisor.
         $offerId = $rawItem['offerId'];
+        $priceType = $rawItem['priceType'] ?? 'FIXED';
 
-        // Pricing logic: For Zendit, 'cost' is wholesale, 'faceValue' is retail (usually)
-        // Note: minAmount and maxAmount dictate if it's variable.
-        $costPrice = (float) ($rawItem['cost'] ?? 0);
-        $faceValue = (float) ($rawItem['faceValue'] ?? $costPrice);
-        $minAmount = isset($rawItem['minAmount']) ? (float) $rawItem['minAmount'] : null;
-        $maxAmount = isset($rawItem['maxAmount']) ? (float) $rawItem['maxAmount'] : null;
+        $priceDiv = (float) ($priceBlock['currencyDivisor'] ?? 100);
+        $sendDiv  = (float) ($sendBlock['currencyDivisor']  ?? 100);
+        $costDiv  = (float) ($costBlock['currencyDivisor']  ?? 100);
 
-        $isVariable = false;
-        if ($minAmount !== null && $maxAmount !== null && $minAmount !== $maxAmount) {
-            $isVariable = true;
-        }
+        $faceValue   = isset($priceBlock['fixed']) ? ((float) $priceBlock['fixed']) / $priceDiv
+                     : (isset($sendBlock['fixed']) ? ((float) $sendBlock['fixed']) / $sendDiv : null);
+        $costPrice   = isset($costBlock['fixed'])  ? ((float) $costBlock['fixed'])  / $costDiv  : ($faceValue ?? 0.0);
+        $retailPrice = $faceValue ?? $costPrice;
+
+        // VARIABLE-priced cards expose min/max on the send block.
+        $minAmount = isset($sendBlock['min']) ? ((float) $sendBlock['min']) / $sendDiv : null;
+        $maxAmount = isset($sendBlock['max']) ? ((float) $sendBlock['max']) / $sendDiv : null;
+
+        $isVariable = $priceType === 'VARIABLE'
+            || ($minAmount !== null && $maxAmount !== null && $minAmount !== $maxAmount);
 
         ProductVariant::updateOrCreate(
             ['provider_offer_id' => $offerId],
@@ -80,17 +102,17 @@ class ZenditNormalizer implements CatalogNormalizerInterface
                 'currency' => $currencyCode,
                 'face_value' => $faceValue,
                 'cost_price' => $costPrice,
-                'retail_price' => $faceValue, // Default retail to face value for now
+                'retail_price' => $retailPrice,
                 'min_amount' => $minAmount,
                 'max_amount' => $maxAmount,
                 'is_variable' => $isVariable,
-                'is_available' => true, // Re-enable if it was disabled
-                'metadata' => $rawItem, // Store entire raw snapshot for debugging/future-proofing
+                'is_available' => (bool) ($rawItem['enabled'] ?? true),
+                'metadata' => $rawItem,
             ]
         );
 
-        // Optional: Dispatch a job to download the logo if we haven't already and a URL exists.
-        if (isset($rawItem['logoUrl']) && ! str_starts_with($product->logo_url, 'local/')) {
+        // Optional logo processing (Zendit offers list doesn't return one, but keep the hook for future).
+        if (! empty($rawItem['logoUrl']) && ! str_starts_with((string) $product->logo_url, 'local/')) {
             MediaProcessorJob::dispatch($product->id, $rawItem['logoUrl']);
         }
     }

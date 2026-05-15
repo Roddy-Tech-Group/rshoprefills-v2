@@ -94,7 +94,7 @@
         <div data-anim="hero-ctas" class="mt-8 flex flex-wrap items-center justify-center gap-4">
 
             {{-- Shop Gift Cards (primary) --}}
-            <a href="#" class="group inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow-lg shadow-blue-600/20 transition-transform hover:-translate-y-0.5 hover:bg-blue-700">
+            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="group inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-base font-semibold text-white shadow-lg shadow-blue-600/20 transition-transform hover:-translate-y-0.5 hover:bg-blue-700">
                 Shop Gift Cards
                 <svg viewBox="0 0 24 24" class="h-5 w-5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3H6a3 3 0 0 1 -3 -3z"/>
@@ -219,7 +219,7 @@
                             class="block min-w-0 overflow-hidden whitespace-nowrap text-left transition-all duration-500 ease-out"
                         >
                             <span class="block truncate text-[15px] font-semibold leading-tight text-zinc-900 transition-colors duration-200 group-hover:text-blue-600 sm:text-base">{{ $chip['title'] }}</span>
-                            <span class="block truncate text-[13px] leading-tight text-zinc-500">{{ $chip['subtitle'] }}</span>
+                            <span class="block truncate text-[13px] leading-tight text-zinc-600">{{ $chip['subtitle'] }}</span>
                         </span>
 
                         {{-- Arrow / Show-more button.

@@ -26,6 +26,31 @@
     --color-accent: var(--color-neutral-800);
     --color-accent-content: var(--color-neutral-800);
     --color-accent-foreground: var(--color-white);
+
+    /* Brand. Single source of truth for the primary action / link color. Tailwind's blue-600 is #2563eb,
+       but RshopRefills brand is the saturated #0044FF used on the hero glow and CTAs. The two are visually
+       close at a glance, so most components can keep using `text-blue-600`/`bg-blue-600` and only swap to
+       `text-brand`/`bg-brand` where we want the exact brand hue (hero, marketing CTAs, primary buttons). */
+    --color-brand: #0044FF;
+    --color-brand-hover: #0036cc;
+    --color-brand-50: #ebf0ff;
+    --color-brand-100: #d6e0ff;
+
+    /* Canonical radii — pick the named size in markup, not arbitrary px values. */
+    --radius-sm:  0.5rem;     /* 8px  — pills, badges, tiny chips */
+    --radius-md:  0.75rem;    /* 12px — inputs, small buttons */
+    --radius-lg:  1rem;       /* 16px — list rows, dropdown panels */
+    --radius-xl:  1.25rem;    /* 20px — primary cards (table containers, kpi cards) */
+    --radius-2xl: 1.5rem;     /* 24px — hero cards, sheet panels */
+    --radius-3xl: 1.75rem;    /* 28px — large surfaces, mobile sheets */
+
+    /* Canonical shadows — graduated by elevation; pair with ring-1 ring-zinc-100 for crispness. */
+    --shadow-card:   0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 1px 0 rgb(15 23 42 / 0.03);
+    --shadow-card-md: 0 4px 12px -2px rgb(15 23 42 / 0.06), 0 2px 4px -1px rgb(15 23 42 / 0.04);
+    --shadow-card-lg: 0 12px 28px -8px rgb(15 23 42 / 0.12), 0 4px 8px -2px rgb(15 23 42 / 0.06);
+
+    /* Standard transition. ~180ms with the Material-emphasis curve — fast but not abrupt. */
+    --ease-emphasis: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer theme {
@@ -61,17 +86,85 @@
     will-change: transform;
 }
 
-/* Livewire wire:navigate top progress bar (NProgress) — taller + brand green. */
+/* Livewire wire:navigate top progress bar (NProgress) — taller + brand blue. */
 #nprogress .bar {
-    background: #22c55e !important;
-    height: 4px !important;
+    background: #0044FF !important;
+    height: 3px !important;
 }
 #nprogress .peg {
-    box-shadow: 0 0 10px #22c55e, 0 0 5px #22c55e !important;
+    box-shadow: 0 0 10px #0044FF, 0 0 5px #0044FF !important;
 }
 #nprogress .spinner-icon {
-    border-top-color: #22c55e !important;
-    border-left-color: #22c55e !important;
+    border-top-color: #0044FF !important;
+    border-left-color: #0044FF !important;
+}
+
+/* Skeleton shimmer — apply to any element with .skeleton.
+   Uses a transform-animated pseudo-element so the animation stays on the compositor layer
+   (no paint/layout work per frame). Pairs with Tailwind utilities (h-X, w-X, rounded-X). */
+@keyframes skeletonShimmer {
+    100% { transform: translateX(100%); }
+}
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: #e4e9f0;
+}
+.skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+    will-change: transform;
+}
+/* Slightly more visible variant for cards on a tinted page background. */
+.skeleton-dark {
+    background-color: #d4dbe6;
+}
+
+/* Premium card surface — soft shadow + crisp 1px ring + smooth hover lift.
+   Use on cards that should feel "raised but quiet". Pair with `rounded-xl` or `rounded-2xl`. */
+.card-surface {
+    background-color: #ffffff;
+    box-shadow: var(--shadow-card);
+    --tw-ring-color: rgb(244 244 245 / 1);  /* zinc-100 */
+    box-shadow: var(--shadow-card), 0 0 0 1px var(--tw-ring-color);
+    transition: box-shadow 200ms var(--ease-emphasis), transform 200ms var(--ease-emphasis);
+}
+.card-surface-interactive:hover {
+    box-shadow: var(--shadow-card-md), 0 0 0 1px rgb(228 231 236 / 1);
+    transform: translateY(-1px);
+}
+
+/* Focus ring that respects the brand color without depending on Tailwind utilities each time. */
+.focus-brand:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(0 68 255 / 0.18);
+}
+
+/* Improve muted text legibility — slightly higher contrast than Tailwind's text-zinc-500
+   on light backgrounds without being heavy. Use sparingly where text-zinc-500 reads too washed out. */
+.text-muted {
+    color: #5b6472;
+}
+
+/* Staggered entrance for grouped skeletons.
+   Add `.skeleton-stagger` on a wrapper and `style="--i: N"` on each child to cascade reveals.
+   `animation-fill-mode: backwards` keeps the child invisible until its delay fires. */
+@keyframes skeletonReveal {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.skeleton-stagger > * {
+    animation: skeletonReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+}
+/* Subtle stagger variant for tighter grids (cards under 60px tall). */
+.skeleton-stagger-fast > * {
+    animation: skeletonReveal 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 35ms);
 }
 
 [data-flux-label] {

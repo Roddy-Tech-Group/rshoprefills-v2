@@ -43,14 +43,14 @@
                 <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10">
                     {{-- Brand (centered at the top) --}}
                     <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
-                        <span class="flex h-9 items-center overflow-hidden">
+                        <span class="flex h-10 items-center">
                             <img
                                 src="{{ asset('assets/Rshoprefillslogo.png') }}"
                                 alt="RshopRefills"
-                                class="h-[170px] w-auto max-w-none object-contain saturate-[1.25] transition-opacity duration-200 group-hover:opacity-90"
+                                class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                             />
                         </span>
-                        <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
+                        <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-600">Digital Marketplace</span>
                     </a>
 
                     {{ $slot }}

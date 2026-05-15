@@ -32,7 +32,7 @@
                         <span class="text-base font-bold text-zinc-900">Trustpilot</span>
                     </div>
                     <p class="text-2xl font-bold leading-none text-zinc-900">
-                        4.4<span class="text-base font-normal text-zinc-400"> / 5</span>
+                        4.4<span class="text-base font-normal text-zinc-600"> / 5</span>
                     </p>
                 </div>
 
@@ -70,7 +70,7 @@
                             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">{{ $initials }}</span>
                             <div class="min-w-0 leading-tight">
                                 <p class="truncate text-sm font-semibold text-zinc-900">{{ $name }}</p>
-                                <p class="text-xs text-zinc-500">{{ $date }}</p>
+                                <p class="text-xs text-zinc-600">{{ $date }}</p>
                             </div>
                         </div>
                         <div class="flex shrink-0 items-center gap-1">
