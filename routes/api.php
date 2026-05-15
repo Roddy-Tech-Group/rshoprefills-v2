@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Storefront\CartController;
 use App\Http\Controllers\Api\Storefront\CatalogController;
 use App\Http\Controllers\Api\Storefront\EsimCatalogController;
 use App\Http\Controllers\Api\UserDashboardController;
@@ -32,6 +33,16 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
     // eSIM Specific Flow
     Route::get('esims/countries', [EsimCatalogController::class, 'countries'])->name('esims.countries');
     Route::get('esims/{slug}', [EsimCatalogController::class, 'show'])->name('esims.show');
+
+    // Cart Flow
+    Route::prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', [CartController::class, 'show'])->name('show');
+        Route::post('/items', [CartController::class, 'addItem'])->name('items.add');
+        Route::patch('/items/{id}', [CartController::class, 'updateItem'])->name('items.update');
+        Route::delete('/items/{id}', [CartController::class, 'removeItem'])->name('items.remove');
+        Route::delete('/', [CartController::class, 'clear'])->name('clear');
+        Route::post('/merge', [CartController::class, 'merge'])->name('merge');
+    });
 });
 
 // Protected Dashboard & Wallet APIs
