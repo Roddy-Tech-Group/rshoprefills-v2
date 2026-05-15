@@ -307,3 +307,147 @@ if (document.readyState === 'loading') {
 
 // Re-run on Livewire SPA navigation so animations replay on the new page.
 document.addEventListener('livewire:navigated', bootAll);
+
+/**
+ * Shared locale Alpine component used by both the storefront and customer-dashboard
+ * layouts. Owns: locale modal open state, country (name + flag + ISO code), language,
+ * and currency (code + symbol). Persists to localStorage so the user's preferences
+ * survive page navigation. When the user changes country or currency AND they're on
+ * a shop page that supports those URL filters (currently /gift-cards), it pushes
+ * `?country=` and `?currency=` and reloads via Livewire's wire:navigate so the page
+ * re-renders with the filter applied.
+ */
+/**
+ * Live brand search dropdown for the storefront nav. Hits /api/search/brands?q=
+ * with a small debounce, renders a dropdown of matching brands while the user
+ * types. Pressing Enter submits the form to /gift-cards?q= for the full
+ * results page.
+ */
+window.navBrandSearch = function () {
+    return {
+        query: '',
+        results: [],
+        open: false,
+        loading: false,
+        _debounce: null,
+        _aborter: null,
+
+        onInput() {
+            const q = this.query.trim();
+            if (q.length < 2) {
+                this.results = [];
+                this.open = false;
+                this.loading = false;
+                if (this._aborter) this._aborter.abort();
+                return;
+            }
+            this.open = true;
+            this.loading = true;
+            clearTimeout(this._debounce);
+            this._debounce = setTimeout(() => this.fetchResults(q), 200);
+        },
+
+        async fetchResults(q) {
+            // Abort any in-flight request so we don't race-condition stale results.
+            if (this._aborter) this._aborter.abort();
+            this._aborter = new AbortController();
+
+            try {
+                const res = await fetch('/api/search/brands?q=' + encodeURIComponent(q), {
+                    signal: this._aborter.signal,
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (! res.ok) {
+                    this.results = [];
+                    this.loading = false;
+                    return;
+                }
+                this.results = await res.json();
+            } catch (err) {
+                if (err.name === 'AbortError') return; // expected when typing fast
+                this.results = [];
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        clear() {
+            this.query = '';
+            this.results = [];
+            this.open = false;
+            this.loading = false;
+            this.$refs.search.focus();
+        },
+    };
+};
+
+window.storefrontLocale = function () {
+    // Pages that read country/currency from the URL. The listing and every brand-level
+    // detail page (e.g. /gift-cards/apple) both honour ?country=XX so flipping the locale
+    // modal reloads either one with the new filters applied.
+    const SHOP_PATH_PREFIXES = ['/gift-cards'];
+
+    const isShopPath = (path) => {
+        return SHOP_PATH_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
+    };
+
+    const read = (key, fallback) => {
+        try {
+            const v = localStorage.getItem('locale.' + key);
+            return v === null ? fallback : v;
+        } catch (_) {
+            return fallback;
+        }
+    };
+
+    return {
+        localeModalOpen: false,
+
+        country:        read('country',        'United States'),
+        countryFlag:    read('countryFlag',    '🇺🇸'),
+        countryCode:    read('countryCode',    'US'),
+        language:       read('language',       'English'),
+        currency:       read('currency',       'USD'),
+        currencySymbol: read('currencySymbol', '$'),
+
+        activeCategory: 'Gift Cards',
+
+        init() {
+            const save = (key) => (val) => {
+                try { localStorage.setItem('locale.' + key, val ?? ''); } catch (_) {}
+            };
+
+            // Persist each piece independently.
+            this.$watch('country',        save('country'));
+            this.$watch('countryFlag',    save('countryFlag'));
+            this.$watch('countryCode',    save('countryCode'));
+            this.$watch('language',       save('language'));
+            this.$watch('currency',       save('currency'));
+            this.$watch('currencySymbol', save('currencySymbol'));
+
+            // When country or currency change AND the user is on a filterable shop page,
+            // navigate to the same path with the updated URL params so the catalog reloads.
+            const reloadIfShop = () => {
+                const path = window.location.pathname;
+                if (!SHOP_PATHS_WITH_FILTERS.includes(path)) return;
+
+                const url = new URL(window.location.href);
+                if (this.countryCode) url.searchParams.set('country', this.countryCode);
+                else url.searchParams.delete('country');
+
+                if (this.currency) url.searchParams.set('currency', this.currency);
+                else url.searchParams.delete('currency');
+
+                // Livewire's SPA navigation if available, otherwise hard reload.
+                if (window.Livewire && typeof window.Livewire.navigate === 'function') {
+                    window.Livewire.navigate(url.toString());
+                } else {
+                    window.location.href = url.toString();
+                }
+            };
+
+            this.$watch('countryCode', reloadIfShop);
+            this.$watch('currency',    reloadIfShop);
+        },
+    };
+};

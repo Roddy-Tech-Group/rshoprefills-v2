@@ -45,7 +45,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
             </svg>
         </h1>
-        <p class="mt-2 text-center text-base text-zinc-500">Join RshopRefills and start shopping today</p>
+        <p class="mt-2 text-center text-base text-zinc-600">Join RshopRefills and start shopping today</p>
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 
@@ -65,7 +65,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         {{-- "or" divider --}}
         <div class="my-4 flex items-center gap-4 sm:my-6">
             <span class="h-px flex-1 bg-zinc-200"></span>
-            <span class="text-sm uppercase tracking-wider text-zinc-400">or</span>
+            <span class="text-sm uppercase tracking-wider text-zinc-600">or</span>
             <span class="h-px flex-1 bg-zinc-200"></span>
         </div>
 
@@ -76,7 +76,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <div>
                 <label for="name" class="mb-1.5 block text-base font-medium text-zinc-700">Full Name</label>
                 <div class="relative">
-                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                         </svg>
@@ -90,7 +90,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         autofocus
                         autocomplete="name"
                         placeholder="Enter your full name"
-                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
                 @error('name') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
@@ -100,7 +100,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <div>
                 <label for="email" class="mb-1.5 block text-base font-medium text-zinc-700">Email Address</label>
                 <div class="relative">
-                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                         </svg>
@@ -113,7 +113,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="email"
                         placeholder="Enter your email address"
-                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
                 @error('email') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
@@ -123,7 +123,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <div x-data="{ show: false }">
                 <label for="password" class="mb-1.5 block text-base font-medium text-zinc-700">Password</label>
                 <div class="relative">
-                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                         </svg>
@@ -136,12 +136,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="new-password"
                         placeholder="Create a password"
-                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                     <button
                         type="button"
                         @click="show = !show"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 rounded text-zinc-400 hover:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 rounded text-zinc-600 hover:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                         :aria-label="show ? 'Hide password' : 'Show password'"
                     >
                         <svg x-show="!show" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -160,7 +160,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
             <div x-data="{ show: false }">
                 <label for="password_confirmation" class="mb-1.5 block text-base font-medium text-zinc-700">Confirm Password</label>
                 <div class="relative">
-                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                         </svg>
@@ -173,12 +173,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="new-password"
                         placeholder="Re-enter your password"
-                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                     <button
                         type="button"
                         @click="show = !show"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 rounded text-zinc-400 hover:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 rounded text-zinc-600 hover:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                         :aria-label="show ? 'Hide password' : 'Show password'"
                     >
                         <svg x-show="!show" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -214,7 +214,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         {{-- Socials divider --}}
         <div class="my-3 flex items-center gap-4 sm:my-5">
             <span class="h-px flex-1 bg-zinc-200"></span>
-            <span class="text-sm text-zinc-400">Connect with us on our socials</span>
+            <span class="text-sm text-zinc-600">Connect with us on our socials</span>
             <span class="h-px flex-1 bg-zinc-200"></span>
         </div>
 
@@ -243,7 +243,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
 
         {{-- Security note --}}
-        <div class="mt-4 flex items-center justify-center gap-1.5 text-sm text-zinc-500 sm:mt-6">
+        <div class="mt-4 flex items-center justify-center gap-1.5 text-sm text-zinc-600 sm:mt-6">
             <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152A11.959 11.959 0 0 1 12 2.714Z" />
             </svg>

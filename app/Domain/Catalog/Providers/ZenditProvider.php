@@ -24,14 +24,14 @@ class ZenditProvider implements ProviderInterface
 
     public function fetchCatalog(int $page = 1, int $limit = 100): array
     {
-        // Add query parameter to filter specifically for gift cards as per this phase's requirement.
-        // If Zendit provides a 'type' or 'subtype' filter, it should be used here.
-        // For now, we assume standard pagination.
+        // Zendit paginates by _offset / _limit (NOT page / limit), and gift cards are scoped via the
+        // /vouchers/offers endpoint (not a generic /catalog/offers with a type filter).
+        // Reference: https://developers.zendit.io/api  -> GET /v1/vouchers/offers
         $response = Http::withToken($this->apiKey)
-            ->get("{$this->baseUrl}/catalog/offers", [
-                'page' => $page,
-                'limit' => $limit,
-                'type' => 'gift_card', // Example: restricting fetch to gift cards
+            ->acceptJson()
+            ->get("{$this->baseUrl}/vouchers/offers", [
+                '_limit' => $limit,
+                '_offset' => max(0, ($page - 1) * $limit),
             ]);
 
         if ($response->failed()) {
@@ -48,12 +48,81 @@ class ZenditProvider implements ProviderInterface
     public function fetchOfferDetails(string $providerReference): array
     {
         $response = Http::withToken($this->apiKey)
-            ->get("{$this->baseUrl}/catalog/offers/{$providerReference}");
+            ->acceptJson()
+            ->get("{$this->baseUrl}/vouchers/offers/{$providerReference}");
 
         if ($response->failed()) {
             throw new \RuntimeException("Failed to fetch Zendit offer: {$providerReference}");
         }
 
-        return $response->json('data'); // Assuming data wraps the object
+        // Zendit returns the offer object directly (no "data" wrapper).
+        return $response->json();
+    }
+
+    /**
+     * Fetch a brand's marketing/media assets from Zendit.
+     *
+     * Returns: brand, brandName, brandLogo, brandLogoExtension, brandBigImage,
+     * brandGiftImage, brandColor, brandInfoPdf, description, inputMasks,
+     * redemptionInstructions, requiredFieldsLabels.
+     *
+     * Reference: GET /v1/brands/{brand}
+     */
+    public function fetchBrand(string $brandKey): array
+    {
+        $response = Http::withToken($this->apiKey)
+            ->acceptJson()
+            ->connectTimeout(30)
+            ->timeout(60)
+            ->retry(3, 500, throw: false)
+            ->get("{$this->baseUrl}/brands/{$brandKey}");
+
+        if ($response->failed()) {
+            Log::warning('Zendit Brand Fetch Failed', [
+                'brand' => $brandKey,
+                'status' => $response->status(),
+                'response' => $response->json(),
+            ]);
+
+            return [];
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Fetch a brand's redemption instructions + terms for a specific country.
+     *
+     * Returns: country, deliveryType, language, redemptionInstructions, terms,
+     * redemptionVideo.
+     *
+     * Reference: GET /v1/brands/{brand}/redemptionInstructions
+     */
+    public function fetchRedemptionInstructions(string $brandKey, ?string $countryCode = null): array
+    {
+        $query = [];
+        if ($countryCode) {
+            $query['country'] = strtoupper($countryCode);
+        }
+
+        $response = Http::withToken($this->apiKey)
+            ->acceptJson()
+            ->connectTimeout(30)
+            ->timeout(60)
+            ->retry(3, 500, throw: false)
+            ->get("{$this->baseUrl}/brands/{$brandKey}/redemptionInstructions", $query);
+
+        if ($response->failed()) {
+            Log::warning('Zendit Redemption Instructions Fetch Failed', [
+                'brand' => $brandKey,
+                'country' => $countryCode,
+                'status' => $response->status(),
+                'response' => $response->json(),
+            ]);
+
+            return [];
+        }
+
+        return $response->json() ?? [];
     }
 }

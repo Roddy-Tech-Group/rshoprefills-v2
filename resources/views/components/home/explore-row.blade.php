@@ -10,7 +10,7 @@
     <div class="mb-4 flex items-end justify-between gap-4">
         <div class="min-w-0">
             <h2 class="text-lg font-bold text-zinc-900 sm:text-xl">eSIMs, flights & stays</h2>
-            <p class="mt-0.5 text-base text-zinc-500">Connect, explore, and relax.</p>
+            <p class="mt-0.5 text-base text-zinc-600">Connect, explore, and relax.</p>
         </div>
         <a
             href="#"
@@ -90,7 +90,7 @@
             <div class="absolute inset-x-0 bottom-0 h-[35%] bg-black/55 backdrop-blur-[2px]" aria-hidden="true"></div>
             <div class="absolute inset-x-0 bottom-0 p-5 text-white">
                 <div class="flex items-center gap-2">
-                    <img src="{{ asset('assets/' . rawurlencode('flight.svg')) }}" alt="" class="h-5 w-5 shrink-0 brightness-0 invert" loading="lazy">
+                    <img src="{{ asset('assets/' . rawurlencode('flight 2.svg')) }}" alt="" class="h-5 w-5 shrink-0 brightness-0 invert" loading="lazy">
                     <h3 class="text-xl font-bold leading-tight">Flights</h3>
                 </div>
                 <p class="mt-1 text-sm leading-snug text-white/90">Book flights effortlessly and pay with crypto from anywhere in the world.</p>
@@ -126,7 +126,7 @@
             <div class="absolute inset-x-0 bottom-0 h-[35%] bg-black/55 backdrop-blur-[2px]" aria-hidden="true"></div>
             <div class="absolute inset-x-0 bottom-0 p-5 text-white">
                 <div class="flex items-center gap-2">
-                    <img src="{{ asset('assets/' . rawurlencode('stay.svg')) }}" alt="" class="h-5 w-5 shrink-0 brightness-0 invert" loading="lazy">
+                    <img src="{{ asset('assets/' . rawurlencode('stay 2.svg')) }}" alt="" class="h-5 w-5 shrink-0 brightness-0 invert" loading="lazy">
                     <h3 class="text-xl font-bold leading-tight">Stays</h3>
                 </div>
                 <p class="mt-1 text-sm leading-snug text-white/90">Turn digital currency into real-world travel, comfort, and unforgettable experiences.</p>

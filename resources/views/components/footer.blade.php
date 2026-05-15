@@ -8,17 +8,17 @@
             {{-- Brand column --}}
             <div class="col-span-2 lg:col-span-4">
                 <a href="{{ route('home') }}" wire:navigate class="-ml-3 flex flex-col rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
-                    <span class="flex h-11 items-center overflow-hidden">
+                    <span class="flex h-12 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"
                             alt="RshopRefills"
-                            class="h-[230px] w-auto max-w-none object-contain saturate-[1.25] transition-opacity duration-200 group-hover:opacity-90"
+                            class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
-                    <span class="pl-8 mt-1 text-[11px] font-medium leading-none text-zinc-500">Digital Marketplace</span>
+                    <span class="mt-1 pl-1 text-[11px] font-medium leading-none text-zinc-600">Digital Marketplace</span>
                 </a>
 
-                <p class="mt-6 max-w-sm text-base leading-relaxed text-zinc-500">
+                <p class="mt-6 max-w-sm text-base leading-relaxed text-zinc-600">
                     Your digital world, all in one place. Gift cards, eSIMs, top-ups, flights and more. Instant, secure, worldwide.
                 </p>
 
@@ -51,12 +51,12 @@
             <nav class="lg:col-span-2" aria-label="Shop">
                 <h3 class="text-base font-semibold text-zinc-900">Shop</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Gift Cards</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">eSIMs</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Mobile top up</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Bill payments</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Flights</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Stays</a></li>
+                    <li><a href="{{ route('shop.gift-cards') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Gift Cards</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">eSIMs</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Mobile top up</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Bill payments</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Flights</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Stays</a></li>
                 </ul>
             </nav>
 
@@ -64,11 +64,11 @@
             <nav class="lg:col-span-2" aria-label="Help">
                 <h3 class="text-base font-semibold text-zinc-900">Help</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Help center</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Contact us</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">How it works</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Order status</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Refund policy</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Help center</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Contact us</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">How it works</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Order status</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Refund policy</a></li>
                 </ul>
             </nav>
 
@@ -76,10 +76,10 @@
             <nav class="lg:col-span-2" aria-label="Company">
                 <h3 class="text-base font-semibold text-zinc-900">Company</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">About us</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Blog</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Careers</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Press</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">About us</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Blog</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Careers</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Press</a></li>
                 </ul>
             </nav>
 
@@ -87,10 +87,10 @@
             <nav class="lg:col-span-2" aria-label="Legal">
                 <h3 class="text-base font-semibold text-zinc-900">Legal</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Privacy</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Terms of Service</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Cookie Policy</a></li>
-                    <li><a href="#" class="text-zinc-500 transition-colors hover:text-zinc-900">Compliance</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Privacy</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Terms of Service</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Cookie Policy</a></li>
+                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Compliance</a></li>
                 </ul>
             </nav>
 
@@ -99,16 +99,53 @@
         {{-- Divider --}}
         <div class="my-10 h-px bg-zinc-200" aria-hidden="true"></div>
 
+        {{-- Utility row: theme picker, version, cookie settings --}}
+        <div class="flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
+            {{-- Modern segmented theme picker --}}
+            <div x-data class="inline-flex items-center gap-2.5">
+                <span class="text-xs font-semibold uppercase tracking-wider text-zinc-600">Theme</span>
+                <div class="inline-flex items-center rounded-full bg-zinc-100 p-0.5 ring-1 ring-zinc-200">
+                    @foreach ([
+                        ['value' => 'light',  'label' => 'Light',  'path' => 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z'],
+                        ['value' => 'dark',   'label' => 'Dark',   'path' => 'M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z'],
+                        ['value' => 'system', 'label' => 'System', 'path' => 'M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25'],
+                    ] as $opt)
+                        <button
+                            type="button"
+                            @click="$flux.appearance = '{{ $opt['value'] }}'"
+                            :class="$flux.appearance === '{{ $opt['value'] }}' ? 'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' : 'text-zinc-600 hover:bg-white/70 hover:text-zinc-900 hover:shadow-sm'"
+                            class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95"
+                            :aria-pressed="$flux.appearance === '{{ $opt['value'] }}'"
+                        >
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $opt['path'] }}"/>
+                            </svg>
+                            {{ $opt['label'] }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            <span class="hidden h-4 w-px bg-zinc-200 sm:inline-block" aria-hidden="true"></span>
+
+            <p class="text-xs">Version 2.0.0</p>
+
+            <a href="#" class="text-xs font-medium transition-colors hover:text-zinc-900">Cookie settings</a>
+        </div>
+
+        {{-- Divider --}}
+        <div class="my-6 h-px bg-zinc-200" aria-hidden="true"></div>
+
         {{-- Bottom bar --}}
-        <div class="flex flex-col gap-4 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
             <p>&copy; 2026 RshopRefills. All rights reserved.</p>
 
             <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
                 {{-- Locale chip: opens the same modal the nav uses --}}
                 <button type="button" @click="localeModalOpen = true" class="flex items-center gap-2 transition-colors hover:text-zinc-900 focus:outline-none focus-visible:text-zinc-900">
-                    <span class="text-base leading-none" aria-hidden="true" x-text="countryFlag">🇨🇲</span>
-                    <span x-text="country">Cameroon</span>
-                    <span class="text-zinc-300" aria-hidden="true">/</span>
+                    <span class="text-base leading-none" aria-hidden="true" x-text="countryFlag">🇺🇸</span>
+                    <span x-text="country">United States</span>
+                    <span class="text-zinc-600" aria-hidden="true">/</span>
                     <span x-text="language">English</span>
                 </button>
                 <a href="#" class="transition-colors hover:text-zinc-900">Sitemap</a>

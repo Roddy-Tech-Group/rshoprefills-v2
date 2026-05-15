@@ -21,9 +21,11 @@ class CatalogSyncService
     {
         $rawPayload = $this->provider->fetchCatalog($page, $limit);
 
-        // Zendit payload typically has a "data" array for items and a "meta" object for pagination
-        $items = $rawPayload['data'] ?? [];
-        $meta = $rawPayload['meta'] ?? ['totalCount' => 0, 'page' => 1];
+        // Zendit's catalog endpoints (/vouchers/offers, /esim/offers, /topups/offers) return:
+        //   { "total": int, "limit": int, "offset": int, "list": [ ...items... ] }
+        // Fall back to legacy "data" / "meta" keys so this works if any provider returns the older shape.
+        $items = $rawPayload['list'] ?? $rawPayload['data'] ?? [];
+        $total = $rawPayload['total'] ?? ($rawPayload['meta']['totalCount'] ?? 0);
 
         $processedItems = 0;
 
@@ -34,8 +36,8 @@ class CatalogSyncService
 
         return [
             'processed' => $processedItems,
-            'has_more' => isset($meta['totalCount']) && ($page * $limit) < $meta['totalCount'],
-            'total' => $meta['totalCount'] ?? 0,
+            'has_more' => $total > 0 && ($page * $limit) < $total,
+            'total' => $total,
         ];
     }
 }

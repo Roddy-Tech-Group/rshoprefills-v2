@@ -5,16 +5,156 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
     use HasFactory, SoftDeletes;
+
+    /**
+     * Customer-facing display label for a brand. Reads config/brand_display_names.php
+     * for overrides ("Apple" → "Everything Apple") and falls back to a humanised
+     * version of the raw brand_key ("MobileLegends" → "Mobile Legends").
+     */
+    public static function brandDisplayName(?string $brandKey): string
+    {
+        if (! $brandKey) {
+            return '';
+        }
+
+        $alias = config("brand_display_names.aliases.{$brandKey}");
+        if ($alias) {
+            return $alias;
+        }
+
+        // CamelCase / PascalCase → "Spaced Words". Single-word keys unchanged.
+        return preg_replace('/(?<=[a-z])(?=[A-Z])/', ' ', $brandKey);
+    }
+
+    /**
+     * URL-safe slug derived from brand_key for the brand-level detail page.
+     * "MobileLegends" → "mobile-legends", "Apple" → "apple", "GooglePlay" → "google-play".
+     */
+    public static function brandSlug(string $brandKey): string
+    {
+        return Str::kebab($brandKey);
+    }
+
+    /**
+     * Best logo URL for a brand. Prefers a handcrafted local asset (mapped in
+     * config/brand_assets.php) over Zendit's `logo_url`, which is sometimes a
+     * wide gray placeholder. Falls back to the raw `logo_url` then to null.
+     */
+    public static function brandLogoUrl(?string $brandKey, ?string $fallback = null): ?string
+    {
+        if ($brandKey) {
+            $local = config("brand_assets.logos.{$brandKey}");
+            if ($local) {
+                return asset('assets/' . $local);
+            }
+        }
+
+        return $fallback ?: null;
+    }
+
+    /**
+     * Card background colour for a brand. Prefers a hand-picked override from
+     * config/brand_colors.php, then the brand_color synced from Zendit, else null
+     * (the view renders white). Lets the gift-card tiles show the real brand colour.
+     */
+    public static function brandColor(?string $brandKey, ?string $fallback = null): ?string
+    {
+        if ($brandKey) {
+            $override = config("brand_colors.colors.{$brandKey}");
+            if ($override) {
+                return $override;
+            }
+        }
+
+        return $fallback ?: null;
+    }
+
+    /**
+     * Symbol for a currency code. Falls back to the raw code + space so an
+     * unmapped currency still renders something sensible.
+     */
+    public static function currencySymbol(?string $code): string
+    {
+        $code = strtoupper((string) $code);
+
+        return [
+            'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦', 'XAF' => 'FCFA', 'XOF' => 'CFA',
+            'ZAR' => 'R', 'KES' => 'KSh', 'GHS' => '₵', 'EGP' => 'E£', 'MAD' => 'DH', 'CAD' => 'CA$',
+            'AUD' => 'A$', 'JPY' => '¥', 'CNY' => '¥', 'INR' => '₹', 'BRL' => 'R$', 'AED' => 'AED',
+            'SAR' => 'SAR', 'TRY' => '₺', 'CHF' => 'Fr', 'MXN' => 'MX$', 'KRW' => '₩', 'SGD' => 'S$',
+            'HKD' => 'HK$', 'TWD' => 'NT$', 'THB' => '฿', 'IDR' => 'Rp', 'PHP' => '₱', 'VND' => '₫',
+            'MYR' => 'RM', 'PLN' => 'zł', 'SEK' => 'kr', 'NOK' => 'kr', 'DKK' => 'kr', 'CZK' => 'Kč',
+        ][$code] ?? ($code !== '' ? $code . ' ' : '');
+    }
+
+    /**
+     * Lowest + highest spendable amount across this product's available variants.
+     * Fixed variants contribute their retail_price; variable variants contribute
+     * their min_amount and max_amount. Requires `variants` to be loaded.
+     *
+     * @return array{0: float|null, 1: float|null}  [min, max]
+     */
+    public function priceRange(): array
+    {
+        $min = null;
+        $max = null;
+
+        foreach ($this->variants as $v) {
+            if (! $v->is_available) {
+                continue;
+            }
+
+            $values = [];
+            if ($v->is_variable) {
+                if ($v->min_amount !== null) {
+                    $values[] = (float) $v->min_amount;
+                }
+                if ($v->max_amount !== null) {
+                    $values[] = (float) $v->max_amount;
+                }
+            } elseif ($v->retail_price !== null) {
+                $values[] = (float) $v->retail_price;
+            }
+
+            foreach ($values as $val) {
+                $min = $min === null ? $val : min($min, $val);
+                $max = $max === null ? $val : max($max, $val);
+            }
+        }
+
+        return [$min, $max];
+    }
+
+    /**
+     * Human-readable price range string, e.g. "$5 - $500" or "$10".
+     * Uses this product's currency_code for the symbol.
+     */
+    public function priceRangeLabel(): ?string
+    {
+        [$min, $max] = $this->priceRange();
+        if ($min === null) {
+            return null;
+        }
+
+        $sym = self::currencySymbol($this->currency_code ?: 'USD');
+        $fmt = fn ($v) => $sym . rtrim(rtrim(number_format($v, 2), '0'), '.');
+
+        return ($max !== null && $max > $min)
+            ? $fmt($min) . ' - ' . $fmt($max)
+            : $fmt($min);
+    }
 
     protected $fillable = [
         'category_id',
         'subcategory_id',
         'provider_name',
         'provider_reference',
+        'brand_key',
         'country_code',
         'currency_code',
         'name',
@@ -24,6 +164,7 @@ class Product extends Model
         'terms_and_conditions',
         'logo_url',
         'featured_image',
+        'brand_color',
         'is_featured',
         'is_popular',
         'is_active',

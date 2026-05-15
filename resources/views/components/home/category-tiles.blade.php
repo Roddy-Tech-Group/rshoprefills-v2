@@ -2,8 +2,10 @@
     Quick-access category tiles. Pill-shaped, content-sized, single-active state.
     Default: Gift Cards (index 0) is black/active. Hover any tile to activate it;
     leaving the row reverts to the first tile.
+    Hidden on mobile (<sm) to remove the horizontal-slide bar; the Quick Actions card
+    on the dashboard + the main nav cover discovery on small screens.
 --}}
-<section aria-label="Browse categories">
+<section aria-label="Browse categories" class="hidden sm:block">
     <div class="-mx-4 overflow-x-auto px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0 sm:py-0">
         <ul
             x-data="{ active: -1 }"
@@ -15,7 +17,8 @@
             {{-- Gift Cards (black default, gray-900 on hover) --}}
             <li data-reveal-item class="shrink-0">
                 <a
-                    href="#"
+                    href="{{ route('shop.gift-cards') }}"
+                    wire:navigate
                     class="inline-flex items-center gap-3 rounded-[25px] bg-black px-6 py-2 ring-1 ring-black transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 hover:bg-gray-900 hover:ring-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('gift cards.svg')) }}" alt="" class="h-6 w-6 shrink-0 object-contain brightness-0 invert" loading="lazy">
@@ -57,7 +60,7 @@
                     :class="active === 3 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('bill payment.svg')) }}" alt="" :class="active === 3 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
+                    <img :src="active === 3 ? '{{ asset('assets/' . rawurlencode('bill payment.svg')) }}' : '{{ asset('assets/' . rawurlencode('Bills 2.svg')) }}'" alt="" :class="active === 3 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
                     <span :class="active === 3 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">Bill Payments</span>
                 </a>
             </li>
@@ -70,7 +73,7 @@
                     :class="active === 4 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('flight.svg')) }}" alt="" :class="active === 4 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
+                    <img :src="active === 4 ? '{{ asset('assets/' . rawurlencode('flight.svg')) }}' : '{{ asset('assets/' . rawurlencode('flight 2.svg')) }}'" alt="" :class="active === 4 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
                     <span :class="active === 4 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">Flights</span>
                 </a>
             </li>
@@ -83,7 +86,7 @@
                     :class="active === 5 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('stay.svg')) }}" alt="" :class="active === 5 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
+                    <img :src="active === 5 ? '{{ asset('assets/' . rawurlencode('stay.svg')) }}' : '{{ asset('assets/' . rawurlencode('stay 2.svg')) }}'" alt="" :class="active === 5 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
                     <span :class="active === 5 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">Stays</span>
                 </a>
             </li>

@@ -12,7 +12,7 @@
 
         {{-- Step 1 — Pick a product --}}
         <article class="w-72 shrink-0 overflow-hidden rounded-2xl bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
-            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden">
+            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
                     src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
                     alt=""
@@ -20,17 +20,17 @@
                     loading="lazy"
                 >
             </div>
-            <div class="border-t border-zinc-200 bg-zinc-200 p-5">
+            <div class="bg-zinc-100 p-5">
                 <h3 class="text-base font-semibold text-zinc-900">1. Pick a product or service</h3>
-                <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">
-                    Choose from 14000+ gift cards, eSIMs, flights, stays and mobile top-ups.
+                <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
+                    Choose from 14000+ gift cards, eSIMs, flights, stays and mobile top-ups made ready for you to simplify your shopping experience.
                 </p>
             </div>
         </article>
 
         {{-- Step 2 — Pay with crypto --}}
         <article class="w-72 shrink-0 overflow-hidden rounded-2xl bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
-            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden">
+            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
                     src="{{ asset('assets/' . rawurlencode('pay with crypto momo +.png')) }}"
                     alt=""
@@ -38,17 +38,17 @@
                     loading="lazy"
                 >
             </div>
-            <div class="border-t border-zinc-200 bg-zinc-200 p-5">
+            <div class="bg-zinc-100 p-5">
                 <h3 class="text-base font-semibold text-zinc-900">2. Pay with Cards, Crypto, MoMo etc</h3>
-                <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">
+                <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
                     Access 14,000+ digital products including gift cards, eSIMs, flights, hotel stays, mobile top-ups, and more, all in one seamless platform.
                 </p>
             </div>
         </article>
 
         {{-- Step 3 — Receive instantly --}}
-        <article class="w-72 shrink-0 overflow-hidden rounded-2xl bg-blue-50 ring-1 ring-blue-200 shadow-sm sm:w-auto">
-            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden">
+        <article class="w-72 shrink-0 overflow-hidden rounded-2xl bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
+            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
                     src="{{ asset('assets/' . rawurlencode('step 3.png')) }}"
                     alt=""
@@ -56,10 +56,10 @@
                     loading="lazy"
                 >
             </div>
-            <div class="border-t border-blue-200 bg-blue-100 p-5">
+            <div class="bg-zinc-100 p-5">
                 <h3 class="text-base font-semibold text-zinc-900">3. Receive instantly</h3>
-                <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">
-                    Your product arrives in seconds, ready to use.
+                <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
+                    Your product arrives in seconds, to your email address and your clients dashboard if you are signed up with us ready to use.
                 </p>
             </div>
         </article>

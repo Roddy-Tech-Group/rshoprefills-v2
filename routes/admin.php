@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFintechController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use Illuminate\Support\Facades\Route;
+use Livewire\Volt\Volt;
 
 Route::prefix('admin')->name('admin.')->group(function () {
     // Guest admin routes (login)
@@ -17,6 +18,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::view('dashboard', 'admin.dashboard')->name('dashboard');
         Route::post('logout', [AdminLoginController::class, 'destroy'])->name('logout');
+
+        // Admin content views — read-only Blade pages backed by shipped models.
+        // Replace with controllers when CRUD/actions ship.
+        Route::view('products', 'admin.products')->name('products');
+        Route::view('orders', 'admin.orders')->name('orders');
+        Route::view('customers', 'admin.customers')->name('customers');
+        Route::view('transactions', 'admin.transactions')->name('transactions');
+        Route::view('wallets', 'admin.wallets')->name('wallets');
+        Volt::route('rates', 'admin.rates')->name('rates');
 
         // Admin Dashboard API
         Route::prefix('api/dashboard')->name('api.dashboard.')->group(function () {

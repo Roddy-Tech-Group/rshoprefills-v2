@@ -24,12 +24,13 @@ class ZenditEsimProvider implements ProviderInterface
 
     public function fetchCatalog(int $page = 1, int $limit = 100): array
     {
-        // Explicitly filter Zendit catalog for eSIMs
+        // Zendit eSIMs live at /esim/offers (NOT /catalog/offers with a type filter), paginated by
+        // _offset / _limit. See https://developers.zendit.io/api -> GET /v1/esim/offers.
         $response = Http::withToken($this->apiKey)
-            ->get("{$this->baseUrl}/catalog/offers", [
-                'page' => $page,
-                'limit' => $limit,
-                'type' => 'esim',
+            ->acceptJson()
+            ->get("{$this->baseUrl}/esim/offers", [
+                '_limit' => $limit,
+                '_offset' => max(0, ($page - 1) * $limit),
             ]);
 
         if ($response->failed()) {
@@ -46,12 +47,14 @@ class ZenditEsimProvider implements ProviderInterface
     public function fetchOfferDetails(string $providerReference): array
     {
         $response = Http::withToken($this->apiKey)
-            ->get("{$this->baseUrl}/catalog/offers/{$providerReference}");
+            ->acceptJson()
+            ->get("{$this->baseUrl}/esim/offers/{$providerReference}");
 
         if ($response->failed()) {
             throw new \RuntimeException("Failed to fetch Zendit eSIM offer: {$providerReference}");
         }
 
-        return $response->json('data');
+        // Zendit returns the offer object directly (no "data" wrapper).
+        return $response->json();
     }
 }

@@ -24,15 +24,8 @@
     <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased">
 
         <div
-            x-data="{
-                localeModalOpen: false,
-                country: 'Cameroon',
-                countryFlag: '🇨🇲',
-                language: 'English',
-                currency: 'USD',
-                currencySymbol: '$',
-                activeCategory: 'Gift Cards'
-            }"
+            x-data="storefrontLocale()"
+            x-init="init()"
             @keydown.escape.window="localeModalOpen = false"
             x-effect="document.body.classList.toggle('overflow-hidden', localeModalOpen)"
             class="flex flex-1 flex-col"

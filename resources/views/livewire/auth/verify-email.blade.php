@@ -44,7 +44,7 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 9v.906a2.25 2.25 0 0 1-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 0 0 1.183 1.981l6.478 3.488m8.839 2.51-4.66-2.51m0 0-1.023-.55a2.25 2.25 0 0 0-2.134 0l-1.022.55m0 0-4.661 2.51m16.5 1.615a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V8.844a2.25 2.25 0 0 1 1.183-1.981l7.5-4.039a2.25 2.25 0 0 1 2.134 0l7.5 4.039a2.25 2.25 0 0 1 1.183 1.981V19.5Z" />
             </svg>
         </h1>
-        <p class="mt-2 text-center text-base text-zinc-500">
+        <p class="mt-2 text-center text-base text-zinc-600">
             We sent a verification link to
             <span class="font-medium text-zinc-700">{{ Auth::user()?->email }}</span>.
             Click the link inside to activate your account.
@@ -76,14 +76,14 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
             <button
                 wire:click="logout"
                 type="button"
-                class="text-center text-base font-medium text-zinc-500 underline-offset-4 transition-colors hover:text-zinc-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                class="text-center text-base font-medium text-zinc-600 underline-offset-4 transition-colors hover:text-zinc-800 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
                 Log out
             </button>
         </div>
 
         {{-- Security note --}}
-        <div class="mt-5 flex items-center justify-center gap-1.5 text-sm text-zinc-500 sm:mt-8">
+        <div class="mt-5 flex items-center justify-center gap-1.5 text-sm text-zinc-600 sm:mt-8">
             <svg class="h-4 w-4 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152A11.959 11.959 0 0 1 12 2.714Z" />
             </svg>
