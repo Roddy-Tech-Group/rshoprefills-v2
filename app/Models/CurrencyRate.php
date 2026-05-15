@@ -46,6 +46,6 @@ class CurrencyRate extends Model
      */
     public function iconUrl(): ?string
     {
-        return $this->icon_path ? asset('assets/' . $this->icon_path) : null;
+        return $this->icon_path ? asset('assets/'.$this->icon_path) : null;
     }
 }

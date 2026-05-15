@@ -17,27 +17,27 @@
 return [
     'aliases' => [
         // Apple ecosystem — App Store, iTunes, Apple Music, Apple TV+ in one card.
-        'Apple'        => 'Everything Apple',
+        'Apple' => 'Everything Apple',
 
         // Google ecosystem.
-        'Google'       => 'Everything Google',
-        'GooglePlay'   => 'Google Play',
+        'Google' => 'Everything Google',
+        'GooglePlay' => 'Google Play',
 
         // Gaming.
-        'PlayStation'  => 'PlayStation Store',
-        'Xbox'         => 'Xbox Live',
-        'Steam'        => 'Steam Wallet',
+        'PlayStation' => 'PlayStation Store',
+        'Xbox' => 'Xbox Live',
+        'Steam' => 'Steam Wallet',
         'NintendoEshop' => 'Nintendo eShop',
         'MobileLegends' => 'Mobile Legends',
-        'FreeFire'     => 'Free Fire',
-        'PUBGMobile'   => 'PUBG Mobile',
-        'Roblox'       => 'Roblox',
+        'FreeFire' => 'Free Fire',
+        'PUBGMobile' => 'PUBG Mobile',
+        'Roblox' => 'Roblox',
 
         // Streaming + commerce.
-        'Spotify'      => 'Spotify Premium',
-        'AmazonCom'    => 'Amazon.com',
-        'BestBuy'      => 'Best Buy',
-        'StubHub'      => 'StubHub',
+        'Spotify' => 'Spotify Premium',
+        'AmazonCom' => 'Amazon.com',
+        'BestBuy' => 'Best Buy',
+        'StubHub' => 'StubHub',
 
         // Extend as needed — flag any brand on the listing that reads awkwardly.
     ],

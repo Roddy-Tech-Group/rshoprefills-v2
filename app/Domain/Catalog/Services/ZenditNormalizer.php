@@ -38,8 +38,8 @@ class ZenditNormalizer implements CatalogNormalizerInterface
 
         // Currency lives on the nested send/price objects (denominated in cents via currencyDivisor).
         $priceBlock = $rawItem['price'] ?? [];
-        $sendBlock  = $rawItem['send']  ?? [];
-        $costBlock  = $rawItem['cost']  ?? [];
+        $sendBlock = $rawItem['send'] ?? [];
+        $costBlock = $rawItem['cost'] ?? [];
         $currencyCode = strtoupper($priceBlock['currency'] ?? $sendBlock['currency'] ?? $rawItem['currency'] ?? 'USD');
 
         // Products are grouped by Brand + Country
@@ -79,12 +79,12 @@ class ZenditNormalizer implements CatalogNormalizerInterface
         $priceType = $rawItem['priceType'] ?? 'FIXED';
 
         $priceDiv = (float) ($priceBlock['currencyDivisor'] ?? 100);
-        $sendDiv  = (float) ($sendBlock['currencyDivisor']  ?? 100);
-        $costDiv  = (float) ($costBlock['currencyDivisor']  ?? 100);
+        $sendDiv = (float) ($sendBlock['currencyDivisor'] ?? 100);
+        $costDiv = (float) ($costBlock['currencyDivisor'] ?? 100);
 
-        $faceValue   = isset($priceBlock['fixed']) ? ((float) $priceBlock['fixed']) / $priceDiv
+        $faceValue = isset($priceBlock['fixed']) ? ((float) $priceBlock['fixed']) / $priceDiv
                      : (isset($sendBlock['fixed']) ? ((float) $sendBlock['fixed']) / $sendDiv : null);
-        $costPrice   = isset($costBlock['fixed'])  ? ((float) $costBlock['fixed'])  / $costDiv  : ($faceValue ?? 0.0);
+        $costPrice = isset($costBlock['fixed']) ? ((float) $costBlock['fixed']) / $costDiv : ($faceValue ?? 0.0);
         $retailPrice = $faceValue ?? $costPrice;
 
         // VARIABLE-priced cards expose min/max on the send block.

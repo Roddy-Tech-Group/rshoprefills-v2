@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => AdminAuth::class,
         ]);
-        
+
         $middleware->redirectGuestsTo(fn () => request()->is('admin*') ? route('admin.login') : route('login'));
         $middleware->redirectUsersTo(fn () => request()->is('admin*') ? route('admin.dashboard') : route('dashboard'));
     })

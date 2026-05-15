@@ -50,7 +50,7 @@ class Product extends Model
         if ($brandKey) {
             $local = config("brand_assets.logos.{$brandKey}");
             if ($local) {
-                return asset('assets/' . $local);
+                return asset('assets/'.$local);
             }
         }
 
@@ -89,7 +89,7 @@ class Product extends Model
             'SAR' => 'SAR', 'TRY' => '₺', 'CHF' => 'Fr', 'MXN' => 'MX$', 'KRW' => '₩', 'SGD' => 'S$',
             'HKD' => 'HK$', 'TWD' => 'NT$', 'THB' => '฿', 'IDR' => 'Rp', 'PHP' => '₱', 'VND' => '₫',
             'MYR' => 'RM', 'PLN' => 'zł', 'SEK' => 'kr', 'NOK' => 'kr', 'DKK' => 'kr', 'CZK' => 'Kč',
-        ][$code] ?? ($code !== '' ? $code . ' ' : '');
+        ][$code] ?? ($code !== '' ? $code.' ' : '');
     }
 
     /**
@@ -97,7 +97,7 @@ class Product extends Model
      * Fixed variants contribute their retail_price; variable variants contribute
      * their min_amount and max_amount. Requires `variants` to be loaded.
      *
-     * @return array{0: float|null, 1: float|null}  [min, max]
+     * @return array{0: float|null, 1: float|null} [min, max]
      */
     public function priceRange(): array
     {
@@ -142,10 +142,10 @@ class Product extends Model
         }
 
         $sym = self::currencySymbol($this->currency_code ?: 'USD');
-        $fmt = fn ($v) => $sym . rtrim(rtrim(number_format($v, 2), '0'), '.');
+        $fmt = fn ($v) => $sym.rtrim(rtrim(number_format($v, 2), '0'), '.');
 
         return ($max !== null && $max > $min)
-            ? $fmt($min) . ' - ' . $fmt($max)
+            ? $fmt($min).' - '.$fmt($max)
             : $fmt($min);
     }
 

@@ -1,7 +1,10 @@
 <?php
 
 use App\Models\Product;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Livewire\Volt\Volt;
 
 Route::get('/', function () {
@@ -14,7 +17,7 @@ Route::view('gift-cards', 'shop.gift-cards')->name('shop.gift-cards');
 
 // Live-search JSON endpoint used by the nav search bar. Returns up to 8 brand matches
 // grouped by brand_key (so "apple" returns "Everything Apple" once, not 8 country rows).
-Route::get('api/search/brands', function (\Illuminate\Http\Request $request) {
+Route::get('api/search/brands', function (Request $request) {
     $q = trim((string) $request->query('q', ''));
     if (mb_strlen($q) < 2) {
         return response()->json([]);
@@ -27,7 +30,7 @@ Route::get('api/search/brands', function (\Illuminate\Http\Request $request) {
             $qq->where('name', 'like', "%{$q}%")
                 ->orWhere('brand_key', 'like', "%{$q}%");
         })
-        ->select('brand_key', \Illuminate\Support\Facades\DB::raw('MIN(id) as id'))
+        ->select('brand_key', DB::raw('MIN(id) as id'))
         ->groupBy('brand_key')
         ->limit(8)
         ->pluck('id');
@@ -37,9 +40,9 @@ Route::get('api/search/brands', function (\Illuminate\Http\Request $request) {
         ->get(['id', 'brand_key', 'country_code', 'logo_url', 'name']);
 
     return response()->json($products->map(fn ($p) => [
-        'name'    => Product::brandDisplayName($p->brand_key),
-        'slug'    => Product::brandSlug($p->brand_key),
-        'logo'    => Product::brandLogoUrl($p->brand_key, $p->logo_url),
+        'name' => Product::brandDisplayName($p->brand_key),
+        'slug' => Product::brandSlug($p->brand_key),
+        'logo' => Product::brandLogoUrl($p->brand_key, $p->logo_url),
         'country' => $p->country_code,
     ])->values());
 })->name('api.search.brands');
@@ -59,7 +62,7 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
         ->where('is_active', true)
         ->distinct()
         ->pluck('brand_key')
-        ->first(fn ($key) => \Illuminate\Support\Str::kebab($key) === $brandSlug);
+        ->first(fn ($key) => Str::kebab($key) === $brandSlug);
 
     abort_if(! $brandKey, 404);
 
