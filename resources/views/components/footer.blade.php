@@ -96,11 +96,8 @@
 
         </div>
 
-        {{-- Divider --}}
-        <div class="my-10 h-px bg-zinc-200" aria-hidden="true"></div>
-
         {{-- Utility row: theme picker, version, cookie settings --}}
-        <div class="flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
+        <div class="mt-10 flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
             {{-- Modern segmented theme picker --}}
             <div x-data class="inline-flex items-center gap-2.5">
                 <span class="text-xs font-semibold uppercase tracking-wider text-zinc-600">Theme</span>
@@ -143,9 +140,10 @@
             <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
                 {{-- Locale chip: opens the same modal the nav uses --}}
                 <button type="button" @click="localeModalOpen = true" class="flex items-center gap-2 transition-colors hover:text-zinc-900 focus:outline-none focus-visible:text-zinc-900">
-                    <span class="text-base leading-none" aria-hidden="true" x-text="countryFlag">🇺🇸</span>
+                    <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                     <span x-text="country">United States</span>
                     <span class="text-zinc-600" aria-hidden="true">/</span>
+                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-3.5 w-3.5 shrink-0 opacity-70">
                     <span x-text="language">English</span>
                 </button>
                 <a href="#" class="transition-colors hover:text-zinc-900">Sitemap</a>

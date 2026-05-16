@@ -570,25 +570,31 @@
             {{-- RIGHT RAIL: points, gift promo, recent transactions --}}
             <div class="flex flex-col gap-6 lg:col-span-4">
 
-                {{-- RShop Points card --}}
+                {{-- RShop Rcoin card --}}
                 <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-start gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-blue-100">
-                            <img src="{{ asset('assets/PWAicon.png') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
+                            <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
                         </span>
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold text-zinc-900">RShop Points</p>
+                            <p class="text-sm font-semibold text-zinc-900">RShop Rcoin</p>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-2xl font-bold tracking-tight text-zinc-900">2,650</span>
                                 <span class="rounded-[5px] bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Gold Member</span>
                             </div>
                         </div>
                     </div>
-                    <p class="mt-4 text-xs text-zinc-600">You're 350 points away from Platinum level</p>
+                    <p class="mt-4 text-xs text-zinc-600">You're 350 Rcoin away from Platinum level</p>
                     <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
                         <div class="h-full rounded-full bg-blue-600" style="width: 88%;"></div>
                     </div>
                     <p class="mt-1.5 text-right text-[10px] font-semibold text-zinc-600">2,650 / 3,000</p>
+
+                    <a href="{{ route('dashboard.rewards') }}" wire:navigate class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                        {{-- Favicon is blue; force it white so it shows on the blue button. --}}
+                        <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain" style="filter: brightness(0) invert(1);">
+                        View coins
+                    </a>
                 </div>
 
                 {{-- Give the Perfect Gift promo --}}

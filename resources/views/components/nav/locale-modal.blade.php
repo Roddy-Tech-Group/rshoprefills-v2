@@ -105,6 +105,14 @@
         ['code' => 'TRY', 'symbol' => '₺',   'name' => 'Turkish Lira'],
         ['code' => 'CHF', 'symbol' => 'Fr',  'name' => 'Swiss Franc'],
     ];
+
+    // Picking a country drives the currency — there is no separate currency picker.
+    // Country ISO -> currency ISO, and currency ISO -> display symbol.
+    $countryCurrencyMap = config('country_currency.map', []);
+    $currencySymbols = [];
+    foreach (array_unique(array_values($countryCurrencyMap)) as $cur) {
+        $currencySymbols[$cur] = \App\Models\Product::currencySymbol($cur);
+    }
 @endphp
 
 {{-- Backdrop — sits BELOW the nav (z-40 < nav z-50) so the nav's glassmorphism stays visible over it --}}
@@ -152,7 +160,7 @@
         <button
             type="button"
             @click="localeModalOpen = false"
-            class="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-zinc-700 shadow-lg shadow-zinc-900/20 transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+            class="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-blue-600 shadow-lg shadow-zinc-900/20 transition-colors duration-150 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
             aria-label="Close"
         >
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -168,7 +176,7 @@
 
             {{-- Country picker --}}
             <div
-                x-data="{ open: false, search: '', options: @js($countries), codes: @js($countryCodes) }"
+                x-data="{ open: false, search: '', options: @js($countries), codes: @js($countryCodes), currencyByCode: @js($countryCurrencyMap), symbolByCurrency: @js($currencySymbols) }"
                 @click.outside="open = false"
                 class="relative"
             >
@@ -182,7 +190,7 @@
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
                     class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
                 >
-                    <span class="text-base leading-none" x-text="countryFlag">🇺🇸</span>
+                    <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                     <span class="flex-1 text-left" x-text="country">United States</span>
                     <svg class="h-4 w-4 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -225,11 +233,11 @@
                                 type="button"
                                 role="option"
                                 :aria-selected="country === name ? 'true' : 'false'"
-                                @click="country = name; countryFlag = flag; countryCode = codes[name] || ''; open = false; search = ''"
+                                @click="country = name; countryFlag = flag; countryCode = codes[name] || ''; currency = (currencyByCode[(codes[name] || '').toUpperCase()] || 'USD'); currencySymbol = (symbolByCurrency[currency] || currency); open = false; search = ''"
                                 :class="country === name ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
                                 class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-base font-medium transition-colors"
                             >
-                                <span class="text-base leading-none" x-text="flag"></span>
+                                <img :src="'https://flagcdn.com/w40/' + (codes[name] || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                                 <span class="flex-1" x-text="name"></span>
                                 <svg x-show="country === name" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -319,90 +327,6 @@
                         </template>
                         <div
                             x-show="options.filter(l => l.toLowerCase().includes(search.toLowerCase())).length === 0"
-                            class="px-3 py-6 text-center text-base text-zinc-600"
-                        >
-                            No matches
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Currency picker --}}
-            <div
-                x-data="{ open: false, search: '', options: @js($currencies) }"
-                @click.outside="open = false"
-                class="relative"
-            >
-                <label class="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium text-zinc-600">
-                    <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-4 w-4 opacity-70" loading="lazy">
-                    Currency
-                </label>
-
-                <button
-                    type="button"
-                    @click="open = !open; if (open) $nextTick(() => $refs.currencySearch.focus())"
-                    :aria-expanded="open.toString()"
-                    aria-haspopup="listbox"
-                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
-                >
-                    <span class="min-w-[2.5rem] text-base font-semibold text-blue-600" x-text="currencySymbol">$</span>
-                    <span class="flex-1 text-left" x-text="currency">USD</span>
-                    <svg class="h-4 w-4 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-
-                <div
-                    x-show="open"
-                    x-transition:enter="transition ease-out duration-150"
-                    x-transition:enter-start="opacity-0 -translate-y-1"
-                    x-transition:enter-end="opacity-100 translate-y-0"
-                    x-transition:leave="transition ease-in duration-100"
-                    x-transition:leave-start="opacity-100 translate-y-0"
-                    x-transition:leave-end="opacity-0 -translate-y-1"
-                    style="display:none;"
-                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
-                    role="listbox"
-                >
-                    {{-- Search --}}
-                    <div class="border-b border-zinc-100 p-2">
-                        <div class="relative">
-                            <svg class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                x-ref="currencySearch"
-                                x-model="search"
-                                type="text"
-                                placeholder="Search currencies"
-                                aria-label="Search currencies"
-                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
-                            />
-                        </div>
-                    </div>
-
-                    {{-- Options --}}
-                    <div class="max-h-64 overflow-y-auto p-1">
-                        <template x-for="opt in options.filter(o => (o.code + ' ' + o.name).toLowerCase().includes(search.toLowerCase()))" :key="opt.code">
-                            <button
-                                type="button"
-                                role="option"
-                                :aria-selected="currency === opt.code ? 'true' : 'false'"
-                                @click="currency = opt.code; currencySymbol = opt.symbol; open = false; search = ''"
-                                :class="currency === opt.code ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
-                                class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-base font-medium transition-colors"
-                            >
-                                <span class="min-w-[2.5rem] text-base font-semibold" :class="currency === opt.code ? 'text-blue-600' : 'text-zinc-600'" x-text="opt.symbol"></span>
-                                <span class="flex-1" x-text="opt.code"></span>
-                                <span class="hidden truncate text-xs text-zinc-600 sm:inline" x-text="opt.name"></span>
-                                <svg x-show="currency === opt.code" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                </svg>
-                            </button>
-                        </template>
-                        <div
-                            x-show="options.filter(o => (o.code + ' ' + o.name).toLowerCase().includes(search.toLowerCase())).length === 0"
                             class="px-3 py-6 text-center text-base text-zinc-600"
                         >
                             No matches

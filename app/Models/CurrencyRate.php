@@ -41,6 +41,34 @@ class CurrencyRate extends Model
     }
 
     /**
+     * Resolve the active rate row for a currency code. Falls back to the USD row,
+     * then to a synthetic 1:1 USD rate, so callers always get a usable object even
+     * if the table is empty or the requested currency is missing/inactive.
+     */
+    public static function resolve(?string $code): self
+    {
+        $code = strtoupper(trim((string) $code)) ?: 'USD';
+
+        $rate = static::query()->where('is_active', true)->where('code', $code)->first()
+            ?? static::query()->where('is_active', true)->where('code', 'USD')->first();
+
+        return $rate ?? new self([
+            'code' => 'USD',
+            'name' => 'United States Dollar',
+            'type' => 'fiat',
+            'rate_per_usd' => 1.0,
+        ]);
+    }
+
+    /**
+     * Convert a USD amount into this currency using rate_per_usd.
+     */
+    public function convert(float $usd): float
+    {
+        return $usd * (float) $this->rate_per_usd;
+    }
+
+    /**
      * Full URL to the currency icon when set. Falls back to null so the view can
      * render a coloured initial badge instead.
      */

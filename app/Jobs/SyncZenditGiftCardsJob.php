@@ -34,6 +34,12 @@ class SyncZenditGiftCardsJob implements ShouldQueue
                 self::dispatch($this->page + 1)->delay(now()->addSeconds(2)); // Dispatch next page with delay
             } else {
                 Log::info('Zendit Gift Card Sync fully completed.');
+
+                // Catalog is fully populated — now hydrate brand assets (logos, hero
+                // art, brand colour, redemption text) from the /brands/* endpoints.
+                // This MUST run after the catalog so every Product + brand_key exists
+                // for the brand sync to match on.
+                SyncZenditBrandsJob::dispatch();
             }
         } catch (\Exception $e) {
             Log::error("Zendit Gift Card Sync failed on page {$this->page}", [

@@ -1,4 +1,5 @@
 @php
+    use App\Domain\Cart\Services\CartPricingService;
     use App\Models\CurrencyRate;
     use App\Models\Product;
 
@@ -36,6 +37,17 @@
     $countryNames = array_flip(config('countries.codes', [])); // ISO → name
     $countryName  = $countryNames[strtoupper($product->country_code)] ?? $product->country_code;
 
+    // Every country this brand has an active product in — i.e. the full set of
+    // regions the card can be redeemed in. Drives the "redeemable in" chips.
+    $brandCountries = Product::query()
+        ->where('brand_key', $brandKey)
+        ->where('is_active', true)
+        ->whereNotNull('country_code')
+        ->distinct()
+        ->orderByRaw("country_code = '" . addslashes($product->country_code) . "' DESC")
+        ->orderBy('country_code')
+        ->pluck('country_code');
+
     // Brand colour: config override → Zendit-synced colour → brand blue accent fallback.
     $brandCardColor = Product::brandColor($brandKey, $product->brand_color);
     $brandColor = $brandCardColor ?: '#2563eb';
@@ -52,12 +64,22 @@
     }
     $rangeText = ($rangeMin !== null && $rangeMax !== null)
         ? $sym($currency) . rtrim(rtrim(number_format((float) $rangeMin, 2), '0'), '.')
-            . ' – '
+            . ' - '
             . rtrim(rtrim(number_format((float) $rangeMax, 2), '0'), '.')
         : null;
 
-    // Pull active currency rates from the admin-managed `currency_rates` table.
-    // The "Estimated price" dropdown uses these to render per-currency totals.
+    // All active currency rates (fiat + crypto) from the admin-managed `currency_rates`
+    // table. `rate_per_usd` is the EXACT admin value — including USD (e.g. 1.04), which
+    // acts as the platform spread/fee. It is applied as-is to compute the payable total.
+    // A fiat code's flag derives from its first two letters (USD -> US, GBP -> GB,
+    // EUR -> EU); a few non-country codes are mapped explicitly.
+    $currencyFlagOverrides = ['XAF' => 'CM', 'XOF' => 'SN', 'XCD' => 'AG'];
+    $currencyFlag = function (string $code) use ($currencyFlagOverrides) {
+        $code = strtoupper($code);
+
+        return Product::flagUrl($currencyFlagOverrides[$code] ?? substr($code, 0, 2));
+    };
+
     $cryptoRatesForJs = CurrencyRate::active()
         ->orderBy('type')
         ->orderBy('sort_order')
@@ -68,27 +90,90 @@
             'name'    => $r->name,
             'type'    => $r->type,
             'perUsd'  => (float) $r->rate_per_usd,
-            // Match the precision of how the original table renders rates: more decimals for tiny
-            // BTC-style rates, fewer for fiat. Just an inverse-magnitude heuristic.
+            // More decimals for tiny BTC-style rates, fewer for fiat.
             'decimals' => $r->rate_per_usd < 0.01 ? 8 : ($r->rate_per_usd < 1 ? 4 : 2),
             'icon'    => $r->icon_path ? asset('assets/' . $r->icon_path) : null,
+            // Fiat currencies show a country flag instead of the letter circle.
+            'flag'    => $r->type === 'fiat' ? $currencyFlag($r->code) : null,
         ])
         ->values();
 
-    // Default crypto: USDT if present, else first active. The amount column in the picker
-    // shows the estimated equivalent of the order total in that currency.
-    $defaultCrypto = $cryptoRatesForJs->firstWhere('code', 'USDT')['code']
-        ?? ($cryptoRatesForJs->first()['code'] ?? 'USDT');
+    // Denominations are shown at their native face value, in the CARD'S OWN
+    // currency (a UK card is GBP, a US card is USD). The face value is intrinsic
+    // to the card and is never converted; only the price the customer pays is.
+    $displayRate = 1.0;
+    $displaySymbol = Product::currencySymbol($currency);
+    $conv = fn ($v) => $displaySymbol . number_format((float) $v, 2);
 
-    // Compact variant payload for Alpine.
-    $variantsForJs = $variants->map(fn ($v) => [
-        'id' => $v->id,
-        'is_variable' => (bool) $v->is_variable,
-        'face_value' => (float) ($v->face_value ?? $v->retail_price),
-        'retail_price' => (float) $v->retail_price,
-        'min' => (float) ($v->min_amount ?? 0),
-        'max' => (float) ($v->max_amount ?? 0),
-    ])->values();
+    // A variable product's amount is entered in the VARIANT's own currency (e.g. a
+    // utility top-up priced in XOF), not USD. These format the custom-amount UI in it.
+    $customCurrency = $variable ? strtoupper((string) ($variable->currency ?: $currency)) : 'USD';
+    $customSymbol   = $sym($customCurrency);
+    $customMoney    = fn ($v) => $customSymbol . rtrim(rtrim(number_format((float) $v, 2), '0'), '.');
+
+    // Makes bare URLs in Zendit's redemption/terms HTML clickable so customers can jump
+    // straight to the brand's redeem page. Existing <a> tags are kept (and forced to
+    // open in a new tab); only plain-text URLs between tags get wrapped.
+    $linkify = function (?string $html): string {
+        if (! $html) {
+            return '';
+        }
+        $parts = preg_split('~(<a\b[^>]*>.*?</a>)~is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+        $out = '';
+        foreach ($parts as $part) {
+            if (preg_match('~^<a\b~i', $part)) {
+                if (! preg_match('~\btarget=~i', $part)) {
+                    $part = preg_replace('~^<a\b~i', '<a target="_blank" rel="noopener noreferrer"', $part);
+                }
+                $out .= $part;
+
+                continue;
+            }
+            $out .= preg_replace(
+                '~(https?://[^\s<>"\']+)~i',
+                '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+                $part
+            );
+        }
+
+        return $out;
+    };
+
+    // The Estimated price selector defaults to the country's currency
+    // (config/country_currency.php) when that currency is configured in Rate
+    // Management; otherwise USD.
+    $countryCurrency = strtoupper(config('country_currency.map.' . strtoupper($product->country_code), 'USD'));
+    $defaultCrypto = $cryptoRatesForJs->firstWhere('code', $countryCurrency)
+        ? $countryCurrency
+        : ($cryptoRatesForJs->firstWhere('code', 'USD') ? 'USD' : ($cryptoRatesForJs->first()['code'] ?? 'USDT'));
+
+    // Pricing — the Estimated price is the actual payable amount: provider cost
+    // + markup (CartPricingService), converted into the selected currency.
+    $pricing = app(CartPricingService::class);
+    $markup  = $pricing->markupDescriptor($product);
+
+    // A variable amount is typed in the variant's own currency; this rate
+    // converts that entered face amount to USD before markup is applied.
+    $customRate = $variable
+        ? (float) (CurrencyRate::where('code', $customCurrency)->value('rate_per_usd') ?: 1.0)
+        : 1.0;
+
+    // Compact variant payload for Alpine. `price_usd` is the marked-up USD price
+    // for a FIXED denomination; variable variants are priced client-side from
+    // the typed amount, so their price_usd is unused.
+    $variantsForJs = $variants->map(function ($v) use ($pricing, $product) {
+        $v->setRelation('product', $product);
+
+        return [
+            'id' => $v->id,
+            'is_variable' => (bool) $v->is_variable,
+            'face_value' => (float) ($v->face_value ?? $v->retail_price),
+            'retail_price' => (float) $v->retail_price,
+            'min' => (float) ($v->min_amount ?? 0),
+            'max' => (float) ($v->max_amount ?? 0),
+            'price_usd' => round((float) $pricing->calculatePricing($v, 1)['unit_price_snapshot'], 2),
+        ];
+    })->values();
 
     // Similar brands in same subcategory + same country.
     $similarIds = Product::query()
@@ -114,38 +199,32 @@
 
     <div
         x-data="brandDetail({
-            currencySymbol: @js($sym($currency)),
             variants: @js($variantsForJs),
             rangeText: @js($rangeText),
             cryptos: @js($cryptoRatesForJs),
             defaultCrypto: @js($defaultCrypto),
+            markup: @js($markup),
+            customRate: @js($customRate),
+            customMin: @js($variable ? (float) $variable->min_amount : 0),
+            customMax: @js($variable ? (float) $variable->max_amount : 0),
         })"
         x-init="init()"
         style="--brand: {{ $brandColor }};"
         class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10"
     >
 
-        {{-- Breadcrumb --}}
-        <nav class="flex items-center gap-2 text-sm text-zinc-600" aria-label="Breadcrumb">
-            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="transition-colors hover:text-zinc-900">Gift Cards</a>
-            @if ($product->subcategory)
-                <span aria-hidden="true">/</span>
-                <a href="{{ route('shop.gift-cards', ['subcategory' => $product->subcategory->slug]) }}" wire:navigate class="transition-colors hover:text-zinc-900">{{ $product->subcategory->name }}</a>
-            @endif
-            <span aria-hidden="true">/</span>
-            <span class="font-medium text-zinc-900">{{ $brandName }}</span>
-        </nav>
-
         {{-- Two-column hero + buy panel --}}
-        <div class="mt-6 grid grid-cols-1 gap-8 lg:mt-10 lg:grid-cols-2 lg:gap-12">
+        <div class="mt-6 grid grid-cols-1 gap-8 lg:mt-10 lg:grid-cols-2 lg:gap-8">
 
             {{-- LEFT: hero plate. The outer div is a normal grid cell (stretches to full row
                  height); the sticky wrapper lives INSIDE it so position:sticky always has room
                  to travel as the taller right column scrolls. --}}
             <div>
-                <div class="lg:sticky lg:top-6">
-                    <div class="mx-auto flex aspect-square w-full max-w-md items-center justify-center rounded-[24px] bg-zinc-100 p-6 sm:p-8">
-                        <div class="relative flex aspect-[8/5] w-full items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
+                {{-- top offset clears the sticky header (top-bar 36 + nav 64 + category bar 40)
+                     so the card parks below it instead of sliding up behind the nav. --}}
+                <div class="lg:sticky lg:top-[156px]">
+                    <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#ededee] p-10 sm:p-14">
+                        <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
                             @if ($logoSrc)
                                 <img src="{{ $logoSrc }}" alt="{{ $brandName }} gift card" class="h-full w-full object-cover" loading="eager">
                             @else
@@ -174,30 +253,37 @@
                     @endif
                 </div>
 
-                {{-- Trust badges row (Instant delivery + Fair refund policy) --}}
-                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-zinc-900">
-                    <span class="flex items-center gap-1.5">
-                        <svg class="h-5 w-5 text-emerald-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/>
-                        </svg>
+                {{-- Trust badges row. Icons are PNGs tinted emerald-green via a CSS filter. --}}
+                @php
+                    // Filter chain that tints a flat icon to ~emerald-500 (#10b981).
+                    $greenTint = 'filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(394%) hue-rotate(105deg) brightness(92%) contrast(87%);';
+                @endphp
+                {{-- Trust badges. Mobile: a horizontal carousel (scrollbar hidden); wraps from sm up. --}}
+                <div class="flex items-center gap-x-6 gap-y-2 overflow-x-auto text-sm font-semibold text-zinc-900 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
+                    <span class="flex shrink-0 items-center gap-1.5">
+                        <img src="{{ asset('assets/' . rawurlencode('instant delivery.png')) }}" alt="" class="h-5 w-5 object-contain" style="{{ $greenTint }}" loading="lazy">
                         Instant delivery
                     </span>
-                    <span class="flex items-center gap-1.5">
-                        <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9" stroke-linecap="round"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v10M9 9.5a2.5 2.5 0 015 0c0 1-.5 1.5-2 2.5s-2 1.5-2 2.5a2.5 2.5 0 005 0"/>
-                        </svg>
+                    <span class="flex shrink-0 items-center gap-1.5">
+                        <img src="{{ asset('assets/' . rawurlencode('Fair Redund Policy.png')) }}" alt="" class="h-5 w-5 object-contain" style="{{ $greenTint }}" loading="lazy">
                         Fair refund policy
+                    </span>
+                    <span class="flex shrink-0 items-center gap-1.5">
+                        <svg class="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Online &amp; instore redeemable
                     </span>
                 </div>
 
                 @if ($hasStock)
-                    {{-- 3-col row: Amount / Quantity / Estimated price --}}
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto]">
+                    {{-- Amount / Quantity / Estimated price. Mobile: Amount on its own full
+                         row, Quantity + Estimated price share a 2-col row. sm+: one row. --}}
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_auto_auto]">
 
                         {{-- Amount field — plain typeable input with $ prefix. Suggested denominations
                              render as small clickable chips below so users can one-tap a common value. --}}
-                        <div>
+                        <div class="col-span-2 sm:col-span-1">
                             <label class="mb-1.5 block text-xs font-semibold text-zinc-900">Amount</label>
                             <div
                                 x-data="{ open: false, locked: false }"
@@ -212,8 +298,28 @@
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
                                     class="flex h-[50px] w-full items-center gap-2 rounded-xl border bg-white px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
-                                    <span class="font-semibold text-zinc-600">{{ $sym($currency) }}</span>
-                                    <span class="flex-1 truncate text-left tabular-nums" :class="amount ? 'text-zinc-900' : 'font-medium text-zinc-500'" x-text="amount ? amount : 'Select amount'">Select amount</span>
+                                    <span class="font-semibold text-zinc-600">{{ $variable ? $customSymbol : $displaySymbol }}</span>
+                                    <span
+                                        x-data="valueFlip()"
+                                        x-effect="selectedVariantId; customMode; flash()"
+                                        class="flex-1 truncate text-left tabular-nums"
+                                        :class="amount ? 'text-zinc-900' : 'font-medium text-zinc-500'"
+                                        x-text="amount ? amount : 'Select amount'"
+                                    >Select amount</span>
+                                    {{-- Clear the selected denomination. @click.stop so it doesn't toggle the dropdown. --}}
+                                    <span
+                                        x-show="selectedVariantId || amount"
+                                        @click.stop="amount = ''; selectedVariantId = null; customMode = false; open = false"
+                                        @keydown.enter.stop="amount = ''; selectedVariantId = null; customMode = false; open = false"
+                                        role="button"
+                                        tabindex="0"
+                                        aria-label="Clear selected amount"
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                                    >
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                        </svg>
+                                    </span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -225,59 +331,73 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute left-0 right-0 top-full z-20 max-h-[27rem] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute left-0 right-0 top-full z-20 max-h-[27rem] overflow-y-auto rounded-xl border border-zinc-200 bg-white/80 backdrop-blur-xl p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     @foreach ($fixedDenoms as $i => $v)
-                                        @php($val = (float) $v->retail_price)
+                                        @php
+                                            $val  = (float) $v->retail_price;
+                                            $disp = round($val * $displayRate, 2); // value in the display currency
+                                        @endphp
                                         <button
                                             type="button"
-                                            @click="amount = {{ $val }}; customMode = false; open = false"
-                                            :class="(! customMode && Number(amount) === {{ $val }}) ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
+                                            @click="amount = {{ $disp }}; selectedVariantId = {{ $v->id }}; customMode = false; open = false"
+                                            :class="(! customMode && Number(amount) === {{ $disp }}) ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
                                             class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-base font-medium tabular-nums transition-colors"
                                         >
-                                            <span class="font-bold">{{ $sym($currency) }}{{ rtrim(rtrim(number_format($val, 2), '0'), '.') }}</span>
+                                            <span class="font-bold">{{ $conv($val) }}</span>
                                             @if ($i === $fixedDenoms->count() - 1 && $fixedDenoms->count() > 1)
-                                                <span class="text-xs font-medium text-zinc-500">Popular</span>
+                                                <span class="inline-flex items-center rounded-full bg-white/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-300/50 shadow-[0_0_10px_rgba(37,99,235,0.45)] backdrop-blur-md">Popular</span>
                                             @endif
                                         </button>
                                     @endforeach
                                     @if ($variable)
                                         <button
                                             type="button"
-                                            @click="customMode = true; amount = ''; open = false"
+                                            @click="customMode = true; selectedVariantId = {{ $variable->id }}; amount = ''; open = false"
                                             :class="customMode ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
                                             class="flex w-full items-center justify-between rounded-lg {{ $fixedDenoms->isNotEmpty() ? 'border-t border-zinc-100' : '' }} px-3 py-2.5 text-left text-base font-medium transition-colors"
                                         >
                                             <span class="font-bold">Custom amount</span>
-                                            <span class="text-xs text-zinc-500">{{ $sym($currency) }}{{ number_format((float) $variable->min_amount, 0) }}–{{ number_format((float) $variable->max_amount, 0) }}</span>
+                                            <span class="text-xs text-zinc-500">{{ $customMoney($variable->min_amount) }} - {{ $customMoney($variable->max_amount) }}</span>
                                         </button>
                                     @endif
                                 </div>
                             </div>
 
                             @if ($variable)
-                                {{-- Custom-amount input, revealed only when "Custom amount" is chosen. --}}
+                                {{-- Custom-amount input. The amount is entered in the variant's own
+                                     currency ({{ $customCurrency }} for this product). A value outside the
+                                     min-max range is rejected: the error shows and the buy buttons
+                                     disable via canAddToCart(). --}}
                                 <div x-show="customMode" x-transition class="mt-2">
                                     <div class="relative">
-                                        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base font-semibold text-zinc-600">{{ $sym($currency) }}</span>
+                                        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base font-semibold text-zinc-600">{{ $customSymbol }}</span>
                                         <input
                                             type="number"
+                                            inputmode="decimal"
                                             x-model="amount"
                                             min="{{ (float) $variable->min_amount }}"
                                             max="{{ (float) $variable->max_amount }}"
                                             step="any"
-                                            placeholder="0.00"
-                                            class="w-full rounded-xl border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-base font-bold tabular-nums text-zinc-900 outline-none transition-colors focus:border-[color:var(--brand)] focus:ring-2 focus:ring-blue-500/15"
+                                            placeholder="{{ rtrim(rtrim(number_format((float) $variable->min_amount, 2), '0'), '.') }} - {{ rtrim(rtrim(number_format((float) $variable->max_amount, 2), '0'), '.') }}"
+                                            class="w-full rounded-xl border bg-white py-2.5 pl-10 pr-3 text-base font-bold tabular-nums text-zinc-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500/15"
+                                            :class="(amount !== '' && (Number(amount) < customMin || Number(amount) > customMax)) ? 'border-red-400 focus:border-red-500' : 'border-zinc-200 focus:border-[color:var(--brand)]'"
                                         />
                                     </div>
+                                    <p
+                                        x-show="amount !== '' && (Number(amount) < customMin || Number(amount) > customMax)"
+                                        x-cloak
+                                        class="mt-1.5 text-xs font-medium text-red-600"
+                                    >
+                                        Enter an amount between {{ $customMoney($variable->min_amount) }} and {{ $customMoney($variable->max_amount) }}.
+                                    </p>
                                 </div>
                             @endif
 
                             @if ($rangeMin !== null && $rangeMax !== null)
                                 <p class="mt-1.5 text-xs text-zinc-600">
-                                    Between {{ $sym($currency) }}{{ rtrim(rtrim(number_format((float) $rangeMin, 2), '0'), '.') }}
-                                    and {{ $sym($currency) }}{{ rtrim(rtrim(number_format((float) $rangeMax, 2), '0'), '.') }}
+                                    Between {{ $variable ? $customMoney($rangeMin) : $conv($rangeMin) }} and {{ $variable ? $customMoney($rangeMax) : $conv($rangeMax) }}
                                 </p>
                             @endif
                         </div>
@@ -298,7 +418,7 @@
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
                                     class="flex h-[50px] w-full items-center gap-2 rounded-xl border bg-white px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
-                                    <span class="flex-1 text-left tabular-nums" x-text="quantity">1</span>
+                                    <span x-data="valueFlip()" x-effect="quantity; flash()" class="flex-1 text-left tabular-nums" x-text="quantity">1</span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -310,7 +430,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute left-0 right-0 top-full z-20 max-h-60 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute left-0 right-0 top-full z-20 max-h-60 overflow-y-auto rounded-xl border border-zinc-200 bg-white/80 backdrop-blur-xl p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     @for ($n = 1; $n <= 10; $n++)
@@ -318,7 +438,7 @@
                                             type="button"
                                             @click="quantity = {{ $n }}; open = false"
                                             :class="quantity === {{ $n }} ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
-                                            class="flex w-full items-center rounded-lg px-3 py-2 text-left text-base font-medium tabular-nums transition-colors"
+                                            class="flex w-full items-center justify-center rounded-lg px-2 py-2 text-center text-base font-medium tabular-nums transition-colors"
                                         >
                                             {{ $n }}
                                         </button>
@@ -347,10 +467,13 @@
                                     <template x-if="cryptos[selectedCrypto]?.icon">
                                         <img :src="cryptos[selectedCrypto].icon" :alt="selectedCrypto" class="h-5 w-5 shrink-0 rounded-full">
                                     </template>
-                                    <template x-if="!cryptos[selectedCrypto]?.icon">
+                                    <template x-if="!cryptos[selectedCrypto]?.icon && cryptos[selectedCrypto]?.flag">
+                                        <img :src="cryptos[selectedCrypto].flag" :alt="selectedCrypto" class="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-zinc-200">
+                                    </template>
+                                    <template x-if="!cryptos[selectedCrypto]?.icon && !cryptos[selectedCrypto]?.flag">
                                         <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-white" :class="cryptos[selectedCrypto]?.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="selectedCrypto.charAt(0)"></span>
                                     </template>
-                                    <span class="flex-1 truncate text-left tabular-nums" x-text="formatCrypto()">0.00 USDT</span>
+                                    <span x-data="valueFlip()" x-effect="selectedVariantId; quantity; selectedCrypto; flash()" class="flex-1 truncate text-left tabular-nums" x-text="formatCrypto()">0.00 USDT</span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -362,7 +485,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute right-0 top-full z-20 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10"
+                                    class="absolute right-0 top-full z-20 max-h-80 w-56 overflow-y-auto rounded-xl border border-zinc-200 bg-white/80 backdrop-blur-xl p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     <template x-for="(meta, code) in cryptos" :key="code">
@@ -375,7 +498,10 @@
                                             <template x-if="meta.icon">
                                                 <img :src="meta.icon" :alt="code" class="h-5 w-5 shrink-0 rounded-full">
                                             </template>
-                                            <template x-if="!meta.icon">
+                                            <template x-if="!meta.icon && meta.flag">
+                                                <img :src="meta.flag" :alt="code" class="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-zinc-200">
+                                            </template>
+                                            <template x-if="!meta.icon && !meta.flag">
                                                 <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-white" :class="meta.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="code.charAt(0)"></span>
                                             </template>
                                             <span class="flex-1 truncate text-left tabular-nums" x-text="formatCryptoFor(code)"></span>
@@ -389,35 +515,83 @@
                         </div>
                     </div>
 
-                    {{-- Points you earn — 0.5 coins per $1 spent, rounded to nearest whole coin. --}}
+                    {{-- Points you earn — 0.5 coins per $1 spent, floored. The coin icon is the site favicon. --}}
                     <p class="flex items-center gap-1.5 text-sm font-semibold text-zinc-700">
                         Points you earn
-                        <svg class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        <span class="text-zinc-900" x-text="pointsEarned()">0</span>
+                        <img src="{{ asset('assets/favicon.ico') }}" alt="coins" class="h-6 w-6 object-contain" loading="lazy">
+                        <span x-data="valueFlip()" x-effect="selectedVariantId; quantity; flash()" class="inline-block text-zinc-900" x-text="pointsEarned()">0</span>
                     </p>
 
-                    {{-- Add to cart + Buy now — brand blue (outline + filled). --}}
+                    {{-- Add to cart + Buy now — brand blue (outline + filled).
+                         addToCart() pushes the selected variant into the global cart store,
+                         which drops the nav cart popup open. Buy now also routes to checkout. --}}
                     <div class="grid grid-cols-2 gap-3">
+                        {{-- Add to cart — morphs label -> spinner -> checkmark with a success bounce.
+                             Re-clicks during the spinner/success cue are ignored by addToCart(). --}}
                         <button
                             type="button"
-                            class="rounded-lg border-2 border-blue-600 bg-white px-4 py-3 text-base font-semibold text-blue-600 transition-colors hover:bg-blue-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                            @click="addToCart()"
+                            :disabled="! canAddToCart()"
+                            :class="cartState === 'success'
+                                ? 'border-emerald-500 bg-emerald-500 text-white animate-cart-pop'
+                                : 'border-blue-600 bg-white text-blue-600 hover:bg-blue-600 hover:text-white'"
+                            class="relative flex h-[52px] items-center justify-center rounded-lg border-2 px-4 text-base font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            Add to cart
+                            <span
+                                x-show="cartState === 'idle'"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-end="opacity-0"
+                                class="absolute inset-0 flex items-center justify-center"
+                            >Add to cart</span>
+
+                            <span
+                                x-show="cartState === 'loading'"
+                                style="display:none;"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-end="opacity-0"
+                                class="absolute inset-0 flex items-center justify-center"
+                            >
+                                <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <circle class="opacity-30" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/>
+                                    <path class="opacity-90" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3z"/>
+                                </svg>
+                            </span>
+
+                            <span
+                                x-show="cartState === 'success'"
+                                style="display:none;"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 scale-90"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute inset-0 flex items-center justify-center gap-2"
+                            >
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Added
+                            </span>
                         </button>
                         <button
                             type="button"
-                            class="rounded-lg bg-blue-600 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                            @click="buyNow()"
+                            :disabled="! canAddToCart() || $store.cart.loading"
+                            class="flex h-[52px] items-center justify-center rounded-lg bg-blue-600 px-4 text-base font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600"
                         >
                             Buy now
                         </button>
                     </div>
 
-                    {{-- Country availability + "find your country" link to reopen the locale modal. --}}
+                    {{-- Country availability — real flag image (flagcdn) + the redeemable
+                         country, then a link to switch country via the locale modal. --}}
                     <div>
                         <p class="flex items-center gap-2 text-sm text-zinc-700">
-                            <span class="text-base leading-none" aria-hidden="true">{{ $flag($product->country_code) }}</span>
+                            @if (Product::flagUrl($product->country_code))
+                                <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-4 w-6 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                            @endif
                             <span>May only be redeemable in {{ $countryName }}</span>
                         </p>
                         <p class="mt-0.5 text-sm text-zinc-600">
@@ -446,7 +620,7 @@
                         </svg>
                     </summary>
                     <div class="pb-5 text-base leading-relaxed text-zinc-700 [&>p]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 [&>ul]:list-disc [&>ul]:pl-5 [&>ol>li]:mb-1.5 [&>ul>li]:mb-1.5 [&_a]:text-blue-600 [&_a]:underline [&_a]:hover:text-blue-700">
-                        {!! $product->redeem_instructions !!}
+                        {!! $linkify($product->redeem_instructions) !!}
                     </div>
                 </details>
             @endif
@@ -460,7 +634,7 @@
                         </svg>
                     </summary>
                     <div class="pb-5 text-sm leading-relaxed text-zinc-700 [&>p]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 [&>ul]:list-disc [&>ul]:pl-5 [&_a]:text-blue-600 [&_a]:underline">
-                        {!! $product->terms_and_conditions !!}
+                        {!! $linkify($product->terms_and_conditions) !!}
                     </div>
                 </details>
             @endif
@@ -511,16 +685,23 @@
                     </a>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                {{-- Horizontal carousel on mobile (scrollbar hidden); a static grid from sm up. --}}
+                <div class="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
                     @foreach ($similar as $s)
                         @php($sLogo = Product::brandLogoUrl($s->brand_key, $s->logo_url))
-                        <a href="{{ route('shop.brand', ['brandSlug' => Product::brandSlug($s->brand_key), 'country' => $product->country_code]) }}" wire:navigate class="group block">
-                            <div class="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md group-hover:ring-zinc-300">
+                        <a href="{{ route('shop.brand', ['brandSlug' => Product::brandSlug($s->brand_key), 'country' => $product->country_code]) }}" wire:navigate class="card-3d-scene group block w-36 shrink-0 sm:w-auto">
+                            <div
+                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
+                                x-data="cardTilt()"
+                                @mousemove="tilt($event)"
+                                @mouseleave="reset()"
+                            >
                                 @if ($sLogo)
-                                    <img src="{{ $sLogo }}" alt="" class="max-h-[68%] max-w-[78%] object-contain" loading="lazy">
+                                    <img src="{{ $sLogo }}" alt="" class="h-full w-full object-cover" loading="lazy">
                                 @else
                                     <span class="text-xl font-black uppercase text-zinc-700">{{ str(Product::brandDisplayName($s->brand_key))->substr(0, 2)->upper() }}</span>
                                 @endif
+                                <span class="card-3d-glare pointer-events-none absolute inset-0" aria-hidden="true"></span>
                             </div>
                             <p class="mt-2 truncate text-[13px] font-bold text-zinc-900 group-hover:text-blue-700">{{ Product::brandDisplayName($s->brand_key) }}</p>
                         </a>
@@ -531,46 +712,123 @@
     </div>
 
     <script>
-        window.brandDetail = function ({ currencySymbol, variants, rangeText, cryptos, defaultCrypto }) {
-            // `cryptos` arrives as an array of {code, name, type, perUsd, decimals, icon} from
-            // the admin-managed currency_rates table. Reshape into a code-keyed object so the
-            // existing render code (cryptos[selectedCrypto].icon etc.) still works.
+        window.brandDetail = function ({ variants, rangeText, cryptos, defaultCrypto, markup, customRate, customMin, customMax }) {
+            // `cryptos` is an array of {code, name, type, perUsd, decimals, icon} from the
+            // admin currency_rates table. Reshape into a code-keyed object.
             const cryptoMap = {};
             (cryptos || []).forEach((c) => { cryptoMap[c.code] = c; });
 
             return {
-                currencySymbol,
                 variants,
                 rangeText,
-                amount: '',
+                markup,               // { type, value, min_margin_percent } from CartPricingService
+                customRate,           // variant-currency → USD divisor for a variable amount
+                amount: '',           // selected face value, in the card's own currency
                 customMode: false,
+                customMin,            // min/max for a custom amount, in the card's currency
+                customMax,
+                selectedVariantId: null,
                 quantity: 1,
                 cryptos: cryptoMap,
                 selectedCrypto: cryptoMap[defaultCrypto] ? defaultCrypto : (cryptos[0]?.code ?? null),
 
+                // Add-to-cart micro-interaction: idle -> loading -> success -> idle.
+                cartState: 'idle',
+                _cartTimer: null,
+
                 init() {
-                    // Empty by default so the placeholder hint stays visible until the user types
-                    // or taps a chip.
+                    // Empty by default so the placeholder hint stays visible.
                 },
 
-                selectedAmount() {
-                    return Number(this.amount || 0);
+                canAddToCart() {
+                    if (! this.selectedVariantId) {
+                        return false;
+                    }
+                    if (this.customMode) {
+                        // A custom amount must fall within the variable variant's range.
+                        const value = Number(this.amount);
+                        return value >= this.customMin && value <= this.customMax;
+                    }
+                    return true;
                 },
 
+                async addToCart() {
+                    // Ignore re-clicks while the spinner/success cue is still playing.
+                    if (this.cartState !== 'idle') {
+                        return false;
+                    }
+                    if (! this.canAddToCart()) {
+                        return false;
+                    }
+                    // Variable variants pass the requested face value back in USD (the cart works in USD).
+                    const requested = this.customMode
+                        ? Number(this.amount) / (this.customRate || 1)
+                        : null;
+
+                    this.cartState = 'loading';
+                    const ok = await this.$store.cart.add(this.selectedVariantId, this.quantity || 1, requested);
+
+                    if (ok) {
+                        // Hold the success cue briefly, then settle back to idle.
+                        this.cartState = 'success';
+                        clearTimeout(this._cartTimer);
+                        this._cartTimer = setTimeout(() => { this.cartState = 'idle'; }, 1600);
+                    } else {
+                        this.cartState = 'idle';
+                    }
+                    return ok;
+                },
+
+                async buyNow() {
+                    const ok = await this.addToCart();
+                    if (ok) {
+                        window.location.href = '{{ route('shop.checkout') }}';
+                    }
+                },
+
+                // Payable USD price for one unit of the selected variant: provider
+                // cost + markup. A fixed denomination carries a precomputed
+                // price_usd; a variable amount is converted from the card currency
+                // and marked up here.
+                unitPriceUsd() {
+                    if (! this.selectedVariantId) {
+                        return 0;
+                    }
+                    const variant = this.variants.find((v) => v.id === this.selectedVariantId);
+                    if (! variant) {
+                        return 0;
+                    }
+                    if (variant.is_variable) {
+                        const costUsd = Number(this.amount || 0) / (this.customRate || 1);
+                        return this.applyMarkup(costUsd);
+                    }
+                    return variant.price_usd || 0;
+                },
+
+                // Mirror of CartPricingService::resolveRetailPrice — apply the
+                // markup, then clamp to the min-margin floor.
+                applyMarkup(costUsd) {
+                    if (costUsd <= 0) {
+                        return 0;
+                    }
+                    const retail = this.markup.type === 'fixed'
+                        ? costUsd + Number(this.markup.value)
+                        : costUsd * (1 + Number(this.markup.value) / 100);
+                    const floor = costUsd * (1 + Number(this.markup.min_margin_percent || 0) / 100);
+                    return Math.max(retail, floor);
+                },
+
+                // Payable USD total for the whole order.
                 totalUsd() {
-                    return this.selectedAmount() * (this.quantity || 1);
+                    return this.unitPriceUsd() * (this.quantity || 1);
                 },
 
-                formatTotal() {
-                    return this.currencySymbol + this.totalUsd().toFixed(2);
-                },
-
-                // 0.5 coins per $1 of the order total, floored.
+                // 0.5 coins per $1 (USD) of the payable total, floored.
                 pointsEarned() {
                     return Math.floor(this.totalUsd() * 0.5);
                 },
 
-                // Estimated equivalent in the currently selected crypto.
+                // Estimated equivalent in the currently selected currency (fiat or crypto).
                 formatCrypto() {
                     return this.formatCryptoFor(this.selectedCrypto);
                 },

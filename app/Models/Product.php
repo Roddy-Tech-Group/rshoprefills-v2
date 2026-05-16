@@ -75,6 +75,20 @@ class Product extends Model
     }
 
     /**
+     * Real flag image URL for an ISO-3166 country code, via flagcdn.com.
+     * Country-flag emoji don't render on Windows desktop, so we use images
+     * for consistent flags on every OS. Returns null for an invalid code.
+     */
+    public static function flagUrl(?string $iso): ?string
+    {
+        if (! $iso || strlen($iso) !== 2) {
+            return null;
+        }
+
+        return 'https://flagcdn.com/w40/'.strtolower($iso).'.png';
+    }
+
+    /**
      * Symbol for a currency code. Falls back to the raw code + space so an
      * unmapped currency still renders something sensible.
      */

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CurrencyRate;
+use App\Models\Product;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -25,6 +26,25 @@ class extends Component {
 
     /** Toggles the "Add new currency" inline form. */
     public bool $creating = false;
+
+    /**
+     * ISO country override for fiat codes whose first two letters aren't a
+     * country code. Everything else derives the flag from the code prefix
+     * (USD -> US, GBP -> GB, EUR -> EU, ...).
+     */
+    private const FLAG_OVERRIDES = [
+        'XAF' => 'CM', // Central African CFA franc
+        'XOF' => 'SN', // West African CFA franc
+        'XCD' => 'AG', // East Caribbean dollar
+    ];
+
+    /** Country flag for a fiat currency code, or null. */
+    public function flagUrl(string $code): ?string
+    {
+        $code = strtoupper($code);
+
+        return Product::flagUrl(self::FLAG_OVERRIDES[$code] ?? substr($code, 0, 2));
+    }
 
     protected function rules(): array
     {
@@ -245,6 +265,8 @@ class extends Component {
                                     <td class="px-3 py-3.5 sm:px-5">
                                         @if ($rate->icon_path)
                                             <img src="{{ asset('assets/' . $rate->icon_path) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-full object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
+                                        @elseif ($rate->type === 'fiat' && $this->flagUrl($rate->code))
+                                            <img src="{{ $this->flagUrl($rate->code) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-full object-cover bg-white ring-1 ring-zinc-100" loading="lazy">
                                         @else
                                             <span class="flex h-9 w-9 items-center justify-center rounded-full {{ $rate->type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500' }} text-xs font-bold text-white">
                                                 {{ substr($rate->code, 0, 1) }}

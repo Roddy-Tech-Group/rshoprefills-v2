@@ -40,7 +40,11 @@ class ZenditNormalizer implements CatalogNormalizerInterface
         $priceBlock = $rawItem['price'] ?? [];
         $sendBlock = $rawItem['send'] ?? [];
         $costBlock = $rawItem['cost'] ?? [];
-        $currencyCode = strtoupper($priceBlock['currency'] ?? $sendBlock['currency'] ?? $rawItem['currency'] ?? 'USD');
+        // The card's currency is the SEND block — the value loaded onto the recipient's
+        // account, in the card's own currency (e.g. a UK Amazon card is GBP). The price
+        // block is Zendit's USD price; the cost block is our USD cost. Don't use those
+        // for the card currency, or a £-card shows as a $-card.
+        $currencyCode = strtoupper($sendBlock['currency'] ?? $priceBlock['currency'] ?? $rawItem['currency'] ?? 'USD');
 
         // Products are grouped by Brand + Country
         $productSlug = Str::slug("{$brandKey}-{$countryCode}-{$providerName}");
@@ -82,8 +86,11 @@ class ZenditNormalizer implements CatalogNormalizerInterface
         $sendDiv = (float) ($sendBlock['currencyDivisor'] ?? 100);
         $costDiv = (float) ($costBlock['currencyDivisor'] ?? 100);
 
-        $faceValue = isset($priceBlock['fixed']) ? ((float) $priceBlock['fixed']) / $priceDiv
-                     : (isset($sendBlock['fixed']) ? ((float) $sendBlock['fixed']) / $sendDiv : null);
+        // Face value = the SEND block (what the recipient actually receives, in the
+        // card's own currency). cost_price below is the COST block — always USD, our
+        // settlement base for the markup engine.
+        $faceValue = isset($sendBlock['fixed']) ? ((float) $sendBlock['fixed']) / $sendDiv
+                     : (isset($priceBlock['fixed']) ? ((float) $priceBlock['fixed']) / $priceDiv : null);
         $costPrice = isset($costBlock['fixed']) ? ((float) $costBlock['fixed']) / $costDiv : ($faceValue ?? 0.0);
         $retailPrice = $faceValue ?? $costPrice;
 

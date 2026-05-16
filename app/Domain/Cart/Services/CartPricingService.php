@@ -2,87 +2,46 @@
 
 namespace App\Domain\Cart\Services;
 
-use App\Models\CartItem;
 use App\Models\PricingRule;
+use App\Models\Product;
 use App\Models\ProductVariant;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 class CartPricingService
 {
+    /** Active pricing rules, loaded once and memoised for this instance. */
+    private ?Collection $rules = null;
+
     /**
-     * Calculate all pricing fields for a potential cart item.
-     * Returns an array of pricing data to be snapshot on the CartItem.
+     * Calculate the pricing fields to snapshot on a cart item. Every figure is
+     * USD — the settlement currency. Conversion into the customer's display
+     * currency happens later, in the presentation layer.
+     *
+     * @return array<string, mixed>
      */
     public function calculatePricing(ProductVariant $variant, int $quantity): array
     {
-        // 1. Determine base USD cost (assuming cost_price is already the provider's USD settlement cost)
-        $providerCostUsd = (float) $variant->cost_price;
-
-        // 2. Fetch applicable pricing rule
-        $rule = $this->getApplicablePricingRule($variant);
-
-        // 3. Calculate markup
-        $markupAmount = 0;
-        if ($rule) {
-            if ($rule->markup_type === 'percentage') {
-                $markupAmount = $providerCostUsd * ((float) $rule->markup_value / 100);
-            } elseif ($rule->markup_type === 'fixed') {
-                $markupAmount = (float) $rule->markup_value;
-            }
-        }
-
-        // 4. Calculate unit retail price
-        $unitPriceUsd = $providerCostUsd + $markupAmount;
-
-        // 5. Calculate subtotal
+        $cost = (float) $variant->cost_price;
+        $unitPriceUsd = $this->resolveRetailPrice($variant->product, $cost);
         $subtotalUsd = $unitPriceUsd * $quantity;
 
         return [
-            'provider_cost_usd' => $providerCostUsd,
-            'markup_amount' => $markupAmount,
+            'provider_cost_usd' => $cost,
+            'markup_amount' => $unitPriceUsd - $cost,
             'unit_price_snapshot' => $unitPriceUsd,
             'subtotal_snapshot' => $subtotalUsd,
-            // Display layer (we assume checkout is in USD for now, frontend will convert later if needed)
+            // Settlement is USD; the display layer converts from here.
             'display_currency' => 'USD',
             'display_amount' => $subtotalUsd,
-            'exchange_rate_snapshot' => 1.0, // Since display is USD
+            'exchange_rate_snapshot' => 1.0,
         ];
     }
 
     /**
-     * Finds the most specific pricing rule (Subcategory > Category).
-     * Cached for performance.
-     */
-    protected function getApplicablePricingRule(ProductVariant $variant): ?PricingRule
-    {
-        $product = $variant->product;
-        if (! $product) {
-            return null;
-        }
-
-        $subcategoryId = $product->subcategory_id;
-        $categoryId = $product->category_id;
-
-        return Cache::remember("pricing_rule.{$categoryId}.{$subcategoryId}", 3600, function () use ($subcategoryId, $categoryId) {
-            // Check subcategory first
-            $rule = PricingRule::where('subcategory_id', $subcategoryId)
-                ->where('is_active', true)
-                ->first();
-
-            if ($rule) {
-                return $rule;
-            }
-
-            // Fallback to category
-            return PricingRule::where('category_id', $categoryId)
-                ->where('is_active', true)
-                ->whereNull('subcategory_id')
-                ->first();
-        });
-    }
-
-    /**
-     * Recalculate totals for an entire cart.
+     * Recalculate USD totals for an entire cart.
+     *
+     * @return array<string, mixed>
      */
     public function calculateCartTotals(iterable $items): array
     {
@@ -103,5 +62,117 @@ class CartPricingService
             'total_provider_cost' => $totalProviderCost,
             'total' => $subtotal, // No tax/discounts yet
         ];
+    }
+
+    /**
+     * The markup parameters for a product, for client-side price estimation on
+     * variable-amount products where the cost is only known once the customer
+     * enters an amount. The consumer must mirror resolveRetailPrice(): apply the
+     * markup, then clamp to the min-margin floor.
+     *
+     * @return array{type: string, value: float, min_margin_percent: float}
+     */
+    public function markupDescriptor(?Product $product): array
+    {
+        $rule = $this->resolveRule($product);
+
+        [$type, $value] = match (true) {
+            $rule === null => ['percentage', $this->safetyMarkupPercent()],
+            $rule->markup_type === 'fixed' => ['fixed', (float) $rule->markup_value],
+            default => ['percentage', (float) $rule->markup_value],
+        };
+
+        return [
+            'type' => $type,
+            'value' => $value,
+            'min_margin_percent' => $this->minMarginPercent(),
+        ];
+    }
+
+    /**
+     * Resolve the marked-up USD retail price for a product. Applies the safety
+     * fallback (no rule matched) and the margin floor, so the result is never
+     * at or below cost.
+     */
+    private function resolveRetailPrice(?Product $product, float $cost): float
+    {
+        $rule = $this->resolveRule($product);
+
+        $retail = match (true) {
+            $rule === null => $cost * (1 + $this->safetyMarkupPercent() / 100),
+            $rule->markup_type === 'fixed' => $cost + (float) $rule->markup_value,
+            default => $cost * (1 + (float) $rule->markup_value / 100), // 'percentage'
+        };
+
+        // Hard floor — never price at or below cost, whatever a rule or a
+        // supplier cost change would otherwise imply.
+        $floor = $cost * (1 + $this->minMarginPercent() / 100);
+
+        return max($retail, $floor);
+    }
+
+    /**
+     * Find the markup rule for a product using the hybrid hierarchy:
+     * product > subcategory > category > global. Each tier is searched in full
+     * before falling through, so a product override always beats a category
+     * rule regardless of row order.
+     */
+    private function resolveRule(?Product $product): ?PricingRule
+    {
+        $rules = $this->activeRules();
+
+        if ($product) {
+            $rule = $rules->first(fn (PricingRule $r) => $r->product_id !== null && $r->product_id === $product->id);
+            if ($rule) {
+                return $rule;
+            }
+
+            if ($product->subcategory_id !== null) {
+                $rule = $rules->first(fn (PricingRule $r) => $r->product_id === null
+                    && $r->subcategory_id !== null && $r->subcategory_id === $product->subcategory_id);
+                if ($rule) {
+                    return $rule;
+                }
+            }
+
+            if ($product->category_id !== null) {
+                $rule = $rules->first(fn (PricingRule $r) => $r->product_id === null
+                    && $r->subcategory_id === null
+                    && $r->category_id !== null && $r->category_id === $product->category_id);
+                if ($rule) {
+                    return $rule;
+                }
+            }
+        }
+
+        // Global default — a rule with no product, subcategory or category.
+        return $rules->first(fn (PricingRule $r) => $r->product_id === null
+            && $r->subcategory_id === null && $r->category_id === null);
+    }
+
+    /**
+     * All active pricing rules, loaded once. pricing_rules is a small table, so
+     * the whole set is cached in memory and resolved with zero per-product
+     * queries (key insight for catalog-listing performance). The cache key is
+     * busted by PricingRuleObserver whenever a rule changes.
+     *
+     * @return Collection<int, PricingRule>
+     */
+    private function activeRules(): Collection
+    {
+        return $this->rules ??= Cache::rememberForever(
+            'pricing_rules.active',
+            fn () => PricingRule::where('is_active', true)->orderBy('id')->get()
+        );
+    }
+
+    private function safetyMarkupPercent(): float
+    {
+        return (float) config('pricing.safety_markup_percent', 10);
+    }
+
+    private function minMarginPercent(): float
+    {
+        return (float) config('pricing.min_margin_percent', 1);
     }
 }
