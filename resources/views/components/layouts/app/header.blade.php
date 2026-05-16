@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="csrf-token" content="{{ csrf_token() }}" />
         <title>{{ $title ?? 'RshopRefills' }}</title>
         <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
 
@@ -15,10 +16,10 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         {{-- @fluxAppearance intentionally omitted — the storefront is always light mode --}}
 
-        {{-- Smooth fade between pages on wire:navigate --}}
+        {{-- Page transition — the incoming page slides up from the bottom on navigation. --}}
         <style>
-            main { transition: opacity 400ms ease-in-out; }
-            body.is-navigating main { opacity: 0; }
+            main { transition: opacity 700ms ease, transform 1200ms cubic-bezier(0.22, 1, 0.36, 1); }
+            main.page-entering { opacity: 0; transform: translateY(40px); transition: none; }
         </style>
     </head>
     <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased">
@@ -35,7 +36,7 @@
                 <x-nav.main-nav />
             </header>
 
-            <main class="flex-1">
+            <main class="flex-1 bg-zinc-100">
                 {{ $slot }}
             </main>
 
@@ -47,12 +48,20 @@
         @fluxScripts
 
         <script>
-            document.addEventListener('livewire:navigating', () => {
-                document.body.classList.add('is-navigating');
-            });
-            document.addEventListener('livewire:navigated', () => {
-                document.body.classList.remove('is-navigating');
-            });
+            (function () {
+                let firstLoad = true;
+                function playPageTransition() {
+                    const main = document.querySelector('main');
+                    if (! main) return;
+                    main.classList.add('page-entering');
+                    void main.offsetWidth; // commit the offset before transitioning back
+                    main.classList.remove('page-entering');
+                }
+                document.addEventListener('livewire:navigated', () => {
+                    if (firstLoad) { firstLoad = false; return; }
+                    playPageTransition();
+                });
+            })();
         </script>
     </body>
 </html>

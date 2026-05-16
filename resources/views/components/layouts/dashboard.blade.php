@@ -28,7 +28,6 @@
             // Placeholder counts. Real counts will bind to Order / Notification models once they ship.
             $ordersCount = $user?->orders()->count() ?? 0;
             $notificationCount = 0;
-            $cartCount = 0;
 
             // Default avatar by gender. Backend hook: add a nullable `gender` enum (male|female|other) on users
             // and the right portrait is picked up automatically. Falls back to the male portrait until the column ships.
@@ -144,6 +143,16 @@
                     </span>
                 </a>
 
+                {{-- Identity verification (KYC) --}}
+                @php $active = $isCurrent('dashboard.kyc'); @endphp
+                <a href="{{ route('dashboard.kyc') }}" wire:navigate class="{{ $navItem($active) }}">
+                    <span class="flex items-center gap-3">
+                        <img src="{{ asset('assets/customer.svg') }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
+                        Verify Identity
+                    </span>
+                    <span class="rounded-[5px] bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">KYC</span>
+                </a>
+
                 {{-- Security (password) --}}
                 @php $active = $isCurrent('dashboard.password'); @endphp
                 <a href="{{ route('dashboard.password') }}" wire:navigate class="{{ $navItem($active) }}">
@@ -172,8 +181,8 @@
                     </span>
                 </a>
 
-                {{-- Referrals --}}
-                <a href="#" class="{{ $navItem(false) }}">
+                {{-- Referrals (lives on the Rcoin rewards page) --}}
+                <a href="{{ route('dashboard.rewards') }}" wire:navigate class="{{ $navItem(request()->routeIs('dashboard.rewards')) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/referals.png') }}" alt="" class="h-5 w-5 shrink-0 object-contain" loading="lazy">
                         Referrals
@@ -309,35 +318,37 @@
 
             <flux:spacer />
 
-            {{-- Cart — mirrors the storefront cart hover/click behavior.
-                 Hover toggles unless the icon was clicked; then it stays open until clicked outside.
-                 Backend hook: $this->dispatch('cart-added') from anywhere to auto-open the popup. --}}
+            {{-- Cart. State lives in the global Alpine cart store ($store.cart) — the same
+                 store the storefront nav uses. The popup drops open automatically when an
+                 item is added (store.add sets open = true). --}}
             <div
-                x-data="{ open: false, locked: false }"
-                @mouseenter="if (!locked) open = true"
-                @mouseleave="if (!locked) open = false"
-                @click.outside="open = false; locked = false"
-                @keydown.escape.window="open = false; locked = false"
-                @cart-added.window="open = true; setTimeout(() => { if (!locked) open = false }, 3500)"
+                x-data="{ locked: false }"
+                @mouseenter="if (!locked) $store.cart.open = true"
+                @mouseleave="if (!locked) $store.cart.open = false"
+                @click.outside="$store.cart.open = false; locked = false"
+                @keydown.escape.window="$store.cart.open = false; locked = false"
                 class="relative"
             >
                 <button
                     type="button"
-                    @click="locked = !locked; open = locked"
-                    :aria-expanded="open.toString()"
+                    @click="locked = !locked; $store.cart.open = locked"
+                    :aria-expanded="$store.cart.open.toString()"
                     aria-haspopup="menu"
                     class="relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-50"
                     aria-label="Shopping cart"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-7 w-7" loading="lazy">
-                    @if ($cartCount > 0)
-                        <span class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-[5px] bg-blue-600 px-1 text-[10px] font-bold text-white">{{ $cartCount }}</span>
-                    @endif
+                    <span
+                        x-show="$store.cart.count > 0"
+                        x-text="$store.cart.count"
+                        x-cloak
+                        class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-[5px] bg-blue-600 px-1 text-[10px] font-bold text-white"
+                    ></span>
                 </button>
 
-                {{-- Cart popup — same empty-state illustration as storefront --}}
+                {{-- Cart popup — mirrors the storefront nav popup --}}
                 <div
-                    x-show="open"
+                    x-show="$store.cart.open"
                     x-transition:enter="transition ease-out duration-150"
                     x-transition:enter-start="opacity-0 -translate-y-1"
                     x-transition:enter-end="opacity-100 translate-y-0"
@@ -345,41 +356,74 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[320px] overflow-hidden rounded-2xl bg-white/85 backdrop-blur-md shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
+                    class="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
                     role="menu"
                 >
-                    @if ($cartCount === 0)
-                        <div class="flex flex-col items-center px-6 py-7 text-center">
-                            <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
-                            <img
-                                src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}"
-                                alt=""
-                                class="mt-4 h-40 w-auto object-contain animate-float"
-                                loading="lazy"
-                            >
-                            <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
+                    {{-- Empty state --}}
+                    <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-6 py-7 text-center">
+                        <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
+                        <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
+                        <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
+                    </div>
+
+                    {{-- Populated state --}}
+                    <div x-show="$store.cart.count > 0" x-cloak>
+                        <div class="flex items-center justify-between px-5 pt-5">
+                            <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
+                            <span class="text-sm text-zinc-600" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
                         </div>
-                    @else
-                        <div class="px-5 py-5">
-                            <div class="mb-4 flex items-center justify-between">
-                                <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
-                                <span class="text-sm text-zinc-600">{{ $cartCount }} {{ \Illuminate\Support\Str::plural('item', $cartCount) }}</span>
-                            </div>
-                            <ul class="max-h-64 space-y-3 overflow-y-auto">
-                                {{-- Backend hook: loop $cartItems here --}}
-                            </ul>
-                            <div class="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4">
-                                <span class="text-sm font-medium text-zinc-700">Subtotal</span>
-                                <span class="text-base font-bold text-zinc-900">${{ number_format($cartSubtotal ?? 0, 2) }}</span>
-                            </div>
-                            <a href="#" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+
+                        <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <template x-for="item in $store.cart.items" :key="item.id">
+                                <li class="flex items-center gap-3 rounded-xl px-2 py-2.5">
+                                    <span class="flex aspect-[16/10] w-20 shrink-0 items-center justify-center overflow-hidden rounded-[2px] bg-white shadow-sm ring-1 ring-zinc-200">
+                                        <template x-if="item.logo">
+                                            <img :src="item.logo" alt="" class="h-full w-full object-cover">
+                                        </template>
+                                        <template x-if="!item.logo">
+                                            <span class="text-sm font-black uppercase text-zinc-700" x-text="item.name.substring(0,2).toUpperCase()"></span>
+                                        </template>
+                                    </span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate text-sm font-bold text-zinc-900" x-text="item.name"></span>
+                                        <span class="block truncate text-xs text-zinc-500">
+                                            <span x-show="item.face_label" x-text="item.face_label"></span><span x-show="item.face_label && item.country"> &middot; </span><span x-text="item.country"></span>
+                                        </span>
+                                        <span class="block text-xs font-semibold text-zinc-700">
+                                            <span x-text="$store.cart.pay(item.unit_price)"></span>
+                                            <span x-show="$store.cart.showUsd" class="font-normal text-zinc-400" x-text="'(' + $store.cart.usd(item.unit_price_usd) + ')'"></span>
+                                        </span>
+                                    </span>
+                                    <span class="flex shrink-0 items-center gap-1.5">
+                                        <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Decrease">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M5 12h14"/></svg>
+                                        </button>
+                                        <span class="w-5 text-center text-sm font-bold tabular-nums text-zinc-900" x-text="item.quantity"></span>
+                                        <button type="button" @click="$store.cart.setQty(item.id, item.quantity + 1)" class="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Increase">
+                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                                        </button>
+                                    </span>
+                                </li>
+                            </template>
+                        </ul>
+
+                        <div class="mx-5 flex items-start justify-between border-t border-zinc-200 py-4">
+                            <span class="text-sm font-medium text-zinc-700">Subtotal</span>
+                            <span class="text-right">
+                                <span class="block text-base font-bold tabular-nums text-zinc-900" x-text="$store.cart.pay($store.cart.subtotal)"></span>
+                                <span x-show="$store.cart.showUsd" class="block text-xs text-zinc-500" x-text="'(' + $store.cart.usd($store.cart.subtotalUsd) + ' USD)'"></span>
+                            </span>
+                        </div>
+
+                        <div class="flex gap-2 border-t border-zinc-100 bg-zinc-50 p-3">
+                            <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
+                                View cart
+                            </a>
+                            <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                                 Checkout
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                                </svg>
                             </a>
                         </div>
-                    @endif
+                    </div>
                 </div>
             </div>
 
@@ -782,11 +826,12 @@
                 ['label' => 'Wallet',        'href' => '#',                          'icon' => 'Wallet.svg',         'tone' => 'bg-emerald-500',  'nav' => false],
                 ['label' => 'Transactions',  'href' => '#',                          'icon' => 'transactions 1.svg', 'tone' => 'bg-teal-500',     'nav' => false],
                 ['label' => 'Profile',       'href' => route('dashboard.profile'),   'icon' => 'Profile 1.svg',      'tone' => 'bg-indigo-500',   'nav' => true],
+                ['label' => 'Verify (KYC)',  'href' => route('dashboard.kyc'),       'icon' => 'customer.svg',       'tone' => 'bg-amber-500',    'nav' => true],
                 ['label' => 'Security',      'href' => route('dashboard.password'),  'icon' => 'admin access.svg',   'tone' => 'bg-violet-500',   'nav' => true],
                 ['label' => 'Appearance',    'href' => route('dashboard.appearance'),'icon' => 'Appearance.svg',     'tone' => 'bg-fuchsia-500',  'nav' => true],
                 ['label' => 'Notifications', 'href' => '#',                          'icon' => 'Notification 3.svg', 'tone' => 'bg-amber-500',    'nav' => false],
                 ['label' => 'Saved Cards',   'href' => '#',                          'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => false],
-                ['label' => 'Referrals',     'href' => '#',                          'icon' => 'referals.png',       'tone' => 'bg-orange-500',   'nav' => false],
+                ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.png',       'tone' => 'bg-orange-500',   'nav' => true],
                 ['label' => 'Support',       'href' => '#',                          'icon' => 'support.svg',        'tone' => 'bg-cyan-500',     'nav' => false],
             ];
         @endphp
@@ -840,7 +885,7 @@
                         <button
                             type="button"
                             @click="menuOpen = false"
-                            class="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                            class="flex h-9 w-9 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
                             aria-label="Close menu"
                         >
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">

@@ -1,14 +1,46 @@
 @php
     use App\Models\Product;
     use App\Models\Category;
+    use Illuminate\Support\Facades\DB;
 
     $search = request()->query('q', '');
     $categorySlug = request()->query('category', 'all');
+    $country = strtoupper((string) request()->query('country', 'all'));
     $perPage = 25;
 
     // Pills: real categories from DB + an "All" sentinel that maps to no filter.
     $categoryPills = collect([['name' => 'All', 'slug' => 'all']])
         ->merge(Category::orderBy('sort_order')->get(['name', 'slug'])->toArray());
+
+    // Country options for the filter dropdown — every country that has products,
+    // with its product count, ordered by volume. config/countries.php maps ISO → name.
+    $countryNames = array_flip(config('countries.codes', []));
+    $countryOptions = Product::query()
+        ->select('country_code', DB::raw('COUNT(*) as product_count'))
+        ->whereNotNull('country_code')
+        ->groupBy('country_code')
+        ->orderByDesc('product_count')
+        ->get();
+
+    $anyFilter = $search !== '' || $categorySlug !== 'all' || $country !== 'ALL';
+
+    // Builds an /admin/products URL with the given country, preserving the other filters.
+    $countryFilterUrl = fn (?string $code) => route('admin.products', array_filter([
+        'q' => $search ?: null,
+        'category' => $categorySlug !== 'all' ? $categorySlug : null,
+        'country' => $code,
+    ]));
+
+    // Flag emoji from an ISO-2 code via regional-indicator codepoints.
+    $flag = function (?string $code) {
+        if (! $code || strlen($code) !== 2) {
+            return '';
+        }
+        $code = strtoupper($code);
+        return mb_chr(0x1F1E6 + ord($code[0]) - ord('A')) . mb_chr(0x1F1E6 + ord($code[1]) - ord('A'));
+    };
+
+    $selectedCountryName = $country !== 'ALL' ? ($countryNames[$country] ?? $country) : null;
 
     // Search resolves against the product name AND country. We accept ISO-2 codes
     // ("US", "GB") directly, plus partial country names ("United Sta…", "Cameroon")
@@ -40,6 +72,7 @@
             });
         })
         ->when($categorySlug !== 'all', fn ($q) => $q->whereHas('category', fn ($qq) => $qq->where('slug', $categorySlug)))
+        ->when($country !== 'ALL', fn ($q) => $q->where('country_code', $country))
         ->latest('id')
         ->paginate($perPage)
         ->withQueryString();
@@ -76,7 +109,7 @@
             @endforeach
         </div>
 
-        {{-- Search + Add row --}}
+        {{-- Search + country filter + Add row --}}
         <form method="GET" action="{{ route('admin.products') }}" class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <div class="relative flex-1">
                 <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -93,12 +126,93 @@
                     <input type="hidden" name="category" value="{{ $categorySlug }}">
                 @endif
             </div>
-            <button type="button" class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
-                </svg>
-                Add product
-            </button>
+
+            {{-- Country filter — modern searchable dropdown. Each option is a real link
+                 that preserves the search + category filters. --}}
+            <div
+                x-data="{ open: false, search: '' }"
+                @click.outside="open = false"
+                @keydown.escape="open = false"
+                class="relative sm:w-60"
+            >
+                <button
+                    type="button"
+                    @click="open = ! open; if (open) $nextTick(() => $refs.countrySearch.focus())"
+                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
+                    class="flex w-full items-center gap-2 rounded-xl border bg-white py-2.5 pl-3 pr-3 text-sm text-zinc-900 outline-none transition-colors"
+                >
+                    <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5-2.5 3.75-5.5 3.75-9S14.5 5.5 12 3m0 18c-2.5-2.5-3.75-5.5-3.75-9S9.5 5.5 12 3M3.6 9h16.8M3.6 15h16.8"/>
+                    </svg>
+                    <span class="flex-1 truncate text-left font-medium">
+                        @if ($selectedCountryName)
+                            {{ $flag($country) }} {{ $selectedCountryName }}
+                        @else
+                            All countries
+                        @endif
+                    </span>
+                    <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 -translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    style="display:none;"
+                    class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
+                >
+                    <div class="border-b border-zinc-100 p-2">
+                        <input
+                            x-ref="countrySearch"
+                            x-model="search"
+                            type="text"
+                            placeholder="Search countries"
+                            class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                        >
+                    </div>
+                    <div class="max-h-72 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <a
+                            href="{{ $countryFilterUrl(null) }}"
+                            class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $country === 'ALL' ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-100' }}"
+                        >
+                            <span>All countries</span>
+                            <span class="text-xs text-zinc-500">{{ number_format($stats['total']) }}</span>
+                        </a>
+                        @foreach ($countryOptions as $opt)
+                            @php
+                                $code = strtoupper($opt->country_code);
+                                $name = $countryNames[$code] ?? $code;
+                            @endphp
+                            <a
+                                href="{{ $countryFilterUrl($code) }}"
+                                x-show="'{{ Str::lower($name . ' ' . $code) }}'.includes(search.toLowerCase())"
+                                class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $country === $code ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-100' }}"
+                            >
+                                <span class="flex min-w-0 items-center gap-2">
+                                    <span class="shrink-0 text-base leading-none">{{ $flag($code) }}</span>
+                                    <span class="truncate">{{ $name }}</span>
+                                </span>
+                                <span class="shrink-0 text-xs text-zinc-500">{{ $opt->product_count }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            @if ($anyFilter)
+                <a href="{{ route('admin.products') }}" wire:navigate class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                    </svg>
+                    Clear filters
+                </a>
+            @endif
+
+            {{-- One-tap full Zendit catalog sync (queued background job). --}}
+            <livewire:admin.sync-products-button />
         </form>
 
         {{-- Category filter pills, server-routed via query string. Hidden on mobile to remove the horizontal-slide bar

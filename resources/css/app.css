@@ -86,6 +86,74 @@
     will-change: transform;
 }
 
+/* 3D pointer-tracked tilt for gift-card tiles. cardTilt() in app.js sets the
+   --tilt-* / --glare-* custom properties on hover; .card-3d-scene supplies the
+   perspective on the link wrapper. Snappy: the card follows the pointer with no
+   transform transition while tracked, then eases flat in ~280ms on leave. */
+.card-3d-scene {
+    perspective: 820px;
+}
+.card-3d {
+    transform:
+        rotateX(var(--tilt-rx, 0deg))
+        rotateY(var(--tilt-ry, 0deg))
+        translateY(var(--tilt-lift, 0px))
+        scale(var(--tilt-scale, 1));
+    transition: transform 280ms var(--ease-emphasis), box-shadow 280ms var(--ease-emphasis);
+}
+.card-3d.is-tilting {
+    /* While the pointer is tracked, the card follows it instantly — only the
+       shadow keeps a transition. will-change is scoped here (not the base
+       class) so a long grid of cards doesn't hold idle compositor layers. */
+    transition: box-shadow 280ms var(--ease-emphasis);
+    will-change: transform;
+}
+/* Pointer-tracked light glare — a soft highlight that follows the cursor. */
+.card-3d-glare {
+    background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 0%),
+        rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 42%);
+    opacity: 0;
+    transition: opacity 280ms var(--ease-emphasis);
+}
+.card-3d.is-tilting .card-3d-glare {
+    opacity: 1;
+}
+
+/* "Add to cart" success cue — a brief, confident bounce when the item lands. */
+@keyframes cartPop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(0.96); }
+    70%  { transform: scale(1.04); }
+    100% { transform: scale(1); }
+}
+.animate-cart-pop {
+    animation: cartPop 420ms var(--ease-emphasis);
+}
+
+/* Dynamic value flipper — a quick roll-and-fade when a displayed number changes
+   (denomination, quantity, estimated price, points). Re-triggered by valueFlip(). */
+@keyframes valueFlip {
+    0%   { opacity: 0; transform: translateY(0.4em); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+.value-flip {
+    animation: valueFlip 260ms var(--ease-emphasis);
+}
+
+/* Honour reduced-motion: drop the tilt, glare, pop and flip entirely. */
+@media (prefers-reduced-motion: reduce) {
+    .card-3d {
+        transform: none !important;
+    }
+    .card-3d-glare {
+        display: none;
+    }
+    .animate-cart-pop,
+    .value-flip {
+        animation: none !important;
+    }
+}
+
 /* Livewire wire:navigate top progress bar (NProgress) — taller + brand blue. */
 #nprogress .bar {
     background: #0044FF !important;
@@ -97,6 +165,12 @@
 #nprogress .spinner-icon {
     border-top-color: #0044FF !important;
     border-left-color: #0044FF !important;
+}
+
+/* Keep Alpine x-cloak elements hidden until Alpine initialises them, so
+   skeleton/overlay markup never flashes on first paint. */
+[x-cloak] {
+    display: none !important;
 }
 
 /* Skeleton shimmer — apply to any element with .skeleton.

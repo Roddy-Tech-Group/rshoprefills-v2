@@ -81,7 +81,7 @@
 
                     <div x-show="expanded" x-collapse class="ml-5 flex flex-col gap-1 border-l border-zinc-200 pl-4">
                         <a href="{{ route('admin.products') }}" class="{{ $subItemClass($isCurrent('admin.products') && !$isCurrent('admin.products.*')) }}">All Products</a>
-                        <a href="{{ route('shop.gift-cards') }}" wire:navigate class="{{ $subItemClass($isCurrent('admin.gift-cards*')) }}">Gift Cards</a>
+                        <a href="{{ route('shop.gift-cards') }}" class="{{ $subItemClass($isCurrent('admin.gift-cards*')) }}">Gift Cards</a>
                         <a href="#" class="{{ $subItemClass($isCurrent('admin.esims*')) }}">eSIMs</a>
                         <a href="#" class="{{ $subItemClass($isCurrent('admin.mobile-topups*')) }}">Mobile Top-ups</a>
                         <a href="#" class="{{ $subItemClass($isCurrent('admin.bill-payments*')) }}">Bill Payments</a>
@@ -148,7 +148,7 @@
 
                 {{-- Rate Management --}}
                 @php $active = $isCurrent('admin.rates*'); @endphp
-                <a href="{{ route('admin.rates') }}" wire:navigate class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.rates') }}" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="9"/>
                         <path d="M9.5 8h4.25a2 2 0 010 4H9.5m0 0h4.5a2 2 0 010 4H9.5m0-8v8m0-8h-1m1 8h-1m2-10v2m0 8v2"/>
@@ -468,7 +468,7 @@
                         <button
                             type="button"
                             @click="menuOpen = false"
-                            class="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                            class="flex h-9 w-9 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
                             aria-label="Close menu"
                         >
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">

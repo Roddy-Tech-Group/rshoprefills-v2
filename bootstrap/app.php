@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AdminAuth;
+use App\Http\Middleware\ResolveRegion;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'admin' => AdminAuth::class,
+        ]);
+
+        // Locks the storefront catalog to the customer's chosen country/region.
+        $middleware->web(append: [
+            ResolveRegion::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => request()->is('admin*') ? route('admin.login') : route('login'));

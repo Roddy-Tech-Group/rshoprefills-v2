@@ -7,20 +7,9 @@
 --}}
 <section data-reveal aria-label="eSIMs, flights and stays">
 
-    <div class="mb-4 flex items-end justify-between gap-4">
-        <div class="min-w-0">
-            <h2 class="text-lg font-bold text-zinc-900 sm:text-xl">eSIMs, flights & stays</h2>
-            <p class="mt-0.5 text-base text-zinc-600">Connect, explore, and relax.</p>
-        </div>
-        <a
-            href="#"
-            aria-label="See all"
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-sm transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-        >
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 6l6 6-6 6"/>
-            </svg>
-        </a>
+    <div class="mb-4 min-w-0">
+        <h2 class="text-lg font-bold text-zinc-900 sm:text-xl">eSIMs, flights & stays</h2>
+        <p class="mt-0.5 text-base text-zinc-600">Connect, explore, and relax.</p>
     </div>
 
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">

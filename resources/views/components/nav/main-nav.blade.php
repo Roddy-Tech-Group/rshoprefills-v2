@@ -35,7 +35,7 @@
                 x-data="navBrandSearch()"
                 @click.outside="open = false"
                 @keydown.escape.window="open = false"
-                class="col-start-2 hidden md:block w-[420px] max-w-full relative"
+                class="col-start-2 hidden md:block w-[480px] max-w-full relative"
             >
                 <form
                     role="search"
@@ -56,14 +56,14 @@
                         @input="onInput()"
                         @focus="if (query.length >= 2) open = true"
                         name="q"
-                        type="search"
+                        type="text"
                         placeholder="Search brands, categories, countries"
                         aria-label="Search brands, categories, countries"
                         autocomplete="off"
                         spellcheck="false"
                         class="flex-1 min-w-0 bg-transparent text-base text-zinc-800 placeholder:text-zinc-600 outline-none"
                     />
-                    <button type="button" x-show="query.length > 0" @click="clear()" class="shrink-0 text-zinc-500 transition-colors hover:text-zinc-900 focus:outline-none" aria-label="Clear">
+                    <button type="button" x-show="query.length > 0" @click="clear()" class="shrink-0 text-blue-600 transition-colors hover:text-blue-700 focus:outline-none" aria-label="Clear">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
                         </svg>
@@ -77,7 +77,7 @@
                     x-transition:enter-start="opacity-0 -translate-y-1"
                     x-transition:enter-end="opacity-100 translate-y-0"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/15"
+                    class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-zinc-200 bg-white/80 shadow-2xl shadow-zinc-900/15 backdrop-blur-xl"
                 >
                     {{-- Loading state --}}
                     <div x-show="loading && results.length === 0" class="px-5 py-6 text-center text-sm text-zinc-600">
@@ -96,12 +96,12 @@
                                     class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-100"
                                 >
                                     <template x-if="r.logo">
-                                        <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-zinc-100">
-                                            <img :src="r.logo" :alt="r.name" class="max-h-[80%] max-w-[80%] object-contain">
+                                        <span class="flex aspect-[16/10] w-20 shrink-0 items-center justify-center overflow-hidden rounded-[5px] bg-white shadow-sm ring-1 ring-zinc-200">
+                                            <img :src="r.logo" :alt="r.name" class="h-full w-full object-cover">
                                         </span>
                                     </template>
                                     <template x-if="!r.logo">
-                                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-xs font-black text-zinc-700" x-text="r.name.substring(0, 2).toUpperCase()"></span>
+                                        <span class="flex aspect-[16/10] w-20 shrink-0 items-center justify-center rounded-[5px] bg-white text-sm font-black uppercase text-zinc-700 shadow-sm ring-1 ring-zinc-200" x-text="r.name.substring(0, 2).toUpperCase()"></span>
                                     </template>
                                     <span class="flex-1 truncate text-sm font-semibold text-zinc-900" x-text="r.name"></span>
                                 </a>
@@ -120,7 +120,7 @@
                         :href="'{{ route('shop.gift-cards') }}?q=' + encodeURIComponent(query)"
                         wire:navigate
                         @click="open = false"
-                        class="block border-t border-zinc-100 bg-white px-5 py-3 text-center text-sm font-semibold text-blue-600 transition-colors hover:bg-zinc-100 hover:text-blue-700"
+                        class="block border-t border-zinc-100 px-5 py-3 text-center text-sm font-semibold text-blue-600 transition-colors hover:bg-zinc-100/70 hover:text-blue-700"
                     >
                         Show all results
                     </a>
@@ -168,7 +168,7 @@
                 <a
                     href="{{ auth()->check() ? route('dashboard') : route('login') }}"
                     wire:navigate
-                    class="hidden md:inline-flex h-10 items-center gap-2 rounded-md bg-zinc-100 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-blue-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                    class="hidden md:inline-flex h-10 items-center gap-2 rounded-md bg-zinc-200 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                     aria-label="{{ auth()->check() ? 'Wallet balance' : 'Wallet — sign in to view balance' }}"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
@@ -317,36 +317,36 @@
                     </div>
                 @endauth
 
-                {{-- Cart (click/hover opens an empty-cart dropdown until cart state ships).
-                     Hover toggles unless the user clicked the cart icon — then it stays open until they click outside.
-                     Backend hook: dispatch a Livewire event named "cart-added" whenever a product is added
-                     to auto-open this popup. Example: $this->dispatch('cart-added'); --}}
+                {{-- Cart. State lives in the global Alpine cart store ($store.cart): the popup
+                     drops open automatically when an item is added (store.add sets open = true). --}}
                 <div
-                    x-data="{ open: false, locked: false }"
-                    @mouseenter="if (!locked) open = true"
-                    @mouseleave="if (!locked) open = false"
-                    @click.outside="open = false; locked = false"
-                    @keydown.escape.window="open = false; locked = false"
-                    @cart-added.window="open = true; setTimeout(() => { if (!locked) open = false }, 3500)"
+                    x-data="{ locked: false }"
+                    @mouseenter="if (!locked) $store.cart.open = true"
+                    @mouseleave="if (!locked) $store.cart.open = false"
+                    @click.outside="$store.cart.open = false; locked = false"
+                    @keydown.escape.window="$store.cart.open = false; locked = false"
                     class="relative"
                 >
                     <button
                         type="button"
-                        @click="locked = !locked; open = locked"
-                        :aria-expanded="open.toString()"
+                        @click="locked = !locked; $store.cart.open = locked"
+                        :aria-expanded="$store.cart.open.toString()"
                         aria-haspopup="menu"
-                        class="relative flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white/70 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                        class="relative flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-md bg-zinc-200 text-zinc-900 hover:bg-zinc-300 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                         aria-label="Shopping cart"
                     >
                         <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-[22px] w-[22px] md:h-6 md:w-6" loading="lazy">
-                        @if(($cartCount ?? 0) > 0)
-                            <span class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-[10px] font-bold text-white leading-none">{{ $cartCount }}</span>
-                        @endif
+                        <span
+                            x-show="$store.cart.count > 0"
+                            x-text="$store.cart.count"
+                            x-cloak
+                            class="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-[10px] font-bold text-white leading-none"
+                        ></span>
                     </button>
 
-                    {{-- Cart popup (empty state) — glassmorphism, illustration only, no CTA --}}
+                    {{-- Cart popup --}}
                     <div
-                        x-show="open"
+                        x-show="$store.cart.open"
                         x-transition:enter="transition ease-out duration-150"
                         x-transition:enter-start="opacity-0 -translate-y-1"
                         x-transition:enter-end="opacity-100 translate-y-0"
@@ -354,49 +354,75 @@
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 -translate-y-1"
                         style="display:none;"
-                        class="absolute right-0 top-full z-50 mt-2 w-[320px] overflow-hidden rounded-2xl bg-white/85 backdrop-blur-md shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
+                        class="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
                         role="menu"
                     >
-                        @if(($cartCount ?? 0) === 0)
-                            {{-- Empty state. Pure-CSS floating motion on the illustration (see .animate-float in app.css). --}}
-                            <div class="flex flex-col items-center px-6 py-7 text-center">
-                                <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
-                                <img
-                                    src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}"
-                                    alt=""
-                                    class="mt-4 h-40 w-auto object-contain animate-float"
-                                    loading="lazy"
-                                >
-                                <p class="mt-3 text-sm text-zinc-600">Your Cards needs items</p>
+                        {{-- Empty state --}}
+                        <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-6 py-7 text-center">
+                            <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
+                            <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
+                            <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
+                        </div>
+
+                        {{-- Populated state --}}
+                        <div x-show="$store.cart.count > 0" x-cloak>
+                            <div class="flex items-center justify-between px-5 pt-5">
+                                <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
+                                <span class="text-sm text-zinc-600" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
                             </div>
-                        @else
-                            {{-- Populated state — backend will provide $cartItems (collection) and $cartSubtotal (decimal).
-                                 The illustration is intentionally NOT rendered here so it only shows on the empty state. --}}
-                            <div class="px-5 py-5">
-                                <div class="mb-4 flex items-center justify-between">
-                                    <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
-                                    <span class="text-sm text-zinc-600">{{ $cartCount }} {{ \Illuminate\Support\Str::plural('item', $cartCount) }}</span>
-                                </div>
 
-                                {{-- Item list — backend loops $cartItems and renders brand/quantity/price rows --}}
-                                <ul class="max-h-64 space-y-3 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                                    {{-- @foreach($cartItems as $item) ...row markup... @endforeach --}}
-                                </ul>
+                            <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                <template x-for="item in $store.cart.items" :key="item.id">
+                                    <li class="flex items-center gap-3 rounded-xl px-2 py-2.5">
+                                        <span class="flex aspect-[16/10] w-20 shrink-0 items-center justify-center overflow-hidden rounded-[2px] bg-white shadow-sm ring-1 ring-zinc-200">
+                                            <template x-if="item.logo">
+                                                <img :src="item.logo" alt="" class="h-full w-full object-cover">
+                                            </template>
+                                            <template x-if="!item.logo">
+                                                <span class="text-sm font-black uppercase text-zinc-700" x-text="item.name.substring(0,2).toUpperCase()"></span>
+                                            </template>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-sm font-bold text-zinc-900" x-text="item.name"></span>
+                                            <span class="block truncate text-xs text-zinc-500">
+                                                <span x-show="item.face_label" x-text="item.face_label"></span><span x-show="item.face_label && item.country"> &middot; </span><span x-text="item.country"></span>
+                                            </span>
+                                            <span class="block text-xs font-semibold text-zinc-700">
+                                                <span x-text="$store.cart.pay(item.unit_price)"></span>
+                                                <span x-show="$store.cart.showUsd" class="font-normal text-zinc-400" x-text="'(' + $store.cart.usd(item.unit_price_usd) + ')'"></span>
+                                            </span>
+                                        </span>
+                                        {{-- Quantity counter --}}
+                                        <span class="flex shrink-0 items-center gap-1.5">
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Decrease">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M5 12h14"/></svg>
+                                            </button>
+                                            <span class="w-5 text-center text-sm font-bold tabular-nums text-zinc-900" x-text="item.quantity"></span>
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity + 1)" class="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Increase">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                                            </button>
+                                        </span>
+                                    </li>
+                                </template>
+                            </ul>
 
-                                <div class="mt-4 flex items-center justify-between border-t border-zinc-200 pt-4">
-                                    <span class="text-sm font-medium text-zinc-700">Subtotal</span>
-                                    <span class="text-base font-bold text-zinc-900">${{ number_format($cartSubtotal ?? 0, 2) }}</span>
-                                </div>
+                            <div class="mx-5 flex items-start justify-between border-t border-zinc-200 py-4">
+                                <span class="text-sm font-medium text-zinc-700">Subtotal</span>
+                                <span class="text-right">
+                                    <span class="block text-base font-bold tabular-nums text-zinc-900" x-text="$store.cart.pay($store.cart.subtotal)"></span>
+                                    <span x-show="$store.cart.showUsd" class="block text-xs text-zinc-500" x-text="'(' + $store.cart.usd($store.cart.subtotalUsd) + ' USD)'"></span>
+                                </span>
+                            </div>
 
-                                <a
-                                    href="#"
-                                    wire:navigate
-                                    class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                                >
+                            <div class="flex gap-2 border-t border-zinc-100 bg-zinc-50 p-3">
+                                <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
+                                    View cart
+                                </a>
+                                <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                                     Checkout
                                 </a>
                             </div>
-                        @endif
+                        </div>
                     </div>
                 </div>
 

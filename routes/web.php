@@ -1,5 +1,10 @@
 <?php
 
+use App\Domain\Cart\Services\CartManager;
+use App\Domain\Cart\Services\CartPricingService;
+use App\Http\Controllers\CartWebController;
+use App\Http\Controllers\CheckoutController;
+use App\Models\CurrencyRate;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -66,10 +71,10 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
 
     abort_if(! $brandKey, 404);
 
-    // Country comes from the locale modal via query param. Default to US (the
-    // largest catalog) if not set, else fall back to whichever country this brand
-    // is actually sold in.
-    $requested = strtoupper((string) request()->query('country', 'US'));
+    // Region-locked: the country is the resolved region (ResolveRegion middleware),
+    // so a brand page always opens in the customer's locked country. Falls back to
+    // whichever country this brand is actually sold in if there's no stock there.
+    $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
     $product = Product::query()
         ->where('brand_key', $brandKey)
@@ -103,9 +108,66 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.brand');
 
+// Cart page (HTML). Store-driven — it hydrates from the /cart/data JSON endpoint.
+Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
+
+// Storefront cart — web routes (session-authenticated) wrapping the backend CartManager.
+// Returns compact JSON the Alpine cart store consumes. See CartWebController.
+Route::prefix('cart')->name('cart.')->group(function () {
+    Route::get('data', [CartWebController::class, 'show'])->name('data');
+    Route::post('items', [CartWebController::class, 'add'])->name('items.add');
+    Route::patch('items/{item}', [CartWebController::class, 'update'])->name('items.update');
+    Route::delete('items/{item}', [CartWebController::class, 'remove'])->name('items.remove');
+});
+
+// Checkout. Resolves the active cart (CartManager — same path the global CartComposer uses)
+// and renders the checkout page. Order creation + payment-gateway initiation are backend
+// territory; the POST below is a validation-only stub the backend replaces with a
+// CheckoutController that builds the Order/OrderItem rows and kicks off the gateway.
+Route::get('checkout', function (CartManager $cartManager, CartPricingService $pricing) {
+    $userId = auth()->id();
+    $guestToken = request()->cookie('guest_token') ?? request()->header('X-Guest-Token');
+
+    $cart = null;
+    $totals = ['currency' => 'USD', 'subtotal' => 0, 'total' => 0];
+
+    if ($userId || $guestToken) {
+        try {
+            $cart = $cartManager->resolveCart($userId, $guestToken);
+            $cart->load('items.product', 'items.variant');
+            $totals = $pricing->calculateCartTotals($cart->items);
+        } catch (Throwable $e) {
+            $cart = null;
+        }
+    }
+
+    // Display currency: the customer's chosen currency, passed through as ?currency=
+    // (the cart popup's Checkout link appends it). The view converts the USD totals
+    // with this rate; falls back to USD when absent.
+    $rate = CurrencyRate::resolve(request('currency'));
+
+    return view('shop.checkout', ['cart' => $cart, 'totals' => $totals, 'rate' => $rate]);
+})->name('shop.checkout');
+
+// Checkout submission — creates the Order + OrderItems + a pending Payment from the
+// cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
+// the controller. Requires auth: an Order needs a user_id.
+Route::post('checkout', [CheckoutController::class, 'process'])
+    ->middleware('auth')
+    ->name('checkout.process');
+
+// Order confirmation page.
+Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])
+    ->middleware('auth')
+    ->name('shop.order');
+
 // Customer dashboard — gated by web guard. Admin operators have their own area at /admin/* via routes/admin.php.
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
+
+    Route::view('dashboard/rewards', 'dashboard.rewards')->name('dashboard.rewards');
+
+    Route::view('dashboard/kyc', 'dashboard.kyc')->name('dashboard.kyc');
 
     Volt::route('dashboard/profile', 'settings.profile')->name('dashboard.profile');
     Volt::route('dashboard/password', 'settings.password')->name('dashboard.password');

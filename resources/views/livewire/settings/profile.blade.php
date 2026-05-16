@@ -133,9 +133,11 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     $authUser = auth()->user();
     $hasAvatar = !empty($authUser?->avatar_url);
     $emailVerified = (bool) $authUser?->email_verified_at;
-    // 2FA + identity verification, last login — backend hooks not shipped yet, flag for later wiring.
+    // 2FA + last login — backend hooks not shipped yet, flag for later wiring.
     $twoFactorEnabled = false;
-    $identityVerified = false;
+    // Identity verification — backend hook: $user->kyc_status. Column not shipped yet,
+    // so this resolves to null and the user shows as not identity-verified.
+    $identityVerified = ($authUser?->kyc_status ?? null) === 'verified';
     $googleConnected = !empty($authUser?->google_id);
     $lastLoginAt = $authUser?->updated_at;
     $firstName = $authUser?->name ? str($authUser->name)->before(' ') : 'there';
@@ -252,7 +254,22 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     </div>
 
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-lg font-bold text-black">{{ $authUser?->name ?? 'Account holder' }}</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="truncate text-lg font-bold text-black">{{ $authUser?->name ?? 'Account holder' }}</p>
+                            {{-- Verification badge: ID-verified > email-verified > basic. --}}
+                            @if ($identityVerified)
+                                <a href="{{ route('dashboard.kyc') }}" wire:navigate class="inline-flex items-center gap-1 rounded-[5px] bg-blue-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.7-1 3.1 1 3.1-2.7 1.7-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1L2.5 16l1-3.1-1-3.1 2.7-1.7 1-3.1 3.2.2L12 1.5zm-1 13.6l5-5-1.4-1.4-3.6 3.6-1.6-1.6L7 12.1l3 3z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Verified
+                                </a>
+                            @elseif ($emailVerified)
+                                <span class="inline-flex items-center rounded-[5px] bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Email Verified</span>
+                            @else
+                                <a href="{{ route('dashboard.kyc') }}" wire:navigate class="inline-flex items-center rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Basic</a>
+                            @endif
+                        </div>
                         <p class="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-zinc-600">
                             <span class="truncate">{{ $authUser?->email ?? '—' }}</span>
                             @if ($emailVerified)

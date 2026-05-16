@@ -1,101 +1,100 @@
 {{--
-    Customer Rewards / Points page — /dashboard/rewards.
-    Backend hooks pending:
-      - $user->points_balance + $user->points_earned (no Points model yet)
-      - $user->pointHistory() — points earned/spent log
-      - $user->rewardRedemptions() — past redemptions
-      - Reward tier configuration (currently hardcoded LTC tiers)
-    Until those ship, sample data renders for layout verification.
+    Customer Rewards page — /dashboard/rewards. The loyalty currency is "Rcoin".
+
+    Frontend only — sample data + placeholder thresholds render until the backend
+    Rcoin ledger ships. Backend hooks pending:
+      - $user->rcoin_balance + $user->rcoin_earned   (no Rcoin model yet)
+      - $user->rcoinHistory()                        (earn/spend ledger)
+      - $user->rcoinRedemptions()                    (past conversions/withdrawals)
+      - Admin config: earn rate, Rcoin→USD rate, convert + withdraw thresholds
+      - POST handlers for convert-to-gift-card and withdraw-to-cash
+    Field names below (convert_*, withdraw_*) are the contract for that wiring.
 --}}
 @php
+    use App\Models\Product;
+
     $user = auth()->user();
 
-    // Placeholders — bind to real Points model when shipped.
-    $pointsBalance = 1963;
-    $pointsEarned  = 1963;
+    // ── Placeholders — bind to the real Rcoin model when it ships ──
+    $rcoinBalance = 2650;
+    $rcoinEarned  = 2650;
 
-    // Loyalty tier logic. Backend will eventually own the tier table + ladder configuration.
-    // For now we compute the active tier + the next milestone from a hardcoded ladder.
+    // Admin-configurable economics (placeholders).
+    $rcoinPerUsd       = 100;    // 100 Rcoin = $1
+    $convertThreshold  = 1000;   // min Rcoin before convert-to-gift-card unlocks
+    $withdrawThreshold = 5000;   // min Rcoin before cash withdrawal unlocks
+
+    $cashValue = $rcoinBalance / $rcoinPerUsd; // USD worth of the current balance
+    $coin      = asset('assets/favicon.ico');  // the Rcoin coin mark
+
+    // ── Loyalty tier ladder ──
+    // Platinum needs email verification, Diamond needs ID (KYC) verification — see /dashboard/kyc.
     $tierLadder = [
-        ['name' => 'Bronze',   'min' => 0],
-        ['name' => 'Silver',   'min' => 1000],
-        ['name' => 'Gold',     'min' => 1500],
-        ['name' => 'Platinum', 'min' => 3000],
-        ['name' => 'Diamond',  'min' => 6000],
+        ['name' => 'Bronze',   'min' => 0,    'requires' => null],
+        ['name' => 'Silver',   'min' => 1000, 'requires' => null],
+        ['name' => 'Gold',     'min' => 1500, 'requires' => null],
+        ['name' => 'Platinum', 'min' => 3000, 'requires' => 'Email verified'],
+        ['name' => 'Diamond',  'min' => 6000, 'requires' => 'ID verified'],
     ];
     $currentTier = $tierLadder[0];
     $nextTier    = null;
     foreach ($tierLadder as $idx => $tier) {
-        if ($pointsBalance >= $tier['min']) {
+        if ($rcoinBalance >= $tier['min']) {
             $currentTier = $tier;
             $nextTier    = $tierLadder[$idx + 1] ?? null;
         }
     }
-    $pointsToNext = $nextTier ? max(0, $nextTier['min'] - $pointsBalance) : 0;
+    $rcoinToNext  = $nextTier ? max(0, $nextTier['min'] - $rcoinBalance) : 0;
     $tierProgress = $nextTier
-        ? min(100, round((($pointsBalance - $currentTier['min']) / ($nextTier['min'] - $currentTier['min'])) * 100, 1))
+        ? min(100, round((($rcoinBalance - $currentTier['min']) / ($nextTier['min'] - $currentTier['min'])) * 100, 1))
         : 100;
 
-    // Referral link — backend will expose $user->referral_code or similar.
-    $referralCode = substr(hash('sha256', 'user-'.$user->id), 0, 10);
-    $referralUrl  = url('/').'/?ref='.$referralCode;
+    // ── Convert / withdraw availability ──
+    $canConvert  = $rcoinBalance >= $convertThreshold;
+    $canWithdraw = $rcoinBalance >= $withdrawThreshold;
+    $convertProgress  = min(100, round(($rcoinBalance / $convertThreshold) * 100, 1));
+    $withdrawProgress = min(100, round(($rcoinBalance / $withdrawThreshold) * 100, 1));
 
-    // Reward tiers — LTC for now; backend will expose a configurable catalog.
-    $rewards = [
-        ['label' => '$3 worth of LTC',  'cost' => 365,  'amount' => 3],
-        ['label' => '$5 worth of LTC',  'cost' => 535,  'amount' => 5],
-        ['label' => '$10 worth of LTC', 'cost' => 1070, 'amount' => 10],
-        ['label' => '$20 worth of LTC', 'cost' => 2140, 'amount' => 20],
-    ];
-
-    // Points history sample data — backend will replace with a query.
-    $pointsHistory = [
-        ['label' => 'Welcome points',     'date' => '2026-05-06', 'points' => 25],
-        ['label' => 'Order Id: 91df8a1e-a933-4212-b45c-1d8c0d92cca2', 'date' => '2026-04-19', 'points' => 9],
-        ['label' => 'Order Id: bb661443-a03f-4ee0-b02c-cb59b4568609', 'date' => '2026-04-18', 'points' => 13],
-        ['label' => 'Order Id: bdacc211-cb32-4d2f-a3bd-2e583dcc7b78', 'date' => '2026-04-12', 'points' => 9],
-        ['label' => 'Order Id: 9661e79c-dcf9-49c9-8e13-fb7a484945f8', 'date' => '2026-04-12', 'points' => 9],
-        ['label' => 'Order Id: 16f13327-1890-48cf-ad56-5f118e9dd9ac', 'date' => '2026-04-05', 'points' => 14],
-        ['label' => 'Order Id: 4bb4fef1-c660-4b1b-9200-8cee2937644d', 'date' => '2026-04-02', 'points' => 13],
-        ['label' => 'Order Id: dea2abf3-b67c-48b6-9ee3-10eda160707c', 'date' => '2026-03-30', 'points' => 151],
-        ['label' => 'Order Id: 18ce047a-82a2-4eb2-93b0-a2d5a9b0a2aa', 'date' => '2026-03-25', 'points' => 2],
-        ['label' => 'Order Id: 644635e6-a998-4176-8aa9-39274e0011f4', 'date' => '2026-03-14', 'points' => 13],
-        ['label' => 'Order Id: 7373b3eb-f2a2-42cc-8617-9a8655078d90', 'date' => '2026-03-14', 'points' => 7],
+    // ── Rcoin history sample data — backend replaces with a query ──
+    $rcoinHistory = [
+        ['label' => 'Welcome bonus',        'date' => '2026-05-06', 'rcoin' => 25],
+        ['label' => 'Order RSR-20260419-K2', 'date' => '2026-04-19', 'rcoin' => 90],
+        ['label' => 'Order RSR-20260418-B7', 'date' => '2026-04-18', 'rcoin' => 130],
+        ['label' => 'Order RSR-20260412-P1', 'date' => '2026-04-12', 'rcoin' => 95],
+        ['label' => 'Order RSR-20260330-D9', 'date' => '2026-03-30', 'rcoin' => 151],
+        ['label' => 'Order RSR-20260314-7Q', 'date' => '2026-03-14', 'rcoin' => 70],
     ];
 @endphp
 
 <x-layouts.dashboard>
     <div class="mx-auto flex max-w-5xl flex-col gap-8">
 
-        {{-- ─── RShop Points balance card ─── --}}
+        {{-- ─── Rcoin balance card ─── --}}
         <section>
-            <h1 class="text-2xl font-bold tracking-tight text-black sm:text-3xl">Earned</h1>
+            <h1 class="text-2xl font-bold tracking-tight text-black sm:text-3xl">Your Rcoin</h1>
 
             <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
                 <div class="flex items-start gap-4">
-                    {{-- R-square brand tile — gray-800 in light mode, white in dark mode, blue R either way --}}
-                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gray-800 text-blue-600 shadow-sm shadow-zinc-900/10 dark:bg-white">
-                        <span class="text-lg font-black leading-none">R</span>
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 shadow-sm shadow-zinc-900/10">
+                        <img src="{{ $coin }}" alt="Rcoin" class="h-7 w-7 object-contain">
                     </span>
 
                     <div class="min-w-0 flex-1">
-                        <p class="text-base font-bold text-black">RShop Points</p>
+                        <p class="text-base font-bold text-black">RShop Rcoin</p>
                         <div class="mt-1 flex flex-wrap items-center gap-2">
-                            <p class="text-3xl font-extrabold tracking-tight text-black">{{ number_format($pointsBalance) }}</p>
+                            <p class="text-3xl font-extrabold tracking-tight text-black">{{ number_format($rcoinBalance) }}</p>
                             <span class="inline-flex items-center rounded-[5px] bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{{ strtoupper($currentTier['name']) }} MEMBER</span>
                         </div>
+                        <p class="mt-0.5 text-sm text-zinc-600">Worth about ${{ number_format($cashValue, 2) }}</p>
                     </div>
                 </div>
 
                 @if ($nextTier)
-                    <p class="mt-5 text-sm text-zinc-600">You're {{ number_format($pointsToNext) }} points away from {{ $nextTier['name'] }} level</p>
-
-                    {{-- Progress bar with rounded fill --}}
+                    <p class="mt-5 text-sm text-zinc-600">You're {{ number_format($rcoinToNext) }} Rcoin away from {{ $nextTier['name'] }} level</p>
                     <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-200">
                         <div class="h-full rounded-full bg-blue-600 transition-all duration-500" style="width: {{ $tierProgress }}%;"></div>
                     </div>
-
-                    <p class="mt-2 text-right text-xs text-zinc-600">{{ number_format($pointsBalance) }} / {{ number_format($nextTier['min']) }}</p>
+                    <p class="mt-2 text-right text-xs text-zinc-600">{{ number_format($rcoinBalance) }} / {{ number_format($nextTier['min']) }}</p>
                 @else
                     <p class="mt-5 text-sm text-zinc-600">You've reached the highest tier. Thank you for being a loyal member.</p>
                     <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-200">
@@ -104,97 +103,177 @@
                 @endif
             </div>
 
-            <p class="mt-3 text-sm text-zinc-600">Your RShop points will become available in 48 hours after your purchase.</p>
+            <p class="mt-3 text-sm text-zinc-600">Rcoin is earned on every purchase and becomes available 48 hours after the order completes.</p>
+        </section>
 
-            {{-- Trust card --}}
-            <div class="mt-4 flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50">
-                    <img src="{{ asset('assets/' . rawurlencode('secure fast reliable.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
-                </span>
-                <div class="min-w-0">
-                    <p class="text-sm font-bold text-black">Secure. Fast. Reliable.</p>
-                    <p class="mt-0.5 text-xs text-zinc-600">Your transactions are protected with bank-level security.</p>
+        {{-- ─── Earn more Rcoin: referral link ─── --}}
+        <section>
+            <h2 class="text-sm font-bold text-black">Earn more Rcoin</h2>
+
+            <div class="mt-3 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
+                <div class="flex items-start gap-4">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                        <img src="{{ asset('assets/referals.png') }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-base font-bold text-black">Refer friends, earn Rcoin</p>
+                        <p class="mt-1 text-sm text-zinc-600">Share your link. You earn Rcoin when a friend signs up, and again every time they place an order.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <livewire:referral-code />
+                </div>
+
+                {{-- Two ways referrals pay out Rcoin. --}}
+                <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div class="rounded-xl bg-zinc-50 px-3 py-2.5">
+                        <p class="font-semibold text-zinc-900">On sign-up</p>
+                        <p class="text-xs text-zinc-600">Rcoin lands when your referral creates their account.</p>
+                    </div>
+                    <div class="rounded-xl bg-zinc-50 px-3 py-2.5">
+                        <p class="font-semibold text-zinc-900">On every order</p>
+                        <p class="text-xs text-zinc-600">Keep earning Rcoin each time they buy.</p>
+                    </div>
                 </div>
             </div>
         </section>
 
-        {{-- ─── Referral link section ─── --}}
-        <section x-data="{
-            copied: false,
-            copy() {
-                navigator.clipboard.writeText($refs.url.value).then(() => {
-                    this.copied = true;
-                    setTimeout(() => this.copied = false, 1500);
-                });
-            }
-        }">
-            <h2 class="text-sm font-bold text-black">Level up your points with your referral link</h2>
+        {{-- ─── Spend your Rcoin: convert to gift card / withdraw to cash ─── --}}
+        <section>
+            <h2 class="text-sm font-bold text-black">Spend your Rcoin</h2>
+            <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-            <div class="mt-3 flex items-center gap-2 rounded-xl bg-zinc-100 px-4 py-3">
-                <input
-                    type="text"
-                    readonly
-                    x-ref="url"
-                    value="{{ $referralUrl }}"
-                    class="flex-1 truncate bg-transparent text-sm text-zinc-700 outline-none"
-                    onfocus="this.select()"
-                />
-                <button type="button" @click="copy()" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-200">
-                    <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/>
-                    </svg>
-                    <svg x-show="copied" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="display:none;">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                    </svg>
-                    <span x-text="copied ? 'Copied' : 'Copy'">Copy</span>
-                </button>
+                {{-- Convert to gift card --}}
+                <div class="flex flex-col rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                        <img src="{{ asset('assets/' . rawurlencode('gift cards.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
+                    </span>
+                    <p class="mt-3 text-base font-bold text-black">Convert to a gift card</p>
+                    <p class="mt-1 text-sm text-zinc-600">Turn your Rcoin into a gift card of your choice. Your balance decides the amount.</p>
+
+                    <div class="mt-4 rounded-xl bg-zinc-50 px-3 py-2.5 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-zinc-600">Available</span>
+                            <span class="inline-flex items-center gap-1 font-bold text-zinc-900">
+                                <img src="{{ $coin }}" alt="" class="h-4 w-4">{{ number_format($rcoinBalance) }}
+                            </span>
+                        </div>
+                        <div class="mt-1 flex items-center justify-between">
+                            <span class="text-zinc-600">Gift card value</span>
+                            <span class="font-bold text-zinc-900">${{ number_format($cashValue, 2) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto pt-4">
+                        @if ($canConvert)
+                            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                                Choose a gift card
+                            </a>
+                        @else
+                            <button type="button" disabled class="w-full cursor-not-allowed rounded-xl bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
+                                {{ number_format($convertThreshold - $rcoinBalance) }} more Rcoin to unlock
+                            </button>
+                            <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+                                <div class="h-full rounded-full bg-blue-600" style="width: {{ $convertProgress }}%;"></div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Withdraw to cash --}}
+                <div
+                    x-data="{ amount: '', method: 'wallet' }"
+                    class="flex flex-col rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100"
+                >
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                        <img src="{{ asset('assets/' . rawurlencode('wallet 2.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
+                    </span>
+                    <p class="mt-3 text-base font-bold text-black">Withdraw to cash</p>
+                    <p class="mt-1 text-sm text-zinc-600">Cash out your Rcoin balance once you reach the minimum.</p>
+
+                    <div class="mt-4 rounded-xl bg-zinc-50 px-3 py-2.5 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-zinc-600">Available</span>
+                            <span class="inline-flex items-center gap-1 font-bold text-zinc-900">
+                                <img src="{{ $coin }}" alt="" class="h-4 w-4">{{ number_format($rcoinBalance) }}
+                            </span>
+                        </div>
+                        <div class="mt-1 flex items-center justify-between">
+                            <span class="text-zinc-600">Cash value</span>
+                            <span class="font-bold text-zinc-900">${{ number_format($cashValue, 2) }}</span>
+                        </div>
+                    </div>
+
+                    @if ($canWithdraw)
+                        {{-- Withdrawal request form. Field names: withdraw_amount, withdraw_method.
+                             Backend wires the POST handler + creates a withdrawal request record. --}}
+                        <form method="POST" action="#" class="mt-4 flex flex-col gap-2.5">
+                            @csrf
+                            <input
+                                type="number"
+                                name="withdraw_amount"
+                                x-model="amount"
+                                min="{{ $withdrawThreshold }}"
+                                max="{{ $rcoinBalance }}"
+                                placeholder="Rcoin to withdraw"
+                                class="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            >
+                            <select name="withdraw_method" x-model="method" class="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <option value="wallet">RShop wallet</option>
+                                <option value="bank">Bank transfer</option>
+                                <option value="mobile_money">Mobile money</option>
+                            </select>
+                            <button type="submit" class="mt-1 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
+                                Request withdrawal
+                            </button>
+                        </form>
+                    @else
+                        <div class="mt-auto pt-4">
+                            <button type="button" disabled class="w-full cursor-not-allowed rounded-xl bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
+                                {{ number_format($withdrawThreshold - $rcoinBalance) }} more Rcoin to unlock
+                            </button>
+                            <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+                                <div class="h-full rounded-full bg-emerald-600" style="width: {{ $withdrawProgress }}%;"></div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
             </div>
-
-            <a href="{{ route('dashboard.referrals') }}" wire:navigate class="mt-2 inline-block text-sm font-medium text-black underline decoration-zinc-300 underline-offset-4 hover:text-blue-700 hover:decoration-blue-300">
-                Learn more about the referral program
-            </a>
         </section>
 
-        {{-- ─── Redeem your points for crypto ─── --}}
+        {{-- ─── Tier ladder ─── --}}
         <section>
-            <h2 class="text-sm font-bold text-black">Redeem your points for crypto</h2>
-            <div class="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                @foreach ($rewards as $r)
-                    @php $affordable = $pointsBalance >= $r['cost']; @endphp
-                    <button
-                        type="button"
-                        @disabled(! $affordable)
-                        class="group flex flex-col items-stretch gap-3 rounded-2xl p-4 text-left transition-colors {{ $affordable ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-zinc-400 text-white/80 cursor-not-allowed' }}"
-                    >
-                        <span class="flex aspect-[5/3] items-center justify-center overflow-hidden rounded-xl bg-white/15">
-                            <img src="{{ asset('assets/LTC.png') }}" alt="" class="h-12 w-12 object-contain {{ $affordable ? '' : 'opacity-70' }}" loading="lazy">
-                        </span>
-                        <div>
-                            <p class="text-sm font-bold">{{ $r['label'] }}</p>
-                            <p class="mt-1 inline-flex items-center gap-1 text-xs">
-                                Cost
-                                <img src="{{ asset('assets/PWAicon.png') }}" alt="" class="h-3.5 w-3.5" loading="lazy">
-                                <span class="font-semibold">{{ number_format($r['cost']) }}</span>
+            <h2 class="mb-3 text-sm font-bold text-black">Membership tiers</h2>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                @foreach ($tierLadder as $tier)
+                    @php $reached = $rcoinBalance >= $tier['min']; $isCurrent = $tier['name'] === $currentTier['name']; @endphp
+                    <div @class([
+                        'rounded-2xl p-4 text-center ring-1 transition-colors',
+                        'bg-blue-600 text-white ring-blue-600' => $isCurrent,
+                        'bg-white text-zinc-900 ring-zinc-100' => ! $isCurrent && $reached,
+                        'bg-white text-zinc-400 ring-zinc-100' => ! $reached,
+                    ])>
+                        <p class="text-sm font-bold">{{ $tier['name'] }}</p>
+                        <p @class(['mt-0.5 text-xs', 'text-white/80' => $isCurrent, 'text-zinc-500' => ! $isCurrent])>{{ number_format($tier['min']) }} Rcoin</p>
+                        @if ($tier['requires'])
+                            <p @class(['mt-1.5 inline-flex items-center gap-1 rounded-[5px] px-1.5 py-0.5 text-[10px] font-semibold', 'bg-white/15 text-white' => $isCurrent, 'bg-amber-50 text-amber-700' => ! $isCurrent])>
+                                <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75M3.75 21.75h16.5a.75.75 0 00.75-.75v-9a.75.75 0 00-.75-.75H3.75a.75.75 0 00-.75.75v9c0 .414.336.75.75.75z"/>
+                                </svg>
+                                {{ $tier['requires'] }}
                             </p>
-                        </div>
-                    </button>
+                        @endif
+                    </div>
                 @endforeach
             </div>
         </section>
 
-        {{-- ─── Redeem history ─── --}}
+        {{-- ─── Rcoin history ─── --}}
         <section>
-            <h2 class="mb-3 text-sm font-bold text-black">Redeem history</h2>
-            <div class="rounded-2xl bg-white p-6 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <p class="text-sm text-zinc-600">No redemption history available</p>
-            </div>
-        </section>
-
-        {{-- ─── Points history ─── --}}
-        <section>
-            <h2 class="mb-3 text-sm font-bold text-black">Points history</h2>
+            <h2 class="mb-3 text-sm font-bold text-black">Rcoin history</h2>
             <div class="divide-y divide-zinc-100 rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                @foreach ($pointsHistory as $entry)
+                @foreach ($rcoinHistory as $entry)
                     <div class="flex items-center justify-between gap-4 px-5 py-3">
                         <div class="min-w-0">
                             <p class="truncate text-sm font-medium text-zinc-700">{{ $entry['label'] }}</p>
@@ -204,8 +283,8 @@
                             <svg class="h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                             </svg>
-                            <img src="{{ asset('assets/PWAicon.png') }}" alt="" class="h-4 w-4" loading="lazy">
-                            <span class="text-black">{{ number_format($entry['points']) }} points</span>
+                            <img src="{{ $coin }}" alt="" class="h-4 w-4">
+                            <span class="text-black">{{ number_format($entry['rcoin']) }} Rcoin</span>
                         </div>
                     </div>
                 @endforeach

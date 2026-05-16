@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Observers\PricingRuleObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+#[ObservedBy([PricingRuleObserver::class])]
 class PricingRule extends Model
 {
     use HasFactory;
@@ -13,6 +16,7 @@ class PricingRule extends Model
     protected $fillable = [
         'category_id',
         'subcategory_id',
+        'product_id',
         'markup_type',
         'markup_value',
         'is_active',
@@ -34,5 +38,10 @@ class PricingRule extends Model
     public function subcategory(): BelongsTo
     {
         return $this->belongsTo(Subcategory::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 }
