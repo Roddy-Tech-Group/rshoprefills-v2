@@ -52,7 +52,7 @@
                 <h3 class="text-base font-semibold text-zinc-900">Shop</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="{{ route('shop.gift-cards') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Gift Cards</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">eSIMs</a></li>
+                    <li><a href="{{ route('shop.esims') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">eSIMs</a></li>
                     <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Mobile top up</a></li>
                     <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Bill payments</a></li>
                     <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Flights</a></li>

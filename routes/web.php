@@ -108,6 +108,26 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.brand');
 
+// eSIM storefront — a coverage-region listing + a per-region data-plan detail page.
+// Mirrors the gift-cards pattern: a Route::view listing + a slug detail route.
+// Each Product in the `esims` category is a coverage region; each variant is a data plan.
+Route::view('esims', 'shop.esims')->name('shop.esims');
+
+Route::get('esims/{slug}', function (string $slug) {
+    $product = Product::query()
+        ->where('slug', $slug)
+        ->where('is_active', true)
+        ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
+        ->with([
+            'category:id,name,slug',
+            'subcategory:id,name,slug',
+            'variants' => fn ($q) => $q->where('is_available', true)->orderBy('cost_price'),
+        ])
+        ->firstOrFail();
+
+    return view('shop.esim', ['product' => $product]);
+})->name('shop.esim');
+
 // Cart page (HTML). Store-driven — it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 

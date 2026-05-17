@@ -140,7 +140,22 @@
     animation: valueFlip 260ms var(--ease-emphasis);
 }
 
-/* Honour reduced-motion: drop the tilt, glare, pop and flip entirely. */
+/* eSIM connectivity pulse — concentric rings radiate outward from a signal
+   source, like a network broadcasting. Place .signal-ring elements (absolutely
+   positioned, same size) inside a relative container; the stagger delays make
+   them ripple one after another. */
+@keyframes signalPulse {
+    0%   { transform: scale(0.55); opacity: 0.65; }
+    80%  { opacity: 0; }
+    100% { transform: scale(2.4); opacity: 0; }
+}
+.signal-ring {
+    animation: signalPulse 2.6s ease-out infinite;
+}
+.signal-ring:nth-child(2) { animation-delay: 0.85s; }
+.signal-ring:nth-child(3) { animation-delay: 1.7s; }
+
+/* Honour reduced-motion: drop the tilt, glare, pop, flip and signal pulse. */
 @media (prefers-reduced-motion: reduce) {
     .card-3d {
         transform: none !important;
@@ -149,7 +164,8 @@
         display: none;
     }
     .animate-cart-pop,
-    .value-flip {
+    .value-flip,
+    .signal-ring {
         animation: none !important;
     }
 }

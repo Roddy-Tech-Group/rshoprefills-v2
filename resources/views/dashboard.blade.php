@@ -194,7 +194,7 @@
             <div class="mt-4 grid grid-cols-3 gap-3">
                 @foreach ([
                     ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    route('shop.gift-cards'), true],
-                    ['eSIMs',      'esim.svg',       'bg-sky-500',     '#',                      false],
+                    ['eSIMs',      'esim.svg',       'bg-sky-500',     route('shop.esims'),      true],
                     ['Topups',     'topup1.svg',     'bg-emerald-500', '#',                      false],
                     ['Bills',      'Bills 2.svg',    'bg-teal-500',    '#',                      false],
                     ['Flights',    'flight 2.svg',   'bg-indigo-500',  '#',                      false],
@@ -219,7 +219,7 @@
             <div class="mt-3 grid grid-cols-2 gap-3">
                 @foreach ([
                     ['Gift Cards', 'Buy Now',  'gift cards.svg', route('shop.gift-cards'), true],
-                    ['eSIM',       'Buy Now',  'esim.svg',       '#',                      false],
+                    ['eSIM',       'Buy Now',  'esim.svg',       route('shop.esims'),      true],
                     ['Top Ups',    'Buy Now',  'mobile.svg',     '#',                      false],
                     ['Flights',    'Book Now', 'flight 2.svg',   '#',                      false],
                 ] as [$name, $cta, $icon, $href, $live])

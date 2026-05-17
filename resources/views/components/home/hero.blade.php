@@ -104,7 +104,7 @@
             </a>
 
             {{-- Explore eSIMs (glass button) --}}
-            <a href="#" class="group inline-flex items-center gap-2 rounded-xl bg-white/60 backdrop-blur-md px-5 py-3 text-base font-semibold text-zinc-900 ring-1 ring-zinc-200/80 shadow-lg shadow-zinc-900/5 transition-all hover:-translate-y-0.5 hover:bg-white/80 hover:ring-zinc-300">
+            <a href="{{ route('shop.esims') }}" wire:navigate class="group inline-flex items-center gap-2 rounded-xl bg-white/60 backdrop-blur-md px-5 py-3 text-base font-semibold text-zinc-900 ring-1 ring-zinc-200/80 shadow-lg shadow-zinc-900/5 transition-all hover:-translate-y-0.5 hover:bg-white/80 hover:ring-zinc-300">
                 Explore eSIMs
                 <svg viewBox="0 0 24 24" class="h-5 w-5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 3h8.5L19 7.5V20a1 1 0 0 1 -1 1H6a1 1 0 0 1 -1 -1V4a1 1 0 0 1 1 -1z"/>

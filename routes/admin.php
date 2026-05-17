@@ -27,6 +27,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::view('transactions', 'admin.transactions')->name('transactions');
         Route::view('wallets', 'admin.wallets')->name('wallets');
         Volt::route('rates', 'admin.rates')->name('rates');
+        Volt::route('account', 'admin.account')->name('account');
 
         // Admin Dashboard API
         Route::prefix('api/dashboard')->name('api.dashboard.')->group(function () {

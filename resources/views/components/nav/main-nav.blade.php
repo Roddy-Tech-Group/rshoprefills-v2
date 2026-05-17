@@ -449,7 +449,7 @@
                 </a>
 
                 {{-- eSIMs --}}
-                <a href="#" @click.prevent="activeCategory = 'eSIMs'" :class="activeCategory === 'eSIMs' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                <a href="{{ route('shop.esims') }}" wire:navigate @click="activeCategory = 'eSIMs'" :class="activeCategory === 'eSIMs' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
                     <img src="{{ asset('assets/' . rawurlencode('esim.svg')) }}" alt="" class="{{ $catImgClass }}" loading="lazy">
                     eSIMs
                 </a>

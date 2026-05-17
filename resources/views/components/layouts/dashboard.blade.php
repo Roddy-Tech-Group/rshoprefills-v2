@@ -89,7 +89,7 @@
                         </a>
                         @foreach ([
                             ['Gift Cards',     'gift cards.svg', route('shop.gift-cards'), true],
-                            ['eSIMs',          'esim.svg',       '#',                      false],
+                            ['eSIMs',          'esim.svg',       route('shop.esims'),      true],
                             ['Flights',        'flight 2.svg',   '#',                      false],
                             ['Stays',          'stay 2.svg',     '#',                      false],
                             ['Topups & Bills', 'Bills 2.svg',    '#',                      false],
