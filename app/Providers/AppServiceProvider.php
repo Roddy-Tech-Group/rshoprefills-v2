@@ -16,7 +16,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(
+            \App\Domain\Notification\Providers\MailProviderInterface::class,
+            \App\Domain\Notification\Providers\ResendProvider::class
+        );
     }
 
     /**
@@ -25,6 +28,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(Registered::class, CreateWalletForNewUser::class);
+        Event::listen(Registered::class, \App\Domain\Notification\Listeners\CreateDefaultPreferencesListener::class);
+        Event::listen(Registered::class, \App\Domain\Notification\Listeners\SendWelcomeEmailListener::class);
+
+        Event::listen(\App\Domain\Wallet\Events\WalletCredited::class, \App\Domain\Notification\Listeners\SendWalletCreditNotificationListener::class);
+        Event::listen(\App\Domain\Wallet\Events\WalletDebited::class, \App\Domain\Notification\Listeners\SendWalletDebitNotificationListener::class);
+
+        Event::subscribe(\App\Domain\Notification\Listeners\SendOrderConfirmationListener::class);
+        Event::subscribe(\App\Domain\Notification\Listeners\SendFulfillmentNotificationListener::class);
+
         Event::subscribe(\App\Listeners\CommerceNotificationListener::class);
         View::composer('*', CartComposer::class);
     }

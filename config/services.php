@@ -38,6 +38,8 @@ return [
 
     'resend' => [
         'key' => env('RESEND_KEY'),
+        'from_address' => env('MAIL_FROM_ADDRESS', 'noreply@rshoprefills.com'),
+        'from_name' => env('MAIL_FROM_NAME', 'RshopRefills'),
     ],
 
     'slack' => [

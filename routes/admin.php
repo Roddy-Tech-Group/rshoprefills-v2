@@ -61,5 +61,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('products/{product}/toggle-featured', [AdminCatalogController::class, 'toggleFeatured']);
             Route::patch('products/{product}/toggle-popular', [AdminCatalogController::class, 'togglePopular']);
         });
+
+        // Admin Notifications & Compliance API
+        Route::prefix('api/notifications')->name('api.notifications.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'index'])->name('index');
+            Route::get('deliveries', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'deliveries'])->name('deliveries');
+            Route::get('metrics', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'metrics'])->name('metrics');
+            Route::post('{id}/retry', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'retry'])->name('retry');
+        });
     });
 });
