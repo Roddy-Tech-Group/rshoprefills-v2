@@ -61,8 +61,18 @@ class FlutterwaveWebhookController extends Controller
             return response()->json(['message' => 'Unauthorized signature'], 401);
         }
 
-        // 3. Dispatch the processing job asynchronously
-        ProcessFundingWebhookJob::dispatch($webhook->id);
+        // 3. Dispatch the processing job asynchronously based on payable type
+        $attempt = \App\Models\PaymentAttempt::where('idempotency_key', $txRef)->first();
+        
+        if ($attempt && ($attempt->payable_type === \App\Models\Order::class || !empty($attempt->order_id))) {
+            $attempt->webhook_payload = $payload;
+            $attempt->gateway_reference = $data['id'] ?? ($payload['id'] ?? $attempt->gateway_reference);
+            $attempt->save();
+            
+            \App\Jobs\VerifyPaymentJob::dispatch($attempt);
+        } else {
+            ProcessFundingWebhookJob::dispatch($webhook->id);
+        }
 
         Log::info('Flutterwave webhook queued successfully.', [
             'webhook_id' => $webhook->id,
