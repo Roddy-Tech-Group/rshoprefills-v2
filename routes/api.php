@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Webhooks (No auth required)
-Route::post('webhooks/flutterwave', [FlutterwaveWebhookController::class, 'handle'])->name('webhooks.flutterwave');
+Route::post('webhooks/flutterwave', [FlutterwaveWebhookController::class, 'handle'])->name('api.webhooks.flutterwave');
+Route::post('webhooks/nowpayments', [\App\Http\Controllers\Api\Webhooks\NowPaymentsWebhookController::class, 'handle'])->name('api.webhooks.nowpayments');
 
 // Storefront Catalog APIs (Public)
 Route::prefix('storefront')->name('api.storefront.')->group(function () {
@@ -45,14 +46,41 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
     });
 });
 
+// Newsletter Subscriptions (Public)
+Route::post('newsletter/subscribe', [\App\Http\Controllers\Api\NewsletterApiController::class, 'subscribe'])->name('newsletter.subscribe');
+Route::get('newsletter/unsubscribe', [\App\Http\Controllers\Api\NewsletterApiController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
+
 // Protected Dashboard & Wallet APIs
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth')->group(function () {
     Route::get('dashboard', [UserDashboardController::class, 'index'])->name('api.dashboard');
 
     Route::prefix('wallets')->name('api.wallets.')->group(function () {
         Route::get('/', [UserWalletController::class, 'index'])->name('index');
+        Route::get('/fundings', [UserWalletController::class, 'fundings'])->name('fundings');
+        Route::get('/fundings/{reference}', [UserWalletController::class, 'fundingDetails'])->name('fundings.show');
         Route::get('{currency}', [UserWalletController::class, 'show'])->name('show');
         Route::post('fund/initiate', [UserWalletController::class, 'initiateFunding'])->name('fund.initiate');
+    });
+
+    Route::prefix('checkout')->name('api.checkout.')->group(function () {
+        Route::post('place-order', [\App\Http\Controllers\Api\CheckoutApiController::class, 'placeOrder'])->name('place-order');
+    });
+
+    Route::prefix('orders')->name('api.orders.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\CheckoutApiController::class, 'index'])->name('index');
+        Route::get('{orderNumber}', [\App\Http\Controllers\Api\CheckoutApiController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('notifications')->name('api.notifications.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NotificationApiController::class, 'index'])->name('index');
+        Route::get('unread-count', [\App\Http\Controllers\Api\NotificationApiController::class, 'unreadCount'])->name('unread-count');
+        Route::patch('{id}/read', [\App\Http\Controllers\Api\NotificationApiController::class, 'markAsRead'])->name('read');
+        Route::patch('read-all', [\App\Http\Controllers\Api\NotificationApiController::class, 'markAllAsRead'])->name('read-all');
+    });
+
+    Route::prefix('notification-preferences')->name('api.notification-preferences.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NotificationApiController::class, 'getPreferences'])->name('get');
+        Route::put('/', [\App\Http\Controllers\Api\NotificationApiController::class, 'updatePreferences'])->name('update');
     });
 
     Route::get('transactions', [UserTransactionController::class, 'index'])->name('api.transactions.index');

@@ -137,4 +137,28 @@ class User extends Authenticatable // implements MustVerifyEmail
     {
         return $this->hasMany(Payment::class);
     }
+
+    /**
+     * Get all payment attempts for this user.
+     */
+    public function paymentAttempts(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class);
+    }
+
+    /**
+     * Get all persistent notifications for this user.
+     */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get the user's notification preferences.
+     */
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class, 'user_id');
+    }
 }

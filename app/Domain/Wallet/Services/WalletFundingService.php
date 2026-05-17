@@ -2,17 +2,20 @@
 
 namespace App\Domain\Wallet\Services;
 
-use App\Domain\Payment\Services\FlutterwaveService;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\FundingStatus;
 use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Transaction\Services\TransactionService;
 use App\Domain\Wallet\Exceptions\WalletFundingException;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletFunding;
+use App\Models\PaymentAttempt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Orchestrates the wallet funding lifecycle (initiation, verification, and completion).
@@ -21,14 +24,16 @@ class WalletFundingService
 {
     public function __construct(
         private readonly TransactionService $transactionService,
-        private readonly FlutterwaveService $flutterwaveService,
+        private readonly PaymentGatewayFactory $paymentGatewayFactory,
         private readonly WalletService $walletService,
+        private readonly CurrencyRateService $currencyRateService,
+        private readonly FundingVerificationService $verificationService
     ) {}
 
     /**
-     * Initialize a funding request and generate a Flutterwave payment link.
+     * Initialize a funding request and generate a hosted payment link.
      */
-    public function initializeFunding(User $user, Wallet $wallet, float $amount, Currency $currency): array
+    public function initializeFunding(User $user, Wallet $wallet, float $amount, Currency $currency, ?string $displayCurrency = null): array
     {
         if ($wallet->currency->value !== $currency->value) {
             throw new \InvalidArgumentException('Funding currency must match wallet currency.');
@@ -38,49 +43,74 @@ class WalletFundingService
             throw new \InvalidArgumentException("Minimum funding amount is {$currency->minimumFundingAmount()} {$currency->value}.");
         }
 
+        $displayCurrency = strtoupper(trim($displayCurrency ?: $currency->value));
+
+        // 1. Resolve rates snapshot
+        $rate = $this->currencyRateService->resolveRate($currency->value, $displayCurrency);
+        $requestedAmount = round($amount * $rate, 4);
+
+        // Convert back to USD for audit settled baseline
+        $usdRate = $this->currencyRateService->resolveRate($currency->value, 'USD');
+        $settledAmountUsd = round($amount * $usdRate, 4);
+
         $reference = $this->transactionService->generateReference('FUND', $currency);
+        $idempotencyKey = 'fund_init_' . Str::random(16);
 
-        $funding = WalletFunding::create([
-            'user_id' => $user->id,
-            'wallet_id' => $wallet->id,
-            'reference' => $reference,
-            'currency' => $currency->value,
-            'amount' => $amount,
-            'gateway' => 'flutterwave',
-            'status' => FundingStatus::Pending,
-        ]);
-
-        // Initialize with Flutterwave
-        $flwPayload = [
-            'tx_ref' => $reference,
-            'amount' => $amount,
-            'currency' => $currency->value,
-            'redirect_url' => url('/dashboard/wallet/funding/callback'),
-            'customer' => [
-                'email' => $user->email,
-                'name' => $user->name,
-            ],
-            'customizations' => [
-                'title' => config('app.name').' Wallet Funding',
-                'description' => "Fund {$currency->value} wallet",
-            ],
-        ];
-
-        $initData = $this->flutterwaveService->initializePayment($flwPayload);
-
-        if (! $initData || ! isset($initData['link'])) {
-            $funding->update([
-                'status' => FundingStatus::Failed,
-                'failed_reason' => 'Failed to initialize payment gateway.',
+        return DB::transaction(function () use ($user, $wallet, $amount, $currency, $displayCurrency, $rate, $requestedAmount, $settledAmountUsd, $reference, $idempotencyKey) {
+            
+            // 2. Create immutable funding attempt
+            $funding = WalletFunding::create([
+                'user_id' => $user->id,
+                'wallet_id' => $wallet->id,
+                'reference' => $reference,
+                'currency' => $currency->value,
+                'display_currency' => $displayCurrency,
+                'amount' => $amount,
+                'requested_amount' => $requestedAmount,
+                'settled_amount_usd' => $settledAmountUsd,
+                'exchange_rate_snapshot' => $rate,
+                'gateway' => 'flutterwave',
+                'status' => FundingStatus::Pending,
+                'idempotency_key' => $idempotencyKey,
             ]);
 
-            throw new \RuntimeException('Unable to initialize payment gateway. Please try again.');
-        }
+            // 3. Create polymorphic PaymentAttempt
+            $attempt = PaymentAttempt::create([
+                'user_id' => $user->id,
+                'payable_type' => WalletFunding::class,
+                'payable_id' => $funding->id,
+                'gateway' => 'flutterwave',
+                'idempotency_key' => $reference, // Use Reference for unique mapping on provider calls
+                'currency' => $displayCurrency,
+                'amount' => $requestedAmount,
+                'exchange_rate_snapshot' => $rate,
+                'payment_status' => PaymentStatus::Pending,
+            ]);
 
-        return [
-            'funding' => $funding,
-            'payment_link' => $initData['link'],
-        ];
+            // 4. Resolve provider and initialize payment
+            $provider = $this->paymentGatewayFactory->getProvider('flutterwave');
+            $initData = $provider->initializePayment($attempt);
+
+            $paymentLink = $initData['payment_url'] ?? null;
+
+            if (!$paymentLink) {
+                $funding->update([
+                    'status' => FundingStatus::Failed,
+                    'failed_reason' => 'Failed to initialize payment gateway.',
+                ]);
+                $attempt->update(['payment_status' => PaymentStatus::Failed]);
+
+                throw new \RuntimeException('Unable to initialize payment gateway. Please try again.');
+            }
+
+            // Sync payment link back
+            $funding->update(['payment_link' => $paymentLink]);
+
+            return [
+                'funding' => $funding,
+                'payment_link' => $paymentLink,
+            ];
+        });
     }
 
     /**
@@ -91,43 +121,52 @@ class WalletFundingService
      */
     public function processSuccessfulFunding(string $txRef, string $flwTransactionId, array $rawPayload = []): void
     {
-        DB::transaction(function () use ($txRef, $flwTransactionId, $rawPayload) {
-            // Lock the funding record to prevent race conditions from duplicate webhooks
-            $funding = WalletFunding::where('reference', $txRef)->lockForUpdate()->first();
+        // 1. Locate and lock funding outside transaction or verify first
+        $funding = WalletFunding::where('reference', $txRef)->first();
 
-            if (! $funding) {
-                Log::error('Wallet funding record not found.', ['tx_ref' => $txRef]);
-                throw new \RuntimeException('Funding record not found.');
+        if (!$funding) {
+            Log::error('Wallet funding record not found.', ['tx_ref' => $txRef]);
+            throw new \RuntimeException('Funding record not found.');
+        }
+
+        if ($funding->status === FundingStatus::Completed) {
+            Log::info('Wallet funding already processed.', ['tx_ref' => $txRef]);
+            return;
+        }
+
+        if ($funding->status === FundingStatus::Failed || $funding->status === FundingStatus::Cancelled) {
+            throw WalletFundingException::alreadyProcessed($txRef);
+        }
+
+        // 2. Server-to-server verification with gateway OUTSIDE transaction so failures are stored
+        $verified = $this->verificationService->verify($funding);
+
+        if (!$verified) {
+            $reason = 'Gateway verification failed or payload tampered.';
+            $this->failFunding($funding, $reason, $rawPayload);
+            throw WalletFundingException::verificationFailed($txRef, $reason);
+        }
+
+        // 3. Now execute database transaction to credit the wallet under pessimistic lock
+        DB::transaction(function () use ($funding, $flwTransactionId, $rawPayload) {
+            // Re-lock funding row
+            $funding->lockForUpdate();
+
+            // Retrieve associated polymorphic attempt and mark confirmed
+            $attempt = PaymentAttempt::where('payable_type', WalletFunding::class)
+                ->where('payable_id', $funding->id)
+                ->first();
+
+            if ($attempt) {
+                $attempt->update([
+                    'payment_status' => PaymentStatus::Paid,
+                    'confirmed_at' => now(),
+                    'gateway_reference' => $flwTransactionId,
+                    'webhook_payload' => $rawPayload,
+                ]);
             }
 
-            if ($funding->status === FundingStatus::Completed) {
-                // Idempotent return: already processed.
-                Log::info('Wallet funding already processed.', ['tx_ref' => $txRef]);
-
-                return;
-            }
-
-            if ($funding->status === FundingStatus::Failed || $funding->status === FundingStatus::Cancelled) {
-                throw WalletFundingException::alreadyProcessed($txRef);
-            }
-
-            // Server-to-server verification with Flutterwave
-            $flwData = $this->flutterwaveService->verifyTransaction($flwTransactionId);
-
-            if (! $flwData || ($flwData['status'] !== 'successful')) {
-                $reason = $flwData['processor_response'] ?? 'Transaction not successful on gateway.';
-                $this->failFunding($funding, $reason, $rawPayload);
-                throw WalletFundingException::verificationFailed($txRef, $reason);
-            }
-
-            // Verify amount and currency to prevent tampering
-            if ((float) $flwData['amount'] < (float) $funding->amount || $flwData['currency'] !== $funding->currency->value) {
-                $reason = 'Amount or currency mismatch during verification.';
-                $this->failFunding($funding, $reason, $rawPayload);
-                throw WalletFundingException::verificationFailed($txRef, $reason);
-            }
-
-            // Proceed to credit wallet
+            // Credit the wallet safely
             $wallet = $funding->wallet;
 
             $this->walletService->credit(
@@ -141,20 +180,27 @@ class WalletFundingService
                 sourceId: $funding->id,
                 metadata: [
                     'gateway_transaction_id' => $flwTransactionId,
-                    'gateway_fee' => $flwData['app_fee'] ?? 0,
+                    'display_currency' => $funding->display_currency,
+                    'exchange_rate' => $funding->exchange_rate_snapshot,
+                    'requested_amount' => $funding->requested_amount,
                 ]
             );
 
-            // Mark funding as completed
+            // Mark funding completed
             $funding->update([
                 'status' => FundingStatus::Completed,
                 'gateway_reference' => $flwTransactionId,
-                'gateway_payload' => $rawPayload,
+                'provider_payload_snapshot' => $rawPayload,
+                'completed_at' => now(),
                 'processed_at' => now(),
             ]);
 
-            Log::info('Wallet funding successfully processed.', ['tx_ref' => $txRef, 'amount' => $funding->amount]);
+            DB::afterCommit(function () use ($funding) {
+                event(new \App\Domain\Wallet\Events\FundingCompleted($funding));
+            });
         });
+
+        Log::info('Wallet funding successfully processed.', ['tx_ref' => $txRef, 'amount' => $funding->amount]);
     }
 
     /**
@@ -165,8 +211,18 @@ class WalletFundingService
         $funding->update([
             'status' => FundingStatus::Failed,
             'failed_reason' => $reason,
-            'gateway_payload' => $payload,
+            'provider_payload_snapshot' => $payload,
             'processed_at' => now(),
         ]);
+
+        // Fail polymorphic payment attempt
+        PaymentAttempt::where('payable_type', WalletFunding::class)
+            ->where('payable_id', $funding->id)
+            ->update([
+                'payment_status' => PaymentStatus::Failed,
+                'failed_at' => now(),
+            ]);
+
+        event(new \App\Domain\Wallet\Events\FundingFailed($funding, $reason));
     }
 }

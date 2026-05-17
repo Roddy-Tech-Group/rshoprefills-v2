@@ -2,103 +2,90 @@
 
 namespace App\Models;
 
-use App\Domain\Shared\Enums\OrderStatus;
-use Database\Factories\OrderFactory;
+use App\Domain\Order\Enums\OrderStatus;
+use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
- * Represents a customer order containing one or more digital products.
- *
- * Orders use soft deletes — we never permanently remove order records
- * for audit and compliance reasons. The order_number is a human-readable
- * reference generated in application code (e.g., RSR-20260513-A1B2).
- *
- * completed_at records when ALL items have been fulfilled, which is
- * distinct from updated_at (last record modification).
- *
- * @property int $id
+ * @property string $id
  * @property int $user_id
  * @property string $order_number
- * @property OrderStatus $status
- * @property string $subtotal
- * @property string $tax
- * @property string $total
- * @property string $currency
- * @property string|null $notes
- * @property array|null $metadata
+ * @property string|null $cart_id
+ * @property string $settlement_currency
+ * @property string $display_currency
+ * @property float $subtotal_amount
+ * @property float $markup_amount
+ * @property float $total_amount
+ * @property string $payment_method
+ * @property PaymentStatus $payment_status
+ * @property FulfillmentStatus $fulfillment_status
+ * @property OrderStatus $order_status
+ * @property string|null $provider_status
+ * @property string|null $provider_reference
+ * @property Carbon|null $placed_at
  * @property Carbon|null $completed_at
- * @property Carbon $created_at
- * @property Carbon $updated_at
- * @property Carbon|null $deleted_at
+ * @property Carbon|null $failed_at
+ * @property array|null $metadata
  */
 class Order extends Model
 {
-    /** @use HasFactory<OrderFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids;
 
-    use SoftDeletes;
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'user_id',
         'order_number',
-        'status',
-        'subtotal',
-        'tax',
-        'total',
-        'currency',
-        'notes',
-        'metadata',
+        'cart_id',
+        'settlement_currency',
+        'display_currency',
+        'subtotal_amount',
+        'markup_amount',
+        'total_amount',
+        'payment_method',
+        'payment_status',
+        'fulfillment_status',
+        'order_status',
+        'provider_status',
+        'provider_reference',
+        'placed_at',
         'completed_at',
+        'failed_at',
+        'metadata',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'status' => OrderStatus::class,
-            'subtotal' => 'decimal:4',
-            'tax' => 'decimal:4',
-            'total' => 'decimal:4',
-            'metadata' => 'array',
+            'payment_status' => PaymentStatus::class,
+            'fulfillment_status' => FulfillmentStatus::class,
+            'order_status' => OrderStatus::class,
+            'subtotal_amount' => 'decimal:4',
+            'markup_amount' => 'decimal:4',
+            'total_amount' => 'decimal:4',
+            'placed_at' => 'datetime',
             'completed_at' => 'datetime',
+            'failed_at' => 'datetime',
+            'metadata' => 'array',
         ];
     }
 
-    /**
-     * Get the user who placed this order.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the line items in this order.
-     */
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
     }
 
-    /**
-     * Get the payment attempts for this order.
-     */
-    public function payments(): HasMany
+    public function paymentAttempts(): HasMany
     {
-        return $this->hasMany(Payment::class);
+        return $this->hasMany(PaymentAttempt::class);
     }
 }

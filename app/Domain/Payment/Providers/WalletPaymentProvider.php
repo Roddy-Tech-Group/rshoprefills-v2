@@ -1,0 +1,135 @@
+<?php
+
+namespace App\Domain\Payment\Providers;
+
+use App\Models\PaymentAttempt;
+use App\Models\Order;
+use App\Domain\Payment\Interfaces\PaymentProviderInterface;
+use App\Domain\Wallet\Services\WalletService;
+use App\Domain\Shared\Enums\Currency;
+use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Payment\Enums\PaymentStatus;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class WalletPaymentProvider implements PaymentProviderInterface
+{
+    public function __construct(
+        private readonly WalletService $walletService
+    ) {}
+
+    public function initializePayment(PaymentAttempt $attempt): array
+    {
+        $user = $attempt->user;
+        $currencyEnum = Currency::tryFrom(strtoupper($attempt->currency));
+
+        if (!$currencyEnum) {
+            throw new \Exception("Unsupported wallet currency: {$attempt->currency}");
+        }
+
+        $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
+
+        // Run in transaction with pessimistic lock
+        DB::transaction(function () use ($wallet, $attempt) {
+            // 1. Lock funds in the wallet
+            $this->walletService->lockFunds($wallet, $attempt->amount);
+
+            // 2. Mark the payment attempt as reserved
+            $attempt->payment_status = PaymentStatus::Reserved;
+            $attempt->gateway_reference = 'WL-LOCK-' . uniqid();
+            $attempt->save();
+        });
+
+        return [
+            'payment_url' => null,
+            'gateway_reference' => $attempt->gateway_reference,
+            'status' => 'reserved',
+        ];
+    }
+
+    public function verifyPayment(PaymentAttempt $attempt): bool
+    {
+        // For wallet, if the status is reserved or paid, it's verified.
+        return $attempt->payment_status === PaymentStatus::Paid 
+            || $attempt->payment_status === PaymentStatus::Reserved;
+    }
+
+    /**
+     * Finalize the debit: deduct the reserved funds and record the transaction.
+     */
+    public function finalizeDebit(PaymentAttempt $attempt): void
+    {
+        $user = $attempt->user;
+        $currencyEnum = Currency::from(strtoupper($attempt->currency));
+        $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
+
+        DB::transaction(function () use ($wallet, $attempt, $currencyEnum) {
+            // Unlock reserved funds first
+            $this->walletService->unlockFunds($wallet, $attempt->amount);
+
+            // Complete actual debit
+            $this->walletService->debit(
+                wallet: $wallet,
+                amount: $attempt->amount,
+                category: TransactionCategory::Purchase,
+                description: "Debit for Order {$attempt->order->order_number}",
+                reference: $attempt->order->order_number,
+                idempotencyKey: "debit-{$attempt->id}"
+            );
+
+            $attempt->payment_status = PaymentStatus::Paid;
+            $attempt->confirmed_at = now();
+            $attempt->save();
+        });
+    }
+
+    /**
+     * Release previously locked/reserved funds due to fulfillment failure.
+     */
+    public function releaseFunds(PaymentAttempt $attempt): void
+    {
+        if ($attempt->payment_status !== PaymentStatus::Reserved) {
+            return;
+        }
+
+        $user = $attempt->user;
+        $currencyEnum = Currency::from(strtoupper($attempt->currency));
+        $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
+
+        DB::transaction(function () use ($wallet, $attempt) {
+            $this->walletService->unlockFunds($wallet, $attempt->amount);
+
+            $attempt->payment_status = PaymentStatus::Failed;
+            $attempt->failed_at = now();
+            $attempt->save();
+        });
+    }
+
+    public function refundPayment(PaymentAttempt $attempt, float $amount): bool
+    {
+        $user = $attempt->user;
+        $currencyEnum = Currency::from(strtoupper($attempt->currency));
+        $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
+
+        DB::transaction(function () use ($wallet, $attempt, $amount) {
+            $this->walletService->credit(
+                wallet: $wallet,
+                amount: $amount,
+                category: TransactionCategory::Refund,
+                description: "Refund for Order {$attempt->order->order_number}",
+                reference: "REF-{$attempt->order->order_number}",
+                idempotencyKey: "refund-{$attempt->id}"
+            );
+
+            $attempt->payment_status = PaymentStatus::Refunded;
+            $attempt->save();
+        });
+
+        return true;
+    }
+
+    public function normalizeWebhook(array $payload): array
+    {
+        return $payload; // Wallet has no webhooks
+    }
+}
