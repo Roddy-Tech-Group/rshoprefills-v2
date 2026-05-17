@@ -29,8 +29,12 @@ class PaymentWebhook extends Model
         'event_type',
         'reference',
         'payload',
+        'headers',
         'signature',
         'processed',
+        'processing_status',
+        'processing_attempts',
+        'exception_traces',
         'processed_at',
     ];
 
@@ -38,7 +42,9 @@ class PaymentWebhook extends Model
     {
         return [
             'payload' => 'array',
+            'headers' => 'array',
             'processed' => 'boolean',
+            'processing_attempts' => 'integer',
             'processed_at' => 'datetime',
         ];
     }

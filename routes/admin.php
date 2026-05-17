@@ -42,6 +42,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('transactions', [AdminFintechController::class, 'transactions'])->name('transactions');
             Route::get('fundings', [AdminFintechController::class, 'fundings'])->name('fundings');
             Route::get('wallets', [AdminFintechController::class, 'wallets'])->name('wallets');
+
+            // Hardened Wallet Funding & Financial Operations Extensions
+            Route::get('payment-attempts', [AdminFintechController::class, 'paymentAttempts'])->name('payment-attempts');
+            Route::get('payment-webhooks', [AdminFintechController::class, 'paymentWebhooks'])->name('payment-webhooks');
+            Route::get('reconciliation/pending', [AdminFintechController::class, 'pendingReconciliations'])->name('reconciliation.pending');
+            Route::post('reconciliation/{id}/retry', [AdminFintechController::class, 'retryReconciliation'])->name('reconciliation.retry');
+            Route::get('metrics', [AdminFintechController::class, 'metrics'])->name('metrics');
+        });
+
+        // Admin Commerce Monitoring & Actions API
+        Route::prefix('api/commerce')->name('api.commerce.')->group(function () {
+            Route::get('orders', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listOrders'])->name('orders');
+            Route::get('payments', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listPayments'])->name('payments');
+            Route::get('fulfillments', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listFulfillmentLogs'])->name('fulfillments');
+            Route::post('orders/{itemId}/retry-fulfillment', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'retryFulfillment'])->name('retry-fulfillment');
+            Route::post('orders/{orderId}/refund', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'refundOrder'])->name('refund');
         });
 
         // Admin Catalog API
@@ -52,6 +68,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('products/{product}/toggle-active', [AdminCatalogController::class, 'toggleActive']);
             Route::patch('products/{product}/toggle-featured', [AdminCatalogController::class, 'toggleFeatured']);
             Route::patch('products/{product}/toggle-popular', [AdminCatalogController::class, 'togglePopular']);
+        });
+
+        // Admin Notifications & Compliance API
+        Route::prefix('api/notifications')->name('api.notifications.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'index'])->name('index');
+            Route::get('deliveries', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'deliveries'])->name('deliveries');
+            Route::get('metrics', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'metrics'])->name('metrics');
+            Route::post('{id}/retry', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'retry'])->name('retry');
         });
     });
 });

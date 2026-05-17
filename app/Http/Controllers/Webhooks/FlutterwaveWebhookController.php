@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Webhooks;
 
 use App\Domain\Payment\Exceptions\InvalidWebhookException;
 use App\Domain\Payment\Services\FlutterwaveService;
-use App\Domain\Wallet\Services\WalletFundingService;
+use App\Domain\Wallet\Jobs\ProcessFundingWebhookJob;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentWebhook;
 use Illuminate\Http\Request;
@@ -14,61 +14,75 @@ use Illuminate\Support\Facades\Log;
 class FlutterwaveWebhookController extends Controller
 {
     public function __construct(
-        private readonly FlutterwaveService $flutterwaveService,
-        private readonly WalletFundingService $fundingService,
+        private readonly FlutterwaveService $flutterwaveService
     ) {}
 
-    public function handle(Request $request): Response
+    /**
+     * Hardened signature-verified asynchronous webhook entry point.
+     */
+    public function handle(Request $request)
     {
         $signature = $request->header('verif-hash');
         $payload = $request->all();
+        $headers = $request->headers->all();
+
+        $eventType = $payload['event'] ?? ($payload['event-type'] ?? 'unknown');
+        $data = $payload['data'] ?? [];
+        $txRef = $data['tx_ref'] ?? ($payload['txRef'] ?? null);
+
+        // 1. Persist the raw webhook immediately for absolute auditability
+        $webhook = PaymentWebhook::create([
+            'gateway' => 'flutterwave',
+            'event_type' => $eventType,
+            'reference' => $txRef,
+            'payload' => $payload,
+            'headers' => $headers,
+            'signature' => $signature,
+            'processed' => false,
+            'processing_status' => 'pending',
+            'processing_attempts' => 0,
+        ]);
 
         try {
-            // Verify signature
+            // 2. Perform signature checking
             $this->flutterwaveService->verifyWebhookSignature($signature);
 
-            // Extract core fields
-            $eventType = $payload['event'] ?? 'unknown';
-            $data = $payload['data'] ?? [];
-            $txRef = $data['tx_ref'] ?? null;
-            $transactionId = $data['id'] ?? null;
-            $status = $data['status'] ?? 'unknown';
-
-            // Store raw webhook for audit
-            $webhook = PaymentWebhook::create([
-                'gateway' => 'flutterwave',
-                'event_type' => $eventType,
-                'reference' => $txRef,
-                'payload' => $payload,
-                'signature' => $signature,
-                'processed' => false,
+        } catch (InvalidWebhookException $e) {
+            Log::warning('Flutterwave webhook signature check failed.', [
+                'webhook_id' => $webhook->id,
+                'signature' => $signature
             ]);
 
-            // Only process successful payments
-            if ($eventType === 'charge.completed' && $status === 'successful') {
-                if (! $txRef || ! $transactionId) {
-                    throw InvalidWebhookException::missingReference();
-                }
+            $webhook->update([
+                'processing_status' => 'failed',
+                'exception_traces' => 'Signature verification failed: ' . $e->getMessage(),
+            ]);
 
-                // Process the funding via our service.
-                // It internally verifies the transaction via API and idempotently credits the wallet.
-                $this->fundingService->processSuccessfulFunding($txRef, (string) $transactionId, $payload);
-
-                $webhook->update(['processed' => true, 'processed_at' => now()]);
-            }
-
-            return response()->noContent();
-
-        } catch (InvalidWebhookException $e) {
-            Log::warning('Webhook processing aborted: '.$e->getMessage());
-
-            return response()->noContent(401); // 401 Unauthorized for bad signatures
-        } catch (\Exception $e) {
-            Log::error('Webhook processing failed: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
-
-            // Return 200 so Flutterwave doesn't endlessly retry if it's our internal error (like already processed)
-            // unless it's a transient failure. For safety against double-credits on our end, we catch and log.
-            return response()->noContent(200);
+            return response()->json(['message' => 'Unauthorized signature'], 401);
         }
+
+        // 3. Dispatch the processing job asynchronously based on payable type
+        $attempt = \App\Models\PaymentAttempt::where('idempotency_key', $txRef)->first();
+        
+        if ($attempt && ($attempt->payable_type === \App\Models\Order::class || !empty($attempt->order_id))) {
+            $attempt->webhook_payload = $payload;
+            $attempt->gateway_reference = $data['id'] ?? ($payload['id'] ?? $attempt->gateway_reference);
+            $attempt->save();
+            
+            \App\Jobs\VerifyPaymentJob::dispatch($attempt);
+        } else {
+            ProcessFundingWebhookJob::dispatch($webhook->id);
+        }
+
+        Log::info('Flutterwave webhook queued successfully.', [
+            'webhook_id' => $webhook->id,
+            'reference' => $txRef,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Webhook queued for processing',
+            'webhook_id' => $webhook->id
+        ], 200);
     }
 }
