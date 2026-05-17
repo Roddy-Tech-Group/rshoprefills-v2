@@ -16,6 +16,15 @@ class UserDashboardController extends Controller
         $wallets = $user->wallets ?? []; // Requires adding HasMany wallets to User model
         $recentTransactions = $user->walletTransactions()->latest()->take(5)->get();
 
+        $recentFundings = \App\Models\WalletFunding::where('user_id', $user->id)
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $pendingFundingTotal = (float) \App\Models\WalletFunding::where('user_id', $user->id)
+            ->where('status', \App\Domain\Shared\Enums\FundingStatus::Pending)
+            ->sum('settled_amount_usd');
+
         return response()->json([
             'user' => [
                 'name' => $user->name,
@@ -23,6 +32,8 @@ class UserDashboardController extends Controller
             ],
             'wallets' => WalletResource::collection($wallets),
             'recent_transactions' => WalletTransactionResource::collection($recentTransactions),
+            'recent_fundings' => $recentFundings,
+            'pending_funding_total_usd' => $pendingFundingTotal,
         ]);
     }
 }

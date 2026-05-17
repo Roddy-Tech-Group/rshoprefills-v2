@@ -37,14 +37,24 @@ class WalletFunding extends Model
         'wallet_id',
         'reference',
         'currency',
+        'display_currency',
         'amount',
+        'requested_amount',
+        'settled_amount_usd',
+        'exchange_rate_snapshot',
         'gateway',
         'gateway_reference',
         'gateway_payload',
+        'payment_link',
+        'provider_payload_snapshot',
+        'verification_payload_snapshot',
         'status',
         'idempotency_key',
         'processed_at',
+        'verified_at',
+        'completed_at',
         'failed_reason',
+        'metadata',
     ];
 
     protected function casts(): array
@@ -52,9 +62,17 @@ class WalletFunding extends Model
         return [
             'currency' => Currency::class,
             'amount' => 'decimal:4',
+            'requested_amount' => 'decimal:4',
+            'settled_amount_usd' => 'decimal:4',
+            'exchange_rate_snapshot' => 'decimal:4',
             'gateway_payload' => 'array',
+            'provider_payload_snapshot' => 'array',
+            'verification_payload_snapshot' => 'array',
             'status' => FundingStatus::class,
             'processed_at' => 'datetime',
+            'verified_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'metadata' => 'array',
         ];
     }
 

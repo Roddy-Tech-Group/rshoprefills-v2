@@ -41,6 +41,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('transactions', [AdminFintechController::class, 'transactions'])->name('transactions');
             Route::get('fundings', [AdminFintechController::class, 'fundings'])->name('fundings');
             Route::get('wallets', [AdminFintechController::class, 'wallets'])->name('wallets');
+
+            // Hardened Wallet Funding & Financial Operations Extensions
+            Route::get('payment-attempts', [AdminFintechController::class, 'paymentAttempts'])->name('payment-attempts');
+            Route::get('payment-webhooks', [AdminFintechController::class, 'paymentWebhooks'])->name('payment-webhooks');
+            Route::get('reconciliation/pending', [AdminFintechController::class, 'pendingReconciliations'])->name('reconciliation.pending');
+            Route::post('reconciliation/{id}/retry', [AdminFintechController::class, 'retryReconciliation'])->name('reconciliation.retry');
+            Route::get('metrics', [AdminFintechController::class, 'metrics'])->name('metrics');
         });
 
         // Admin Commerce Monitoring & Actions API

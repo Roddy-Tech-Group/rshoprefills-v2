@@ -35,6 +35,8 @@ class PaymentAttempt extends Model
     protected $fillable = [
         'order_id',
         'user_id',
+        'payable_type',
+        'payable_id',
         'gateway',
         'gateway_reference',
         'idempotency_key',
@@ -74,5 +76,10 @@ class PaymentAttempt extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function payable()
+    {
+        return $this->morphTo();
     }
 }
