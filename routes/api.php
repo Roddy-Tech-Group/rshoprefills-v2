@@ -46,6 +46,10 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
     });
 });
 
+// Newsletter Subscriptions (Public)
+Route::post('newsletter/subscribe', [\App\Http\Controllers\Api\NewsletterApiController::class, 'subscribe'])->name('newsletter.subscribe');
+Route::get('newsletter/unsubscribe', [\App\Http\Controllers\Api\NewsletterApiController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
+
 // Protected Dashboard & Wallet APIs
 Route::middleware('auth')->group(function () {
     Route::get('dashboard', [UserDashboardController::class, 'index'])->name('api.dashboard');
@@ -63,6 +67,18 @@ Route::middleware('auth')->group(function () {
     Route::prefix('orders')->name('api.orders.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\CheckoutApiController::class, 'index'])->name('index');
         Route::get('{orderNumber}', [\App\Http\Controllers\Api\CheckoutApiController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('notifications')->name('api.notifications.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NotificationApiController::class, 'index'])->name('index');
+        Route::get('unread-count', [\App\Http\Controllers\Api\NotificationApiController::class, 'unreadCount'])->name('unread-count');
+        Route::patch('{id}/read', [\App\Http\Controllers\Api\NotificationApiController::class, 'markAsRead'])->name('read');
+        Route::patch('read-all', [\App\Http\Controllers\Api\NotificationApiController::class, 'markAllAsRead'])->name('read-all');
+    });
+
+    Route::prefix('notification-preferences')->name('api.notification-preferences.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\NotificationApiController::class, 'getPreferences'])->name('get');
+        Route::put('/', [\App\Http\Controllers\Api\NotificationApiController::class, 'updatePreferences'])->name('update');
     });
 
     Route::get('transactions', [UserTransactionController::class, 'index'])->name('api.transactions.index');

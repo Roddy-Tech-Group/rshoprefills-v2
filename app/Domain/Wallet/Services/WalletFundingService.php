@@ -153,6 +153,10 @@ class WalletFundingService
                 'processed_at' => now(),
             ]);
 
+            DB::afterCommit(function () use ($funding) {
+                event(new \App\Domain\Wallet\Events\FundingCompleted($funding));
+            });
+
             Log::info('Wallet funding successfully processed.', ['tx_ref' => $txRef, 'amount' => $funding->amount]);
         });
     }
@@ -168,5 +172,7 @@ class WalletFundingService
             'gateway_payload' => $payload,
             'processed_at' => now(),
         ]);
+
+        event(new \App\Domain\Wallet\Events\FundingFailed($funding, $reason));
     }
 }

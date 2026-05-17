@@ -76,7 +76,7 @@ class WalletService
             $lockedWallet->save();
 
             // Record transaction
-            return $this->transactionService->recordTransaction([
+            $tx = $this->transactionService->recordTransaction([
                 'wallet_id' => $lockedWallet->id,
                 'user_id' => $lockedWallet->user_id,
                 'type' => WalletTransactionType::Credit,
@@ -92,6 +92,13 @@ class WalletService
                 'source_id' => $sourceId,
                 'metadata' => $metadata,
             ]);
+
+            // Dispatch event after transaction successfully commits
+            DB::afterCommit(function () use ($tx) {
+                event(new \App\Domain\Wallet\Events\WalletCredited($tx));
+            });
+
+            return $tx;
         });
     }
 
@@ -113,7 +120,8 @@ class WalletService
         ?array $metadata = null
     ): WalletTransaction {
         if ($amount <= 0) {
-            throw new \InvalidArgumentException('Debit amount must be greater than zero.');
+            $debitEx = new \InvalidArgumentException('Debit amount must be greater than zero.');
+            throw $debitEx;
         }
 
         return DB::transaction(function () use ($wallet, $amount, $category, $description, $reference, $idempotencyKey, $sourceType, $sourceId, $metadata) {
@@ -128,7 +136,7 @@ class WalletService
             $lockedWallet->last_activity_at = now();
             $lockedWallet->save();
 
-            return $this->transactionService->recordTransaction([
+            $tx = $this->transactionService->recordTransaction([
                 'wallet_id' => $lockedWallet->id,
                 'user_id' => $lockedWallet->user_id,
                 'type' => WalletTransactionType::Debit,
@@ -144,6 +152,13 @@ class WalletService
                 'source_id' => $sourceId,
                 'metadata' => $metadata,
             ]);
+
+            // Dispatch event after transaction successfully commits
+            DB::afterCommit(function () use ($tx) {
+                event(new \App\Domain\Wallet\Events\WalletDebited($tx));
+            });
+
+            return $tx;
         });
     }
 
