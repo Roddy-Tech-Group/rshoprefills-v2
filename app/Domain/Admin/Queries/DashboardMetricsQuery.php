@@ -2,10 +2,10 @@
 
 namespace App\Domain\Admin\Queries;
 
-use App\Domain\Shared\Enums\OrderStatus;
-use App\Domain\Shared\Enums\PaymentStatus;
+use App\Domain\Order\Enums\OrderStatus;
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Models\Order;
-use App\Models\Payment;
+use App\Models\PaymentAttempt;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
@@ -29,13 +29,13 @@ class DashboardMetricsQuery
         $totalOrders = Order::count();
 
         // Calculate revenue from successful payments
-        $totalRevenue = Payment::where('status', PaymentStatus::Completed)->sum('amount');
+        $totalRevenue = PaymentAttempt::where('payment_status', PaymentStatus::Paid)->sum('amount');
 
-        $paymentCount = Payment::count();
+        $paymentCount = PaymentAttempt::count();
         $walletTxCount = WalletTransaction::count();
         $transactionsCount = $paymentCount + $walletTxCount;
 
-        $successfulPayments = Payment::where('status', PaymentStatus::Completed)->count();
+        $successfulPayments = PaymentAttempt::where('payment_status', PaymentStatus::Paid)->count();
         $successRate = $paymentCount > 0 ? round(($successfulPayments / $paymentCount) * 100, 2) : 0.0;
 
         $walletBalanceTotal = Wallet::sum('balance');
@@ -69,14 +69,15 @@ class DashboardMetricsQuery
         // Aggregate completed orders by product type
         $results = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->where('orders.status', OrderStatus::Completed)
+            ->join('categories', 'order_items.category_id', '=', 'categories.id')
+            ->where('orders.order_status', OrderStatus::Completed->value)
             ->where('orders.completed_at', '>=', $startDate)
             ->select(
                 DB::raw("DATE_FORMAT(orders.completed_at, '{$dateFormat}') as date"),
-                'order_items.product_type',
-                DB::raw('SUM(order_items.total_price) as total')
+                'categories.slug as category_slug',
+                DB::raw('SUM(order_items.subtotal_amount) as total')
             )
-            ->groupBy('date', 'order_items.product_type')
+            ->groupBy('date', 'categories.slug')
             ->orderBy('date')
             ->get();
 
@@ -96,11 +97,11 @@ class DashboardMetricsQuery
             }
 
             // Pivot product types into fixed categories
-            $type = strtolower($row->product_type);
+            $slug = strtolower($row->category_slug);
             $key = match (true) {
-                str_contains($type, 'gift') => 'gift_cards',
-                str_contains($type, 'esim') => 'esim',
-                str_contains($type, 'topup') || str_contains($type, 'airtime') || str_contains($type, 'data') => 'topup',
+                str_contains($slug, 'gift') => 'gift_cards',
+                str_contains($slug, 'esim') => 'esim',
+                str_contains($slug, 'topup') || str_contains($slug, 'airtime') || str_contains($slug, 'data') => 'topup',
                 default => 'other',
             };
 
@@ -123,17 +124,17 @@ class DashboardMetricsQuery
      */
     public function getLatestTransactions(int $perPage = 10): LengthAwarePaginator
     {
-        $payments = DB::table('payments')
-            ->join('users', 'payments.user_id', '=', 'users.id')
+        $payments = DB::table('payment_attempts')
+            ->join('users', 'payment_attempts.user_id', '=', 'users.id')
             ->select(
-                'payments.id',
-                'payments.gateway_transaction_id as reference',
+                'payment_attempts.id',
+                DB::raw('COALESCE(payment_attempts.gateway_reference, payment_attempts.idempotency_key) as reference'),
                 'users.name as customer_name',
                 DB::raw("'payment' as type"),
-                'payments.amount',
-                'payments.status',
-                'payments.created_at as date',
-                'payments.gateway as gateway',
+                'payment_attempts.amount',
+                'payment_attempts.payment_status as status',
+                'payment_attempts.created_at as date',
+                'payment_attempts.gateway as gateway',
                 DB::raw("'payment' as source")
             );
 

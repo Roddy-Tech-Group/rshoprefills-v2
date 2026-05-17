@@ -2,83 +2,95 @@
 
 namespace App\Models;
 
-use Database\Factories\OrderItemFactory;
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Represents a single product line within an order.
- *
- * product_type + product_id form a pseudo-polymorphic reference to the
- * catalog. product_name is snapshotted at purchase time so the record
- * remains accurate even if the catalog product is renamed or removed.
- *
- * Each item tracks its own fulfillment_status independently — one item
- * can be delivered while another retries. fulfillment_data stores the
- * Zendit API response (codes, PINs, voucher numbers).
- *
- * @property int $id
- * @property int $order_id
- * @property string $product_type
- * @property string|null $product_id
- * @property string $product_name
+ * @property string $id
+ * @property string $order_id
+ * @property int $product_id
+ * @property int $product_variant_id
+ * @property int $category_id
+ * @property int $subcategory_id
+ * @property string $provider_name
+ * @property string|null $provider_offer_id
+ * @property array|null $product_snapshot
+ * @property array|null $variant_snapshot
  * @property int $quantity
- * @property string $unit_price
- * @property string $total_price
- * @property string $currency
- * @property string $fulfillment_status
- * @property array|null $fulfillment_data
+ * @property string $display_currency
+ * @property float $display_amount
+ * @property float $provider_cost_usd
+ * @property float $markup_amount
+ * @property float $subtotal_amount
+ * @property FulfillmentStatus $fulfillment_status
+ * @property string|null $fulfillment_reference
+ * @property array|null $fulfillment_payload
+ * @property Carbon|null $delivered_at
+ * @property Carbon|null $failed_at
  * @property array|null $metadata
- * @property Carbon $created_at
- * @property Carbon $updated_at
  */
 class OrderItem extends Model
 {
-    /** @use HasFactory<OrderItemFactory> */
-    use HasFactory;
+    use HasFactory, HasUuids;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'order_id',
-        'product_type',
         'product_id',
-        'product_name',
+        'product_variant_id',
+        'category_id',
+        'subcategory_id',
+        'provider_name',
+        'provider_offer_id',
+        'product_snapshot',
+        'variant_snapshot',
         'quantity',
-        'unit_price',
-        'total_price',
-        'currency',
+        'display_currency',
+        'display_amount',
+        'provider_cost_usd',
+        'markup_amount',
+        'subtotal_amount',
         'fulfillment_status',
-        'fulfillment_data',
+        'fulfillment_reference',
+        'fulfillment_payload',
+        'delivered_at',
+        'failed_at',
         'metadata',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
+            'fulfillment_status' => FulfillmentStatus::class,
+            'product_snapshot' => 'array',
+            'variant_snapshot' => 'array',
             'quantity' => 'integer',
-            'unit_price' => 'decimal:4',
-            'total_price' => 'decimal:4',
-            'fulfillment_data' => 'array',
+            'display_amount' => 'decimal:4',
+            'provider_cost_usd' => 'decimal:4',
+            'markup_amount' => 'decimal:4',
+            'subtotal_amount' => 'decimal:4',
+            'fulfillment_payload' => 'array',
+            'delivered_at' => 'datetime',
+            'failed_at' => 'datetime',
             'metadata' => 'array',
         ];
     }
 
-    /**
-     * Get the order this item belongs to.
-     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 }

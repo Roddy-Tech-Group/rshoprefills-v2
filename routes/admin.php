@@ -43,6 +43,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('wallets', [AdminFintechController::class, 'wallets'])->name('wallets');
         });
 
+        // Admin Commerce Monitoring & Actions API
+        Route::prefix('api/commerce')->name('api.commerce.')->group(function () {
+            Route::get('orders', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listOrders'])->name('orders');
+            Route::get('payments', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listPayments'])->name('payments');
+            Route::get('fulfillments', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listFulfillmentLogs'])->name('fulfillments');
+            Route::post('orders/{itemId}/retry-fulfillment', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'retryFulfillment'])->name('retry-fulfillment');
+            Route::post('orders/{orderId}/refund', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'refundOrder'])->name('refund');
+        });
+
         // Admin Catalog API
         Route::prefix('api/catalog')->name('api.catalog.')->group(function () {
             Route::post('sync/zendit', [AdminCatalogController::class, 'syncZendit'])->name('sync.zendit');
