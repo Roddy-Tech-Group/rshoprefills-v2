@@ -48,6 +48,7 @@
                 </div>
                 <p class="mt-1 text-sm leading-snug text-white/90">Ditch physical SIM cards and stay connected globally with instant eSIM activation.</p>
             </div>
+            <a href="{{ route('shop.esims') }}" wire:navigate class="absolute inset-0 z-20" aria-label="Browse eSIMs"></a>
         </article>
 
         {{-- Flights (auto-fades between travel.png and flight2.jpg every 4 seconds, pauses on hover) --}}
