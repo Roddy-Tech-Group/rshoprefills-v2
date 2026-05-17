@@ -229,6 +229,8 @@ class CommerceOrchestrationTest extends TestCase
 
         $attempt = $order->paymentAttempts->first();
 
+        config(['services.flutterwave.webhook_hash' => 'FLW_SECRET_HASH_MOCK']);
+
         // Simulate secure webhook trigger
         $response = $this->postJson(route('api.webhooks.flutterwave'), [
             'status' => 'successful',
