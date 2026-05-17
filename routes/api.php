@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Webhooks (No auth required)
-Route::post('webhooks/flutterwave', [FlutterwaveWebhookController::class, 'handle'])->name('webhooks.flutterwave');
+Route::post('webhooks/flutterwave', [\App\Http\Controllers\Api\Webhooks\FlutterwaveWebhookController::class, 'handle'])->name('api.webhooks.flutterwave');
+Route::post('webhooks/nowpayments', [\App\Http\Controllers\Api\Webhooks\NowPaymentsWebhookController::class, 'handle'])->name('api.webhooks.nowpayments');
 
 // Storefront Catalog APIs (Public)
 Route::prefix('storefront')->name('api.storefront.')->group(function () {
@@ -46,13 +47,22 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
 });
 
 // Protected Dashboard & Wallet APIs
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth')->group(function () {
     Route::get('dashboard', [UserDashboardController::class, 'index'])->name('api.dashboard');
 
     Route::prefix('wallets')->name('api.wallets.')->group(function () {
         Route::get('/', [UserWalletController::class, 'index'])->name('index');
         Route::get('{currency}', [UserWalletController::class, 'show'])->name('show');
         Route::post('fund/initiate', [UserWalletController::class, 'initiateFunding'])->name('fund.initiate');
+    });
+
+    Route::prefix('checkout')->name('api.checkout.')->group(function () {
+        Route::post('place-order', [\App\Http\Controllers\Api\CheckoutApiController::class, 'placeOrder'])->name('place-order');
+    });
+
+    Route::prefix('orders')->name('api.orders.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\CheckoutApiController::class, 'index'])->name('index');
+        Route::get('{orderNumber}', [\App\Http\Controllers\Api\CheckoutApiController::class, 'show'])->name('show');
     });
 
     Route::get('transactions', [UserTransactionController::class, 'index'])->name('api.transactions.index');

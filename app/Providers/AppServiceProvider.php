@@ -25,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(Registered::class, CreateWalletForNewUser::class);
+        Event::subscribe(\App\Listeners\CommerceNotificationListener::class);
         View::composer('*', CartComposer::class);
     }
 }
