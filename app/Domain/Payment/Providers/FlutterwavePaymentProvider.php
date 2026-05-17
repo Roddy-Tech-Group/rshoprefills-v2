@@ -22,6 +22,15 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
     public function initializePayment(PaymentAttempt $attempt): array
     {
         $txRef = $attempt->idempotency_key;
+        $payable = $attempt->payable;
+
+        $title = 'RshopRefills Order Refill';
+        $description = $attempt->order ? "Order #{$attempt->order->order_number}" : "Payment Ref #{$txRef}";
+
+        if ($payable instanceof \App\Models\WalletFunding) {
+            $title = 'RshopRefills Wallet Deposit';
+            $description = "Wallet Funding Ref #{$payable->reference}";
+        }
 
         // If mock key, return simulated payment link
         if (str_contains($this->secretKey, 'MOCK')) {
@@ -42,14 +51,14 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                     'tx_ref' => $txRef,
                     'amount' => $attempt->amount,
                     'currency' => strtoupper($attempt->currency),
-                    'redirect_url' => route('home'), // Fallback redirect
+                    'redirect_url' => route('payment.callback', ['provider' => 'flutterwave']),
                     'customer' => [
                         'email' => $attempt->user->email,
                         'name' => $attempt->user->name,
                     ],
                     'customizations' => [
-                        'title' => 'RshopRefills Order Refill',
-                        'description' => "Order #{$attempt->order->order_number}",
+                        'title' => $title,
+                        'description' => $description,
                     ],
                 ]);
 
@@ -142,6 +151,54 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         } catch (\Exception $e) {
             Log::error('Flutterwave refund error: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    public function verifyByReference(string $txRef): ?array
+    {
+        if (str_contains($this->secretKey, 'MOCK')) {
+            return [
+                'status' => 'successful',
+                'amount' => 100.0,
+                'currency' => 'USD',
+                'transaction_id' => 'FLW-MOCK-' . uniqid(),
+                'tx_ref' => $txRef,
+                'raw' => ['simulated' => true]
+            ];
+        }
+
+        try {
+            $response = Http::withToken($this->secretKey)
+                ->get("{$this->baseUrl}/transactions/verify_by_reference", [
+                    'tx_ref' => $txRef
+                ]);
+
+            if ($response->failed()) {
+                Log::error("Flutterwave transaction reference verification failed for: {$txRef}", [
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                ]);
+                return null;
+            }
+
+            $body = $response->json();
+            $data = $body['data'] ?? null;
+
+            if ($data) {
+                return [
+                    'status' => $data['status'] ?? null,
+                    'amount' => $data['amount'] ?? 0.0,
+                    'currency' => $data['currency'] ?? '',
+                    'transaction_id' => $data['id'] ?? null,
+                    'tx_ref' => $data['tx_ref'] ?? null,
+                    'raw' => $body
+                ];
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Flutterwave verifyByReference error: ' . $e->getMessage());
+            return null;
         }
     }
 

@@ -41,26 +41,50 @@ class UserWalletController extends Controller
         $validated = $request->validate([
             'currency' => ['required', new Enum(Currency::class)],
             'amount' => ['required', 'numeric', 'min:1'],
+            'display_currency' => ['nullable', 'string', 'max:10'],
         ]);
 
         $currency = Currency::from($validated['currency']);
         $wallet = $this->walletService->getOrCreateWallet($request->user(), $currency);
+        $displayCurrency = $validated['display_currency'] ?? null;
 
         try {
             $result = $this->fundingService->initializeFunding(
                 user: $request->user(),
                 wallet: $wallet,
                 amount: (float) $validated['amount'],
-                currency: $currency
+                currency: $currency,
+                displayCurrency: $displayCurrency
             );
 
             return response()->json([
                 'message' => 'Funding initialized successfully.',
                 'payment_link' => $result['payment_link'],
                 'reference' => $result['funding']->reference,
+                'requested_amount' => $result['funding']->requested_amount,
+                'display_currency' => $result['funding']->display_currency,
+                'exchange_rate' => $result['funding']->exchange_rate_snapshot,
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 400);
         }
+    }
+
+    public function fundings(Request $request)
+    {
+        $fundings = \App\Models\WalletFunding::where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return response()->json($fundings);
+    }
+
+    public function fundingDetails(Request $request, string $reference)
+    {
+        $funding = \App\Models\WalletFunding::where('user_id', $request->user()->id)
+            ->where('reference', $reference)
+            ->firstOrFail();
+
+        return response()->json($funding);
     }
 }

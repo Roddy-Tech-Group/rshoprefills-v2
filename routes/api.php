@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Webhooks (No auth required)
-Route::post('webhooks/flutterwave', [\App\Http\Controllers\Api\Webhooks\FlutterwaveWebhookController::class, 'handle'])->name('api.webhooks.flutterwave');
+Route::post('webhooks/flutterwave', [FlutterwaveWebhookController::class, 'handle'])->name('api.webhooks.flutterwave');
 Route::post('webhooks/nowpayments', [\App\Http\Controllers\Api\Webhooks\NowPaymentsWebhookController::class, 'handle'])->name('api.webhooks.nowpayments');
 
 // Storefront Catalog APIs (Public)
@@ -56,6 +56,8 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('wallets')->name('api.wallets.')->group(function () {
         Route::get('/', [UserWalletController::class, 'index'])->name('index');
+        Route::get('/fundings', [UserWalletController::class, 'fundings'])->name('fundings');
+        Route::get('/fundings/{reference}', [UserWalletController::class, 'fundingDetails'])->name('fundings.show');
         Route::get('{currency}', [UserWalletController::class, 'show'])->name('show');
         Route::post('fund/initiate', [UserWalletController::class, 'initiateFunding'])->name('fund.initiate');
     });
