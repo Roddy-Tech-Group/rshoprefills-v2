@@ -66,28 +66,8 @@
         };
     };
 
-    // Brand color per currency — drives the wallet card bg when that wallet is active.
-    // Crypto follows the coin's brand; fiat uses flag-evoked tones.
-    $colorFor = function (string $code): string {
-        return match (strtoupper($code)) {
-            'USD'  => 'bg-blue-600',
-            'GBP'  => 'bg-indigo-600',
-            'EUR'  => 'bg-sky-600',
-            'NGN'  => 'bg-emerald-600',
-            'GHS'  => 'bg-rose-600',
-            'XAF'  => 'bg-teal-600',
-            'KES'  => 'bg-red-600',
-            'ZAR'  => 'bg-amber-600',
-            'BTC'  => 'bg-orange-500',
-            'USDT' => 'bg-teal-500',
-            'BUSD' => 'bg-yellow-500',
-            'SOL'  => 'bg-fuchsia-500',
-            'BNB'  => 'bg-yellow-500',
-            'LTC'  => 'bg-zinc-500',
-            'ETH'  => 'bg-indigo-500',
-            default => 'bg-blue-600',
-        };
-    };
+    // Wallet card bg — every wallet uses the same colour as the USD card.
+    $colorFor = fn (string $code): string => 'bg-blue-800';
 
     // Build the wallet payload for Alpine. Each entry includes icon URL when one exists.
     $walletsPayload = $allWallets->map(function ($w) use ($symbolFor, $isCryptoCode, $iconFor, $colorFor) {
@@ -116,25 +96,72 @@
     {{-- MOBILE HERO (sits inside the layout's blue panel)        --}}
     {{-- ─────────────────────────────────────────────────────── --}}
     <x-slot:mobileHero>
-        <div class="rounded-2xl bg-blue-500/30 p-5 text-white ring-1 ring-white/15">
-            <div class="flex items-start justify-between">
-                <p class="text-sm font-medium text-blue-100">Wallet Balance</p>
-                @if ($allWallets->count() > 1)
-                    <p class="text-[11px] font-medium text-blue-100">{{ $allWallets->count() }} wallets</p>
-                @endif
+        {{-- Swipeable wallet carousel — one card per funded currency. Each card
+             carries its own balance + in-card Top Up button; swipe between wallets. --}}
+        {{-- active wallet index lives in $store.wallet so the desktop card and this
+             mobile carousel always show the same wallet (synced live, no reload). --}}
+        <div x-data="{
+                visible: true,
+                syncActive() { this.$store.wallet.active = Math.round(this.$refs.track.scrollLeft / Math.max(1, this.$refs.track.clientWidth)); },
+                goTo(i) { this.$store.wallet.active = i; },
+            }"
+            x-effect="$store.wallet.active; $nextTick(() => { const t = $refs.track; if (! t || ! t.clientWidth) return; const target = $store.wallet.active * t.clientWidth; if (Math.abs(t.scrollLeft - target) > 4) t.scrollTo({ left: target, behavior: 'smooth' }); })"
+            @resize.window.debounce.200ms="$nextTick(() => { const t = $refs.track; if (t && t.clientWidth) t.scrollTo({ left: $store.wallet.active * t.clientWidth }); })"
+        >
+            {{-- Swipe track — native scroll-snap, one card per wallet.
+                 -mx-5 cancels the hero's px-5 so each slide is a FULL viewport width;
+                 the slide's own px-5 keeps the card visually inset. One swipe = one full-width card. --}}
+            <div
+                x-ref="track"
+                @scroll.debounce.60ms="syncActive()"
+                class="-mx-5 flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+                @foreach ($walletsPayload as $w)
+                    <div class="w-full shrink-0 snap-center px-5">
+                        {{-- Card bg adopts this wallet's brand colour, so swiping reveals each wallet's own colour (matches the desktop card). --}}
+                        <div class="rounded-2xl {{ $w['color'] }} p-5 text-white ring-1 ring-white/10">
+                            <div class="flex items-start justify-between gap-3">
+                                <p class="text-sm font-medium text-blue-100">Wallet Balance</p>
+                                <button type="button" @click="visible = ! visible" class="-mr-1 -mt-1 shrink-0 rounded-md p-1 text-blue-200 transition-colors hover:bg-white/10 hover:text-white" :aria-label="visible ? 'Hide balance' : 'Show balance'">
+                                    <svg x-show="visible" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.244 7.244L19.5 19.5m-2.876-2.876L13.875 13.875M9.878 9.878a3 3 0 105.249 5.249"/>
+                                    </svg>
+                                    <svg x-show="!visible" x-cloak class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="mt-2 flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="truncate text-3xl font-bold tracking-tight sm:text-4xl">
+                                        <span x-show="visible">{{ $w['formatted'] }}</span>
+                                        <span x-show="!visible" x-cloak>{{ $w['symbol'] }} ••••</span>
+                                    </p>
+                                    <p class="mt-1 text-xs text-blue-100">{{ $w['code'] }} · {{ $w['label'] }}</p>
+                                </div>
+                                {{-- In-card Top Up — fund-wallet Volt component, pre-set to this wallet's currency. --}}
+                                <livewire:dashboard.fund-wallet :currency="$w['code']" variant="compact" wire:key="fund-mobile-{{ $w['code'] }}" />
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
-            <div class="mt-3 flex items-end justify-between gap-4">
-                <div class="min-w-0">
-                    <p class="truncate text-3xl font-bold tracking-tight sm:text-4xl">{{ $walletSymbol }}{{ number_format($walletBalance, 2) }}</p>
-                    <p class="mt-1 text-xs text-blue-100">{{ $walletCurrencyCode }} · {{ $walletCurrencyCase?->label() ?? 'Wallet' }}</p>
+
+            {{-- Dots — swipe position indicator (multiple wallets only). --}}
+            @if ($walletsPayload->count() > 1)
+                <div class="mt-3 flex items-center justify-center gap-1.5">
+                    @foreach ($walletsPayload as $i => $w)
+                        <button
+                            type="button"
+                            @click="goTo({{ $i }})"
+                            :class="$store.wallet.active === {{ $i }} ? 'w-5 bg-white' : 'w-1.5 bg-white/40'"
+                            class="h-1.5 rounded-full transition-all duration-200"
+                            aria-label="Wallet {{ $i + 1 }}"
+                        ></button>
+                    @endforeach
                 </div>
-                <button type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors active:bg-blue-100">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-                    </svg>
-                    Top Up
-                </button>
-            </div>
+            @endif
         </div>
     </x-slot>
 
@@ -186,7 +213,7 @@
     {{-- ─────────────────────────────────────────────────────── --}}
     {{-- MOBILE VIEW (< lg)                                      --}}
     {{-- ─────────────────────────────────────────────────────── --}}
-    <div class="flex min-h-[calc(100vh-200px)] flex-col gap-5 lg:hidden">
+    <div class="flex flex-col gap-5 lg:hidden">
 
         {{-- Quick Actions (mirrors the desktop card so customers can jump straight into a category). --}}
         <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -210,84 +237,20 @@
             </div>
         </div>
 
-        {{-- Popular Services --}}
-        <div>
-            <div class="flex items-center justify-between">
-                <h3 class="text-base font-bold text-zinc-900">Popular Services</h3>
-                <a href="#" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View all</a>
-            </div>
-            <div class="mt-3 grid grid-cols-2 gap-3">
-                @foreach ([
-                    ['Gift Cards', 'Buy Now',  'gift cards.svg', route('shop.gift-cards'), true],
-                    ['eSIM',       'Buy Now',  'esim.svg',       route('shop.esims'),      true],
-                    ['Top Ups',    'Buy Now',  'mobile.svg',     '#',                      false],
-                    ['Flights',    'Book Now', 'flight 2.svg',   '#',                      false],
-                ] as [$name, $cta, $icon, $href, $live])
-                    <a href="{{ $href }}" @if ($live) wire:navigate @endif class="group flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 transition-colors hover:bg-zinc-50">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100">
-                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6" loading="lazy">
-                        </span>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-bold text-zinc-900">{{ $name }}</p>
-                            <p class="truncate text-[11px] font-medium text-blue-600">{{ $cta }}</p>
-                        </div>
-                        <svg class="h-4 w-4 shrink-0 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                        </svg>
-                    </a>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Recent Transactions --}}
-        <div>
-            <div class="flex items-center justify-between">
-                <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
-                <a href="#" class="text-sm font-semibold text-blue-600 hover:text-blue-700">View all</a>
-            </div>
-            <div class="mt-3 divide-y divide-zinc-100 overflow-hidden rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                @foreach ([
-                    ['Netflix Gift Card', '$25.00', 'Completed', 'netflix.webp'],
-                    ['USDT Top Up',       '$50.00', 'Completed', 'global svg.svg'],
-                ] as [$name, $amount, $status, $icon])
-                    <a href="#" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-zinc-50">
-                        <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
-                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
-                        </span>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-bold text-zinc-900">{{ $name }}</p>
-                            <span class="mt-1 inline-flex items-center rounded-[5px] bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{{ $status }}</span>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-2">
-                            <p class="text-sm font-bold text-zinc-900">{{ $amount }}</p>
-                            <svg class="h-4 w-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                            </svg>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Promo banner. mt-auto pushes it to the bottom of the column so the empty space sits ABOVE
-             the promo, not between it and the tab bar. Combined with min-h-[calc(100vh-200px)] on the
-             column wrapper, the layout always anchors the promo to the bottom of the visible area. --}}
-        <div class="relative mt-auto overflow-hidden rounded-2xl bg-blue-50 p-5 ring-1 ring-blue-100">
-            <div class="relative z-10 max-w-[60%]">
-                <h3 class="text-lg font-bold tracking-tight text-blue-900">Instant. Secure. Global.</h3>
-                <p class="mt-1 text-sm text-blue-900/70">Your trusted marketplace for digital products and services.</p>
-
-                {{-- 3-dot pagination --}}
-                <div class="mt-4 flex items-center gap-1.5">
-                    <span class="h-1.5 w-4 rounded-full bg-blue-600"></span>
-                    <span class="h-1.5 w-1.5 rounded-full bg-blue-200"></span>
-                    <span class="h-1.5 w-1.5 rounded-full bg-blue-200"></span>
-                </div>
+        {{-- Give the Perfect Gift promo — placed here on mobile (desktop keeps its own copy in the right rail). --}}
+        <div class="relative overflow-hidden rounded-2xl bg-blue-950 p-5 text-white">
+            <div class="relative z-10 max-w-[64%]">
+                <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
+                <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
+                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
+                    Shop Now
+                    <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 no-dark-invert" loading="lazy">
+                </a>
             </div>
             <img
-                src="{{ asset('assets/' . rawurlencode('secured users.png')) }}"
+                src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
                 alt=""
-                class="pointer-events-none absolute right-4 bottom-3 h-20 w-auto select-none object-contain"
+                class="pointer-events-none absolute -right-5 -bottom-3 h-28 w-auto select-none object-contain drop-shadow-2xl"
                 loading="lazy"
             >
         </div>
@@ -335,9 +298,8 @@
                     <div
                         x-data="{
                             visible: true,
-                            active: 0,
                             wallets: @js($walletsPayload),
-                            get current() { return this.wallets[this.active] ?? { code: 'USD', symbol: '$', label: 'US Dollar', formatted: '$0.00', type: 'fiat', color: 'bg-blue-600', icon: null }; }
+                            get current() { return this.wallets[this.$store.wallet.active] ?? { code: 'USD', symbol: '$', label: 'US Dollar', formatted: '$0.00', type: 'fiat', color: 'bg-blue-800', icon: null }; }
                         }"
                         :class="current.color"
                         class="flex flex-col justify-center gap-4 rounded-2xl {{ $initialWalletColor }} p-5 text-left text-white shadow-sm shadow-black/10 transition-colors duration-300"
@@ -371,7 +333,9 @@
                             </span>
                         </div>
 
-                        <button type="button" class="w-full rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">Fund Wallet</button>
+                        {{-- Fund Wallet — embedded Volt component: amount/currency modal that
+                             calls WalletFundingService and hands off to the payment gateway. --}}
+                        <livewire:dashboard.fund-wallet :currency="$walletCurrencyCode" wire:key="fund-desktop" />
 
                         {{-- Currency switcher: user clicks a chip to swap the displayed wallet --}}
                         @if ($walletsPayload->count() > 1)
@@ -381,12 +345,12 @@
                                     <template x-for="(w, i) in wallets" :key="w.code">
                                         <button
                                             type="button"
-                                            @click="active = i"
-                                            :class="active === i ? 'bg-white text-blue-700 shadow-sm' : 'bg-white/20 text-white hover:bg-white/30'"
+                                            @click="$store.wallet.active = i"
+                                            :class="$store.wallet.active === i ? 'bg-white text-blue-700 shadow-sm' : 'bg-white/20 text-white hover:bg-white/30'"
                                             class="inline-flex items-center gap-1.5 rounded-[5px] px-2 py-1 text-xs font-semibold transition-colors"
                                         >
                                             <img :src="w.icon" alt="" class="h-4 w-4 shrink-0 object-contain" x-show="w.icon" loading="lazy">
-                                            <span class="text-[10px]" :class="active === i ? 'text-blue-500' : 'text-blue-100'" x-text="w.code"></span>
+                                            <span class="text-[10px]" :class="$store.wallet.active === i ? 'text-blue-500' : 'text-blue-100'" x-text="w.code"></span>
                                             <span x-text="w.formatted"></span>
                                         </button>
                                     </template>
@@ -613,7 +577,7 @@
                     <img
                         src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
                         alt=""
-                        class="pointer-events-none absolute -right-6 -bottom-4 h-44 w-auto select-none object-contain drop-shadow-2xl"
+                        class="pointer-events-none absolute -right-5 -bottom-3 h-36 w-auto select-none object-contain drop-shadow-2xl"
                         loading="lazy"
                     >
                 </div>

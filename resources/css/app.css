@@ -373,6 +373,7 @@ select:focus[data-flux-control] {
 .dark .bg-white\/40 { background-color: rgb(12 26 46 / 0.55); }
 .dark .bg-white\/70 { background-color: rgb(12 26 46 / 0.80); }
 .dark .bg-white\/80 { background-color: rgb(12 26 46 / 0.86); }
+.dark .bg-white\/85 { background-color: rgb(12 26 46 / 0.88); }
 .dark .bg-white\/90 { background-color: rgb(12 26 46 / 0.92); }
 .dark .bg-white\/95 { background-color: rgb(12 26 46 / 0.95); }
 

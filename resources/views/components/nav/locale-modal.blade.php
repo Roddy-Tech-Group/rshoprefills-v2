@@ -157,14 +157,7 @@
         class="pointer-events-auto relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] will-change-transform"
     >
         {{-- Close button (positioned outside the card's top-right corner) --}}
-        <button
-            type="button"
-            @click="localeModalOpen = false"
-            class="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 shadow-lg shadow-zinc-900/20 transition-colors duration-150 hover:bg-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
-            aria-label="Close"
-        >
-            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
-        </button>
+        <x-close-button @click="localeModalOpen = false" class="absolute -top-3 -right-3 z-10 shadow-lg shadow-zinc-900/20" />
 
         {{-- Header --}}
         <h2 id="locale-modal-title" class="mb-5 text-lg font-bold text-zinc-900">Country and language</h2>
