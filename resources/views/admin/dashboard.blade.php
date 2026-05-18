@@ -457,7 +457,7 @@
                         <img src="{{ asset('assets/' . rawurlencode('user.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
                         <h2 class="text-base font-semibold text-zinc-900">Latest Users</h2>
                     </div>
-                    <a href="#" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
+                    <a href="{{ route('admin.customers') }}" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -497,7 +497,7 @@
                                     </td>
                                     <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $user->created_at->format('M j, Y') }}</td>
                                     <td class="px-5 py-3 text-right">
-                                        <a href="#" class="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View</a>
+                                        <a href="{{ route('admin.customers') }}" class="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View</a>
                                     </td>
                                 </tr>
                             @empty
@@ -517,7 +517,7 @@
                         <img src="{{ asset('assets/' . rawurlencode('Latest transactions.png')) }}" alt="" class="h-5 w-5" loading="lazy">
                         <h2 class="text-base font-semibold text-zinc-900">Latest Transactions</h2>
                     </div>
-                    <a href="#" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
+                    <a href="{{ route('admin.transactions') }}" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
                 </div>
 
                 <div class="overflow-x-auto">

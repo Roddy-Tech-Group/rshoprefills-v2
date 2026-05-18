@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Shared\Enums\Currency;
+use App\Models\Product;
 use Livewire\Attributes\Lazy;
 use Livewire\Volt\Component;
 
@@ -38,6 +39,52 @@ new #[Lazy] class extends Component
 
         // Recent wallet ledger movements for the overview card (latest 6).
         $recentTransactions = $user->walletTransactions()->latest()->limit(6)->get();
+
+        // Latest 3 orders for the Recent Orders card.
+        $recentOrders = $user->orders()->with('items')->latest()->limit(3)->get();
+
+        // Popular gift cards — same source as the storefront's "Popular Gift Cards"
+        // row (config/popular_brands.php), region-locked to the customer's resolved
+        // region (ResolveRegion middleware). One product per brand (MIN id dedupes
+        // the per-country rows), ordered by the curated list.
+        $region = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
+        $popularKeys = config('popular_brands.keys', []);
+
+        $popularIds = Product::query()
+            ->where('is_active', true)
+            ->where('country_code', $region)
+            ->whereIn('brand_key', $popularKeys)
+            ->groupBy('brand_key')
+            ->selectRaw('MIN(id) as id')
+            ->pluck('id');
+
+        $popularProducts = Product::query()
+            ->whereIn('id', $popularIds)
+            ->with('variants')
+            ->get()
+            ->sortBy(fn ($p) => array_search($p->brand_key, $popularKeys))
+            ->take(5)
+            ->values();
+
+        // Fallback so the row never renders empty in a small region.
+        if ($popularProducts->isEmpty()) {
+            $fallbackIds = Product::query()
+                ->where('is_active', true)
+                ->where('country_code', $region)
+                ->whereNotNull('brand_key')
+                ->whereHas('category', fn ($q) => $q->where('slug', 'gift-cards'))
+                ->groupBy('brand_key')
+                ->selectRaw('MIN(id) as id')
+                ->pluck('id');
+
+            $popularProducts = Product::query()
+                ->whereIn('id', $fallbackIds)
+                ->with('variants')
+                ->orderByDesc('is_popular')
+                ->orderByDesc('is_featured')
+                ->limit(5)
+                ->get();
+        }
 
         // Symbol/label map covering fiat + crypto.
         $symbolFor = function (string $code): string {
@@ -85,7 +132,7 @@ new #[Lazy] class extends Component
                 'balance'   => (float) $w->balance,
                 'formatted' => $symbolFor($code) . number_format((float) $w->balance, 2),
                 'type'      => $isCryptoCode((string) $code) ? 'crypto' : 'fiat',
-                'icon'      => $iconFile ? asset('assets/' . rawurlencode($iconFile)) : null,
+                'icon'      => $iconFile ? asset('assets/' . rawurlencode($iconFile)) : Product::flagUrl(match (strtoupper((string) $code)) { 'USD' => 'US', 'GBP' => 'GB', 'EUR' => 'EU', 'KES' => 'KE', 'ZAR' => 'ZA', 'UGX' => 'UG', 'TZS' => 'TZ', 'RWF' => 'RW', 'ZMW' => 'ZM', 'MWK' => 'MW', 'ETB' => 'ET', 'EGP' => 'EG', 'MAD' => 'MA', default => '' }),
                 'color'     => $colorFor($code),
             ];
         })->values();
@@ -98,6 +145,8 @@ new #[Lazy] class extends Component
             'walletSymbol' => $walletSymbol,
             'walletsPayload' => $walletsPayload,
             'recentTransactions' => $recentTransactions,
+            'recentOrders' => $recentOrders,
+            'popularProducts' => $popularProducts,
             'initialWalletColor' => $colorFor($walletCurrencyCode),
         ];
     }
@@ -260,14 +309,14 @@ new #[Lazy] class extends Component
                         <h3 class="text-base font-semibold text-zinc-900">Quick Actions</h3>
                         <div class="mt-4 grid grid-cols-3 gap-3">
                             @foreach ([
-                                ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    null],
-                                ['eSIMs',      'esim.svg',       'bg-sky-500',     null],
-                                ['Topups',     'topup1.svg',     'bg-emerald-500', null],
-                                ['Bills',      'Bills 2.svg',    'bg-teal-500',    'bill payment.svg'],
-                                ['Flights',    'flight 2.svg',   'bg-indigo-500',  'flight.svg'],
-                                ['Stays',      'stay 2.svg',     'bg-orange-500',  'stay.svg'],
-                            ] as [$label, $icon, $bg, $hoverIcon])
-                                <a href="#" class="group flex flex-col items-center gap-1.5 text-center">
+                                ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    null,               route('shop.gift-cards')],
+                                ['eSIMs',      'esim.svg',       'bg-sky-500',     null,               route('shop.esims')],
+                                ['Topups',     'topup1.svg',     'bg-emerald-500', null,               route('shop.topups')],
+                                ['Bills',      'Bills 2.svg',    'bg-teal-500',    'bill payment.svg', route('shop.bills')],
+                                ['Flights',    'flight 2.svg',   'bg-indigo-500',  'flight.svg',       route('shop.flights')],
+                                ['Stays',      'stay 2.svg',     'bg-orange-500',  'stay.svg',         route('shop.stays')],
+                            ] as [$label, $icon, $bg, $hoverIcon, $href])
+                                <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-1.5 text-center">
                                     <span class="flex h-12 w-12 items-center justify-center rounded-2xl {{ $bg }} transition-transform group-hover:scale-105">
                                         @if ($hoverIcon)
                                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
@@ -286,39 +335,61 @@ new #[Lazy] class extends Component
                     <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
-                            <a href="#" class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                            <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
                         </div>
 
                         @php
-                            // Status badges follow the project rule: solid saturated bg + white text + rounded-[5px].
-                            $statusToneClasses = [
-                                'success'    => 'bg-emerald-500 text-white',
-                                'processing' => 'bg-amber-500 text-white',
-                                'neutral'    => 'bg-zinc-500 text-white',
+                            // order_status value -> [label, badge classes]. Solid saturated bg + white text + rounded-[5px].
+                            $orderStatusUi = [
+                                'completed'           => ['Completed',  'bg-emerald-500 text-white'],
+                                'partially_completed' => ['Partial',    'bg-blue-500 text-white'],
+                                'processing'          => ['Processing', 'bg-amber-500 text-white'],
+                                'pending'             => ['Pending',    'bg-amber-500 text-white'],
+                                'failed'              => ['Failed',     'bg-red-500 text-white'],
+                                'cancelled'           => ['Cancelled',  'bg-zinc-500 text-white'],
+                                'requires_attention'  => ['Review',     'bg-red-500 text-white'],
                             ];
                         @endphp
                         <ul class="mt-4 space-y-3">
-                            @foreach ([
-                                ['Apple iTunes Gift Card', '$50',         'Delivered',  'apple.png',  'success',    '2 mins ago'],
-                                ['MTN Ghana Airtime',      'GHS 100',     'Delivered',  'mobile.svg', 'success',    '1 hour ago'],
-                                ['Airalo eSIM',            'Turkey 10GB', 'Processing', 'esim.svg',   'processing', '3 hours ago'],
-                            ] as [$name, $amount, $status, $icon, $tone, $time])
-                                <li class="flex items-center gap-3">
-                                    <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
-                                        <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
-                                    </span>
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $name }}</p>
-                                            <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusToneClasses[$tone] }}">{{ $status }}</span>
+                            @forelse ($recentOrders as $order)
+                                @php
+                                    $firstItem = $order->items->first();
+                                    $snap = (array) ($firstItem?->product_snapshot ?? []);
+                                    $brandKey = $snap['brand_key'] ?? null;
+                                    $itemName = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Order');
+                                    $extraItems = max(0, $order->items->count() - 1);
+                                    $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
+                                    [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-500 text-white'];
+                                @endphp
+                                <li>
+                                    <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
+                                        <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
+                                            @if ($logo)
+                                                <img src="{{ $logo }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
+                                            @else
+                                                <span class="text-xs font-bold uppercase text-zinc-500">{{ \Illuminate\Support\Str::substr($itemName, 0, 2) }}</span>
+                                            @endif
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="truncate text-sm font-semibold text-zinc-900">
+                                                    {{ $itemName }}@if ($extraItems > 0) <span class="font-normal text-zinc-500">+{{ $extraItems }}</span>@endif
+                                                </p>
+                                                <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusTone }}">{{ $statusLabel }}</span>
+                                            </div>
+                                            <div class="mt-0.5 flex items-center justify-between gap-2">
+                                                <p class="truncate text-xs text-zinc-600">{{ $order->display_currency }} {{ number_format((float) $order->total_amount, 2) }}</p>
+                                                <p class="shrink-0 text-[10px] text-zinc-600">{{ $order->created_at->diffForHumans() }}</p>
+                                            </div>
                                         </div>
-                                        <div class="mt-0.5 flex items-center justify-between gap-2">
-                                            <p class="truncate text-xs text-zinc-600">{{ $amount }}</p>
-                                            <p class="shrink-0 text-[10px] text-zinc-600">{{ $time }}</p>
-                                        </div>
-                                    </div>
+                                    </a>
                                 </li>
-                            @endforeach
+                            @empty
+                                <li class="flex flex-col items-center justify-center py-8 text-center">
+                                    <p class="text-sm font-semibold text-zinc-900">No orders yet</p>
+                                    <p class="mt-1 text-xs text-zinc-600">Your purchases will show up here.</p>
+                                </li>
+                            @endforelse
                         </ul>
                     </div>
                 </div>
@@ -352,16 +423,16 @@ new #[Lazy] class extends Component
 
                         <div class="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-8">
                             @foreach ([
-                                ['Gift Cards', 'gift cards.svg',   'bg-pink-500',     null],
-                                ['eSIMs',      'esim.svg',         'bg-sky-500',      null],
-                                ['Flights',    'flight 2.svg',     'bg-indigo-500',   'flight.svg'],
-                                ['Stays',      'stay 2.svg',       'bg-orange-500',   'stay.svg'],
-                                ['Topups',     'topup1.svg',       'bg-emerald-500',  null],
-                                ['Bills',      'bill payment.svg', 'bg-teal-500',     'Bills 2.svg'],
-                                ['Gaming',     'Gaming.svg',       'bg-fuchsia-500',  'gaming two.svg'],
-                                ['More',       'More.svg',         'bg-blue-500',     'more two.svg'],
-                            ] as [$label, $icon, $bg, $hoverIcon])
-                                <a href="#" class="group flex flex-col items-center gap-2 text-center">
+                                ['Gift Cards', 'gift cards.svg',   'bg-pink-500',     null,             route('shop.gift-cards')],
+                                ['eSIMs',      'esim.svg',         'bg-sky-500',      null,             route('shop.esims')],
+                                ['Flights',    'flight 2.svg',     'bg-indigo-500',   'flight.svg',     route('shop.flights')],
+                                ['Stays',      'stay 2.svg',       'bg-orange-500',   'stay.svg',       route('shop.stays')],
+                                ['Topups',     'topup1.svg',       'bg-emerald-500',  null,             route('shop.topups')],
+                                ['Bills',      'bill payment.svg', 'bg-teal-500',     'Bills 2.svg',    route('shop.bills')],
+                                ['Gaming',     'Gaming.svg',       'bg-fuchsia-500',  'gaming two.svg', route('shop.gift-cards')],
+                                ['More',       'More.svg',         'bg-blue-500',     'more two.svg',   route('home')],
+                            ] as [$label, $icon, $bg, $hoverIcon, $href])
+                                <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
                                     <span class="flex h-14 w-14 items-center justify-center rounded-full {{ $bg }} transition-transform group-hover:scale-105">
                                         @if ($hoverIcon)
                                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
@@ -379,50 +450,43 @@ new #[Lazy] class extends Component
                     {{-- Divider --}}
                     <div class="border-t border-zinc-100"></div>
 
-                    {{-- Recommended for you section --}}
+                    {{-- Popular Gift Cards — same curated source (config/popular_brands.php)
+                         and card style as the storefront's "Popular Gift Cards" row. --}}
                     <div class="p-5 sm:p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-base font-semibold text-zinc-900">Recommended for you</h3>
-                                <p class="mt-0.5 text-xs text-zinc-600">Based on your recent activity</p>
+                        @if ($popularProducts->isNotEmpty())
+                            <x-home.brand-row
+                                title="Popular Gift Cards"
+                                subtitle="Top-rated gift cards in your region"
+                                :view-all-href="route('shop.gift-cards')"
+                                :cols="5"
+                            >
+                                @foreach ($popularProducts as $p)
+                                    @php
+                                        $logo = Product::brandLogoUrl($p->brand_key, $p->logo_url);
+                                        $label = Product::brandDisplayName($p->brand_key);
+                                        $brandColor = Product::brandColor($p->brand_key, $p->brand_color);
+                                    @endphp
+                                    <x-home.brand-card
+                                        :name="$label"
+                                        :price-range="$p->priceRangeLabel()"
+                                        :href="route('shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
+                                        :card-class="$logo ? 'bg-[#ffffff]' : ($brandColor ? '' : 'bg-zinc-100')"
+                                        :style="! $logo && $brandColor ? 'background-color: ' . $brandColor . ';' : false"
+                                    >
+                                        @if ($logo)
+                                            <img src="{{ $logo }}" alt="{{ $label }} gift card" class="h-full w-full object-cover" loading="lazy">
+                                        @else
+                                            <span class="px-3 text-center text-xl font-black uppercase leading-tight tracking-tight sm:text-2xl {{ $brandColor ? 'text-white' : 'text-zinc-700' }}">{{ $label }}</span>
+                                        @endif
+                                    </x-home.brand-card>
+                                @endforeach
+                            </x-home.brand-row>
+                        @else
+                            <div class="rounded-2xl bg-blue-50 px-4 py-8 text-center">
+                                <p class="text-sm font-semibold text-zinc-900">No gift cards in your region yet</p>
+                                <p class="mt-1 text-xs text-zinc-600">Check back soon as the catalogue grows.</p>
                             </div>
-                            <a href="#" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
-                                View all
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                                </svg>
-                            </a>
-                        </div>
-
-                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                            @foreach ([
-                                ['Netflix Gift Card',    'Worldwide',     '$15.00', 'netflix.webp'],
-                                ['Google Play Gift Card', 'USA',          '$10.00', 'googleplay.png'],
-                                ['Airalo eSIM',          'USA · 10GB',    '$4.50',  'esim.svg'],
-                                ['MTN Ghana Airtime',    'GHS 50',        '$12.50', 'mobile.svg'],
-                            ] as [$name, $tag, $price, $icon])
-                                <a href="#" class="group flex flex-col gap-3 rounded-2xl bg-blue-100 p-4 transition-colors hover:bg-blue-200">
-                                    <div class="flex items-start gap-3">
-                                        <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
-                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-10 w-10 object-contain" loading="lazy">
-                                        </span>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $name }}</p>
-                                            <p class="truncate text-[11px] text-zinc-600">{{ $tag }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-end justify-between">
-                                        <div>
-                                            <p class="text-[10px] uppercase tracking-wider text-zinc-600">From</p>
-                                            <p class="text-base font-bold text-zinc-900">{{ $price }}</p>
-                                        </div>
-                                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 transition-colors group-hover:bg-blue-700">
-                                            <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 brightness-0 invert" loading="lazy">
-                                        </span>
-                                    </div>
-                                </a>
-                            @endforeach
-                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -430,7 +494,8 @@ new #[Lazy] class extends Component
             {{-- RIGHT RAIL: points, gift promo, recent transactions --}}
             <div class="flex flex-col gap-6 lg:col-span-4">
 
-                {{-- RShop Rcoin card --}}
+                {{-- RShop Rcoin card. No Rcoin ledger backend exists yet, so this shows
+                     a neutral intro state rather than fabricated balance/tier numbers. --}}
                 <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-start gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-blue-100">
@@ -439,16 +504,12 @@ new #[Lazy] class extends Component
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-zinc-900">RShop Rcoin</p>
                             <div class="mt-1 flex items-center gap-2">
-                                <span class="text-2xl font-bold tracking-tight text-zinc-900">2,650</span>
-                                <span class="rounded-[5px] bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Gold Member</span>
+                                <span class="text-2xl font-bold tracking-tight text-zinc-900">0</span>
+                                <span class="rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">New Member</span>
                             </div>
                         </div>
                     </div>
-                    <p class="mt-4 text-xs text-zinc-600">You're 350 Rcoin away from Platinum level</p>
-                    <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-                        <div class="h-full rounded-full bg-blue-600" style="width: 88%;"></div>
-                    </div>
-                    <p class="mt-1.5 text-right text-[10px] font-semibold text-zinc-600">2,650 / 3,000</p>
+                    <p class="mt-4 text-xs text-zinc-600">Earn Rcoin on every order and referral, then spend it on gift cards.</p>
 
                     <a href="{{ route('dashboard.rewards') }}" wire:navigate class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                         {{-- Favicon is blue; force it white so it shows on the blue button. --}}
@@ -518,7 +579,7 @@ new #[Lazy] class extends Component
                                     </svg>
                                 </span>
                                 <p class="mt-3 text-sm font-semibold text-zinc-900">No transactions yet</p>
-                                <p class="mt-1 text-xs text-zinc-600">Fund your wallet to get started.</p>
+                                <p class="mt-1 text-xs text-zinc-600">Fund your wallet or shop directly to get started.</p>
                             </li>
                         @endforelse
                     </ul>

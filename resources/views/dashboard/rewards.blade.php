@@ -15,9 +15,11 @@
 
     $user = auth()->user();
 
-    // ── Placeholders — bind to the real Rcoin model when it ships ──
-    $rcoinBalance = 2650;
-    $rcoinEarned  = 2650;
+    // ── Rcoin balance — no Rcoin ledger backend exists yet, so this is an honest
+    //    zero state (no fabricated balance). Bind to the Rcoin model when it ships;
+    //    the rest of the page computes off these values. ──
+    $rcoinBalance = 0;
+    $rcoinEarned  = 0;
 
     // Admin-configurable economics (placeholders).
     $rcoinPerUsd       = 100;    // 100 Rcoin = $1
@@ -55,15 +57,8 @@
     $convertProgress  = min(100, round(($rcoinBalance / $convertThreshold) * 100, 1));
     $withdrawProgress = min(100, round(($rcoinBalance / $withdrawThreshold) * 100, 1));
 
-    // ── Rcoin history sample data — backend replaces with a query ──
-    $rcoinHistory = [
-        ['label' => 'Welcome bonus',        'date' => '2026-05-06', 'rcoin' => 25],
-        ['label' => 'Order RSR-20260419-K2', 'date' => '2026-04-19', 'rcoin' => 90],
-        ['label' => 'Order RSR-20260418-B7', 'date' => '2026-04-18', 'rcoin' => 130],
-        ['label' => 'Order RSR-20260412-P1', 'date' => '2026-04-12', 'rcoin' => 95],
-        ['label' => 'Order RSR-20260330-D9', 'date' => '2026-03-30', 'rcoin' => 151],
-        ['label' => 'Order RSR-20260314-7Q', 'date' => '2026-03-14', 'rcoin' => 70],
-    ];
+    // ── Rcoin history — empty until the Rcoin ledger backend ships. ──
+    $rcoinHistory = [];
 @endphp
 
 <x-layouts.dashboard>
@@ -298,7 +293,7 @@
         <section>
             <h2 class="mb-3 text-sm font-bold text-black">Rcoin history</h2>
             <div class="divide-y divide-zinc-100 rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                @foreach ($rcoinHistory as $entry)
+                @forelse ($rcoinHistory as $entry)
                     <div class="flex items-center justify-between gap-4 px-5 py-3">
                         <div class="min-w-0">
                             <p class="truncate text-sm font-medium text-zinc-700">{{ $entry['label'] }}</p>
@@ -312,7 +307,12 @@
                             <span class="text-black">{{ number_format($entry['rcoin']) }} Rcoin</span>
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="px-5 py-10 text-center">
+                        <p class="text-sm font-semibold text-zinc-900">No Rcoin activity yet</p>
+                        <p class="mt-1 text-xs text-zinc-600">Earn Rcoin on every order and referral, then track it here.</p>
+                    </div>
+                @endforelse
             </div>
         </section>
 
