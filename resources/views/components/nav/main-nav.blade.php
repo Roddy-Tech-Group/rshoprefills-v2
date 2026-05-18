@@ -154,8 +154,11 @@
 
                     $walletBalance = auth()->check() ? (float) (auth()->user()->wallet?->balance ?? 0) : null;
                     $walletCurrency = auth()->check() ? (auth()->user()->wallet?->currency ?? 'USD') : null;
-                    $currencyCase = $walletCurrency ? Currency::tryFrom($walletCurrency) : null;
-                    $currencySymbol = $currencyCase?->symbol() ?? ($walletCurrency ? $walletCurrency.' ' : '');
+                    $currencyCase = $walletCurrency instanceof Currency
+                        ? $walletCurrency
+                        : ($walletCurrency ? Currency::tryFrom($walletCurrency) : null);
+                    $currencySymbol = $currencyCase?->symbol()
+                        ?? (is_string($walletCurrency) ? $walletCurrency.' ' : ($walletCurrency instanceof Currency ? $walletCurrency->value.' ' : ''));
 
                     // Gender-aware default avatar for authed users. Resolved at render time so the right
                     // portrait shows up everywhere the user's avatar is rendered until they upload one.

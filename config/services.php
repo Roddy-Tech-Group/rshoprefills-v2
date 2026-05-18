@@ -55,4 +55,15 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
     ],
 
+    'flutterwave' => [
+        'public_key' => env('FLW_PUBLIC_KEY'),
+        'secret_key' => env('FLW_SECRET_KEY'),
+        'webhook_hash' => env('FLW_WEBHOOK_HASH'),
+    ],
+
+    'nowpayments' => [
+        'api_key' => env('NOWPAYMENTS_API_KEY'),
+        'ipn_secret' => env('NOWPAYMENTS_IPN_SECRET'),
+    ],
+
 ];
