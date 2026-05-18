@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Domain\Catalog\Providers\ZenditProvider;
+use App\Domain\Catalog\Services\CatalogSyncService;
+use App\Domain\Catalog\Services\ZenditNormalizer;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use Illuminate\Console\Command;
+
+class SyncGiftCardsCommand extends Command
+{
+    protected $signature = 'giftcards:sync {--page=1 : Page number to start syncing from}';
+
+    protected $description = 'Sync the Zendit gift-card (/vouchers/offers) catalog synchronously, page by page, then report counts';
+
+    public function handle(): int
+    {
+        $syncService = new CatalogSyncService(new ZenditProvider, new ZenditNormalizer);
+
+        $page = max(1, (int) $this->option('page'));
+        $totalProcessed = 0;
+
+        $this->info('Syncing Zendit gift cards (/vouchers/offers)...');
+
+        do {
+            try {
+                $result = $syncService->sync($page, 100);
+            } catch (\Throwable $e) {
+                $this->error("Page {$page} failed: {$e->getMessage()}");
+
+                return self::FAILURE;
+            }
+
+            $totalProcessed += $result['processed'];
+            $this->line("  page {$page}: {$result['processed']} offers  (running total {$totalProcessed} of {$result['total']})");
+            $page++;
+        } while ($result['has_more']);
+
+        $this->info("Done. Processed {$totalProcessed} offers.");
+
+        // Breakdown — offers map to variants; products are brand x country rows.
+        $giftCat = Category::where('slug', 'gift-cards')->first();
+        $billCat = Category::where('slug', 'bill-payments')->first();
+
+        $this->newLine();
+        $this->info('Catalog now holds:');
+        $this->line('  Gift-card products:    '.Product::where('category_id', $giftCat?->id ?? 0)->count().'  (brand x country rows)');
+        $this->line('  Gift-card brands:      '.Product::where('category_id', $giftCat?->id ?? 0)->whereNotNull('brand_key')->distinct()->count('brand_key').'  (1 card per brand — what the storefront shows)');
+        $this->line('  Bill-payment products: '.Product::where('category_id', $billCat?->id ?? 0)->count());
+        $this->line('  Total products:        '.Product::count());
+        $this->line('  Total variants:        '.ProductVariant::count());
+        $this->newLine();
+        $this->comment('Logos/redemption text come from a separate brand sync (SyncZenditBrandsJob).');
+
+        return self::SUCCESS;
+    }
+}

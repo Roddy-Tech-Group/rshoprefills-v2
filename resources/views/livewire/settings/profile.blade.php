@@ -18,6 +18,13 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     public ?string $gender = null;
     public $avatar = null;
 
+    // Notification preferences (NotificationPreference model). Saved instantly on toggle.
+    public bool $notifyEmail = true;
+    public bool $notifyMarketing = true;
+    public bool $notifyOrders = true;
+    public bool $notifyWallet = true;
+    public bool $notifySecurity = true;
+
     /**
      * Mount the component.
      */
@@ -28,6 +35,13 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         $this->email  = $user->email;
         $this->phone  = $user->phone;
         $this->gender = $user->gender;
+
+        $prefs = app(\App\Domain\Notification\Services\NotificationPreferenceService::class)->getPreferences($user);
+        $this->notifyEmail     = $prefs->email_enabled;
+        $this->notifyMarketing = $prefs->marketing_enabled;
+        $this->notifyOrders    = $prefs->order_notifications;
+        $this->notifyWallet    = $prefs->wallet_notifications;
+        $this->notifySecurity  = $prefs->security_notifications;
     }
 
     /**
@@ -127,6 +141,38 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
 
         Session::flash('status', 'verification-link-sent');
     }
+
+    /**
+     * Flip one notification preference and persist all five immediately.
+     */
+    public function toggleNotification(string $key): void
+    {
+        $map = [
+            'email'     => 'notifyEmail',
+            'marketing' => 'notifyMarketing',
+            'orders'    => 'notifyOrders',
+            'wallet'    => 'notifyWallet',
+            'security'  => 'notifySecurity',
+        ];
+
+        if (! isset($map[$key])) {
+            return;
+        }
+
+        $property = $map[$key];
+        $this->{$property} = ! $this->{$property};
+
+        app(\App\Domain\Notification\Services\NotificationPreferenceService::class)
+            ->updatePreferences(Auth::user(), [
+                'email_enabled'          => $this->notifyEmail,
+                'marketing_enabled'      => $this->notifyMarketing,
+                'order_notifications'    => $this->notifyOrders,
+                'wallet_notifications'   => $this->notifyWallet,
+                'security_notifications' => $this->notifySecurity,
+            ]);
+
+        $this->dispatch('preferences-saved');
+    }
 }; ?>
 
 @php
@@ -153,11 +199,6 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     x-data="{
         editingProfile: false,
         uploading: false,
-        notifications: {
-            orderUpdates: true,
-            promotions: false,
-            securityAlerts: true,
-        },
         country: 'Cameroon',
         countryFlag: '🇨🇲',
         language: 'English',
@@ -607,84 +648,47 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         <h2 class="mb-2.5 text-base font-bold text-zinc-900">Notifications</h2>
 
         <div class="divide-y divide-zinc-100 overflow-hidden rounded-2xl bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
-            {{-- Order updates --}}
-            <label class="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 sm:px-6">
-                <span class="flex items-center gap-3">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z"/>
-                        </svg>
+            @php
+                // [key, current value, label, description, heroicon path]
+                $notifyRows = [
+                    ['orders',    $notifyOrders,    'Order updates',       'Delivery, fulfillment and refunds',  'M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z'],
+                    ['wallet',    $notifyWallet,    'Wallet activity',     'Funding, credits and debits',        'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z'],
+                    ['security',  $notifySecurity,  'Security alerts',     'Login attempts and account changes', 'M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z'],
+                    ['marketing', $notifyMarketing, 'Promotions',          'Deals, offers and new arrivals',     'M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z'],
+                    ['email',     $notifyEmail,     'Email notifications', 'Master switch for all emails',       'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75'],
+                ];
+            @endphp
+            @foreach ($notifyRows as [$key, $on, $label, $desc, $iconPath])
+                <div class="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+                    <span class="flex items-center gap-3">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}"/>
+                            </svg>
+                        </span>
+                        <span>
+                            <span class="block text-sm font-semibold text-black">{{ $label }}</span>
+                            <span class="block text-[13px] text-zinc-600">{{ $desc }}</span>
+                        </span>
                     </span>
-                    <span>
-                        <span class="block text-sm font-semibold text-black">Order updates</span>
-                        <span class="block text-[13px] text-zinc-600">Delivery, refunds and receipts</span>
-                    </span>
-                </span>
-                <button
-                    type="button"
-                    role="switch"
-                    @click="notifications.orderUpdates = !notifications.orderUpdates"
-                    :aria-checked="notifications.orderUpdates"
-                    :class="notifications.orderUpdates ? 'bg-blue-600' : 'bg-zinc-200'"
-                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                >
-                    <span :class="notifications.orderUpdates ? 'translate-x-5' : 'translate-x-0.5'" class="pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-300"></span>
-                </button>
-            </label>
-
-            {{-- Promotions --}}
-            <label class="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 sm:px-6">
-                <span class="flex items-center gap-3">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/>
-                        </svg>
-                    </span>
-                    <span>
-                        <span class="block text-sm font-semibold text-black">Promotions</span>
-                        <span class="block text-[13px] text-zinc-600">Deals, offers and new arrivals</span>
-                    </span>
-                </span>
-                <button
-                    type="button"
-                    role="switch"
-                    @click="notifications.promotions = !notifications.promotions"
-                    :aria-checked="notifications.promotions"
-                    :class="notifications.promotions ? 'bg-blue-600' : 'bg-zinc-200'"
-                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                >
-                    <span :class="notifications.promotions ? 'translate-x-5' : 'translate-x-0.5'" class="pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-300"></span>
-                </button>
-            </label>
-
-            {{-- Security alerts --}}
-            <label class="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 sm:px-6">
-                <span class="flex items-center gap-3">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/>
-                        </svg>
-                    </span>
-                    <span>
-                        <span class="block text-sm font-semibold text-black">Security alerts</span>
-                        <span class="block text-[13px] text-zinc-600">Login attempts and account changes</span>
-                    </span>
-                </span>
-                <button
-                    type="button"
-                    role="switch"
-                    @click="notifications.securityAlerts = !notifications.securityAlerts"
-                    :aria-checked="notifications.securityAlerts"
-                    :class="notifications.securityAlerts ? 'bg-blue-600' : 'bg-zinc-200'"
-                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                >
-                    <span :class="notifications.securityAlerts ? 'translate-x-5' : 'translate-x-0.5'" class="pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-300"></span>
-                </button>
-            </label>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked="{{ $on ? 'true' : 'false' }}"
+                        aria-label="{{ $label }}"
+                        wire:click="toggleNotification('{{ $key }}')"
+                        class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $on ? 'bg-blue-600' : 'bg-zinc-200' }}"
+                    >
+                        <span class="pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-300 {{ $on ? 'translate-x-5' : 'translate-x-0.5' }}"></span>
+                    </button>
+                </div>
+            @endforeach
         </div>
 
-        <p class="mt-2.5 px-1 text-[13px] text-zinc-600">Notification delivery channels will go live when the inbox ships.</p>
+        <p class="mt-2.5 flex items-center gap-2 px-1 text-[13px] text-zinc-600">
+            Changes save automatically.
+            <x-action-message on="preferences-saved" class="font-medium text-emerald-600">Saved.</x-action-message>
+        </p>
     </section>
 
     {{-- ─── Section 5: Danger Zone ─── --}}

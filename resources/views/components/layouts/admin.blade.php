@@ -63,10 +63,16 @@
                         ? 'flex items-center rounded-[20px] bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700'
                         : 'flex items-center rounded-[20px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-blue-600 hover:text-white';
                 @endphp
-                <div x-data="{ expanded: {{ $productActive ? 'true' : 'false' }} }" class="flex flex-col gap-1">
+                <div
+                    x-data="{ expanded: {{ $productActive ? 'true' : 'false' }}, locked: {{ $productActive ? 'true' : 'false' }} }"
+                    @mouseenter="expanded = true"
+                    @mouseleave="if (! locked) expanded = false"
+                    @click.outside="locked = false; expanded = false"
+                    class="flex flex-col gap-1"
+                >
                     <button
                         type="button"
-                        @click="expanded = !expanded"
+                        @click.stop="locked = ! locked; expanded = locked"
                         :aria-expanded="expanded.toString()"
                         class="{{ $navItemClass($productActive) }} w-full justify-between"
                     >
@@ -373,7 +379,7 @@
                             <img src="{{ asset('assets/' . rawurlencode('account avtivities 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Account activity
                         </a>
-                        <a href="#" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('admin.notifications') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('Notification 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Notifications Log
                         </a>

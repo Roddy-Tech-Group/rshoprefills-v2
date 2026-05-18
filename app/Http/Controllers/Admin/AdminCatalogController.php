@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Jobs\SyncZenditEsimsJob;
 use App\Jobs\SyncZenditGiftCardsJob;
+use App\Jobs\SyncZenditTopupsJob;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -27,6 +28,15 @@ class AdminCatalogController extends Controller
 
         return response()->json([
             'message' => 'Zendit eSIM catalog sync job dispatched successfully.',
+        ]);
+    }
+
+    public function syncZenditTopups()
+    {
+        SyncZenditTopupsJob::dispatch(1);
+
+        return response()->json([
+            'message' => 'Zendit mobile top-up catalog sync job dispatched successfully.',
         ]);
     }
 

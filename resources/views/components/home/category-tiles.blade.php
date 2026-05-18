@@ -43,7 +43,8 @@
             {{-- Mobile Top-ups --}}
             <li data-reveal-item class="shrink-0">
                 <a
-                    href="#"
+                    href="{{ route('shop.topups') }}"
+                    wire:navigate
                     @mouseenter="active = 2"
                     :class="active === 2 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
@@ -56,7 +57,8 @@
             {{-- Bill Payments --}}
             <li data-reveal-item class="shrink-0">
                 <a
-                    href="#"
+                    href="{{ route('shop.bills') }}"
+                    wire:navigate
                     @mouseenter="active = 3"
                     :class="active === 3 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"

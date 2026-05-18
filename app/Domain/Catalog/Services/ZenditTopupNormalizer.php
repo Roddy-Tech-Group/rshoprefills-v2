@@ -9,54 +9,48 @@ use App\Models\ProductVariant;
 use App\Models\Subcategory;
 use Illuminate\Support\Str;
 
-class ZenditNormalizer implements CatalogNormalizerInterface
+class ZenditTopupNormalizer implements CatalogNormalizerInterface
 {
     public function normalizeAndSave(array $rawItem, string $providerName): void
     {
-        // 1. Normalize Subtype. Zendit returns subTypes as an array; pick the first.
+        // 1. Ensure the Mobile Airtime category exists.
+        $category = Category::firstOrCreate(
+            ['slug' => 'mobile-airtime'],
+            ['name' => 'Mobile Airtime', 'type' => 'digital']
+        );
+
+        // 2. Normalize subType -> Subcategory. Zendit returns subTypes as an array;
+        // pick the first one (or fall back to a generic "Airtime").
         $subTypes = $rawItem['subTypes'] ?? [];
-        $subtypeName = is_array($subTypes) && ! empty($subTypes) ? $subTypes[0] : ($rawItem['subtype'] ?? 'Uncategorized');
+        $subtypeName = is_array($subTypes) && ! empty($subTypes) ? $subTypes[0] : ($rawItem['subtype'] ?? 'Airtime');
         $subcategorySlug = Str::slug($subtypeName);
-
-        // 2. Resolve the Category. Prepaid Utilities arrive on the SAME
-        // /vouchers/offers feed as gift cards (Zendit tags both productType
-        // VOUCHER); the "Utilities" subType is the classifier. Route those into
-        // their own Bill Payments category so they form a distinct storefront
-        // instead of polluting the gift-card grid.
-        $isUtility = strtolower($subtypeName) === 'utilities';
-
-        $category = $isUtility
-            ? Category::firstOrCreate(['slug' => 'bill-payments'], ['name' => 'Bill Payments', 'type' => 'digital'])
-            : Category::firstOrCreate(['slug' => 'gift-cards'], ['name' => 'Gift Cards', 'type' => 'digital']);
 
         $subcategory = Subcategory::firstOrCreate(
             ['category_id' => $category->id, 'slug' => $subcategorySlug],
             ['name' => $subtypeName, 'is_featured' => false]
         );
 
-        // 3. Determine Brand and Product Grouping.
-        // Zendit exposes both a short machine key (brand) and a human label (brandName).
-        $brandKey = $rawItem['brand'] ?? 'unknown';
-        $brandLabel = $rawItem['brandName'] ?? $brandKey;
+        // 3. Brand = the mobile operator (e.g. "MTN", "Vodafone"). Zendit exposes a
+        // machine key and a human label; topup payloads may use brand/brandName or
+        // operator/operatorName depending on the offer, so accept either.
+        $brandKey = $rawItem['brand'] ?? $rawItem['operator'] ?? 'unknown';
+        $brandLabel = $rawItem['brandName'] ?? $rawItem['operatorName'] ?? $brandKey;
         $countryCode = strtoupper($rawItem['country'] ?? 'US');
 
-        // Currency lives on the nested send/price objects (denominated in cents via currencyDivisor).
+        // Money lives on the nested send/price/cost objects (minor units via currencyDivisor).
         $priceBlock = $rawItem['price'] ?? [];
         $sendBlock = $rawItem['send'] ?? [];
         $costBlock = $rawItem['cost'] ?? [];
-        // The card's currency is the SEND block — the value loaded onto the recipient's
-        // account, in the card's own currency (e.g. a UK Amazon card is GBP). The price
-        // block is Zendit's USD price; the cost block is our USD cost. Don't use those
-        // for the card currency, or a £-card shows as a $-card.
+        // The SEND block is the value credited to the recipient's phone, in its own
+        // currency (a Ghana top-up is GHS). The price block is Zendit's USD price;
+        // the cost block is our USD cost. Use the send block for the card currency.
         $currencyCode = strtoupper($sendBlock['currency'] ?? $priceBlock['currency'] ?? $rawItem['currency'] ?? 'USD');
 
-        // Products are grouped by Brand + Country
-        $productSlug = Str::slug("{$brandKey}-{$countryCode}-{$providerName}");
+        // Products are grouped by operator + country. The `topup-` slug prefix keeps
+        // it from ever colliding with a gift-card brand that shares a brand_key.
+        $productSlug = Str::slug("topup-{$brandKey}-{$countryCode}-{$providerName}");
 
-        // Preserve any fields that were hydrated by ZenditBrandSyncService (logo, hero,
-        // brand_color, description, redeem_instructions, terms_and_conditions). The
-        // /vouchers/offers payload doesn't include those — only /brands/* does — so
-        // we mustn't blow them away on a routine catalog re-sync.
+        // Preserve any fields hydrated elsewhere so a routine re-sync doesn't blow them away.
         $existing = Product::where('slug', $productSlug)->first();
 
         $product = Product::updateOrCreate(
@@ -73,7 +67,7 @@ class ZenditNormalizer implements CatalogNormalizerInterface
                 'currency_code' => $currencyCode,
                 'name' => "{$brandLabel} ({$countryCode})",
                 'description' => $existing?->description
-                    ?: ($rawItem['shortNotes'] ?? $rawItem['notes'] ?? $rawItem['description'] ?? "{$brandLabel} Gift Card for {$countryCode}"),
+                    ?: ($rawItem['shortNotes'] ?? $rawItem['notes'] ?? $rawItem['description'] ?? "{$brandLabel} mobile top-up for {$countryCode}"),
                 'redeem_instructions' => $existing?->redeem_instructions ?: ($rawItem['redeem_instructions'] ?? null),
                 'terms_and_conditions' => $existing?->terms_and_conditions ?: ($rawItem['terms'] ?? null),
                 'logo_url' => $existing?->logo_url ?: ($rawItem['logoUrl'] ?? null),
@@ -82,7 +76,8 @@ class ZenditNormalizer implements CatalogNormalizerInterface
             ]
         );
 
-        // 4. Create/Update Variant. Zendit money fields are integer minor units; divide by currencyDivisor.
+        // 4. Create/Update the variant (one airtime amount). Zendit money fields are
+        // integer minor units; divide by currencyDivisor.
         $offerId = $rawItem['offerId'];
         $priceType = $rawItem['priceType'] ?? 'FIXED';
 
@@ -90,19 +85,19 @@ class ZenditNormalizer implements CatalogNormalizerInterface
         $sendDiv = (float) ($sendBlock['currencyDivisor'] ?? 100);
         $costDiv = (float) ($costBlock['currencyDivisor'] ?? 100);
 
-        // Face value = the SEND block (what the recipient actually receives, in the
-        // card's own currency). cost_price below is the COST block — always USD, our
-        // settlement base for the markup engine.
+        // Face value = the SEND block (what the phone is credited, in its own
+        // currency). cost_price is the COST block — always USD, our markup base.
         $faceValue = isset($sendBlock['fixed']) ? ((float) $sendBlock['fixed']) / $sendDiv
                      : (isset($priceBlock['fixed']) ? ((float) $priceBlock['fixed']) / $priceDiv : null);
         $costPrice = isset($costBlock['fixed']) ? ((float) $costBlock['fixed']) / $costDiv : ($faceValue ?? 0.0);
         $retailPrice = $faceValue ?? $costPrice;
 
-        // VARIABLE-priced cards expose min/max on the send block.
+        // Variable top-ups expose min/max on the send block. Zendit labels variable
+        // top-ups as RANGE (vouchers use VARIABLE) — accept both.
         $minAmount = isset($sendBlock['min']) ? ((float) $sendBlock['min']) / $sendDiv : null;
         $maxAmount = isset($sendBlock['max']) ? ((float) $sendBlock['max']) / $sendDiv : null;
 
-        $isVariable = $priceType === 'VARIABLE'
+        $isVariable = in_array($priceType, ['VARIABLE', 'RANGE'], true)
             || ($minAmount !== null && $maxAmount !== null && $minAmount !== $maxAmount);
 
         ProductVariant::updateOrCreate(
@@ -123,7 +118,7 @@ class ZenditNormalizer implements CatalogNormalizerInterface
             ]
         );
 
-        // Optional logo processing (Zendit offers list doesn't return one, but keep the hook for future).
+        // Optional logo processing — topup operator logos arrive on the offer itself.
         if (! empty($rawItem['logoUrl']) && ! str_starts_with((string) $product->logo_url, 'local/')) {
             MediaProcessorJob::dispatch($product->id, $rawItem['logoUrl']);
         }

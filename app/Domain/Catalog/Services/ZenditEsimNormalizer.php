@@ -79,6 +79,7 @@ class ZenditEsimNormalizer implements CatalogNormalizerInterface
             ['provider_offer_id' => $offerId],
             [
                 'product_id' => $product->id,
+                'subcategory_id' => $subcategory->id,
                 'sku' => $rawItem['sku'] ?? $offerId,
                 'currency' => $currencyCode,
                 'face_value' => $faceValue,

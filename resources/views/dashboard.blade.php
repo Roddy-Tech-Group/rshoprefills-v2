@@ -195,8 +195,8 @@
                 @foreach ([
                     ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    route('shop.gift-cards'), true],
                     ['eSIMs',      'esim.svg',       'bg-sky-500',     route('shop.esims'),      true],
-                    ['Topups',     'topup1.svg',     'bg-emerald-500', '#',                      false],
-                    ['Bills',      'Bills 2.svg',    'bg-teal-500',    '#',                      false],
+                    ['Topups',     'topup1.svg',     'bg-emerald-500', route('shop.topups'),     true],
+                    ['Bills',      'Bills 2.svg',    'bg-teal-500',    route('shop.bills'),      true],
                     ['Flights',    'flight 2.svg',   'bg-indigo-500',  '#',                      false],
                     ['Stays',      'stay 2.svg',     'bg-orange-500',  '#',                      false],
                 ] as [$label, $icon, $bg, $href, $live])

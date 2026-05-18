@@ -128,6 +128,87 @@ Route::get('esims/{slug}', function (string $slug) {
     return view('shop.esim', ['product' => $product]);
 })->name('shop.esim');
 
+// Mobile top-up — mirrors the gift-card flow exactly: a brand listing + a
+// brand-level detail page. Operators are the Products in the `mobile-airtime`
+// category; their variants are the airtime amounts. The detail page reuses the
+// shared `shop.product` view.
+Route::view('topups', 'shop.topups')->name('shop.topups');
+
+Route::get('topups/{brandSlug}', function (string $brandSlug) {
+    $brandSlug = strtolower($brandSlug);
+
+    // Resolve the kebab-cased URL slug back to the actual brand_key, scoped to
+    // the mobile-airtime category so it never collides with a gift-card brand.
+    $brandKey = Product::query()
+        ->whereNotNull('brand_key')
+        ->where('is_active', true)
+        ->whereHas('category', fn ($q) => $q->where('slug', 'mobile-airtime'))
+        ->distinct()
+        ->pluck('brand_key')
+        ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+
+    abort_if(! $brandKey, 404);
+
+    $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
+
+    $base = fn () => Product::query()
+        ->where('brand_key', $brandKey)
+        ->where('is_active', true)
+        ->whereHas('category', fn ($q) => $q->where('slug', 'mobile-airtime'))
+        ->with([
+            'subcategory:id,name,slug',
+            'category:id,name,slug',
+            'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
+        ]);
+
+    // Region-locked, with a fallback to any country this operator is sold in.
+    $product = $base()->where('country_code', $requested)->first()
+        ?: $base()->orderByRaw("country_code = 'US' DESC")->first();
+
+    abort_if(! $product, 404);
+
+    return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
+})->name('shop.topup');
+
+// Bill payments — prepaid utilities (electricity, water, etc.). These ride
+// Zendit's /vouchers/offers feed and are split into the `bill-payments`
+// category by ZenditNormalizer. Mirrors the gift-card flow: a brand listing +
+// a brand-level detail page reusing the shared `shop.product` view.
+Route::view('bills', 'shop.bills')->name('shop.bills');
+
+Route::get('bills/{brandSlug}', function (string $brandSlug) {
+    $brandSlug = strtolower($brandSlug);
+
+    $brandKey = Product::query()
+        ->whereNotNull('brand_key')
+        ->where('is_active', true)
+        ->whereHas('category', fn ($q) => $q->where('slug', 'bill-payments'))
+        ->distinct()
+        ->pluck('brand_key')
+        ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+
+    abort_if(! $brandKey, 404);
+
+    $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
+
+    $base = fn () => Product::query()
+        ->where('brand_key', $brandKey)
+        ->where('is_active', true)
+        ->whereHas('category', fn ($q) => $q->where('slug', 'bill-payments'))
+        ->with([
+            'subcategory:id,name,slug',
+            'category:id,name,slug',
+            'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
+        ]);
+
+    $product = $base()->where('country_code', $requested)->first()
+        ?: $base()->orderByRaw("country_code = 'US' DESC")->first();
+
+    abort_if(! $product, 404);
+
+    return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
+})->name('shop.bill');
+
 // Cart page (HTML). Store-driven — it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 
@@ -188,6 +269,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard/rewards', 'dashboard.rewards')->name('dashboard.rewards');
 
     Route::view('dashboard/kyc', 'dashboard.kyc')->name('dashboard.kyc');
+
+    Volt::route('dashboard/orders', 'dashboard.orders')->name('dashboard.orders');
 
     Volt::route('dashboard/profile', 'settings.profile')->name('dashboard.profile');
     Volt::route('dashboard/password', 'settings.password')->name('dashboard.password');
