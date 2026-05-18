@@ -538,6 +538,61 @@ window.navBrandSearch = function () {
 };
 
 /**
+ * Dashboard command palette (CTRL/CMD + K). Combines the static "Most used"
+ * account links with live product search — typing 2+ characters hits the same
+ * /api/search/brands?q= endpoint the storefront nav search uses, so the palette
+ * searches the whole catalogue, not just dashboard navigation.
+ */
+window.dashboardSearch = function () {
+    return {
+        open: false,
+        query: '',
+        results: [],
+        loading: false,
+        _debounce: null,
+        _aborter: null,
+        activeTab: 'Overview',
+        tabs: ['Overview', 'Orders', 'Wallet', 'Transactions', 'Profile', 'Settings'],
+
+        /** True once the user has typed enough to trigger a product search. */
+        get searching() {
+            return this.query.trim().length >= 2;
+        },
+
+        onInput() {
+            const q = this.query.trim();
+            if (q.length < 2) {
+                this.results = [];
+                this.loading = false;
+                if (this._aborter) this._aborter.abort();
+                return;
+            }
+            this.loading = true;
+            clearTimeout(this._debounce);
+            this._debounce = setTimeout(() => this.fetchResults(q), 200);
+        },
+
+        async fetchResults(q) {
+            // Abort any in-flight request so stale results never overwrite fresh ones.
+            if (this._aborter) this._aborter.abort();
+            this._aborter = new AbortController();
+
+            try {
+                const res = await fetch('/api/search/brands?q=' + encodeURIComponent(q), {
+                    signal: this._aborter.signal,
+                    headers: { Accept: 'application/json' },
+                });
+                this.results = res.ok ? await res.json() : [];
+            } catch (err) {
+                if (err.name !== 'AbortError') this.results = [];
+            } finally {
+                this.loading = false;
+            }
+        },
+    };
+};
+
+/**
  * Customer-reviews carousel. The header arrow advances the horizontal scroll
  * by one screenful of whole cards using a custom requestAnimationFrame easing
  * pass (cubic ease-in-out), so the motion is consistently smooth across every

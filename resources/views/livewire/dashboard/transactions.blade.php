@@ -211,7 +211,7 @@ class extends Component {
                 @endif
             </p>
             @unless (trim($search) !== '' || $filter !== 'all')
-                <a href="{{ route('dashboard') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                <a href="{{ route('dashboard.wallet') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
                     Go to wallet
                 </a>
             @endunless

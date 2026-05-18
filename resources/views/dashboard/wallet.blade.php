@@ -47,7 +47,7 @@
             'code'      => $code,
             'label'     => Currency::tryFrom((string) $code)?->label() ?? $code,
             'formatted' => $symbolFor($code) . number_format((float) $w->balance, 2),
-            'icon'      => $iconFile ? asset('assets/' . rawurlencode($iconFile)) : null,
+            'icon'      => $iconFile ? asset('assets/' . rawurlencode($iconFile)) : \App\Models\Product::flagUrl(match (strtoupper((string) $code)) { 'USD' => 'US', 'GBP' => 'GB', 'EUR' => 'EU', 'KES' => 'KE', 'ZAR' => 'ZA', 'UGX' => 'UG', 'TZS' => 'TZ', 'RWF' => 'RW', 'ZMW' => 'ZM', 'MWK' => 'MW', 'ETB' => 'ET', 'EGP' => 'EG', 'MAD' => 'MA', default => '' }),
         ];
     })->values();
 
