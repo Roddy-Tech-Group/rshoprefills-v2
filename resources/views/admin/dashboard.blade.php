@@ -285,9 +285,9 @@
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $kpi['tone'] }} sm:h-11 sm:w-11">
                             <img src="{{ asset('assets/' . rawurlencode($kpi['icon'])) }}" alt="" class="h-5 w-5 sm:h-6 sm:w-6" loading="lazy">
                         </span>
-                        <p class="mt-3 text-xs font-medium text-zinc-600 sm:text-sm">{{ $kpi['label'] }}</p>
+                        <p class="mt-3 text-xs font-medium text-zinc-600 dark:text-zinc-200 sm:text-sm">{{ $kpi['label'] }}</p>
                         <p class="mt-0.5 text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{{ $kpi['value'] }}</p>
-                        <p class="mt-auto pt-3 text-[11px] text-zinc-600 sm:text-xs">{{ $kpi['sub'] }}</p>
+                        <p class="mt-auto pt-3 text-[11px] text-zinc-600 dark:text-zinc-400 sm:text-xs">{{ $kpi['sub'] }}</p>
                     </div>
                 </div>
             @endforeach

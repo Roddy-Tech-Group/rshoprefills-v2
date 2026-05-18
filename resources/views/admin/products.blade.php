@@ -251,7 +251,7 @@
                     @for ($i = 0; $i < 8; $i++)
                         <div class="grid grid-cols-7 items-center gap-3 px-5 py-3.5" style="--i: {{ $i }}">
                             <span class="flex items-center gap-3">
-                                <x-skeleton class="h-10 w-10 rounded-xl" />
+                                <x-skeleton class="h-10 w-10" rounded="rounded-[5px]" />
                                 <span class="flex flex-col gap-2">
                                     <x-skeleton class="h-4 w-32" />
                                     <x-skeleton class="h-3 w-20" />
@@ -296,9 +296,9 @@
                                 <td class="px-5 py-3.5">
                                     <div class="flex items-center gap-3">
                                         @if ($logoSrc)
-                                            <img src="{{ $logoSrc }}" alt="" class="h-10 w-10 shrink-0 rounded-xl object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
+                                            <img src="{{ $logoSrc }}" alt="" class="h-10 w-10 shrink-0 rounded-[5px] object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
                                         @else
-                                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold uppercase tracking-tight text-blue-700 ring-1 ring-blue-100">
+                                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[5px] bg-blue-50 text-xs font-bold uppercase tracking-tight text-blue-700 ring-1 ring-blue-100">
                                                 {{ str($product->name)->substr(0, 2)->upper() }}
                                             </span>
                                         @endif

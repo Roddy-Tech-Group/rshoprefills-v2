@@ -49,10 +49,10 @@
 @endphp
 
 <x-layouts.dashboard>
-    <div class="mx-auto flex max-w-4xl flex-col gap-8">
+    <div class="flex w-full flex-col gap-8">
 
-        {{-- ─── Header ─── --}}
-        <section>
+        {{-- ─── Header (desktop only — mobile uses the layout's slim top bar) ─── --}}
+        <section class="hidden lg:block">
             <h1 class="text-xl font-bold tracking-tight text-black sm:text-3xl">Identity verification</h1>
             <p class="mt-1 text-sm text-zinc-600">Verify your account to raise your transaction limits and unlock the top membership tiers.</p>
         </section>

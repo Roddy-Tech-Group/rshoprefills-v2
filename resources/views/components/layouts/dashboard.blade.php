@@ -97,9 +97,9 @@
                         @foreach ([
                             ['Gift Cards',     'gift cards.svg', route('shop.gift-cards'), true],
                             ['eSIMs',          'esim.svg',       route('shop.esims'),      true],
-                            ['Flights',        'flight 2.svg',   '#',                      false],
-                            ['Stays',          'stay 2.svg',     '#',                      false],
-                            ['Topups & Bills', 'Bills 2.svg',    '#',                      false],
+                            ['Flights',        'flight 2.svg',   route('shop.flights'),    true],
+                            ['Stays',          'stay 2.svg',     route('shop.stays'),      true],
+                            ['Topups & Bills', 'Bills 2.svg',    route('shop.topups'),     true],
                         ] as [$label, $icon, $href, $live])
                             <a href="{{ $href }}" @if ($live) wire:navigate @endif class="{{ $subItem(false) }}">
                                 <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-4 w-4 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
@@ -126,17 +126,19 @@
                 </a>
 
                 {{-- Wallet --}}
-                <a href="#" class="{{ $navItem(false) }}">
+                @php $active = request()->routeIs('dashboard.wallet'); @endphp
+                <a href="{{ route('dashboard.wallet') }}" wire:navigate class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
-                        <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Wallet
                     </span>
                 </a>
 
                 {{-- Transactions --}}
-                <a href="#" class="{{ $navItem(false) }}">
+                @php $active = $isCurrent('dashboard.transactions*'); @endphp
+                <a href="{{ route('dashboard.transactions') }}" wire:navigate class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
-                        <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Transactions
                     </span>
                 </a>
@@ -170,9 +172,10 @@
                 </a>
 
                 {{-- Notifications --}}
-                <a href="#" class="{{ $navItem(false) }}">
+                @php $active = request()->routeIs('dashboard.notifications'); @endphp
+                <a href="{{ route('dashboard.notifications') }}" wire:navigate class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
-                        <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Notifications
                     </span>
                     @if ($notificationCount > 0)
@@ -181,9 +184,10 @@
                 </a>
 
                 {{-- Saved Cards --}}
-                <a href="#" class="{{ $navItem(false) }}">
+                @php $active = request()->routeIs('dashboard.saved-cards'); @endphp
+                <a href="{{ route('dashboard.saved-cards') }}" wire:navigate class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
-                        <img src="{{ asset('assets/' . 'savedcard.svg') }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
+                        <img src="{{ asset('assets/' . 'savedcard.svg') }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Saved Cards
                     </span>
                 </a>
@@ -198,9 +202,9 @@
                 </a>
             </nav>
 
-            {{-- Need Help card --}}
+            {{-- Need Help card — opens WhatsApp chat with support. --}}
             <div class="mt-auto pt-6">
-                <a href="#" class="flex items-center gap-3 rounded-2xl bg-blue-50 p-3 transition-colors hover:bg-blue-100">
+                <a href="https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-2xl bg-blue-50 p-3 transition-colors hover:bg-blue-100">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white">
                         <img src="{{ asset('assets/support.svg') }}" alt="" class="h-5 w-5" loading="lazy">
                     </span>
@@ -574,7 +578,7 @@
                         {{-- Divider after locale block --}}
                         <div class="my-1 h-px bg-zinc-100"></div>
 
-                        <a href="#" class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('dashboard.notifications') }}" wire:navigate class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <span class="flex items-center gap-3">
                                 <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                                 Notifications
@@ -603,7 +607,9 @@
         </flux:header>
 
         @php
-            $skipMobileHero = request()->routeIs('dashboard.profile', 'dashboard.password', 'dashboard.appearance');
+            // The blue hero shows ONLY on the dashboard overview. Every other dashboard
+            // page uses the slim white inner top bar (hamburger + title + bell) below.
+            $skipMobileHero = ! request()->routeIs('dashboard');
         @endphp
 
         {{-- flux:main is the single main-axis child of Flux's layout container.
@@ -617,6 +623,7 @@
              (e.g. wallet card on the overview). Inner pages with their own sticky header
              (settings, password, appearance) skip this hero entirely. --}}
         @unless ($skipMobileHero)
+        {{-- Blue hero — overview only, and sticky there. --}}
         <header class="sticky top-0 z-30 rounded-b-[20px] bg-blue-600 px-5 pb-6 lg:hidden" style="padding-top: max(1.25rem, env(safe-area-inset-top));">
             {{-- Greeting + notifications on one row. --}}
             <div class="flex items-start justify-between gap-3 text-white">
@@ -647,17 +654,26 @@
         @if ($skipMobileHero)
             @php
                 $innerTitle = match (true) {
-                    request()->routeIs('dashboard.password')   => 'Security',
-                    request()->routeIs('dashboard.appearance') => 'Appearance',
-                    default                                    => 'Settings',
+                    request()->routeIs('dashboard.orders')        => 'Orders',
+                    request()->routeIs('dashboard.transactions')  => 'Transactions',
+                    request()->routeIs('dashboard.wallet')        => 'Wallet',
+                    request()->routeIs('dashboard.notifications') => 'Notifications',
+                    request()->routeIs('dashboard.saved-cards')   => 'Saved Cards',
+                    request()->routeIs('dashboard.kyc')           => 'Verify Identity',
+                    request()->routeIs('dashboard.rewards')       => 'Rewards',
+                    request()->routeIs('dashboard.password')      => 'Security',
+                    request()->routeIs('dashboard.appearance')    => 'Appearance',
+                    default                                       => 'Settings',
                 };
             @endphp
             <div class="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-zinc-100 bg-white px-3 py-2.5 lg:hidden">
+                {{-- Hamburger opens the Connect panel (social + contact channels).
+                     The app menu itself is the bottom-bar centre FAB. --}}
                 <button
                     type="button"
                     x-data
-                    x-on:click="$dispatch('open-mobile-menu')"
-                    aria-label="Open menu"
+                    x-on:click="$dispatch('open-connect-panel')"
+                    aria-label="Connect with us"
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-zinc-100 active:scale-95"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5" style="filter: brightness(0) saturate(100%);" loading="lazy">
@@ -700,7 +716,7 @@
                             ['idx' => 0, 'href' => route('dashboard'),         'icon' => 'Home.svg',           'label' => 'Home',         'nav' => true],
                             ['idx' => 1, 'href' => route('dashboard.orders'), 'icon' => 'order.svg',          'label' => 'Orders',       'nav' => true],
                             // index 2 is the FAB spacer — handled separately below
-                            ['idx' => 3, 'href' => '#',                        'icon' => 'transactions 1.svg', 'label' => 'Transactions', 'nav' => false],
+                            ['idx' => 3, 'href' => route('dashboard.transactions'), 'icon' => 'transactions 1.svg', 'label' => 'Transactions', 'nav' => true],
                             ['idx' => 4, 'href' => route('dashboard.profile'), 'icon' => 'Profile 1.svg',      'label' => 'Profile',      'nav' => true],
                         ];
                     @endphp
@@ -791,16 +807,16 @@
                 ['label' => 'Home',          'href' => route('dashboard'),           'icon' => 'Home.svg',           'tone' => 'bg-blue-500',     'nav' => true],
                 ['label' => 'Shop',          'href' => route('home'),                'icon' => 'Shop.svg',           'tone' => 'bg-pink-500',     'nav' => true],
                 ['label' => 'Orders',        'href' => route('dashboard.orders'),    'icon' => 'order.svg',          'tone' => 'bg-sky-500',      'nav' => true],
-                ['label' => 'Wallet',        'href' => '#',                          'icon' => 'Wallet.svg',         'tone' => 'bg-emerald-500',  'nav' => false],
-                ['label' => 'Transactions',  'href' => '#',                          'icon' => 'transactions 1.svg', 'tone' => 'bg-teal-500',     'nav' => false],
+                ['label' => 'Wallet',        'href' => route('dashboard.wallet'),    'icon' => 'Wallet.svg',         'tone' => 'bg-emerald-500',  'nav' => true],
+                ['label' => 'Transactions',  'href' => route('dashboard.transactions'), 'icon' => 'transactions 1.svg', 'tone' => 'bg-teal-500',  'nav' => true],
                 ['label' => 'Profile',       'href' => route('dashboard.profile'),   'icon' => 'Profile 1.svg',      'tone' => 'bg-indigo-500',   'nav' => true],
                 ['label' => 'Verify (KYC)',  'href' => route('dashboard.kyc'),       'icon' => 'customer.svg',       'tone' => 'bg-amber-500',    'nav' => true],
                 ['label' => 'Security',      'href' => route('dashboard.password'),  'icon' => 'admin access.svg',   'tone' => 'bg-violet-500',   'nav' => true],
                 ['label' => 'Appearance',    'href' => route('dashboard.appearance'),'icon' => 'Appearance.svg',     'tone' => 'bg-fuchsia-500',  'nav' => true],
-                ['label' => 'Notifications', 'href' => '#',                          'icon' => 'notification 2.svg', 'tone' => 'bg-amber-500',    'nav' => false],
-                ['label' => 'Saved Cards',   'href' => '#',                          'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => false],
+                ['label' => 'Notifications', 'href' => route('dashboard.notifications'), 'icon' => 'notification 2.svg', 'tone' => 'bg-amber-500',    'nav' => true],
+                ['label' => 'Saved Cards',   'href' => route('dashboard.saved-cards'),   'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => true],
                 ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.png',       'tone' => 'bg-orange-500',   'nav' => true],
-                ['label' => 'Support',       'href' => '#',                          'icon' => 'support.svg',        'tone' => 'bg-cyan-500',     'nav' => false],
+                ['label' => 'Support',       'href' => 'https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'icon' => 'support.svg', 'tone' => 'bg-cyan-500', 'nav' => false],
             ];
         @endphp
         {{-- Mobile menu wrapper: `contents` removes the div from Flux's grid layout so it
@@ -884,6 +900,118 @@
                             Log out
                         </button>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        {{-- ─────────────────────────────────────────────────────── --}}
+        {{-- Connect panel — slim-bar hamburger slides this out (the app    --}}
+        {{-- menu itself lives on the bottom-bar FAB). Social + contact     --}}
+        {{-- channel cards.                                                --}}
+        {{-- ─────────────────────────────────────────────────────── --}}
+        @php
+            // Discord invite + support email are placeholders until the real ones land.
+            $connectChannels = [
+                ['type' => 'instagram', 'label' => 'Instagram', 'value' => '@rshoprefills',          'url' => 'https://instagram.com/rshoprefills',  'tone' => 'bg-pink-500',    'external' => true],
+                ['type' => 'tiktok',    'label' => 'TikTok',    'value' => '@rshoprefills',          'url' => 'https://tiktok.com/@rshoprefills',    'tone' => 'bg-zinc-900',    'external' => true],
+                ['type' => 'discord',   'label' => 'Discord',   'value' => 'Join our community',     'url' => '#',                                   'tone' => 'bg-indigo-500',  'external' => true],
+                ['type' => 'whatsapp',  'label' => 'WhatsApp',  'value' => '+237 676 700 173',       'url' => 'https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'tone' => 'bg-emerald-500', 'external' => true],
+                ['type' => 'facebook',  'label' => 'Facebook',  'value' => '/rshoprefills',          'url' => 'https://facebook.com/rshoprefills',   'tone' => 'bg-blue-600',    'external' => true],
+                ['type' => 'email',     'label' => 'Email',     'value' => 'info@rshoprefill.com',   'url' => 'mailto:info@rshoprefill.com',         'tone' => 'bg-amber-500',   'external' => false],
+                ['type' => 'phone',     'label' => 'Phone',     'value' => '+237 676 700 173',       'url' => 'tel:+237676700173',                   'tone' => 'bg-sky-500',     'external' => false],
+            ];
+        @endphp
+        <div
+            x-data="{ connectOpen: false }"
+            x-on:open-connect-panel.window="$nextTick(() => connectOpen = true)"
+            x-on:keydown.escape.window="connectOpen = false"
+            class="contents lg:hidden"
+        >
+            {{-- Backdrop --}}
+            <div
+                x-show="connectOpen"
+                x-transition:enter="transition-opacity ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition-opacity ease-in duration-200"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="connectOpen = false"
+                style="display: none;"
+                class="fixed inset-0 z-[60] bg-zinc-900/45 backdrop-blur-sm"
+                aria-hidden="true"
+            ></div>
+
+            {{-- Left slide-out drawer --}}
+            <div
+                x-show="connectOpen"
+                x-transition:enter="transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                x-transition:enter-start="-translate-x-full"
+                x-transition:enter-end="translate-x-0"
+                x-transition:leave="transition-transform duration-250 ease-in"
+                x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="-translate-x-full"
+                style="display: none;"
+                class="fixed inset-y-0 left-0 z-[70] w-[86%] max-w-sm overflow-y-auto bg-white shadow-2xl shadow-zinc-900/25 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="connect-title"
+            >
+                <div class="px-5 pb-[max(20px,env(safe-area-inset-bottom))]" style="padding-top: max(1.25rem, env(safe-area-inset-top));">
+                    {{-- Header --}}
+                    <div class="mb-5 flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h2 id="connect-title" class="text-lg font-bold text-zinc-900">Connect with us</h2>
+                            <p class="mt-0.5 text-xs text-zinc-600">Reach RshopRefills on your favourite channel.</p>
+                        </div>
+                        <x-close-button @click="connectOpen = false" aria-label="Close" />
+                    </div>
+
+                    {{-- Channel cards --}}
+                    <div class="skeleton-stagger-fast flex flex-col gap-2.5">
+                        @foreach ($connectChannels as $i => $channel)
+                            <a
+                                href="{{ $channel['url'] }}"
+                                @if ($channel['external']) target="_blank" rel="noopener" @endif
+                                @click="connectOpen = false"
+                                style="--i: {{ $i }}"
+                                class="group flex items-center gap-3 rounded-[10px] bg-zinc-50 p-3 ring-1 ring-zinc-100 transition-colors hover:bg-zinc-100"
+                            >
+                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $channel['tone'] }} text-white">
+                                    @switch ($channel['type'])
+                                        @case ('instagram')
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.849.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.07 1.644.07 4.849 0 3.205-.012 3.584-.07 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.849.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                                            @break
+                                        @case ('tiktok')
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                                            @break
+                                        @case ('discord')
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
+                                            @break
+                                        @case ('whatsapp')
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.612-.916-2.207-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.414z"/></svg>
+                                            @break
+                                        @case ('facebook')
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                            @break
+                                        @case ('email')
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                                            @break
+                                        @case ('phone')
+                                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                                            @break
+                                    @endswitch
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-bold text-zinc-900">{{ $channel['label'] }}</p>
+                                    <p class="truncate text-xs text-zinc-600">{{ $channel['value'] }}</p>
+                                </div>
+                                <svg class="h-4 w-4 shrink-0 text-zinc-400 transition-colors group-hover:text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                                </svg>
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
