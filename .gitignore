@@ -8,9 +8,14 @@
 /vendor
 .DS_Store
 .env
+.env.example
+.env.backup
 .env.backup
 .env.production
+.env.production
 .phpactor.json
+.phpactor.json
+.phpunit.result.cache
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
