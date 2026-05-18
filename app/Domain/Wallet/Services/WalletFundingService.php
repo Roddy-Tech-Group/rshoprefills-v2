@@ -27,7 +27,8 @@ class WalletFundingService
         private readonly PaymentGatewayFactory $paymentGatewayFactory,
         private readonly WalletService $walletService,
         private readonly CurrencyRateService $currencyRateService,
-        private readonly FundingVerificationService $verificationService
+        private readonly FundingVerificationService $verificationService,
+        private readonly \App\Domain\Payment\Services\PaymentSessionService $paymentSessionService
     ) {}
 
     /**
@@ -91,24 +92,12 @@ class WalletFundingService
             $provider = $this->paymentGatewayFactory->getProvider('flutterwave');
             $initData = $provider->initializePayment($attempt);
 
-            $paymentLink = $initData['payment_url'] ?? null;
-
-            if (!$paymentLink) {
-                $funding->update([
-                    'status' => FundingStatus::Failed,
-                    'failed_reason' => 'Failed to initialize payment gateway.',
-                ]);
-                $attempt->update(['payment_status' => PaymentStatus::Failed]);
-
-                throw new \RuntimeException('Unable to initialize payment gateway. Please try again.');
-            }
-
-            // Sync payment link back
-            $funding->update(['payment_link' => $paymentLink]);
+            // 5. Create PaymentSession
+            $paymentSession = $this->paymentSessionService->createForWalletFunding($funding, $attempt, $initData);
 
             return [
                 'funding' => $funding,
-                'payment_link' => $paymentLink,
+                'payment_session' => $paymentSession,
             ];
         });
     }
@@ -164,6 +153,15 @@ class WalletFundingService
                     'gateway_reference' => $flwTransactionId,
                     'webhook_payload' => $rawPayload,
                 ]);
+
+                // Sync payment session status
+                $attempt->load('paymentSession');
+                if ($attempt->paymentSession) {
+                    $this->paymentSessionService->confirmSession($attempt->paymentSession, [
+                        'transaction_id' => $flwTransactionId,
+                        'payload' => $rawPayload,
+                    ]);
+                }
             }
 
             // Credit the wallet safely
@@ -216,12 +214,22 @@ class WalletFundingService
         ]);
 
         // Fail polymorphic payment attempt
-        PaymentAttempt::where('payable_type', WalletFunding::class)
+        $attempt = PaymentAttempt::where('payable_type', WalletFunding::class)
             ->where('payable_id', $funding->id)
-            ->update([
+            ->first();
+
+        if ($attempt) {
+            $attempt->update([
                 'payment_status' => PaymentStatus::Failed,
                 'failed_at' => now(),
             ]);
+
+            // Sync payment session status
+            $attempt->load('paymentSession');
+            if ($attempt->paymentSession) {
+                $this->paymentSessionService->failSession($attempt->paymentSession, $reason, $payload);
+            }
+        }
 
         event(new \App\Domain\Wallet\Events\FundingFailed($funding, $reason));
     }

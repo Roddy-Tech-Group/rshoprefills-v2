@@ -83,5 +83,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/', [\App\Http\Controllers\Api\NotificationApiController::class, 'updatePreferences'])->name('update');
     });
 
+    Route::prefix('payment-sessions')->name('api.payment-sessions.')->group(function () {
+        Route::get('{id}', [\App\Http\Controllers\Api\PaymentSessionController::class, 'show'])->name('show');
+        Route::get('{id}/status', [\App\Http\Controllers\Api\PaymentSessionController::class, 'status'])->name('status');
+        Route::post('{id}/cancel', [\App\Http\Controllers\Api\PaymentSessionController::class, 'cancel'])->name('cancel');
+    });
+
     Route::get('transactions', [UserTransactionController::class, 'index'])->name('api.transactions.index');
 });

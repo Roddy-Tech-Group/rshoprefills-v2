@@ -59,7 +59,8 @@ class UserWalletController extends Controller
 
             return response()->json([
                 'message' => 'Funding initialized successfully.',
-                'payment_link' => $result['payment_link'],
+                'payment_link' => null,
+                'payment_session' => new \App\Http\Resources\PaymentSessionResource($result['payment_session']),
                 'reference' => $result['funding']->reference,
                 'requested_amount' => $result['funding']->requested_amount,
                 'display_currency' => $result['funding']->display_currency,

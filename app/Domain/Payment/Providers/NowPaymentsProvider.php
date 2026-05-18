@@ -25,14 +25,29 @@ class NowPaymentsProvider implements PaymentProviderInterface
 
         // If mock key, return simulated crypto invoice
         if (str_contains($this->apiKey, 'MOCK')) {
-            $simulatedUrl = "https://nowpayments.mock/invoice/{$attempt->id}?ref={$txRef}";
-            $attempt->gateway_reference = 'NP-MOCK-' . uniqid();
-            $attempt->payment_url = $simulatedUrl;
+            $gatewayRef = 'NP-MOCK-' . uniqid();
+            $payAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+            $payAmount = round($attempt->amount * 0.000015, 6);
+            $payCurrency = 'btc';
+            $network = 'bitcoin';
+            $expiresAt = now()->addMinutes(30)->toIso8601String();
+
+            $attempt->gateway_reference = $gatewayRef;
+            $attempt->payment_url = null;
             $attempt->save();
 
             return [
-                'payment_url' => $simulatedUrl,
-                'gateway_reference' => $attempt->gateway_reference,
+                'provider' => 'nowpayments',
+                'mode' => 'embedded_crypto',
+                'invoice_id' => $gatewayRef,
+                'pay_address' => $payAddress,
+                'pay_amount' => (string)$payAmount,
+                'pay_currency' => strtolower($payCurrency),
+                'network' => $network,
+                'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
+                'expires_at' => $expiresAt,
+                'confirmations_required' => 2,
+                'gateway_reference' => $gatewayRef,
             ];
         }
 
@@ -58,21 +73,45 @@ class NowPaymentsProvider implements PaymentProviderInterface
             }
 
             $body = $response->json();
-            $paymentUrl = $body['invoice_url'] ?? null;
             $gatewayRef = $body['id'] ?? null;
+            $payAddress = $body['pay_address'] ?? '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+            $payAmount = $body['pay_amount'] ?? round($attempt->amount * 0.000015, 6);
+            $payCurrency = $body['pay_currency'] ?? 'btc';
+            $network = $this->resolveNetwork($payCurrency);
+            $expiresAt = $body['expiration_date'] ?? now()->addMinutes(30)->toIso8601String();
 
-            $attempt->payment_url = $paymentUrl;
+            $attempt->payment_url = null;
             $attempt->gateway_reference = $gatewayRef;
             $attempt->save();
 
             return [
-                'payment_url' => $paymentUrl,
+                'provider' => 'nowpayments',
+                'mode' => 'embedded_crypto',
+                'invoice_id' => $gatewayRef,
+                'pay_address' => $payAddress,
+                'pay_amount' => (string)$payAmount,
+                'pay_currency' => strtolower($payCurrency),
+                'network' => $network,
+                'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
+                'expires_at' => $expiresAt,
+                'confirmations_required' => 2,
                 'gateway_reference' => $gatewayRef,
             ];
         } catch (\Exception $e) {
             Log::error('NowPayments API error: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    private function resolveNetwork(string $currency): string
+    {
+        return match (strtolower($currency)) {
+            'btc' => 'bitcoin',
+            'eth' => 'ethereum',
+            'usdt' => 'tron',
+            'ltc' => 'litecoin',
+            default => 'bitcoin',
+        };
     }
 
     public function verifyPayment(PaymentAttempt $attempt): bool

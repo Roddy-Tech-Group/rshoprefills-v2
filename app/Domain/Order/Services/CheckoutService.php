@@ -23,7 +23,8 @@ class CheckoutService
     public function __construct(
         private readonly OrderValidationService $orderValidationService,
         private readonly PaymentGatewayFactory $paymentGatewayFactory,
-        private readonly WalletPaymentProvider $walletPaymentProvider
+        private readonly WalletPaymentProvider $walletPaymentProvider,
+        private readonly \App\Domain\Payment\Services\PaymentSessionService $paymentSessionService
     ) {}
 
     /**
@@ -115,13 +116,19 @@ class CheckoutService
         $provider = $this->paymentGatewayFactory->getProvider($paymentMethod);
         $initResult = $provider->initializePayment($attempt);
 
-        // 6. Handle internal Wallet flow immediately (it reserves then triggers fulfillment)
+        // 6. Create the PaymentSession
+        $paymentSession = $this->paymentSessionService->createForOrder($order, $attempt, $initResult);
+
+        // 7. Handle internal Wallet flow immediately (it reserves then triggers fulfillment)
         if ($paymentMethod === 'wallet') {
-            DB::transaction(function () use ($order, $attempt) {
+            DB::transaction(function () use ($order, $attempt, $paymentSession) {
                 // If reserved successfully
                 $order->payment_status = PaymentStatus::Reserved;
                 $order->order_status = OrderStatus::Processing;
                 $order->save();
+
+                // Wallet confirms instantly
+                $this->paymentSessionService->confirmSession($paymentSession, ['transaction_id' => $attempt->gateway_reference]);
             });
 
             // Dispatch fulfillment immediately since funds are locked!
@@ -130,6 +137,6 @@ class CheckoutService
             }
         }
 
-        return $order->load('paymentAttempts');
+        return $order->load(['paymentAttempts', 'paymentAttempts.paymentSession']);
     }
 }

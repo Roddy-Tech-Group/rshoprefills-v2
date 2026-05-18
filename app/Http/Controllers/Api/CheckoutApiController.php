@@ -36,9 +36,14 @@ class CheckoutApiController extends Controller
                 deliveryEmail: $validated['delivery_email'] ?? null
             );
 
+            $order->load(['items', 'paymentAttempts', 'paymentAttempts.paymentSession']);
+            $latestAttempt = $order->paymentAttempts->sortByDesc('created_at')->first();
+            $paymentSession = $latestAttempt?->paymentSession;
+
             return response()->json([
                 'message' => 'Order placed successfully.',
-                'order' => new OrderResource($order->load('items')),
+                'order' => new OrderResource($order),
+                'payment_session' => $paymentSession ? new \App\Http\Resources\PaymentSessionResource($paymentSession) : null,
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
