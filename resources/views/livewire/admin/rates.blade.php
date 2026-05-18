@@ -300,7 +300,7 @@ class extends Component {
                             <tr>
                                 <td colspan="7" class="px-5 py-16 text-center">
                                     <p class="text-base font-semibold text-zinc-900">No currencies yet</p>
-                                    <p class="mt-1 text-sm text-zinc-600">Click "Add currency" to define your first rate, or run the seeder.</p>
+                                    <p class="mt-1 text-sm text-zinc-600">Click "Add currency" to define your first rate.</p>
                                 </td>
                             </tr>
                         @endforelse

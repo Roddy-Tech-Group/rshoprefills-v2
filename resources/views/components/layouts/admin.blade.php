@@ -173,7 +173,12 @@
         </flux:sidebar>
 
         {{-- Top header (sticky). Notifications + profile wired to admin guard. --}}
-        <flux:header sticky class="sticky top-0 z-40 min-h-[60px] items-center gap-2 !border-b-0 bg-white px-3 py-2 sm:gap-3 sm:px-6">
+        {{-- NOTE: do NOT add Flux's `sticky` prop here. It injects an Alpine binding that
+             freezes `top` to the header's offsetTop read once at init; if that fires before
+             the body grid settles (wire:navigate morph, slow paint) it captures the header's
+             block-flow position below the sidebar (~478px) and the bar floats mid-page.
+             The `sticky top-0` classes below are pure CSS — no race. --}}
+        <flux:header class="sticky top-0 z-40 min-h-[60px] items-center gap-2 !border-b-0 bg-white px-3 py-2 sm:gap-3 sm:px-6">
             {{-- Plain button toggle. Bypasses <flux:sidebar.toggle>, which is a self-closing wrapper
                  around <flux:button square /> and doesn't render slot children. Dispatching
                  'flux-sidebar-toggle' is exactly what Flux's own toggle does internally. --}}
@@ -401,7 +406,7 @@
         </flux:header>
 
         {{-- Content area with rounded top-left corner. Padding is provided here so pages just provide their content. --}}
-        <flux:main class="!p-0 !bg-white">
+        <flux:main class="!p-0 bg-white">
             <div class="min-h-full rounded-tl-[60px] rounded-tr-[60px] bg-[#eff6ff] px-4 py-6 sm:px-6 lg:rounded-tr-none lg:px-10 lg:py-8">
                 <div class="mx-auto max-w-7xl">
                     {{ $slot }}
@@ -413,7 +418,7 @@
              Card grid of admin nav items instead of the Flux sidebar drawer. lg:hidden so it never shows on desktop. --}}
         @php
             $adminMenuItems = [
-                ['label' => 'Overview',     'href' => route('admin.dashboard'),     'icon' => 'Shop.svg',           'tone' => 'bg-blue-500'],
+                ['label' => 'Home',         'href' => route('admin.dashboard'),     'icon' => 'Home.svg',           'tone' => 'bg-blue-500'],
                 ['label' => 'Products',     'href' => route('admin.products'),      'icon' => 'Shop.svg',           'tone' => 'bg-pink-500'],
                 ['label' => 'Orders',       'href' => route('admin.orders'),        'icon' => 'order.svg',          'tone' => 'bg-sky-500'],
                 ['label' => 'Customers',    'href' => route('admin.customers'),     'icon' => 'customer.svg',       'tone' => 'bg-emerald-500'],
@@ -474,12 +479,10 @@
                         <button
                             type="button"
                             @click="menuOpen = false"
-                            class="flex h-9 w-9 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                            class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
                             aria-label="Close menu"
                         >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
+                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
                         </button>
                     </div>
 

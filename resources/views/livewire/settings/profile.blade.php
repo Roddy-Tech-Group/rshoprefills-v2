@@ -237,23 +237,23 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     >
         {{-- Skeleton overlay shown during wire:navigate page transitions — cascading reveal --}}
         <div x-show="navigating" x-cloak class="skeleton-stagger absolute inset-0 z-10 bg-[#eff6ff]" aria-hidden="true">
-            <x-skeleton class="h-5 w-44" style="--i: 0" />
+            <x-skeleton class="h-6 w-44" style="--i: 0" />
             <div class="mt-2.5 overflow-hidden rounded-3xl bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: 1">
                 <div class="flex items-center gap-4 p-6">
                     <x-skeleton shape="circle" class="h-20 w-20" />
-                    <div class="flex-1 space-y-2">
-                        <x-skeleton class="h-4 w-32" />
-                        <x-skeleton class="h-3 w-48" />
+                    <div class="flex-1 space-y-2.5">
+                        <x-skeleton class="h-5 w-32" />
+                        <x-skeleton class="h-3.5 w-48" />
                     </div>
                 </div>
                 <div class="skeleton-stagger-fast divide-y divide-zinc-100 border-t border-zinc-100">
                     @for ($i = 0; $i < 4; $i++)
                         <div class="flex items-center justify-between px-6 py-3.5" style="--i: {{ $i }}">
-                            <div class="space-y-1.5">
-                                <x-skeleton class="h-2.5 w-20" />
-                                <x-skeleton class="h-3.5 w-36" />
+                            <div class="space-y-2">
+                                <x-skeleton class="h-3 w-20" />
+                                <x-skeleton class="h-4 w-36" />
                             </div>
-                            <x-skeleton class="h-4 w-12 rounded-[5px]" />
+                            <x-skeleton class="h-5 w-12" />
                         </div>
                     @endfor
                 </div>
@@ -421,7 +421,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     <div class="min-w-0">
                         <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-600">Country</p>
                         <p class="mt-0.5 flex items-center gap-2 text-sm font-medium text-black">
-                            <span class="text-base leading-none" x-text="countryFlag">🇨🇲</span>
+                            <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                             <span x-text="country">Cameroon</span>
                         </p>
                     </div>
@@ -620,11 +620,11 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                 $themeOptions = [
                     ['value' => 'light',  'label' => 'Light',  'path' => 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z'],
                     ['value' => 'dark',   'label' => 'Dark',   'path' => 'M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z'],
-                    ['value' => 'system', 'label' => 'System', 'path' => 'M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25'],
+                    ['value' => 'system', 'label' => 'Auto', 'path' => 'M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25'],
                 ];
             @endphp
 
-            <div x-data="{ theme: localStorage.getItem('theme') || 'light' }" x-init="$watch('theme', v => localStorage.setItem('theme', v))" class="grid grid-cols-3 gap-2 rounded-2xl bg-zinc-100 p-1">
+            <div x-data="{ theme: localStorage.getItem('theme') || 'system' }" x-init="$watch('theme', v => window.setTheme(v))" class="grid grid-cols-3 gap-2 rounded-2xl bg-zinc-100 p-1">
                 @foreach ($themeOptions as $opt)
                     <button
                         type="button"

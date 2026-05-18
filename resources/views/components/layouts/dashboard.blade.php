@@ -216,7 +216,9 @@
         </flux:sidebar>
 
         {{-- Top header (desktop only). Search is absolutely centered horizontally so it stays middle regardless of cart/profile width on the right. --}}
-        <flux:header sticky class="sticky top-0 z-40 hidden min-h-[64px] items-center gap-3 !border-b-0 bg-white/95 px-4 py-2 backdrop-blur-xl sm:px-6 lg:flex">
+        {{-- NOTE: no Flux `sticky` prop — it freezes `top` to a JS-read offsetTop and floats
+             the bar mid-page when the read races the body grid. `sticky top-0` below is pure CSS. --}}
+        <flux:header class="sticky top-0 z-40 hidden min-h-[64px] items-center gap-3 !border-b-0 bg-white/95 px-4 py-2 backdrop-blur-xl sm:px-6 lg:flex">
 
             {{-- Search bar (matches storefront home-nav style) with results panel --}}
             <div
@@ -439,6 +441,7 @@
                     locked: false,
                     country: 'United States',
                     countryFlag: '🇺🇸',
+                    countryCode: 'US',
                     language: 'English',
                     currency: 'USD',
                     currencySymbol: '$',
@@ -461,7 +464,7 @@
                 @mouseleave="if (!locked) open = false"
                 @click.outside="open = false; locked = false; currencyMenuOpen = false"
                 @keydown.escape.window="open = false; locked = false; currencyMenuOpen = false"
-                @locale-updated.window="country = $event.detail.country; countryFlag = $event.detail.countryFlag; language = $event.detail.language"
+                @locale-updated.window="country = $event.detail.country; countryFlag = $event.detail.countryFlag; countryCode = $event.detail.countryCode; language = $event.detail.language"
                 class="relative"
             >
                 <button type="button" @click="locked = !locked; open = locked" :aria-expanded="open.toString()" aria-label="{{ $user?->name ?? 'Account' }}" class="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
@@ -529,7 +532,7 @@
                                 Country
                             </span>
                             <span class="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
-                                <span class="text-sm leading-none" x-text="countryFlag">🇺🇸</span>
+                                <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3 w-[18px] shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                                 <span class="max-w-[80px] truncate" x-text="country">United States</span>
                             </span>
                         </button>
@@ -607,7 +610,7 @@
              ANYTHING that should stack vertically with the page content (mobile blue hero,
              slim inner-page bar, the page slot) goes INSIDE it — otherwise Flux's flex
              container puts them side-by-side with flux:main on mobile. --}}
-        <flux:main class="!p-0 !bg-white">
+        <flux:main class="!p-0 bg-white">
 
         {{-- Mobile header (blue hero, visible only on mobile).
              Pages can extend the blue area by filling the $mobileHero slot
@@ -792,8 +795,8 @@
             x-init="
                 init();
                 // Profile dropdown chip listens for these events to keep its display values in sync.
-                $watch('country',  v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, language: language }));
-                $watch('language', v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, language: language }));
+                $watch('country',  v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
+                $watch('language', v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
             "
             x-on:open-locale-modal.window="localeModalOpen = true"
         >
@@ -870,12 +873,10 @@
                         <button
                             type="button"
                             @click="menuOpen = false"
-                            class="flex h-9 w-9 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                            class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
                             aria-label="Close menu"
                         >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
+                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
                         </button>
                     </div>
 

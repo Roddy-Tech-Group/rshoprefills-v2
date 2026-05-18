@@ -103,8 +103,10 @@
                 </svg>
             </a>
 
-            {{-- Explore eSIMs (glass button) --}}
-            <a href="{{ route('shop.esims') }}" wire:navigate class="group inline-flex items-center gap-2 rounded-xl bg-white/60 backdrop-blur-md px-5 py-3 text-base font-semibold text-zinc-900 ring-1 ring-zinc-200/80 shadow-lg shadow-zinc-900/5 transition-all hover:-translate-y-0.5 hover:bg-white/80 hover:ring-zinc-300">
+            {{-- Explore eSIMs (glass button). Literal-hex bg/text so the dark-mode
+                 palette remap skips it — it is a light glass accent on the
+                 always-dark hero and must look the same in both themes. --}}
+            <a href="{{ route('shop.esims') }}" wire:navigate class="group inline-flex items-center gap-2 rounded-xl bg-[#ffffff]/60 backdrop-blur-md px-5 py-3 text-base font-semibold text-[#18181b] ring-1 ring-zinc-200/80 shadow-lg shadow-zinc-900/5 transition-all hover:-translate-y-0.5 hover:bg-[#ffffff]/80 hover:ring-zinc-300">
                 Explore eSIMs
                 <svg viewBox="0 0 24 24" class="h-5 w-5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 3h8.5L19 7.5V20a1 1 0 0 1 -1 1H6a1 1 0 0 1 -1 -1V4a1 1 0 0 1 1 -1z"/>
@@ -243,9 +245,12 @@
                             {{-- White "Show more" button slides in from the right on hover.
                                  Pops slightly past the chip's right edge (translate-x-3 = 12px)
                                  so the chip's gap accommodates it without overlapping neighbours. --}}
+                            {{-- bg/text use literal hexes (not bg-white/text-zinc-700) so the
+                                 dark-mode palette remap leaves this pill white — it is a light
+                                 accent on the always-dark hero and must stay light in both themes. --}}
                             <span
                                 :class="(current === {{ $i }} && hovered) ? 'translate-x-3 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'"
-                                class="absolute inset-0 z-10 inline-flex h-14 items-center justify-start rounded-full bg-white pl-5 pr-6 text-zinc-700 shadow-2xl shadow-zinc-900/25 transition-all duration-400 ease-out"
+                                class="absolute inset-0 z-10 inline-flex h-14 items-center justify-start rounded-full bg-[#ffffff] pl-5 pr-6 text-[#3f3f46] shadow-2xl shadow-zinc-900/25 transition-all duration-400 ease-out"
                             >
                                 <svg class="mr-3 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>

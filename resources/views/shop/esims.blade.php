@@ -132,11 +132,7 @@
             @else
                 {{-- Empty state --}}
                 <div class="mt-8 rounded-3xl bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
-                    <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8"/>
-                        </svg>
-                    </span>
+                    <img src="{{ asset('assets/' . rawurlencode('Empty state.png')) }}" alt="" class="mx-auto block h-44 w-auto object-contain" loading="lazy">
                     @if ($search !== '')
                         <p class="mt-4 text-base font-semibold text-zinc-900">No eSIM regions match "{{ $search }}"</p>
                         <p class="mt-1 text-sm text-zinc-600">Try a different country or region name.</p>
@@ -145,7 +141,7 @@
                         </a>
                     @else
                         <p class="mt-4 text-base font-semibold text-zinc-900">No eSIM coverage regions yet</p>
-                        <p class="mt-1 text-sm text-zinc-600">The eSIM catalog has not been synced. Run the Zendit eSIM sync from the admin products page.</p>
+                        <p class="mt-1 text-sm text-zinc-600">We're adding eSIM coverage for your region. Check back shortly.</p>
                     @endif
                 </div>
             @endif

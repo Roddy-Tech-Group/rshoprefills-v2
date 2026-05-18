@@ -886,3 +886,62 @@ window.kycDatePicker = function (initial = '') {
         },
     };
 };
+
+/*
+ * Keyboard navigation for every custom dropdown / menu on the site.
+ *
+ * The whole storefront + admin use one markup convention: a `.relative`
+ * wrapper holding a `.absolute` popup panel whose options are real <a>/<button>
+ * elements. This single listener drives them all — no per-dropdown wiring:
+ *   - Arrow Down / Up move focus between the open panel's options.
+ *   - Enter activates the focused option natively (a focused <a> follows its
+ *     href; a focused <button> fires its @click), so no Enter handling here.
+ *   - It only acts when focus sits on a control inside an open dropdown, so it
+ *     never hijacks arrow keys elsewhere on the page.
+ */
+(function () {
+    const isVisible = (el) => !! (el && el.offsetParent !== null);
+
+    // Resolve the open popup panel relative to the currently focused element.
+    function panelFor(el) {
+        // Focus is already inside an open panel (on an option or the search box).
+        const within = el.closest('.absolute');
+        if (within && isVisible(within) && within.querySelector('a[href],button')) {
+            return within;
+        }
+        // Focus is on the toggle — the panel is a visible `.absolute` element
+        // inside the same `.relative` wrapper. Require >= 2 options so a stray
+        // absolutely-positioned badge/icon is never mistaken for a menu.
+        const wrapper = el.closest('.relative');
+        if (! wrapper) {
+            return null;
+        }
+        return [...wrapper.querySelectorAll('.absolute')].find(
+            (p) => isVisible(p) && p.querySelectorAll('a[href],button:not([disabled])').length >= 2
+        ) || null;
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') {
+            return;
+        }
+        const active = document.activeElement;
+        if (! active || ! ['A', 'BUTTON', 'INPUT'].includes(active.tagName)) {
+            return;
+        }
+        const panel = panelFor(active);
+        if (! panel) {
+            return;
+        }
+        const items = [...panel.querySelectorAll('a[href],button:not([disabled])')].filter(isVisible);
+        if (! items.length) {
+            return;
+        }
+        e.preventDefault();
+        const i = items.indexOf(active);
+        const next = e.key === 'ArrowDown'
+            ? (i < 0 ? 0 : (i + 1) % items.length)
+            : (i <= 0 ? items.length - 1 : i - 1);
+        items[next].focus();
+    });
+})();
