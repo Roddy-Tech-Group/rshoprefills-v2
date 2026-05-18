@@ -13,17 +13,21 @@ class ZenditNormalizer implements CatalogNormalizerInterface
 {
     public function normalizeAndSave(array $rawItem, string $providerName): void
     {
-        // 1. Ensure Gift Cards Category exists
-        $category = Category::firstOrCreate(
-            ['slug' => 'gift-cards'],
-            ['name' => 'Gift Cards', 'type' => 'digital']
-        );
-
-        // 2. Normalize Subtype -> Subcategory.
-        // Zendit returns subTypes as an array; pick the first one (or fall back).
+        // 1. Normalize Subtype. Zendit returns subTypes as an array; pick the first.
         $subTypes = $rawItem['subTypes'] ?? [];
         $subtypeName = is_array($subTypes) && ! empty($subTypes) ? $subTypes[0] : ($rawItem['subtype'] ?? 'Uncategorized');
         $subcategorySlug = Str::slug($subtypeName);
+
+        // 2. Resolve the Category. Prepaid Utilities arrive on the SAME
+        // /vouchers/offers feed as gift cards (Zendit tags both productType
+        // VOUCHER); the "Utilities" subType is the classifier. Route those into
+        // their own Bill Payments category so they form a distinct storefront
+        // instead of polluting the gift-card grid.
+        $isUtility = strtolower($subtypeName) === 'utilities';
+
+        $category = $isUtility
+            ? Category::firstOrCreate(['slug' => 'bill-payments'], ['name' => 'Bill Payments', 'type' => 'digital'])
+            : Category::firstOrCreate(['slug' => 'gift-cards'], ['name' => 'Gift Cards', 'type' => 'digital']);
 
         $subcategory = Subcategory::firstOrCreate(
             ['category_id' => $category->id, 'slug' => $subcategorySlug],
@@ -105,6 +109,7 @@ class ZenditNormalizer implements CatalogNormalizerInterface
             ['provider_offer_id' => $offerId],
             [
                 'product_id' => $product->id,
+                'subcategory_id' => $subcategory->id,
                 'sku' => $rawItem['sku'] ?? $offerId,
                 'currency' => $currencyCode,
                 'face_value' => $faceValue,

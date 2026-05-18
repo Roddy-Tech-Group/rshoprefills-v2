@@ -55,7 +55,9 @@
         }))
         ->when($country !== '', fn ($q) => $q->where('country_code', $country))
         ->when($currency !== '', fn ($q) => $q->where('currency_code', $currency))
-        ->when($sub !== '', fn ($q) => $q->whereHas('subcategory', fn ($qq) => $qq->where('slug', $sub)));
+        // Precise subcategory filter: match products that have at least one
+        // VARIANT in this subcategory, not just the product's representative one.
+        ->when($sub !== '', fn ($q) => $q->whereHas('variants', fn ($qq) => $qq->whereHas('subcategory', fn ($qqq) => $qqq->where('slug', $sub))));
 
     // Pluck one representative Product id per brand_key. With ~692 unique brands this is
     // a cheap single SELECT. Prefer the US variant as the representative (matches the
@@ -112,6 +114,9 @@
         ->sortBy('name')
         ->values();
     $currentCountryName = $country ? ($countryNameMap[$country] ?? $country) : null;
+    // US is the default region — USD, USA products only. Selecting a country
+    // narrows to that region; the clear-X resets back to the US default.
+    $countryFiltered = $country !== '' && $country !== 'US';
 
     $availableCurrencies = Product::query()
         ->when($giftCardsCategory, fn ($q) => $q->where('category_id', $giftCardsCategory->id))
@@ -156,6 +161,16 @@
         return route('shop.gift-cards', $params);
     };
 
+    // Subcategory links for the shared sidebar — "All" first, then each subtype.
+    $sidebarSubItems = array_merge(
+        [['label' => 'All gift cards', 'url' => $filterUrl(['subcategory' => null]), 'active' => $sub === '']],
+        $subcategories->map(fn ($s) => [
+            'label' => $s->name,
+            'url' => $filterUrl(['subcategory' => $s->slug]),
+            'active' => $sub === $s->slug,
+        ])->all()
+    );
+
 @endphp
 
 <x-layouts.app.header>
@@ -165,46 +180,8 @@
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr] lg:gap-8">
 
-                {{-- Left sidebar (desktop only). Lists ONLY the gift-card sub-categories (real DB rows synced from Zendit subTypes).
-                     The top-level product types (eSIMs, Flights, etc.) live in the storefront nav — don't duplicate.
-                     `sticky top-4` keeps it in view while the product grid scrolls; max-height + overflow-y handles long lists. --}}
-                {{-- Sidebar (desktop). The whole aside is sticky as ONE unit;
-                     the inner nav handles its own scroll if the subcategory list outgrows the viewport. --}}
-                {{-- top offset clears the sticky header (top-bar 36 + nav 64 + category bar 40)
-                     so the sidebar parks below it; max-height is the space left under the header. --}}
-                <aside class="hidden self-start lg:sticky lg:top-[156px] lg:block">
-                    <div class="max-h-[calc(100vh-180px)] overflow-y-auto rounded-2xl bg-white/80 backdrop-blur-xl p-3 ring-1 ring-zinc-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-
-                        {{-- Categories group --}}
-                        <p class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">Categories</p>
-                        <nav class="space-y-0.5 text-sm" aria-label="Gift card categories">
-                            <a
-                                href="{{ route('shop.gift-cards') }}"
-                                wire:navigate
-                                class="flex items-center justify-between rounded-lg px-3 py-2 transition-colors {{ $sub === '' ? 'bg-blue-100 font-bold text-blue-700' : 'text-zinc-700 hover:bg-blue-100 hover:text-zinc-900' }}"
-                            >
-                                <span>All gift cards</span>
-                            </a>
-                        </nav>
-
-                        @if ($subcategories->isNotEmpty())
-                            {{-- Subcategories group --}}
-                            <p class="mt-4 px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">Subcategories</p>
-                            <nav class="space-y-0.5 text-sm" aria-label="Gift card subcategories">
-                                @foreach ($subcategories as $s)
-                                    <a
-                                        href="{{ $filterUrl(['subcategory' => $s->slug]) }}"
-                                        wire:navigate
-                                        class="block rounded-lg px-3 py-2 transition-colors {{ $sub === $s->slug ? 'bg-blue-100 font-bold text-blue-700' : 'text-zinc-700 hover:bg-blue-100 hover:text-zinc-900' }}"
-                                    >
-                                        {{ $s->name }}
-                                    </a>
-                                @endforeach
-                            </nav>
-                        @endif
-
-                    </div>
-                </aside>
+                {{-- Shared category sidebar — same component on every storefront. --}}
+                <x-shop.category-sidebar active="gift-cards" :sub-items="$sidebarSubItems" />
 
                 {{-- Main column --}}
                 <div>
@@ -232,20 +209,45 @@
                             @keydown.escape="open = false"
                             class="relative w-full sm:w-72 sm:justify-self-center"
                         >
-                            <button
-                                type="button"
-                                @click="open = !open; if (open) $nextTick(() => $refs.countryQ?.focus())"
+                            <div
                                 :class="open ? 'border-zinc-900 ring-1 ring-zinc-900/10' : 'border-zinc-200 hover:border-zinc-400'"
-                                class="flex w-full items-center justify-between gap-2 rounded-xl border bg-white py-2.5 pl-3.5 pr-3 text-sm text-zinc-900 transition-colors"
+                                class="flex w-full items-center gap-1 rounded-xl border bg-white py-2.5 pl-3.5 pr-2.5 text-sm text-zinc-900 transition-colors"
                             >
-                                <span class="flex min-w-0 items-center gap-2">
-                                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
+                                <button
+                                    type="button"
+                                    @click="open = !open; if (open) $nextTick(() => $refs.countryQ?.focus())"
+                                    class="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
+                                >
+                                    @if ($currentCountryName && Product::flagUrl($country))
+                                        <img src="{{ Product::flagUrl($country) }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                    @else
+                                        <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
+                                    @endif
                                     <span class="truncate {{ $currentCountryName ? 'font-medium text-zinc-900' : 'text-zinc-500' }}">{{ $currentCountryName ?? 'Shop by country' }}</span>
-                                </span>
-                                <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
+                                </button>
+
+                                @if ($countryFiltered)
+                                    <a
+                                        href="{{ $filterUrl(['country' => 'US']) }}"
+                                        wire:navigate
+                                        aria-label="Clear country filter"
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
+                                    >
+                                        <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
+                                    </a>
+                                @endif
+
+                                <button
+                                    type="button"
+                                    @click="open = !open"
+                                    aria-label="Toggle country list"
+                                    class="shrink-0 outline-none"
+                                >
+                                    <svg class="h-4 w-4 text-zinc-500 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                            </div>
 
                             <div
                                 x-show="open"
@@ -349,9 +351,11 @@
                                             class="card-3d-scene group block focus:outline-none"
                                             aria-label="{{ Product::brandDisplayName($product->brand_key) }}"
                                         >
-                                            {{-- White tile, logo fills the card edge-to-edge. Caption sits OUTSIDE on the page background. --}}
+                                            {{-- Logo tile. bg uses a literal hex so the dark-mode
+                                                 remap keeps it white — brand logos are drawn for a
+                                                 light tile and vanish on a dark one. --}}
                                             <div
-                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
+                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-[#ffffff] shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
                                                 x-data="cardTilt()"
                                                 @mousemove="tilt($event)"
                                                 @mouseleave="reset()"
@@ -359,7 +363,7 @@
                                                 @if ($logoSrc)
                                                     <img src="{{ $logoSrc }}" alt="{{ Product::brandDisplayName($product->brand_key) }}" class="h-full w-full object-cover" loading="lazy">
                                                 @else
-                                                    <span class="text-2xl font-black tracking-tight text-zinc-700">
+                                                    <span class="text-2xl font-black tracking-tight text-[#3f3f46]">
                                                         {{ str(Product::brandDisplayName($product->brand_key))->substr(0, 2)->upper() }}
                                                     </span>
                                                 @endif
@@ -391,14 +395,10 @@
 
                         @else
                             <div class="rounded-3xl bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
-                                <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                    </svg>
-                                </span>
+                                <img src="{{ asset('assets/' . rawurlencode('Empty state.png')) }}" alt="" class="mx-auto block h-44 w-auto object-contain" loading="lazy">
                                 <p class="mt-4 text-base font-semibold text-zinc-900">No gift cards match these filters</p>
                                 <p class="mt-1 text-sm text-zinc-600">Try clearing the search or pick a different category.</p>
-                                @if ($search !== '' || $country !== '' || $sub !== '')
+                                @if ($search !== '' || $countryFiltered || $sub !== '')
                                     <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
                                         Clear all filters
                                     </a>

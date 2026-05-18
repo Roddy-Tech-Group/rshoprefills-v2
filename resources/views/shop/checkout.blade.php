@@ -88,7 +88,7 @@
                         <template x-for="item in $store.cart.items" :key="item.id">
                             <li class="flex items-start gap-3 py-4">
                                 {{-- Brand tile — matches the catalog product card (16:10, edge-to-edge logo). --}}
-                                <span class="flex aspect-[16/10] w-24 shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 sm:w-28">
+                                <span class="flex aspect-[16/10] w-28 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-zinc-200 sm:w-32">
                                     <template x-if="item.logo">
                                         <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                     </template>
@@ -167,6 +167,7 @@
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
                     <input type="hidden" name="crypto_network" :value="network">
+                    <input type="hidden" name="currency" :value="$store.cart.currency">
 
                     <h2 class="text-lg font-bold text-zinc-900">Select payment method</h2>
 

@@ -134,17 +134,17 @@
             @for ($i = 0; $i < 6; $i++)
                 <div class="flex w-72 shrink-0 flex-col rounded-2xl bg-white p-5 ring-1 ring-zinc-200 shadow-sm" style="--i: {{ $i }}">
                     <div class="flex items-center gap-3">
-                        <x-skeleton class="h-9 w-9 rounded-full" />
-                        <div class="min-w-0 flex-1 space-y-1.5">
-                            <x-skeleton class="h-3 w-2/3" />
-                            <x-skeleton class="h-2.5 w-1/3" />
+                        <x-skeleton class="h-11 w-11 rounded-full" />
+                        <div class="min-w-0 flex-1 space-y-2">
+                            <x-skeleton class="h-4 w-2/3" />
+                            <x-skeleton class="h-3 w-1/3" />
                         </div>
                     </div>
                     <x-skeleton class="mt-4 h-4 w-28" />
-                    <div class="mt-4 space-y-2">
-                        <x-skeleton class="h-2.5 w-full" />
-                        <x-skeleton class="h-2.5 w-full" />
-                        <x-skeleton class="h-2.5 w-4/5" />
+                    <div class="mt-4 space-y-2.5">
+                        <x-skeleton class="h-3.5 w-full" />
+                        <x-skeleton class="h-3.5 w-full" />
+                        <x-skeleton class="h-3.5 w-4/5" />
                     </div>
                 </div>
             @endfor

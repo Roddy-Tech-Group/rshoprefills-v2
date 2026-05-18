@@ -3,41 +3,40 @@
 
     /** @var \App\Models\Order $order */
 
-    // Brand logos aren't snapshotted on the order item, so resolve them from the
-    // catalog here (view layer — keeps the controller untouched). product_id is
-    // stored as a string; the catalog keys on the integer id.
-    $productIds   = $order->items->pluck('product_id')->filter()->map(fn ($id) => (int) $id)->all();
-    $productsById = Product::whereIn('id', $productIds)->get()->keyBy('id');
-
-    $status = $order->status;
+    $status = $order->order_status;
 
     // Status-driven hero copy + colour. The order is `pending` straight after
-    // checkout (payment gateway hand-off is the next backend step).
+    // checkout while payment is verified, then moves through the fulfillment engine.
     $ui = match ($status->value) {
         'completed' => [
             'tone' => 'emerald', 'icon' => 'check',
             'title' => 'Your order is complete',
             'line'  => 'Your redemption codes are ready below and have been emailed to you.',
         ],
+        'partially_completed' => [
+            'tone' => 'amber', 'icon' => 'clock',
+            'title' => 'Your order is partially complete',
+            'line'  => 'Some items are ready below. The rest are still being processed and will be emailed shortly.',
+        ],
         'processing' => [
             'tone' => 'blue', 'icon' => 'clock',
             'title' => 'Payment received',
-            'line'  => 'We are fulfilling your order. Codes land in your email the moment each card is ready.',
+            'line'  => 'We are fulfilling your order. Codes land in your email the moment each item is ready.',
         ],
         'failed' => [
             'tone' => 'red', 'icon' => 'cross',
             'title' => 'This order could not be completed',
             'line'  => 'Your payment did not go through and no charge was taken. You can try checking out again.',
         ],
-        'refunded' => [
-            'tone' => 'zinc', 'icon' => 'clock',
-            'title' => 'This order was refunded',
-            'line'  => 'The amount has been returned to your original payment method.',
-        ],
         'cancelled' => [
             'tone' => 'zinc', 'icon' => 'cross',
             'title' => 'This order was cancelled',
             'line'  => 'No payment was taken for this order.',
+        ],
+        'requires_attention' => [
+            'tone' => 'amber', 'icon' => 'clock',
+            'title' => 'We are reviewing your order',
+            'line'  => 'This order needs a quick review. Our team will update you by email shortly.',
         ],
         default => [
             'tone' => 'amber', 'icon' => 'clock',
@@ -56,22 +55,24 @@
     $tone = $tones[$ui['tone']];
 
     $statusBadge = match ($status->value) {
-        'completed'  => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-        'processing' => 'bg-blue-50 text-blue-700 ring-blue-200',
-        'failed'     => 'bg-red-50 text-red-700 ring-red-200',
-        'refunded', 'cancelled' => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
-        default      => 'bg-amber-50 text-amber-700 ring-amber-200',
+        'completed'           => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+        'processing'          => 'bg-blue-50 text-blue-700 ring-blue-200',
+        'failed'              => 'bg-red-50 text-red-700 ring-red-200',
+        'cancelled'           => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+        default               => 'bg-amber-50 text-amber-700 ring-amber-200',
     };
 
     // Customer-facing payment label only — the gateway/provider name is never shown.
-    $methodLabels  = ['card' => 'Card', 'mobile_money' => 'Mobile Money', 'crypto' => 'Crypto', 'wallet' => 'Wallet'];
-    $paymentMethod = $methodLabels[$order->metadata['payment_method'] ?? ''] ?? 'Card';
+    // The order stores wallet / flutterwave / crypto; card + mobile money both
+    // settle through Flutterwave, so they surface as the generic "Card".
+    $methodLabels  = ['wallet' => 'Wallet', 'crypto' => 'Crypto', 'flutterwave' => 'Card'];
+    $paymentMethod = $methodLabels[$order->payment_method] ?? 'Card';
     $deliveryEmail = $order->metadata['delivery_email'] ?? auth()->user()?->email;
 
-    $sym   = Product::currencySymbol($order->currency ?: 'USD');
+    $sym   = Product::currencySymbol($order->display_currency ?: 'USD');
     $money = fn ($v) => $sym . number_format((float) $v, 2);
 
-    $points    = (int) floor((float) $order->total * 0.5);
+    $points    = (int) floor((float) $order->total_amount * 0.5);
     $isPending = in_array($status->value, ['pending', 'processing'], true);
 @endphp
 
@@ -122,7 +123,7 @@
         <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
             <div>
                 <dt class="text-xs font-medium text-zinc-500">Date placed</dt>
-                <dd class="mt-0.5 font-semibold text-zinc-900">{{ $order->created_at->format('M j, Y') }}</dd>
+                <dd class="mt-0.5 font-semibold text-zinc-900">{{ ($order->placed_at ?? $order->created_at)->format('M j, Y') }}</dd>
             </div>
             <div>
                 <dt class="text-xs font-medium text-zinc-500">Payment method</dt>
@@ -138,27 +139,31 @@
         <ul class="mt-5 divide-y divide-zinc-100 border-t border-zinc-100">
             @foreach ($order->items as $item)
                 @php
-                    $product = $productsById->get((int) $item->product_id);
-                    $logo    = $product ? Product::brandLogoUrl($product->brand_key, $product->logo_url) : null;
+                    // product_snapshot is the catalog Product captured at order time.
+                    $snap     = $item->product_snapshot ?? [];
+                    $brandKey = $snap['brand_key'] ?? null;
+                    $name     = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Item');
+                    $logo     = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                 @endphp
                 <li class="flex items-start gap-3 py-4">
-                    <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-200">
+                    {{-- Brand tile — matches the catalog / cart product card (16:10, edge-to-edge logo). --}}
+                    <span class="flex aspect-[16/10] w-24 shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 sm:w-28">
                         @if ($logo)
                             <img src="{{ $logo }}" alt="" class="h-full w-full object-cover" loading="lazy">
                         @else
-                            <span class="text-[11px] font-black uppercase text-zinc-700">{{ str($item->product_name)->substr(0, 2)->upper() }}</span>
+                            <span class="text-lg font-black uppercase text-zinc-700">{{ str($name)->substr(0, 2)->upper() }}</span>
                         @endif
                     </span>
 
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-bold text-zinc-900">{{ $item->product_name }}</p>
+                        <p class="truncate text-sm font-bold text-zinc-900">{{ $name }}</p>
                         <p class="mt-0.5 text-xs text-zinc-600">
-                            Qty {{ $item->quantity }} &middot; {{ $money($item->unit_price) }} each
+                            Qty {{ $item->quantity }} &middot; {{ $money($item->display_amount) }} each
                         </p>
-                        @if (! empty($item->fulfillment_data))
+                        @if (! empty($item->fulfillment_payload))
                             <div class="mt-2 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200">
                                 <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Redemption details</p>
-                                @foreach ((array) $item->fulfillment_data as $value)
+                                @foreach ((array) $item->fulfillment_payload as $value)
                                     @if (is_scalar($value))
                                         <p class="mt-1 text-sm font-bold tabular-nums text-zinc-900">{{ $value }}</p>
                                     @endif
@@ -174,26 +179,16 @@
                         @endif
                     </div>
 
-                    <span class="shrink-0 text-sm font-bold tabular-nums text-zinc-900">{{ $money($item->total_price) }}</span>
+                    <span class="shrink-0 text-sm font-bold tabular-nums text-zinc-900">{{ $money($item->subtotal_amount) }}</span>
                 </li>
             @endforeach
         </ul>
 
         {{-- Totals --}}
         <div class="mt-1 space-y-2 border-t border-zinc-100 pt-4 text-sm">
-            <div class="flex items-center justify-between text-zinc-600">
-                <span>Subtotal</span>
-                <span class="tabular-nums">{{ $money($order->subtotal) }}</span>
-            </div>
-            @if ((float) $order->tax > 0)
-                <div class="flex items-center justify-between text-zinc-600">
-                    <span>Tax</span>
-                    <span class="tabular-nums">{{ $money($order->tax) }}</span>
-                </div>
-            @endif
-            <div class="flex items-center justify-between border-t border-zinc-100 pt-2 text-base font-bold text-zinc-900">
+            <div class="flex items-center justify-between text-base font-bold text-zinc-900">
                 <span>Total paid</span>
-                <span class="tabular-nums">{{ $money($order->total) }}</span>
+                <span class="tabular-nums">{{ $money($order->total_amount) }}</span>
             </div>
             <div class="flex items-center justify-between pt-1 text-zinc-600">
                 <span class="inline-flex items-center gap-1.5">
@@ -212,7 +207,7 @@
             <ol class="mt-4 space-y-4">
                 @foreach ([
                     ['Confirm payment', 'We verify your payment with the provider. This is usually instant.'],
-                    ['Codes are issued', 'Each gift card is generated and attached to your order.'],
+                    ['Codes are issued', 'Each item is fulfilled and its redemption code attached to your order.'],
                     ['Delivery', 'Codes arrive at ' . ($deliveryEmail ?: 'your email') . ' and stay available on this page.'],
                 ] as $i => $step)
                     <li class="flex gap-3">

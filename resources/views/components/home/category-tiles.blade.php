@@ -19,7 +19,7 @@
                 <a
                     href="{{ route('shop.gift-cards') }}"
                     wire:navigate
-                    class="inline-flex items-center gap-3 rounded-[25px] bg-black px-6 py-2 ring-1 ring-black transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 hover:bg-gray-900 hover:ring-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                    class="inline-flex items-center gap-3 rounded-[25px] bg-black px-6 py-2 ring-1 ring-black transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 hover:bg-gray-900 hover:ring-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:bg-blue-600 dark:ring-blue-600 dark:hover:bg-blue-700 dark:hover:ring-blue-700"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('gift cards.svg')) }}" alt="" class="h-6 w-6 shrink-0 object-contain brightness-0 invert" loading="lazy">
                     <span class="text-base font-semibold text-white">Gift Cards</span>
@@ -32,7 +32,7 @@
                     href="{{ route('shop.esims') }}"
                     wire:navigate
                     @mouseenter="active = 1"
-                    :class="active === 1 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 1 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('esim.svg')) }}" alt="" :class="active === 1 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
@@ -43,9 +43,10 @@
             {{-- Mobile Top-ups --}}
             <li data-reveal-item class="shrink-0">
                 <a
-                    href="#"
+                    href="{{ route('shop.topups') }}"
+                    wire:navigate
                     @mouseenter="active = 2"
-                    :class="active === 2 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 2 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('mobile.svg')) }}" alt="" :class="active === 2 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
@@ -56,9 +57,10 @@
             {{-- Bill Payments --}}
             <li data-reveal-item class="shrink-0">
                 <a
-                    href="#"
+                    href="{{ route('shop.bills') }}"
+                    wire:navigate
                     @mouseenter="active = 3"
-                    :class="active === 3 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 3 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img :src="active === 3 ? '{{ asset('assets/' . rawurlencode('bill payment.svg')) }}' : '{{ asset('assets/' . rawurlencode('Bills 2.svg')) }}'" alt="" :class="active === 3 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
@@ -71,7 +73,7 @@
                 <a
                     href="#"
                     @mouseenter="active = 4"
-                    :class="active === 4 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 4 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img :src="active === 4 ? '{{ asset('assets/' . rawurlencode('flight.svg')) }}' : '{{ asset('assets/' . rawurlencode('flight 2.svg')) }}'" alt="" :class="active === 4 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
@@ -84,7 +86,7 @@
                 <a
                     href="#"
                     @mouseenter="active = 5"
-                    :class="active === 5 ? 'bg-zinc-900 ring-zinc-900' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 5 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img :src="active === 5 ? '{{ asset('assets/' . rawurlencode('stay.svg')) }}' : '{{ asset('assets/' . rawurlencode('stay 2.svg')) }}'" alt="" :class="active === 5 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">

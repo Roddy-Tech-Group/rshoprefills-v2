@@ -3,31 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Cart\Services\CartManager;
-use App\Domain\Cart\Services\CartPricingService;
-use App\Domain\Shared\Enums\OrderStatus;
-use App\Domain\Shared\Enums\PaymentGateway;
-use App\Domain\Shared\Enums\PaymentStatus;
+use App\Domain\Order\Services\CheckoutService;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Payment;
-use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Throwable;
 
 /**
- * Turns a cart into an order.
- *
- * process() creates the Order + OrderItem rows and a PENDING Payment, then
- * marks the cart converted. The actual gateway hand-off (Flutterwave hosted
- * page, NowPayments invoice, or wallet debit) is the marked TODO — it needs
- * gateway credentials/SDKs which live in backend infrastructure.
+ * Web checkout. Delegates order placement to the CheckoutService orchestration
+ * engine (the same path CheckoutApiController uses): cart validation, atomic
+ * Order + OrderItem snapshots, a PaymentAttempt, gateway init, and — for wallet
+ * payments — an immediate pessimistic-lock reserve + fulfillment dispatch.
  */
 class CheckoutController extends Controller
 {
     public function __construct(
         private CartManager $cartManager,
-        private CartPricingService $pricing,
+        private CheckoutService $checkoutService,
     ) {}
 
     public function process(Request $request)
@@ -48,75 +39,36 @@ class CheckoutController extends Controller
                 ->with('checkout_status', 'Your cart is empty.');
         }
 
-        $totals = $this->pricing->calculateCartTotals($cart->items);
-
-        // Map the UI payment choice onto the backend PaymentGateway enum.
-        $gateway = match ($data['payment_method']) {
-            'crypto' => PaymentGateway::NowPayments,
-            'wallet' => PaymentGateway::Wallet,
-            default => PaymentGateway::Flutterwave, // card + mobile_money
+        // The UI offers card / mobile_money / crypto / wallet; the CheckoutService
+        // engine speaks wallet / flutterwave / crypto — card + mobile money both
+        // settle through Flutterwave.
+        $paymentMethod = match ($data['payment_method']) {
+            'wallet' => 'wallet',
+            'crypto' => 'crypto',
+            default => 'flutterwave',
         };
 
-        $order = DB::transaction(function () use ($cart, $user, $totals, $data, $gateway) {
-            $order = Order::create([
-                'user_id' => $user->id,
-                'order_number' => 'RSR-'.now()->format('Ymd').'-'.strtoupper(Str::random(4)),
-                'status' => OrderStatus::Pending,
-                'subtotal' => $totals['subtotal'] ?? 0,
-                'tax' => 0,
-                'total' => $totals['total'] ?? 0,
-                'currency' => $totals['currency'] ?? 'USD',
-                'metadata' => [
-                    'delivery_email' => $data['delivery_email'],
-                    'payment_method' => $data['payment_method'],
-                ],
-            ]);
+        // Display currency comes from the customer's locale (hidden field on the
+        // checkout form). Settlement is always USD; this is presentation only.
+        $displayCurrency = strtoupper((string) $request->input('currency', 'USD'));
+        if (strlen($displayCurrency) !== 3) {
+            $displayCurrency = 'USD';
+        }
 
-            foreach ($cart->items as $item) {
-                $product = $item->product;
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_type' => 'gift_card',
-                    'product_id' => (string) $item->product_id,
-                    'product_name' => $product
-                        ? Product::brandDisplayName($product->brand_key)
-                        : ($item->metadata_snapshot['product_name'] ?? 'Gift Card'),
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price_snapshot,
-                    'total_price' => $item->subtotal_snapshot,
-                    'currency' => $item->display_currency ?? 'USD',
-                    'fulfillment_status' => 'pending',
-                    'metadata' => [
-                        'product_variant_id' => $item->product_variant_id,
-                    ],
-                ]);
-            }
+        try {
+            $order = $this->checkoutService->placeOrder(
+                user: $user,
+                cart: $cart,
+                paymentMethod: $paymentMethod,
+                displayCurrency: $displayCurrency,
+                deliveryEmail: $data['delivery_email'],
+            );
+        } catch (Throwable $e) {
+            return redirect()->route('shop.checkout')
+                ->with('checkout_status', 'Checkout could not be completed: '.$e->getMessage());
+        }
 
-            Payment::create([
-                'order_id' => $order->id,
-                'user_id' => $user->id,
-                'gateway' => $gateway,
-                'status' => PaymentStatus::Pending,
-                'amount' => $totals['total'] ?? 0,
-                'currency' => $totals['currency'] ?? 'USD',
-            ]);
-
-            // The cart has been consumed by this order.
-            $cart->update(['status' => 'converted']);
-
-            return $order;
-        });
-
-        // TODO(backend): hand the pending Payment to its gateway and redirect the
-        // customer to the hosted payment page:
-        //   Flutterwave  → card / mobile_money
-        //   NowPayments  → crypto (returns a wallet address + amount)
-        //   Wallet       → debit a WalletTransaction here, no redirect
-        // The gateway webhook then flips Payment + Order status to completed and
-        // triggers Zendit fulfillment of each OrderItem.
-
-        return redirect()->route('shop.order', $order->order_number)
-            ->with('checkout_status', 'Order placed. Payment gateway hand-off is the next backend step.');
+        return redirect()->route('shop.order', $order->order_number);
     }
 
     /**
@@ -128,7 +80,7 @@ class CheckoutController extends Controller
         $order = Order::query()
             ->where('order_number', $orderNumber)
             ->where('user_id', $request->user()?->id)
-            ->with(['items', 'payments'])
+            ->with(['items', 'paymentAttempts'])
             ->firstOrFail();
 
         return view('shop.order', ['order' => $order]);

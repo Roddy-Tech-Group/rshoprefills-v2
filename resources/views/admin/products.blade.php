@@ -31,15 +31,6 @@
         'country' => $code,
     ]));
 
-    // Flag emoji from an ISO-2 code via regional-indicator codepoints.
-    $flag = function (?string $code) {
-        if (! $code || strlen($code) !== 2) {
-            return '';
-        }
-        $code = strtoupper($code);
-        return mb_chr(0x1F1E6 + ord($code[0]) - ord('A')) . mb_chr(0x1F1E6 + ord($code[1]) - ord('A'));
-    };
-
     $selectedCountryName = $country !== 'ALL' ? ($countryNames[$country] ?? $country) : null;
 
     // Search resolves against the product name AND country. We accept ISO-2 codes
@@ -146,7 +137,10 @@
                     </svg>
                     <span class="flex-1 truncate text-left font-medium">
                         @if ($selectedCountryName)
-                            {{ $flag($country) }} {{ $selectedCountryName }}
+                            @if (Product::flagUrl($country))
+                                <img src="{{ Product::flagUrl($country) }}" alt="" class="mr-1.5 inline-block h-3.5 w-5 rounded-[2px] object-cover align-[-3px] ring-1 ring-zinc-200">
+                            @endif
+                            {{ $selectedCountryName }}
                         @else
                             All countries
                         @endif
@@ -192,7 +186,9 @@
                                 class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $country === $code ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-100' }}"
                             >
                                 <span class="flex min-w-0 items-center gap-2">
-                                    <span class="shrink-0 text-base leading-none">{{ $flag($code) }}</span>
+                                    @if (Product::flagUrl($code))
+                                        <img src="{{ Product::flagUrl($code) }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                    @endif
                                     <span class="truncate">{{ $name }}</span>
                                 </span>
                                 <span class="shrink-0 text-xs text-zinc-500">{{ $opt->product_count }}</span>
@@ -204,9 +200,7 @@
 
             @if ($anyFilter)
                 <a href="{{ route('admin.products') }}" wire:navigate class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                    </svg>
+                    <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-4 w-4 object-contain" loading="lazy">
                     Clear filters
                 </a>
             @endif
@@ -230,7 +224,7 @@
                     <a
                         href="{{ $href }}"
                         wire:navigate
-                        class="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold ring-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $isActive ? 'bg-zinc-900 text-white ring-zinc-900' : 'bg-white text-zinc-800 ring-zinc-200 hover:bg-zinc-50' }}"
+                        class="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold ring-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $isActive ? 'bg-zinc-900 text-white ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white text-zinc-800 ring-zinc-200 hover:bg-zinc-50' }}"
                     >
                         {{ $pill['name'] }}
                     </a>
@@ -257,18 +251,18 @@
                     @for ($i = 0; $i < 8; $i++)
                         <div class="grid grid-cols-7 items-center gap-3 px-5 py-3.5" style="--i: {{ $i }}">
                             <span class="flex items-center gap-3">
-                                <x-skeleton shape="rect" w="h-9" h="w-9" rounded="rounded-lg" />
-                                <span class="flex flex-col gap-1.5">
-                                    <x-skeleton shape="line" class="h-3 w-32" />
-                                    <x-skeleton shape="line" class="h-2.5 w-20" />
+                                <x-skeleton class="h-10 w-10 rounded-xl" />
+                                <span class="flex flex-col gap-2">
+                                    <x-skeleton class="h-4 w-32" />
+                                    <x-skeleton class="h-3 w-20" />
                                 </span>
                             </span>
-                            <x-skeleton shape="line" class="h-3 w-20" />
-                            <x-skeleton shape="line" class="h-3 w-8" />
-                            <x-skeleton shape="line" class="h-3 w-12" />
-                            <x-skeleton shape="line" class="h-3 w-24" />
-                            <x-skeleton shape="line" class="h-4 w-16 rounded-[5px]" />
-                            <x-skeleton shape="line" class="h-3 w-10 justify-self-end" />
+                            <x-skeleton class="h-4 w-20" />
+                            <x-skeleton class="h-4 w-9" />
+                            <x-skeleton class="h-4 w-14" />
+                            <x-skeleton class="h-4 w-24" />
+                            <x-skeleton class="h-6 w-16 rounded-full" />
+                            <x-skeleton class="h-4 w-12 justify-self-end" />
                         </div>
                     @endfor
                 </div>
@@ -276,7 +270,7 @@
 
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
-                    <thead class="border-b border-zinc-100 bg-zinc-50/60">
+                    <thead class="border-b border-zinc-100 bg-zinc-50">
                         <tr class="text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600">
                             <th class="px-5 py-3 font-semibold">Product</th>
                             <th class="px-5 py-3 font-semibold">Category</th>
@@ -296,12 +290,13 @@
                                 $minPrice = ! empty($prices) ? min($prices) : null;
                                 $maxPrice = ! empty($prices) ? max($prices) : null;
                                 $currency = $product->currency_code ?: 'USD';
+                                $logoSrc = Product::brandLogoUrl($product->brand_key, $product->logo_url);
                             @endphp
                             <tr class="transition-colors duration-150 hover:bg-blue-50/40">
                                 <td class="px-5 py-3.5">
                                     <div class="flex items-center gap-3">
-                                        @if ($product->logo_url)
-                                            <img src="{{ $product->logo_url }}" alt="" class="h-10 w-10 shrink-0 rounded-xl object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
+                                        @if ($logoSrc)
+                                            <img src="{{ $logoSrc }}" alt="" class="h-10 w-10 shrink-0 rounded-xl object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
                                         @else
                                             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xs font-bold uppercase tracking-tight text-blue-700 ring-1 ring-blue-100">
                                                 {{ str($product->name)->substr(0, 2)->upper() }}
@@ -315,7 +310,12 @@
                                 </td>
                                 <td class="px-5 py-3.5 text-sm text-zinc-700">{{ $product->category?->name ?? '—' }}</td>
                                 <td class="px-5 py-3.5">
-                                    <span class="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-zinc-700">{{ $product->country_code ?? '—' }}</span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-zinc-700">
+                                        @if (Product::flagUrl($product->country_code))
+                                            <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-3 w-[18px] rounded-[1px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                        @endif
+                                        {{ $product->country_code ?? '—' }}
+                                    </span>
                                 </td>
                                 <td class="px-5 py-3.5 text-sm text-zinc-700">
                                     <span class="font-semibold text-zinc-900 tabular-nums">{{ $variants->count() }}</span>
@@ -369,9 +369,7 @@
                                     @if ($search !== '' || $categorySlug !== 'all')
                                         <a href="{{ route('admin.products') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
                                             Clear all filters
-                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
+                                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                                         </a>
                                     @endif
                                 </td>
