@@ -25,6 +25,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Replace with controllers when CRUD/actions ship.
         Route::view('products', 'admin.products')->name('products');
         Route::view('orders', 'admin.orders')->name('orders');
+        Route::get('orders/{order}', function (\App\Models\Order $order) {
+            return view('admin.order', [
+                'order' => $order->load(['user', 'items', 'paymentAttempts']),
+            ]);
+        })->name('order');
         Route::view('customers', 'admin.customers')->name('customers');
         Route::view('transactions', 'admin.transactions')->name('transactions');
         Route::view('wallets', 'admin.wallets')->name('wallets');

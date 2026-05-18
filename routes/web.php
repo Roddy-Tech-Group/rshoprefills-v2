@@ -209,6 +209,11 @@ Route::get('bills/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.bill');
 
+// Flights & Stays — branded "coming soon" pages until the booking catalog ships.
+// One shared view, the `service` data flag drives the per-service copy + art.
+Route::view('flights', 'shop.coming-soon', ['service' => 'flights'])->name('shop.flights');
+Route::view('stays', 'shop.coming-soon', ['service' => 'stays'])->name('shop.stays');
+
 // Cart page (HTML). Store-driven — it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 
@@ -271,6 +276,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard/kyc', 'dashboard.kyc')->name('dashboard.kyc');
 
     Volt::route('dashboard/orders', 'dashboard.orders')->name('dashboard.orders');
+
+    Volt::route('dashboard/transactions', 'dashboard.transactions')->name('dashboard.transactions');
+
+    Volt::route('dashboard/notifications', 'dashboard.notifications')->name('dashboard.notifications');
+
+    Route::view('dashboard/saved-cards', 'dashboard.saved-cards')->name('dashboard.saved-cards');
+
+    Route::view('dashboard/wallet', 'dashboard.wallet')->name('dashboard.wallet');
 
     Volt::route('dashboard/profile', 'settings.profile')->name('dashboard.profile');
     Volt::route('dashboard/password', 'settings.password')->name('dashboard.password');

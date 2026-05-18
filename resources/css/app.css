@@ -261,7 +261,7 @@ body::-webkit-scrollbar-thumb:hover {
 .skeleton {
     position: relative;
     overflow: hidden;
-    background-color: #e4e9f0;
+    background-color: #d4d4d4;
 }
 .skeleton::after {
     content: "";

@@ -469,13 +469,13 @@
                 </a>
 
                 {{-- Flights --}}
-                <a href="#" @click.prevent class="{{ $catLinkClass }} {{ $catLinkState('Flights') }}">
+                <a href="{{ route('shop.flights') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Flights') }}">
                     <img src="{{ asset('assets/' . rawurlencode('flight 2.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('Flights') }}" loading="lazy">
                     Flights
                 </a>
 
                 {{-- Stays --}}
-                <a href="#" @click.prevent class="{{ $catLinkClass }} {{ $catLinkState('Stays') }}">
+                <a href="{{ route('shop.stays') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Stays') }}">
                     <img src="{{ asset('assets/' . rawurlencode('stay 2.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('Stays') }}" loading="lazy">
                     Stays
                 </a>
