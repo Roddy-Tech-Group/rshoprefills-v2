@@ -354,11 +354,11 @@
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 -translate-y-1"
                         style="display:none;"
-                        class="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
+                        class="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-2xl bg-white/80 px-3 py-2 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
                         role="menu"
                     >
                         {{-- Empty state --}}
-                        <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-6 py-7 text-center">
+                        <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
                             <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
                             <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
                             <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
@@ -366,15 +366,15 @@
 
                         {{-- Populated state --}}
                         <div x-show="$store.cart.count > 0" x-cloak>
-                            <div class="flex items-center justify-between px-5 pt-5">
+                            <div class="flex items-center justify-between px-3 pt-3">
                                 <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
                                 <span class="text-sm text-zinc-600" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
                             </div>
 
-                            <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                 <template x-for="item in $store.cart.items" :key="item.id">
-                                    <li class="flex items-center gap-3 rounded-xl px-2 py-2.5">
-                                        <span class="flex aspect-[16/10] w-20 shrink-0 items-center justify-center overflow-hidden rounded-[2px] bg-white shadow-sm ring-1 ring-zinc-200">
+                                    <li class="flex items-center gap-3 rounded-xl px-3 py-2.5">
+                                        <span class="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-zinc-200">
                                             <template x-if="item.logo">
                                                 <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                             </template>
@@ -384,13 +384,7 @@
                                         </span>
                                         <span class="min-w-0 flex-1">
                                             <span class="block truncate text-sm font-bold text-zinc-900" x-text="item.name"></span>
-                                            <span class="block truncate text-xs text-zinc-500">
-                                                <span x-show="item.face_label" x-text="item.face_label"></span><span x-show="item.face_label && item.country"> &middot; </span><span x-text="item.country"></span>
-                                            </span>
-                                            <span class="block text-xs font-semibold text-zinc-700">
-                                                <span x-text="$store.cart.pay(item.unit_price)"></span>
-                                                <span x-show="$store.cart.showUsd" class="font-normal text-zinc-400" x-text="'(' + $store.cart.usd(item.unit_price_usd) + ')'"></span>
-                                            </span>
+                                            <span class="mt-0.5 block text-xs font-semibold text-zinc-700" x-text="$store.cart.pay(item.unit_price)"></span>
                                         </span>
                                         {{-- Quantity counter --}}
                                         <span class="flex shrink-0 items-center gap-1.5">
@@ -406,19 +400,11 @@
                                 </template>
                             </ul>
 
-                            <div class="mx-5 flex items-start justify-between border-t border-zinc-200 py-4">
-                                <span class="text-sm font-medium text-zinc-700">Subtotal</span>
-                                <span class="text-right">
-                                    <span class="block text-base font-bold tabular-nums text-zinc-900" x-text="$store.cart.pay($store.cart.subtotal)"></span>
-                                    <span x-show="$store.cart.showUsd" class="block text-xs text-zinc-500" x-text="'(' + $store.cart.usd($store.cart.subtotalUsd) + ' USD)'"></span>
-                                </span>
-                            </div>
-
-                            <div class="flex gap-2 border-t border-zinc-100 bg-zinc-50 p-3">
-                                <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
+                            <div class="mt-3 flex gap-2 rounded-xl bg-zinc-50 px-3 py-3">
+                                <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
                                     View cart
                                 </a>
-                                <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                                <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                                     Checkout
                                 </a>
                             </div>
@@ -455,13 +441,13 @@
                 </a>
 
                 {{-- Mobile top up --}}
-                <a href="#" @click.prevent="activeCategory = 'Mobile top up'" :class="activeCategory === 'Mobile top up' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                <a href="{{ route('shop.topups') }}" wire:navigate @click="activeCategory = 'Mobile top up'" :class="activeCategory === 'Mobile top up' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
                     <img src="{{ asset('assets/' . rawurlencode('topup1.svg')) }}" alt="" class="{{ $catImgClass }}" loading="lazy">
                     Mobile top up
                 </a>
 
                 {{-- Bill payments --}}
-                <a href="#" @click.prevent="activeCategory = 'Bill payments'" :class="activeCategory === 'Bill payments' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
+                <a href="{{ route('shop.bills') }}" wire:navigate @click="activeCategory = 'Bill payments'" :class="activeCategory === 'Bill payments' ? 'text-zinc-900 font-semibold after:bg-zinc-900' : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent'" class="{{ $catLinkClass }}">
                     <img :src="activeCategory === 'Bill payments' ? '{{ asset('assets/' . rawurlencode('bill payment.svg')) }}' : '{{ asset('assets/' . rawurlencode('Bills 2.svg')) }}'" alt="" class="{{ $catImgClass }}" loading="lazy">
                     Bill payments
                 </a>

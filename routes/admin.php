@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCatalogController;
+use App\Http\Controllers\Admin\AdminCommerceController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFintechController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
+use App\Http\Controllers\Admin\NotificationAdminApiController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -28,6 +30,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::view('wallets', 'admin.wallets')->name('wallets');
         Volt::route('rates', 'admin.rates')->name('rates');
         Volt::route('account', 'admin.account')->name('account');
+        Volt::route('notifications', 'admin.notifications')->name('notifications');
 
         // Admin Dashboard API
         Route::prefix('api/dashboard')->name('api.dashboard.')->group(function () {
@@ -53,17 +56,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Admin Commerce Monitoring & Actions API
         Route::prefix('api/commerce')->name('api.commerce.')->group(function () {
-            Route::get('orders', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listOrders'])->name('orders');
-            Route::get('payments', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listPayments'])->name('payments');
-            Route::get('fulfillments', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'listFulfillmentLogs'])->name('fulfillments');
-            Route::post('orders/{itemId}/retry-fulfillment', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'retryFulfillment'])->name('retry-fulfillment');
-            Route::post('orders/{orderId}/refund', [\App\Http\Controllers\Admin\AdminCommerceController::class, 'refundOrder'])->name('refund');
+            Route::get('orders', [AdminCommerceController::class, 'listOrders'])->name('orders');
+            Route::get('payments', [AdminCommerceController::class, 'listPayments'])->name('payments');
+            Route::get('fulfillments', [AdminCommerceController::class, 'listFulfillmentLogs'])->name('fulfillments');
+            Route::post('orders/{itemId}/retry-fulfillment', [AdminCommerceController::class, 'retryFulfillment'])->name('retry-fulfillment');
+            Route::post('orders/{orderId}/refund', [AdminCommerceController::class, 'refundOrder'])->name('refund');
         });
 
         // Admin Catalog API
         Route::prefix('api/catalog')->name('api.catalog.')->group(function () {
             Route::post('sync/zendit', [AdminCatalogController::class, 'syncZendit'])->name('sync.zendit');
             Route::post('sync/zendit-esims', [AdminCatalogController::class, 'syncZenditEsims'])->name('sync.zendit-esims');
+            Route::post('sync/zendit-topups', [AdminCatalogController::class, 'syncZenditTopups'])->name('sync.zendit-topups');
             Route::get('products', [AdminCatalogController::class, 'products'])->name('products');
             Route::patch('products/{product}/toggle-active', [AdminCatalogController::class, 'toggleActive']);
             Route::patch('products/{product}/toggle-featured', [AdminCatalogController::class, 'toggleFeatured']);
@@ -72,10 +76,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Admin Notifications & Compliance API
         Route::prefix('api/notifications')->name('api.notifications.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'index'])->name('index');
-            Route::get('deliveries', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'deliveries'])->name('deliveries');
-            Route::get('metrics', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'metrics'])->name('metrics');
-            Route::post('{id}/retry', [\App\Http\Controllers\Admin\NotificationAdminApiController::class, 'retry'])->name('retry');
+            Route::get('/', [NotificationAdminApiController::class, 'index'])->name('index');
+            Route::get('deliveries', [NotificationAdminApiController::class, 'deliveries'])->name('deliveries');
+            Route::get('metrics', [NotificationAdminApiController::class, 'metrics'])->name('metrics');
+            Route::post('{id}/retry', [NotificationAdminApiController::class, 'retry'])->name('retry');
         });
     });
 });

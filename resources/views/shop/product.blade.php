@@ -11,6 +11,19 @@
     $brandName = Product::brandDisplayName($brandKey);
     $logoSrc   = Product::brandLogoUrl($brandKey, $product->logo_url);
 
+    // This page is shared across catalog categories — gift cards and mobile
+    // top-ups both render here. Derive the customer-facing noun + routes from
+    // the product's category so a top-up never reads as a "gift card".
+    $categorySlug = $product->category?->slug ?? 'gift-cards';
+    $isTopup      = $categorySlug === 'mobile-airtime';
+    $isBill       = $categorySlug === 'bill-payments';
+
+    [$kindNoun, $kindTitle, $listingRoute, $detailRoute] = match ($categorySlug) {
+        'mobile-airtime' => ['top-up', 'Mobile Top-up', 'shop.topups', 'shop.topup'],
+        'bill-payments'  => ['bill payment', 'Bill Payment', 'shop.bills', 'shop.bill'],
+        default          => ['gift card', 'Gift Card', 'shop.gift-cards', 'shop.brand'],
+    };
+
     $variants    = $product->variants;
     $fixedDenoms = $variants->where('is_variable', false)->sortBy('retail_price')->values();
     $variable    = $variants->where('is_variable', true)->first();
@@ -47,6 +60,15 @@
         ->orderByRaw("country_code = '" . addslashes($product->country_code) . "' DESC")
         ->orderBy('country_code')
         ->pluck('country_code');
+
+    // Primary redemption URL — a curated override (config/brand_urls.php), else
+    // the first link inside Zendit's redemption instructions — so the customer
+    // can jump straight to the brand to redeem right after buying.
+    $redeemUrl = config("brand_urls.urls.{$brandKey}");
+    if (! $redeemUrl && $product->redeem_instructions
+        && preg_match('~https?://[^\s<>"\'\)]+~i', $product->redeem_instructions, $m)) {
+        $redeemUrl = $m[0];
+    }
 
     // Brand colour: config override → Zendit-synced colour → brand blue accent fallback.
     $brandCardColor = Product::brandColor($brandKey, $product->brand_color);
@@ -180,6 +202,7 @@
         ->where('is_active', true)
         ->where('brand_key', '!=', $brandKey)
         ->whereNotNull('brand_key')
+        ->where('category_id', $product->category_id)
         ->where('country_code', $product->country_code)
         ->when($product->subcategory_id, fn ($q) => $q->where('subcategory_id', $product->subcategory_id))
         ->select('brand_key', \Illuminate\Support\Facades\DB::raw('MIN(id) as id'))
@@ -195,7 +218,7 @@
         ->get(['id', 'name', 'slug', 'brand_key', 'country_code', 'logo_url', 'featured_image', 'brand_color']);
 @endphp
 
-<x-layouts.app.header :title="$brandName . ' Gift Card | RshopRefills'">
+<x-layouts.app.header :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'">
 
     <div
         x-data="brandDetail({
@@ -226,11 +249,12 @@
                     <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#ededee] p-10 sm:p-14">
                         <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
                             @if ($logoSrc)
-                                <img src="{{ $logoSrc }}" alt="{{ $brandName }} gift card" class="h-full w-full object-cover" loading="eager">
+                                <img src="{{ $logoSrc }}" alt="{{ $brandName }} {{ $kindNoun }}" class="h-full w-full object-cover" loading="eager">
                             @else
-                                <span class="text-3xl font-black uppercase tracking-tight text-zinc-700">
-                                    {{ str($brandName)->substr(0, 2)->upper() }}
-                                </span>
+                                {{-- No logo (e.g. mobile-airtime operators) — a branded name tile. --}}
+                                <div class="flex h-full w-full items-center justify-center" style="background-color: {{ Product::tileColor($brandKey) }}">
+                                    <span class="px-4 text-center text-2xl font-extrabold leading-tight text-white">{{ $brandName }}</span>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -242,10 +266,18 @@
 
                 {{-- Heading --}}
                 <div>
-                    <h1 class="text-[24px] font-bold leading-tight text-zinc-900">{{ $brandName }} gift card</h1>
+                    <h1 class="text-[24px] font-bold leading-tight text-zinc-900">{{ $brandName }} {{ $kindNoun }}</h1>
 
                     @if ($product->description)
                         <div class="mt-3 text-base leading-relaxed text-zinc-600 [&>p]:mb-2 [&_a]:text-blue-600 [&_a]:underline">{!! $product->description !!}</div>
+                    @elseif ($isTopup)
+                        <p class="mt-3 text-base leading-relaxed text-zinc-600">
+                            Send airtime to any {{ $brandName }} number. Instant delivery and a fair refund policy.
+                        </p>
+                    @elseif ($isBill)
+                        <p class="mt-3 text-base leading-relaxed text-zinc-600">
+                            Pay your {{ $brandName }} bill instantly. Fast delivery and a fair refund policy.
+                        </p>
                     @else
                         <p class="mt-3 text-base leading-relaxed text-zinc-600">
                             Buy {{ $brandName }} gift cards with Bitcoin, USDT, USDC and other Crypto. Instant delivery and a fair refund policy.
@@ -272,7 +304,7 @@
                         <svg class="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        Online &amp; instore redeemable
+                        {{ $isTopup ? 'Credited straight to the number' : ($isBill ? 'Paid straight to the account' : 'Online & instore redeemable') }}
                     </span>
                 </div>
 
@@ -585,36 +617,87 @@
                         </button>
                     </div>
 
-                    {{-- Country availability — real flag image (flagcdn) + the redeemable
-                         country, then a link to switch country via the locale modal. --}}
+                    {{-- Where this product can be used. Each (brand x country) is a
+                         separate variant; these chips list every country the brand
+                         covers so the customer picks the right one and never buys a
+                         card that won't work where they are. --}}
+                    @php
+                        $useWord = $isTopup ? 'Works in' : ($isBill ? 'Available in' : 'Redeemable in');
+                        $multiCountry = $brandCountries->count() > 1;
+                    @endphp
                     <div>
-                        <p class="flex items-center gap-2 text-sm text-zinc-700">
-                            @if (Product::flagUrl($product->country_code))
-                                <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-4 w-6 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                        <p class="text-sm font-bold text-zinc-900">{{ $useWord }}</p>
+                        <p class="mt-0.5 text-xs leading-relaxed text-zinc-600">
+                            @if ($multiCountry)
+                                You are viewing the <span class="font-semibold text-zinc-900">{{ $countryName }}</span> {{ $kindNoun }}. It only works in the country it is issued for — pick yours below. If your country is not listed, this {{ $kindNoun }} is not available there.
+                            @else
+                                This {{ $kindNoun }} can only be used in {{ $countryName }}.
                             @endif
-                            <span>May only be redeemable in {{ $countryName }}</span>
                         </p>
-                        <p class="mt-0.5 text-sm text-zinc-600">
-                            Not in {{ $countryName }}?
-                            <button type="button" @click="$dispatch('open-locale-modal'); localeModalOpen = true" class="font-semibold text-zinc-900 underline underline-offset-2 transition-colors hover:text-blue-700">
-                                Find your country
-                            </button>
-                        </p>
+                        <div class="mt-2.5 flex flex-wrap gap-1.5">
+                            @foreach ($brandCountries->take(24) as $iso)
+                                @php
+                                    $iso       = strtoupper($iso);
+                                    $cName     = $countryNames[$iso] ?? $iso;
+                                    $isCurrent = $iso === strtoupper($product->country_code);
+                                @endphp
+                                @if ($isCurrent)
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
+                                        @if (Product::flagUrl($iso))
+                                            <img src="{{ Product::flagUrl($iso) }}" alt="" class="h-3.5 w-5 rounded-[2px] object-cover">
+                                        @endif
+                                        {{ $cName }}
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                        </svg>
+                                    </span>
+                                @else
+                                    <a
+                                        href="{{ route($detailRoute, ['brandSlug' => Product::brandSlug($brandKey), 'country' => $iso]) }}"
+                                        wire:navigate
+                                        class="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                                    >
+                                        @if (Product::flagUrl($iso))
+                                            <img src="{{ Product::flagUrl($iso) }}" alt="" class="h-3.5 w-5 rounded-[2px] object-cover ring-1 ring-zinc-200">
+                                        @endif
+                                        {{ $cName }}
+                                    </a>
+                                @endif
+                            @endforeach
+                            @if ($brandCountries->count() > 24)
+                                <span class="inline-flex items-center rounded-full px-2 py-1.5 text-xs font-medium text-zinc-500">+{{ $brandCountries->count() - 24 }} more</span>
+                            @endif
+                        </div>
                     </div>
                 @else
                     <div class="rounded-2xl bg-zinc-50 px-4 py-8 text-center ring-1 ring-zinc-100">
                         <p class="text-base font-semibold text-zinc-900">Out of stock</p>
-                        <p class="mt-1 text-sm text-zinc-600">This card has no denominations available right now. Check back later.</p>
+                        <p class="mt-1 text-sm text-zinc-600">{{ $isTopup ? 'This network has no top-up amounts available right now.' : ($isBill ? 'This biller has no payment amounts available right now.' : 'This card has no denominations available right now.') }} Check back later.</p>
                     </div>
                 @endif
 
                 {{-- Accordion sections: How to redeem / Terms / FAQ — INSIDE the right column so the
                      gift card stays alone on the left. No dividers between items. --}}
                 <section class="mt-6">
+            @if ($redeemUrl)
+                {{-- Jump straight to the brand's redemption page in a new tab. --}}
+                <a
+                    href="{{ $redeemUrl }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="mb-2 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                >
+                    Redeem at {{ $brandName }}
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
+                    </svg>
+                </a>
+            @endif
+
             @if ($product->redeem_instructions)
                 <details class="group" open>
                     <summary class="flex cursor-pointer items-center justify-between py-5 text-lg font-bold text-zinc-900 marker:content-['']">
-                        How to redeem
+                        {{ $categorySlug === 'gift-cards' ? 'How to redeem' : 'How it works' }}
                         <svg class="h-5 w-5 text-zinc-600 transition-transform group-open:rotate-45" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
                         </svg>
@@ -666,9 +749,19 @@
                     </svg>
                 </summary>
                 <div class="pb-5 text-base leading-relaxed text-zinc-700">
-                    <p class="mb-3"><strong class="text-zinc-900">How fast will I receive my gift card?</strong><br>Delivery is instant — the redemption code lands in your delivery email within seconds of confirmed payment.</p>
-                    <p class="mb-3"><strong class="text-zinc-900">Can I redeem this {{ $brandName }} gift card in my country?</strong><br>This card is only redeemable in {{ $countryName }}. To shop a different country's catalog, switch country in the locale picker at the top of the page.</p>
-                    <p><strong class="text-zinc-900">What happens if the code doesn't work?</strong><br>Our fair-refund policy covers any code that fails to redeem due to a delivery issue on our end. Contact support with your order ID.</p>
+                    @if ($isTopup)
+                        <p class="mb-3"><strong class="text-zinc-900">How fast will the top-up arrive?</strong><br>Delivery is instant — the airtime is credited to the phone number within seconds of confirmed payment.</p>
+                        <p class="mb-3"><strong class="text-zinc-900">Which numbers can I top up on {{ $brandName }}?</strong><br>This top-up works for {{ $brandName }} mobile numbers in {{ $countryName }}. To top up a different network or country, switch country in the locale picker at the top of the page.</p>
+                        <p><strong class="text-zinc-900">What happens if the top-up fails?</strong><br>Our fair-refund policy covers any top-up that fails to deliver due to an issue on our end. Contact support with your order ID.</p>
+                    @elseif ($isBill)
+                        <p class="mb-3"><strong class="text-zinc-900">How fast is the bill paid?</strong><br>Payment is instant — the amount is applied to the account within seconds of confirmed payment.</p>
+                        <p class="mb-3"><strong class="text-zinc-900">What do I need to pay a {{ $brandName }} bill?</strong><br>You need the account or meter number the bill is registered to. Enter it at checkout so the payment reaches the right account.</p>
+                        <p><strong class="text-zinc-900">What happens if the payment fails?</strong><br>Our fair-refund policy covers any bill payment that fails to apply due to an issue on our end. Contact support with your order ID.</p>
+                    @else
+                        <p class="mb-3"><strong class="text-zinc-900">How fast will I receive my gift card?</strong><br>Delivery is instant — the redemption code lands in your delivery email within seconds of confirmed payment.</p>
+                        <p class="mb-3"><strong class="text-zinc-900">Can I redeem this {{ $brandName }} gift card in my country?</strong><br>This card is only redeemable in {{ $countryName }}. To shop a different country's catalog, switch country in the locale picker at the top of the page.</p>
+                        <p><strong class="text-zinc-900">What happens if the code doesn't work?</strong><br>Our fair-refund policy covers any code that fails to redeem due to a delivery issue on our end. Contact support with your order ID.</p>
+                    @endif
                 </div>
             </details>
                 </section>
@@ -680,7 +773,7 @@
             <section class="mt-12">
                 <div class="mb-4 flex items-baseline justify-between">
                     <h2 class="text-lg font-bold text-zinc-900">Similar in {{ $countryName }}</h2>
-                    <a href="{{ route('shop.gift-cards', array_filter(['country' => $product->country_code, 'subcategory' => $product->subcategory?->slug])) }}" wire:navigate class="text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700">
+                    <a href="{{ route($listingRoute, array_filter(['country' => $product->country_code, 'subcategory' => $product->subcategory?->slug])) }}" wire:navigate class="text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700">
                         View all →
                     </a>
                 </div>
@@ -689,7 +782,7 @@
                 <div class="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
                     @foreach ($similar as $s)
                         @php($sLogo = Product::brandLogoUrl($s->brand_key, $s->logo_url))
-                        <a href="{{ route('shop.brand', ['brandSlug' => Product::brandSlug($s->brand_key), 'country' => $product->country_code]) }}" wire:navigate class="card-3d-scene group block w-36 shrink-0 sm:w-auto">
+                        <a href="{{ route($detailRoute, ['brandSlug' => Product::brandSlug($s->brand_key), 'country' => $product->country_code]) }}" wire:navigate class="card-3d-scene group block w-36 shrink-0 sm:w-auto">
                             <div
                                 class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
                                 x-data="cardTilt()"

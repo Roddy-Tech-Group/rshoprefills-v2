@@ -4,7 +4,10 @@
     use App\Models\Subcategory;
     use Illuminate\Support\Facades\DB;
 
-    $giftCardsCategory = Category::where('slug', 'gift-cards')->first();
+    // Mobile top-up listing — mirrors the gift-card listing exactly. One card per
+    // operator BRAND (Products in the `mobile-airtime` category, grouped by
+    // brand_key); the detail page reuses the shared `shop.product` view.
+    $topupCategory = Category::where('slug', 'mobile-airtime')->first();
 
     // URL-driven filters. $country is the locked region (resolved by ResolveRegion
     // middleware and shared as $region) — the catalog only ever shows that country.
@@ -31,19 +34,17 @@
     }
 
     /*
-     * One card per BRAND, not per (brand × country). Zendit syncs the catalog as one
-     * Product row per country (e.g. Apple has 8 country variants), but customer-facing
-     * the user just wants to see "Apple" once. They pick country+currency in the locale
-     * modal which filters which brands appear, and they pick the denomination later on
-     * the detail page.
-     *
-     * Implementation: filter the products table by the active filters, group by
-     * brand_key, take the MIN(id) per group as the representative row to display.
+     * One card per BRAND, not per (brand × country) — same approach as the gift-card
+     * listing. Filter the products table by the active filters, group by brand_key,
+     * take the MIN(id) per group as the representative row to display.
      */
+    // Hard-scope to the mobile-airtime category. If that category row does not
+    // exist yet, `?->id ?? 0` matches nothing — so the page shows its empty
+    // state instead of silently falling through to the whole gift-card catalog.
     $baseFilters = Product::query()
         ->where('is_active', true)
         ->whereNotNull('brand_key')
-        ->when($giftCardsCategory, fn ($q) => $q->where('category_id', $giftCardsCategory->id))
+        ->where('category_id', $topupCategory?->id ?? 0)
         ->when($search !== '', fn ($q) => $q->where(function ($qq) use ($search, $searchCountryCodes) {
             $qq->where('name', 'like', "%{$search}%")
                 ->orWhere('slug', 'like', '%' . str()->slug($search) . '%')
@@ -59,10 +60,8 @@
         // VARIANT in this subcategory, not just the product's representative one.
         ->when($sub !== '', fn ($q) => $q->whereHas('variants', fn ($qq) => $qq->whereHas('subcategory', fn ($qqq) => $qqq->where('slug', $sub))));
 
-    // Pluck one representative Product id per brand_key. With ~692 unique brands this is
-    // a cheap single SELECT. Prefer the US variant as the representative (matches the
-    // detail page, which defaults to US) so the card's price range reflects US pricing;
-    // fall back to the lowest id when a brand has no US product.
+    // One representative Product id per brand_key. Prefer the US variant (matches the
+    // detail page default); fall back to the lowest id when a brand has no US product.
     $representativeIds = (clone $baseFilters)
         ->select('brand_key', DB::raw("COALESCE(MIN(CASE WHEN country_code = 'US' THEN id END), MIN(id)) as id"))
         ->groupBy('brand_key')
@@ -77,29 +76,23 @@
     } elseif ($sort === 'name-desc') {
         $productsQuery->orderByDesc('name');
     } else {
-        // Default (Popularity): curated popular brands lead the page, then the
-        // is_popular / is_featured flags, then alphabetical.
-        $popularKeys = config('popular_brands.keys', []);
-        if (! empty($popularKeys)) {
-            $placeholders = implode(',', array_fill(0, count($popularKeys), '?'));
-            $productsQuery->orderByRaw("CASE WHEN brand_key IN ({$placeholders}) THEN 0 ELSE 1 END", $popularKeys);
-        }
+        // Default (Popularity): the is_popular / is_featured flags, then alphabetical.
         $productsQuery->orderByDesc('is_popular')->orderByDesc('is_featured')->orderBy('name');
     }
 
-    // The listing shows every matching brand on one page — no pagination.
+    // The listing shows every matching operator on one page — no pagination.
     $products = $productsQuery->get();
 
-    $subcategories = $giftCardsCategory
-        ? Subcategory::where('category_id', $giftCardsCategory->id)->orderBy('name')->get(['name', 'slug'])
+    $subcategories = $topupCategory
+        ? Subcategory::where('category_id', $topupCategory->id)->orderBy('name')->get(['name', 'slug'])
         : collect();
 
     // Green tint for the trust-badge icons (instant delivery / refund policy).
     $greenTint = 'filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(394%) hue-rotate(105deg) brightness(92%) contrast(87%);';
 
-    // Distinct countries + currencies actually available in the synced gift-card catalog.
+    // Distinct countries actually available in the synced mobile-airtime catalog.
     $availableCountries = Product::query()
-        ->when($giftCardsCategory, fn ($q) => $q->where('category_id', $giftCardsCategory->id))
+        ->where('category_id', $topupCategory?->id ?? 0)
         ->where('is_active', true)
         ->distinct()
         ->pluck('country_code')
@@ -118,31 +111,7 @@
     // narrows to that region; the clear-X resets back to the US default.
     $countryFiltered = $country !== '' && $country !== 'US';
 
-    $availableCurrencies = Product::query()
-        ->when($giftCardsCategory, fn ($q) => $q->where('category_id', $giftCardsCategory->id))
-        ->where('is_active', true)
-        ->distinct()
-        ->pluck('currency_code')
-        ->filter()
-        ->sort()
-        ->values();
-
-    // Currency symbols. Falls back to the raw code for anything not in this table.
-    $currencySymbols = [
-        'USD' => '$',  'EUR' => '€',  'GBP' => '£',  'JPY' => '¥',  'CNY' => '¥',
-        'AUD' => 'A$', 'CAD' => 'C$', 'NZD' => 'NZ$', 'CHF' => 'Fr', 'SEK' => 'kr',
-        'NOK' => 'kr', 'DKK' => 'kr', 'PLN' => 'zł', 'CZK' => 'Kč', 'HUF' => 'Ft',
-        'INR' => '₹',  'KRW' => '₩',  'THB' => '฿',  'IDR' => 'Rp', 'PHP' => '₱',
-        'VND' => '₫',  'MYR' => 'RM', 'SGD' => 'S$', 'HKD' => 'HK$','TWD' => 'NT$',
-        'BRL' => 'R$', 'MXN' => 'MX$','ARS' => 'AR$','CLP' => 'CL$','COP' => 'CO$',
-        'PEN' => 'S/', 'NGN' => '₦',  'GHS' => '₵',  'KES' => 'KSh','UGX' => 'USh',
-        'TZS' => 'TSh','ZAR' => 'R',  'EGP' => 'E£', 'MAD' => 'MAD','AED' => 'AED',
-        'SAR' => 'SAR','TRY' => '₺',  'ILS' => '₪',  'PKR' => '₨',  'BDT' => '৳',
-        'RUB' => '₽',  'UAH' => '₴',  'XAF' => 'FCFA','XOF' => 'CFA',
-    ];
-    $sym = fn (?string $code) => $code ? ($currencySymbols[strtoupper($code)] ?? $code) : '';
-
-    // Helper to preserve other filters when toggling one
+    // Helper to preserve other filters when toggling one.
     $filterUrl = function (array $overrides) use ($search, $country, $currency, $sub, $sort) {
         $params = array_filter([
             'q'           => $search ?: null,
@@ -158,22 +127,21 @@
                 $params[$k] = $v;
             }
         }
-        return route('shop.gift-cards', $params);
+        return route('shop.topups', $params);
     };
 
     // Subcategory links for the shared sidebar — "All" first, then each subtype.
     $sidebarSubItems = array_merge(
-        [['label' => 'All gift cards', 'url' => $filterUrl(['subcategory' => null]), 'active' => $sub === '']],
+        [['label' => 'All networks', 'url' => $filterUrl(['subcategory' => null]), 'active' => $sub === '']],
         $subcategories->map(fn ($s) => [
             'label' => $s->name,
             'url' => $filterUrl(['subcategory' => $s->slug]),
             'active' => $sub === $s->slug,
         ])->all()
     );
-
 @endphp
 
-<x-layouts.app.header>
+<x-layouts.app.header :title="'Mobile Top-up | RshopRefills'">
 
     <section class="min-h-full bg-zinc-100">
         <div class="mx-auto w-full max-w-[1550px] px-4 py-8 sm:px-6 lg:px-8">
@@ -181,14 +149,14 @@
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr] lg:gap-8">
 
                 {{-- Shared category sidebar — same component on every storefront. --}}
-                <x-shop.category-sidebar active="gift-cards" :sub-items="$sidebarSubItems" />
+                <x-shop.category-sidebar active="mobile-airtime" :sub-items="$sidebarSubItems" />
 
                 {{-- Main column --}}
                 <div>
                     {{-- Heading + search row --}}
                     <div class="mb-6 flex flex-col gap-3 sm:grid sm:grid-cols-3 sm:items-center sm:gap-4">
                         <div>
-                            <h1 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Gift Cards</h1>
+                            <h1 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Mobile Top-up</h1>
                             <div class="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-zinc-700">
                                 <span class="flex items-center gap-1.5">
                                     <img src="{{ asset('assets/' . rawurlencode('instant delivery.png')) }}" alt="" class="h-4 w-4 object-contain" style="{{ $greenTint }}" loading="lazy">
@@ -201,8 +169,7 @@
                             </div>
                         </div>
 
-                        {{-- Shop by country picker — sits in the centered middle column.
-                             Replaces a page-level brand search (the storefront nav carries search). --}}
+                        {{-- Shop by country picker — sits in the centered middle column. --}}
                         <div
                             x-data="{ open: false, q: '' }"
                             @click.outside="open = false"
@@ -282,9 +249,8 @@
                             </div>
                         </div>
 
-                        {{-- Modern segmented sort selector. URL-driven so the choice survives reloads;
-                             each pill is a real <a> that updates ?sort= while preserving other filters. --}}
-                        <div class="inline-flex shrink-0 items-center rounded-xl bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort gift cards">
+                        {{-- Modern segmented sort selector. URL-driven so the choice survives reloads. --}}
+                        <div class="inline-flex shrink-0 items-center rounded-xl bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort networks">
                             @foreach ([
                                 ['value' => 'popular',   'label' => 'Popularity'],
                                 ['value' => 'name-asc',  'label' => 'A → Z'],
@@ -312,7 +278,7 @@
                                     wire:navigate
                                     class="inline-flex shrink-0 items-center rounded-full px-4 py-1.5 text-xs font-semibold transition-colors {{ $sub === '' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200' }}"
                                 >
-                                    All gift cards
+                                    All networks
                                 </a>
                                 @foreach ($subcategories as $s)
                                     <a
@@ -327,9 +293,7 @@
                         </div>
                     @endif
 
-                    {{-- Product grid. Skeleton overlay removed — it was rendering misaligned with the real
-                         grid and flashing on every navigation. wire:navigate transitions are fast enough
-                         without a synthetic loading state. --}}
+                    {{-- Operator grid. Same card treatment as the gift-card listing. --}}
                     <div>
                         @if ($products->isNotEmpty())
                             <ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -338,30 +302,30 @@
                                         $variants   = $product->variants;
                                         $available  = $variants->where('is_available', true);
                                         $isOut      = $variants->isNotEmpty() && $available->isEmpty();
-                                        // Min-to-max range across ALL denominations (fixed + variable), in the product's currency.
                                         $priceLabel = $product->priceRangeLabel();
                                         $logoSrc    = Product::brandLogoUrl($product->brand_key, $product->logo_url);
+                                        $opName     = Product::brandDisplayName($product->brand_key);
+                                        $tileColor  = Product::tileColor($product->brand_key);
                                     @endphp
                                     <li>
                                         <a
-                                            href="{{ route('shop.brand', ['brandSlug' => Product::brandSlug($product->brand_key), 'country' => $product->country_code]) }}"
+                                            href="{{ route('shop.topup', ['brandSlug' => Product::brandSlug($product->brand_key), 'country' => $product->country_code]) }}"
                                             wire:navigate
                                             class="card-3d-scene group block focus:outline-none"
                                             aria-label="{{ Product::brandDisplayName($product->brand_key) }}"
                                         >
                                             {{-- White tile, logo fills the card edge-to-edge. Caption sits OUTSIDE on the page background. --}}
                                             <div
-                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
+                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300 {{ $logoSrc ? 'bg-white' : '' }}"
+                                                @if (! $logoSrc) style="background-color: {{ $tileColor }}" @endif
                                                 x-data="cardTilt()"
                                                 @mousemove="tilt($event)"
                                                 @mouseleave="reset()"
                                             >
                                                 @if ($logoSrc)
-                                                    <img src="{{ $logoSrc }}" alt="{{ Product::brandDisplayName($product->brand_key) }}" class="h-full w-full object-cover" loading="lazy">
+                                                    <img src="{{ $logoSrc }}" alt="{{ $opName }}" class="h-full w-full object-cover" loading="lazy">
                                                 @else
-                                                    <span class="text-2xl font-black tracking-tight text-zinc-700">
-                                                        {{ str(Product::brandDisplayName($product->brand_key))->substr(0, 2)->upper() }}
-                                                    </span>
+                                                    <span class="px-3 text-center text-lg font-extrabold leading-tight text-white">{{ $opName }}</span>
                                                 @endif
 
                                                 @if ($isOut)
@@ -377,9 +341,12 @@
                                                 <span class="card-3d-glare pointer-events-none absolute inset-0" aria-hidden="true"></span>
                                             </div>
 
-                                            {{-- Caption — brand name + the real min-to-max denomination range. --}}
+                                            {{-- Caption — operator name (only when a real logo is on the
+                                                 tile; the styled tile already shows the name) + amount range. --}}
                                             <div class="mt-2 px-0.5">
-                                                <p class="truncate text-[13px] font-bold leading-tight text-zinc-900 group-hover:text-blue-700">{{ Product::brandDisplayName($product->brand_key) }}</p>
+                                                @if ($logoSrc)
+                                                    <p class="truncate text-[13px] font-bold leading-tight text-zinc-900 group-hover:text-blue-700">{{ $opName }}</p>
+                                                @endif
                                                 @if ($priceLabel)
                                                     <p class="mt-0.5 truncate text-[14px] text-zinc-600">{{ $priceLabel }}</p>
                                                 @endif
@@ -393,15 +360,18 @@
                             <div class="rounded-3xl bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
                                 <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                                     <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/>
                                     </svg>
                                 </span>
-                                <p class="mt-4 text-base font-semibold text-zinc-900">No gift cards match these filters</p>
-                                <p class="mt-1 text-sm text-zinc-600">Try clearing the search or pick a different category.</p>
                                 @if ($search !== '' || $countryFiltered || $sub !== '')
-                                    <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                                    <p class="mt-4 text-base font-semibold text-zinc-900">No networks match these filters</p>
+                                    <p class="mt-1 text-sm text-zinc-600">Try clearing the search or pick a different country.</p>
+                                    <a href="{{ route('shop.topups') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
                                         Clear all filters
                                     </a>
+                                @else
+                                    <p class="mt-4 text-base font-semibold text-zinc-900">No mobile networks yet</p>
+                                    <p class="mt-1 text-sm text-zinc-600">The mobile top-up catalog has not been synced. Run the airtime sync from the admin products page.</p>
                                 @endif
                             </div>
                         @endif
