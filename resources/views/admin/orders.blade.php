@@ -27,11 +27,11 @@
                     <tbody class="divide-y divide-zinc-100">
                         @forelse ($orders as $order)
                             @php
-                                $statusValue = $order->status->value ?? 'pending';
+                                $statusValue = $order->order_status?->value ?? 'pending';
                                 $statusClasses = match ($statusValue) {
                                     'completed' => 'bg-emerald-50 text-emerald-700',
-                                    'failed', 'cancelled' => 'bg-red-50 text-red-700',
-                                    'refunded' => 'bg-zinc-100 text-zinc-700',
+                                    'partially_completed' => 'bg-blue-50 text-blue-700',
+                                    'failed', 'cancelled', 'requires_attention' => 'bg-red-50 text-red-700',
                                     default => 'bg-amber-50 text-amber-700',
                                 };
                             @endphp
@@ -39,10 +39,10 @@
                                 <td class="px-5 py-3 font-mono text-zinc-700">#{{ $order->order_number }}</td>
                                 <td class="px-5 py-3 font-medium text-zinc-900">{{ $order->user?->name ?? '—' }}</td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $order->items->count() }}</td>
-                                <td class="px-5 py-3 font-semibold text-zinc-900">${{ number_format((float) $order->total, 2) }}</td>
+                                <td class="px-5 py-3 font-semibold text-zinc-900">{{ $order->display_currency }} {{ number_format((float) $order->total_amount, 2) }}</td>
                                 <td class="px-5 py-3">
                                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusClasses }}">
-                                        {{ $order->status->label() }}
+                                        {{ $order->order_status?->label() ?? 'Pending' }}
                                     </span>
                                 </td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $order->created_at->format('M j, Y') }}</td>

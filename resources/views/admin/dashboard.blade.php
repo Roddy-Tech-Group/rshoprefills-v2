@@ -241,9 +241,10 @@
             <div x-show="navigating" x-cloak class="skeleton-stagger-fast absolute inset-0 z-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5" aria-hidden="true">
                 @for ($i = 0; $i < 5; $i++)
                     <div class="rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 {{ $i === 4 ? 'col-span-2 lg:col-span-1' : '' }}" style="--i: {{ $i }}">
-                        <x-skeleton class="h-10 w-10 rounded-xl" />
-                        <x-skeleton class="mt-3 h-3 w-20" />
-                        <x-skeleton class="mt-1.5 h-6 w-24" />
+                        <x-skeleton class="h-11 w-11 rounded-xl" />
+                        <x-skeleton class="mt-3 h-4 w-24" />
+                        <x-skeleton class="mt-1 h-7 w-28" />
+                        <x-skeleton class="mt-3 h-3 w-32" />
                     </div>
                 @endfor
             </div>
@@ -431,16 +432,16 @@
             <div x-show="navigating" x-cloak class="skeleton-stagger absolute inset-0 z-10 grid grid-cols-1 gap-4 lg:grid-cols-2" aria-hidden="true">
                 @for ($i = 0; $i < 2; $i++)
                     <div class="overflow-hidden rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100" style="--i: {{ $i }}">
-                        <x-skeleton class="h-4 w-32" />
+                        <x-skeleton class="h-5 w-32" />
                         <div class="skeleton-stagger-fast mt-5 space-y-3">
                             @for ($r = 0; $r < 5; $r++)
                                 <div class="flex items-center gap-3" style="--i: {{ $r }}">
                                     <x-skeleton shape="circle" class="h-9 w-9" />
-                                    <div class="flex-1 space-y-1.5">
-                                        <x-skeleton class="h-3 w-32" />
-                                        <x-skeleton class="h-2.5 w-44" />
+                                    <div class="flex-1 space-y-2">
+                                        <x-skeleton class="h-4 w-32" />
+                                        <x-skeleton class="h-3 w-44" />
                                     </div>
-                                    <x-skeleton class="h-3 w-12" />
+                                    <x-skeleton class="h-4 w-12" />
                                 </div>
                             @endfor
                         </div>

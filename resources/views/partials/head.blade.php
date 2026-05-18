@@ -18,25 +18,4 @@
     main.page-entering { opacity: 0; transform: translateY(40px); transition: none; }
 </style>
 
-{{-- Force admin/settings into light mode. Dark mode wasn't fully designed yet — Flux components read the .dark
-     class set by @fluxAppearance based on the user's OS preference, which flips text colors and breaks contrast.
-     This script strips it on every load. Remove this script when a proper dark mode pass ships. --}}
-<script>
-    document.documentElement.classList.remove('dark');
-
-    (function () {
-        let firstLoad = true;
-        function playPageTransition() {
-            const main = document.querySelector('main');
-            if (! main) return;
-            main.classList.add('page-entering');
-            void main.offsetWidth; // commit the offset before transitioning back
-            main.classList.remove('page-entering');
-        }
-        document.addEventListener('livewire:navigated', () => {
-            document.documentElement.classList.remove('dark');
-            if (firstLoad) { firstLoad = false; return; }
-            playPageTransition();
-        });
-    })();
-</script>
+@include('partials.theme-engine')

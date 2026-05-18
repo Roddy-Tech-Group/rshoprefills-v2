@@ -114,7 +114,9 @@
             'perUsd'  => (float) $r->rate_per_usd,
             // More decimals for tiny BTC-style rates, fewer for fiat.
             'decimals' => $r->rate_per_usd < 0.01 ? 8 : ($r->rate_per_usd < 1 ? 4 : 2),
-            'icon'    => $r->icon_path ? asset('assets/' . $r->icon_path) : null,
+            // Only crypto uses an icon image; fiat always falls through to its
+            // country flag below (an icon_path on a fiat row is ignored).
+            'icon'    => ($r->type === 'crypto' && $r->icon_path) ? asset('assets/' . $r->icon_path) : null,
             // Fiat currencies show a country flag instead of the letter circle.
             'flag'    => $r->type === 'fiat' ? $currencyFlag($r->code) : null,
         ])
@@ -247,7 +249,7 @@
                      so the card parks below it instead of sliding up behind the nav. --}}
                 <div class="lg:sticky lg:top-[156px]">
                     <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#ededee] p-10 sm:p-14">
-                        <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
+                        <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-xl bg-[#ffffff] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
                             @if ($logoSrc)
                                 <img src="{{ $logoSrc }}" alt="{{ $brandName }} {{ $kindNoun }}" class="h-full w-full object-cover" loading="eager">
                             @else
@@ -346,11 +348,9 @@
                                         role="button"
                                         tabindex="0"
                                         aria-label="Clear selected amount"
-                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
                                     >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                                        </svg>
+                                        <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                                     </span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -379,7 +379,7 @@
                                         >
                                             <span class="font-bold">{{ $conv($val) }}</span>
                                             @if ($i === $fixedDenoms->count() - 1 && $fixedDenoms->count() > 1)
-                                                <span class="inline-flex items-center rounded-full bg-white/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-300/50 shadow-[0_0_10px_rgba(37,99,235,0.45)] backdrop-blur-md">Popular</span>
+                                                <span class="inline-flex items-center rounded-full bg-white/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-300/50 shadow-[0_0_10px_rgba(37,99,235,0.45)] backdrop-blur-md dark:bg-blue-950 dark:ring-blue-400/50">Popular</span>
                                             @endif
                                         </button>
                                     @endforeach
@@ -617,57 +617,21 @@
                         </button>
                     </div>
 
-                    {{-- Where this product can be used. Each (brand x country) is a
-                         separate variant; these chips list every country the brand
-                         covers so the customer picks the right one and never buys a
-                         card that won't work where they are. --}}
-                    @php
-                        $useWord = $isTopup ? 'Works in' : ($isBill ? 'Available in' : 'Redeemable in');
-                        $multiCountry = $brandCountries->count() > 1;
-                    @endphp
+                    {{-- Country availability — the redeemable country for this
+                         variant, plus a link to switch country via the locale modal. --}}
                     <div>
-                        <p class="text-sm font-bold text-zinc-900">{{ $useWord }}</p>
-                        <p class="mt-0.5 text-xs leading-relaxed text-zinc-600">
-                            @if ($multiCountry)
-                                You are viewing the <span class="font-semibold text-zinc-900">{{ $countryName }}</span> {{ $kindNoun }}. It only works in the country it is issued for — pick yours below. If your country is not listed, this {{ $kindNoun }} is not available there.
-                            @else
-                                This {{ $kindNoun }} can only be used in {{ $countryName }}.
+                        <p class="flex items-center gap-2 text-sm text-zinc-700">
+                            @if (Product::flagUrl($product->country_code))
+                                <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-4 w-6 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
                             @endif
+                            <span>{{ $isTopup ? 'Works for ' . $countryName . ' mobile numbers' : ($isBill ? 'Available for billers in ' . $countryName : 'May only be redeemable in ' . $countryName) }}</span>
                         </p>
-                        <div class="mt-2.5 flex flex-wrap gap-1.5">
-                            @foreach ($brandCountries->take(24) as $iso)
-                                @php
-                                    $iso       = strtoupper($iso);
-                                    $cName     = $countryNames[$iso] ?? $iso;
-                                    $isCurrent = $iso === strtoupper($product->country_code);
-                                @endphp
-                                @if ($isCurrent)
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
-                                        @if (Product::flagUrl($iso))
-                                            <img src="{{ Product::flagUrl($iso) }}" alt="" class="h-3.5 w-5 rounded-[2px] object-cover">
-                                        @endif
-                                        {{ $cName }}
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                        </svg>
-                                    </span>
-                                @else
-                                    <a
-                                        href="{{ route($detailRoute, ['brandSlug' => Product::brandSlug($brandKey), 'country' => $iso]) }}"
-                                        wire:navigate
-                                        class="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-                                    >
-                                        @if (Product::flagUrl($iso))
-                                            <img src="{{ Product::flagUrl($iso) }}" alt="" class="h-3.5 w-5 rounded-[2px] object-cover ring-1 ring-zinc-200">
-                                        @endif
-                                        {{ $cName }}
-                                    </a>
-                                @endif
-                            @endforeach
-                            @if ($brandCountries->count() > 24)
-                                <span class="inline-flex items-center rounded-full px-2 py-1.5 text-xs font-medium text-zinc-500">+{{ $brandCountries->count() - 24 }} more</span>
-                            @endif
-                        </div>
+                        <p class="mt-0.5 text-sm text-zinc-600">
+                            Not in {{ $countryName }}?
+                            <button type="button" @click="$dispatch('open-locale-modal'); localeModalOpen = true" class="font-semibold text-zinc-900 underline underline-offset-2 transition-colors hover:text-blue-700">
+                                Find your country
+                            </button>
+                        </p>
                     </div>
                 @else
                     <div class="rounded-2xl bg-zinc-50 px-4 py-8 text-center ring-1 ring-zinc-100">
@@ -784,7 +748,7 @@
                         @php($sLogo = Product::brandLogoUrl($s->brand_key, $s->logo_url))
                         <a href="{{ route($detailRoute, ['brandSlug' => Product::brandSlug($s->brand_key), 'country' => $product->country_code]) }}" wire:navigate class="card-3d-scene group block w-36 shrink-0 sm:w-auto">
                             <div
-                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
+                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-[#ffffff] shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
                                 x-data="cardTilt()"
                                 @mousemove="tilt($event)"
                                 @mouseleave="reset()"
@@ -792,7 +756,7 @@
                                 @if ($sLogo)
                                     <img src="{{ $sLogo }}" alt="" class="h-full w-full object-cover" loading="lazy">
                                 @else
-                                    <span class="text-xl font-black uppercase text-zinc-700">{{ str(Product::brandDisplayName($s->brand_key))->substr(0, 2)->upper() }}</span>
+                                    <span class="text-xl font-black uppercase text-[#3f3f46]">{{ str(Product::brandDisplayName($s->brand_key))->substr(0, 2)->upper() }}</span>
                                 @endif
                                 <span class="card-3d-glare pointer-events-none absolute inset-0" aria-hidden="true"></span>
                             </div>
@@ -935,5 +899,75 @@
             };
         };
     </script>
+
+    {{-- Region notice — auto-shows on every gift-card product view and
+         auto-dismisses after 6 seconds. Backdrop click / X / Got it close early. --}}
+    @if ($categorySlug === 'gift-cards')
+        <div
+            x-data="{ show: false }"
+            x-init="$nextTick(() => show = true); setTimeout(() => show = false, 20000)"
+            :class="{ 'pointer-events-none': ! show }"
+            class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Gift card region notice"
+        >
+            {{-- Backdrop --}}
+            <div
+                x-show="show"
+                x-cloak
+                x-transition:enter="transition-opacity ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition-opacity ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="show = false"
+                class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm"
+            ></div>
+
+            {{-- Notice card --}}
+            <div
+                x-show="show"
+                x-cloak
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                x-transition:leave-end="opacity-0 translate-y-3 scale-95"
+                class="relative w-full max-w-md rounded-2xl bg-blue-100 p-6 text-center shadow-2xl shadow-zinc-900/25"
+            >
+                <button
+                    type="button"
+                    @click="show = false"
+                    aria-label="Dismiss"
+                    class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
+                >
+                    <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-4 w-4 object-contain" loading="lazy">
+                </button>
+
+                {{-- The illustration is dark line-art drawn for a light background; give it
+                     a fixed light-blue backing (literal hex so the dark remap leaves it light)
+                     so it stays legible whether the modal is light or dark. --}}
+                <div class="mx-auto w-fit rounded-2xl bg-[#e8f0fb] px-6 py-4">
+                    <img src="{{ asset('assets/' . rawurlencode('Gift card awareness pop up.png')) }}" alt="" class="mx-auto block h-36 w-auto object-contain" loading="eager">
+                </div>
+
+                <h2 class="mt-4 text-lg font-bold text-zinc-900">Gift cards are region-based</h2>
+                <p class="mt-2 text-sm leading-relaxed text-zinc-600">
+                    If you are redeeming a gift card from a region other than your own, switch your device's region to match the gift card's region before redeeming it.
+                </p>
+
+                <button
+                    type="button"
+                    @click="show = false"
+                    class="mt-5 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                >
+                    Got it
+                </button>
+            </div>
+        </div>
+    @endif
 
 </x-layouts.app.header>

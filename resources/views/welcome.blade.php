@@ -107,7 +107,7 @@
                             :name="$label"
                             :price-range="$p->priceRangeLabel()"
                             :href="route('shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
-                            :card-class="$logo ? 'bg-white' : ($brandColor ? '' : 'bg-zinc-100')"
+                            :card-class="$logo ? 'bg-[#ffffff]' : ($brandColor ? '' : 'bg-zinc-100')"
                             :style="! $logo && $brandColor ? 'background-color: ' . $brandColor . ';' : false"
                         >
                             @if ($logo)

@@ -21,10 +21,18 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             <p class="mt-0.5 text-xs text-zinc-600">Switch between light and dark mode, or follow your system.</p>
         </div>
 
-        <flux:radio.group x-data variant="segmented" x-model="$flux.appearance">
+        {{-- Bound to the project theme engine (window.setTheme / localStorage['theme'])
+             so the choice persists across reloads and navigation. Flux's own
+             $flux.appearance is NOT used — the head engine would overwrite it. --}}
+        <flux:radio.group
+            x-data="{ theme: localStorage.getItem('theme') || 'system' }"
+            x-init="$watch('theme', v => window.setTheme(v))"
+            x-model="theme"
+            variant="segmented"
+        >
             <flux:radio value="light" icon="sun">Light</flux:radio>
             <flux:radio value="dark" icon="moon">Dark</flux:radio>
-            <flux:radio value="system" icon="computer-desktop">System</flux:radio>
+            <flux:radio value="system" icon="computer-desktop">Auto</flux:radio>
         </flux:radio.group>
     </div>
 </div>

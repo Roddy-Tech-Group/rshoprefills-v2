@@ -14,13 +14,15 @@
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700|urbanist:800" rel="stylesheet" />
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-        {{-- @fluxAppearance intentionally omitted — the storefront is always light mode --}}
 
         {{-- Page transition — the incoming page slides up from the bottom on navigation. --}}
         <style>
             main { transition: opacity 700ms ease, transform 1200ms cubic-bezier(0.22, 1, 0.36, 1); }
             main.page-entering { opacity: 0; transform: translateY(40px); transition: none; }
         </style>
+
+        {{-- Theme engine (light / dark / system) — same as admin/dashboard so dark mode works storefront-wide. --}}
+        @include('partials.theme-engine')
     </head>
     <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased">
 

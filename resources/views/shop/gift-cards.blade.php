@@ -218,7 +218,11 @@
                                     @click="open = !open; if (open) $nextTick(() => $refs.countryQ?.focus())"
                                     class="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
                                 >
-                                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
+                                    @if ($currentCountryName && Product::flagUrl($country))
+                                        <img src="{{ Product::flagUrl($country) }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                    @else
+                                        <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
+                                    @endif
                                     <span class="truncate {{ $currentCountryName ? 'font-medium text-zinc-900' : 'text-zinc-500' }}">{{ $currentCountryName ?? 'Shop by country' }}</span>
                                 </button>
 
@@ -227,11 +231,9 @@
                                         href="{{ $filterUrl(['country' => 'US']) }}"
                                         wire:navigate
                                         aria-label="Clear country filter"
-                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
                                     >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                                        </svg>
+                                        <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                                     </a>
                                 @endif
 
@@ -349,9 +351,11 @@
                                             class="card-3d-scene group block focus:outline-none"
                                             aria-label="{{ Product::brandDisplayName($product->brand_key) }}"
                                         >
-                                            {{-- White tile, logo fills the card edge-to-edge. Caption sits OUTSIDE on the page background. --}}
+                                            {{-- Logo tile. bg uses a literal hex so the dark-mode
+                                                 remap keeps it white — brand logos are drawn for a
+                                                 light tile and vanish on a dark one. --}}
                                             <div
-                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-white shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
+                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-[#ffffff] shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300"
                                                 x-data="cardTilt()"
                                                 @mousemove="tilt($event)"
                                                 @mouseleave="reset()"
@@ -359,7 +363,7 @@
                                                 @if ($logoSrc)
                                                     <img src="{{ $logoSrc }}" alt="{{ Product::brandDisplayName($product->brand_key) }}" class="h-full w-full object-cover" loading="lazy">
                                                 @else
-                                                    <span class="text-2xl font-black tracking-tight text-zinc-700">
+                                                    <span class="text-2xl font-black tracking-tight text-[#3f3f46]">
                                                         {{ str(Product::brandDisplayName($product->brand_key))->substr(0, 2)->upper() }}
                                                     </span>
                                                 @endif
@@ -391,11 +395,7 @@
 
                         @else
                             <div class="rounded-3xl bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
-                                <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                    </svg>
-                                </span>
+                                <img src="{{ asset('assets/' . rawurlencode('Empty state.png')) }}" alt="" class="mx-auto block h-44 w-auto object-contain" loading="lazy">
                                 <p class="mt-4 text-base font-semibold text-zinc-900">No gift cards match these filters</p>
                                 <p class="mt-1 text-sm text-zinc-600">Try clearing the search or pick a different category.</p>
                                 @if ($search !== '' || $countryFiltered || $sub !== '')

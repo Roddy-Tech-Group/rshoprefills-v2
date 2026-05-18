@@ -2,7 +2,7 @@
     'name',
     'priceRange' => null,
     'href' => '#',
-    'cardClass' => 'bg-white',
+    'cardClass' => 'bg-[#ffffff]',
 ])
 
 {{--

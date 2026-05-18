@@ -150,33 +150,33 @@
         <div x-show="navigating" x-cloak class="skeleton-stagger absolute inset-0 z-10 flex flex-col gap-5 bg-[#eff6ff]" aria-hidden="true">
             {{-- Heading row --}}
             <div class="flex items-center justify-between" style="--i: 0">
-                <x-skeleton class="h-6 w-40" />
+                <x-skeleton class="h-7 w-48" />
                 <x-skeleton class="h-4 w-16" />
             </div>
             {{-- 4 quick action tiles --}}
             <div class="skeleton-stagger-fast grid grid-cols-2 gap-3 lg:grid-cols-4" style="--i: 1">
                 @for ($i = 0; $i < 4; $i++)
                     <div class="rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: {{ $i }}">
-                        <x-skeleton shape="rect" class="h-10 w-10 rounded-xl" />
-                        <x-skeleton class="mt-3 h-3 w-20" />
+                        <x-skeleton class="h-10 w-10 rounded-xl" />
+                        <x-skeleton class="mt-3 h-4 w-20" />
                     </div>
                 @endfor
             </div>
             {{-- Big card --}}
             <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: 2">
                 <div class="flex items-center justify-between">
-                    <x-skeleton class="h-4 w-32" />
-                    <x-skeleton class="h-3 w-16" />
+                    <x-skeleton class="h-5 w-32" />
+                    <x-skeleton class="h-4 w-16" />
                 </div>
                 <div class="skeleton-stagger-fast mt-5 space-y-3">
                     @for ($r = 0; $r < 4; $r++)
                         <div class="flex items-center gap-3" style="--i: {{ $r }}">
                             <x-skeleton shape="circle" class="h-9 w-9" />
-                            <div class="flex-1 space-y-1.5">
-                                <x-skeleton class="h-3 w-40" />
-                                <x-skeleton class="h-2.5 w-24" />
+                            <div class="flex-1 space-y-2">
+                                <x-skeleton class="h-4 w-40" />
+                                <x-skeleton class="h-3 w-24" />
                             </div>
-                            <x-skeleton class="h-3 w-14" />
+                            <x-skeleton class="h-4 w-14" />
                         </div>
                     @endfor
                 </div>
@@ -602,9 +602,11 @@
                     <div class="relative z-10 max-w-[60%]">
                         <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
                         <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
-                        <button type="button" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-blue-100">
+                        {{-- Literal-hex bg + no-dark-invert icon so this light button stays
+                             light on the always-dark promo card in both themes. --}}
+                        <button type="button" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
                             Shop Now
-                            <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
+                            <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 no-dark-invert" loading="lazy">
                         </button>
                     </div>
 

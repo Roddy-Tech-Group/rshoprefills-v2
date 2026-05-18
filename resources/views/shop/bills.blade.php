@@ -167,7 +167,11 @@
                                     @click="open = !open; if (open) $nextTick(() => $refs.countryQ?.focus())"
                                     class="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
                                 >
-                                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
+                                    @if ($currentCountryName && Product::flagUrl($country))
+                                        <img src="{{ Product::flagUrl($country) }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                    @else
+                                        <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
+                                    @endif
                                     <span class="truncate {{ $currentCountryName ? 'font-medium text-zinc-900' : 'text-zinc-500' }}">{{ $currentCountryName ?? 'Shop by country' }}</span>
                                 </button>
 
@@ -176,11 +180,9 @@
                                         href="{{ $filterUrl(['country' => 'US']) }}"
                                         wire:navigate
                                         aria-label="Clear country filter"
-                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
                                     >
-                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
-                                        </svg>
+                                        <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                                     </a>
                                 @endif
 
@@ -298,7 +300,7 @@
                                             aria-label="{{ $billerName }}"
                                         >
                                             <div
-                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300 {{ $logoSrc ? 'bg-white' : '' }}"
+                                                class="card-3d relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] shadow-sm ring-1 ring-zinc-200 group-hover:shadow-lg group-hover:ring-zinc-300 {{ $logoSrc ? 'bg-[#ffffff]' : '' }}"
                                                 @if (! $logoSrc) style="background-color: {{ $tileColor }}" @endif
                                                 x-data="cardTilt()"
                                                 @mousemove="tilt($event)"
@@ -340,11 +342,7 @@
 
                         @else
                             <div class="rounded-3xl bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
-                                <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18V8.25M3 8.25V6a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 6v2.25M3 8.25h18M7.5 12h3"/>
-                                    </svg>
-                                </span>
+                                <img src="{{ asset('assets/' . rawurlencode('Empty state.png')) }}" alt="" class="mx-auto block h-44 w-auto object-contain" loading="lazy">
                                 @if ($search !== '' || $countryFiltered || $sub !== '')
                                     <p class="mt-4 text-base font-semibold text-zinc-900">No billers match these filters</p>
                                     <p class="mt-1 text-sm text-zinc-600">Try clearing the search or pick a different country.</p>
@@ -352,8 +350,8 @@
                                         Clear all filters
                                     </a>
                                 @else
-                                    <p class="mt-4 text-base font-semibold text-zinc-900">No billers yet</p>
-                                    <p class="mt-1 text-sm text-zinc-600">Prepaid utilities ride the Zendit voucher feed. Run the gift-card sync, then <code>php artisan catalog:split-bill-payments</code> to populate this storefront.</p>
+                                    <p class="mt-4 text-base font-semibold text-zinc-900">Bill payments coming soon</p>
+                                    <p class="mt-1 text-sm text-zinc-600">We're adding bill payment services for your region. Check back shortly.</p>
                                 @endif
                             </div>
                         @endif

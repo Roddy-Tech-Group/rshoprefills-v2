@@ -161,6 +161,9 @@ class extends Component {
                                     <span class="ml-1 font-bold">{{ $faceTxt }}</span>
                                 @endif
                                 @if ($country)
+                                    @if (Product::flagUrl($snap['country_code'] ?? null))
+                                        <img src="{{ Product::flagUrl($snap['country_code'] ?? null) }}" alt="" class="ml-1 inline-block h-3 w-[18px] rounded-[1px] object-cover align-[-1px] ring-1 ring-zinc-200">
+                                    @endif
                                     <span class="ml-1 font-semibold text-zinc-700">{{ $country }}</span>
                                 @endif
                             </p>
@@ -233,8 +236,10 @@ class extends Component {
                                     $country  = $countryNames[strtoupper((string) ($snap['country_code'] ?? ''))] ?? ($snap['country_code'] ?? null);
                                     $code     = $extractCode($item);
                                 @endphp
-                                {{-- Gift card — brand logo + denomination, full width inside the order card. --}}
-                                <div class="max-w-[340px] rounded-[10px] border-2 border-zinc-100 bg-zinc-100 px-3 py-1.5">
+                                {{-- Gift card — brand logo + denomination, full width inside the order card.
+                                     `theme-static`: resellers screenshot this to deliver to their own
+                                     customers, so it must look identical in light and dark mode. --}}
+                                <div class="theme-static max-w-[340px] rounded-[10px] border-2 border-zinc-100 bg-zinc-100 px-3 py-1.5">
                                     <div class="flex items-start justify-between gap-3 px-2 pt-2">
                                         <div class="flex min-w-0 flex-col items-start gap-2.5">
                                             @if ($logo)
@@ -249,7 +254,12 @@ class extends Component {
                                                 <p class="text-2xl font-extrabold leading-none text-zinc-900">{{ $faceTxt }}</p>
                                             @endif
                                             @if ($country)
-                                                <p class="mt-1 text-sm text-zinc-600">{{ $country }}</p>
+                                                <p class="mt-1 flex items-center justify-end gap-1.5 text-sm text-zinc-600">
+                                                    @if (Product::flagUrl($snap['country_code'] ?? null))
+                                                        <img src="{{ Product::flagUrl($snap['country_code'] ?? null) }}" alt="" class="h-3 w-[18px] rounded-[1px] object-cover ring-1 ring-zinc-200">
+                                                    @endif
+                                                    {{ $country }}
+                                                </p>
                                             @endif
                                         </div>
                                     </div>

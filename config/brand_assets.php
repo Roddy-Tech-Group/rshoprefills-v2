@@ -28,5 +28,25 @@ return [
         'Xbox' => 'x-box_300x190.png',
         'XboxGamePass' => 'x-box_300x190.png',
         'XboxLiveGold' => 'x-box_300x190.png',
+
+        // Mobile network operators (mobile top-up / airtime products). Keyed by
+        // brand_key, so each logo shows for that operator in every country it
+        // appears in — e.g. MTN across CM/NG/GH, not just Cameroon.
+        'MTN' => 'mtn.webp',
+        'Orange' => 'orange.webp',
+        'Att' => 'at&t-prepaid_2_300x190.webp',
+        'Boost' => 'boost-mobile_300x190.webp',
+        'Cricket' => 'cricket-wireless_300x190.webp',
+        'GoSmart' => 'go-smart-mobile_300x190.webp',
+        'H2O' => 'h2o-unlimited_300x190.webp',
+        'LycaMobile' => 'lyca-mobile_300x190.webp',
+        'MetroPCS' => 'metro-pcs_300x190.webp',
+        'Net10' => 'net10parent_300x190.webp',
+        'PagePlus' => 'pageplus-wireless_300x190.webp',
+        'StraightTalk' => 'images.png',
+        'Tmobile' => 't-mobile_300x190.webp',
+        'TotalbyVerizon' => 'totalbyverizonusa_300x190.webp',
+        'UltraMobile' => 'ultra-mobile_300x190.webp',
+        'Verizon' => 'verizon_300x190.webp',
     ],
 ];
