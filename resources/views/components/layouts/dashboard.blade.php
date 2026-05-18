@@ -226,12 +226,7 @@
 
             {{-- Search bar (matches storefront home-nav style) with results panel --}}
             <div
-                x-data="{
-                    open: false,
-                    query: '',
-                    activeTab: 'Overview',
-                    tabs: ['Overview', 'Orders', 'Wallet', 'Transactions', 'Profile', 'Settings']
-                }"
+                x-data="dashboardSearch()"
                 @click.outside="open = false"
                 @keydown.escape.window="open = false"
                 @keydown.window.prevent.ctrl.k="open = true; $nextTick(() => $refs.searchInput.focus())"
@@ -250,6 +245,7 @@
                     <input
                         x-ref="searchInput"
                         x-model="query"
+                        @input="onInput()"
                         @focus="open = true"
                         type="search"
                         placeholder="Search products, brands or categories"
@@ -290,22 +286,73 @@
                         </div>
                     </div>
 
-                    {{-- Most used --}}
-                    <div class="p-2">
+                    {{-- Product & brand results — live catalogue search (2+ characters),
+                         same /api/search/brands endpoint as the storefront nav search. --}}
+                    <div x-show="searching" class="p-2">
+                        <p class="px-3 pb-1 pt-2 text-xs font-semibold text-zinc-600">Products &amp; brands</p>
+
+                        {{-- Loading --}}
+                        <div x-show="loading" class="flex items-center gap-2 px-3 py-6 text-sm text-zinc-500">
+                            <svg class="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle class="opacity-30" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/>
+                                <path class="opacity-90" fill="currentColor" d="M12 3a9 9 0 0 1 9 9h-3a6 6 0 0 0-6-6V3z"/>
+                            </svg>
+                            Searching the catalogue&hellip;
+                        </div>
+
+                        {{-- Matches --}}
+                        <template x-for="r in results" :key="r.slug">
+                            <a :href="'/gift-cards/' + r.slug" class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-blue-100">
+                                <span class="flex min-w-0 items-center gap-3">
+                                    <span class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-zinc-200">
+                                        <template x-if="r.logo"><img :src="r.logo" alt="" class="h-full w-full object-cover"></template>
+                                        <template x-if="! r.logo"><span class="text-[10px] font-bold uppercase text-zinc-500" x-text="r.name.slice(0, 2)"></span></template>
+                                    </span>
+                                    <span class="min-w-0 leading-tight">
+                                        <span class="block truncate text-sm font-semibold text-zinc-900" x-text="r.name"></span>
+                                        <span class="block text-xs text-zinc-600">Gift card</span>
+                                    </span>
+                                </span>
+                                <svg class="h-4 w-4 shrink-0 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                                </svg>
+                            </a>
+                        </template>
+
+                        {{-- No matches --}}
+                        <div x-show="! loading && results.length === 0" class="px-3 py-6 text-center text-sm text-zinc-500">
+                            No products match &ldquo;<span x-text="query"></span>&rdquo;.
+                        </div>
+
+                        {{-- See all results --}}
+                        <a
+                            x-show="! loading && results.length > 0"
+                            :href="'/gift-cards?q=' + encodeURIComponent(query)"
+                            class="mt-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                        >
+                            See all results
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                            </svg>
+                        </a>
+                    </div>
+
+                    {{-- Most used — shown until the user starts a product search. --}}
+                    <div x-show="! searching" class="p-2">
                         <p class="px-3 pb-1 pt-2 text-xs font-semibold text-zinc-600">Most used</p>
 
                         @php
                             $searchItems = [
-                                ['Wallet',          'Top up & balance',       'Wallet.svg',         '#'],
+                                ['Wallet',          'Top up & balance',       'Wallet.svg',         route('dashboard.wallet')],
                                 ['Orders',          'Recent purchases',       'order.svg',          route('dashboard.orders')],
-                                ['Transactions',    'Activity history',       'transactions.svg',   '#'],
+                                ['Transactions',    'Activity history',       'transactions.svg',   route('dashboard.transactions')],
                                 ['Profile',         'Account information',    'user.svg',           route('dashboard.profile')],
                                 ['Security',        'Password & sessions',    'admin access.svg',   route('dashboard.password')],
                             ];
                         @endphp
 
                         @foreach ($searchItems as [$title, $subtitle, $icon, $href])
-                            <a href="{{ $href }}" @if($href !== '#') wire:navigate @endif class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-blue-100">
+                            <a href="{{ $href }}" wire:navigate class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-blue-100">
                                 <span class="flex items-center gap-3">
                                     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 ring-1 ring-zinc-200">
                                         <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-4 w-4" loading="lazy">
