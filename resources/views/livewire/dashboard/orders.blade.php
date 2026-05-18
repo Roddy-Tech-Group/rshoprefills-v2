@@ -85,10 +85,10 @@ class extends Component {
     };
 @endphp
 
-<div class="mx-auto flex w-full max-w-3xl flex-col gap-5">
+<div class="flex w-full flex-col gap-5">
 
     {{-- Heading --}}
-    <h1 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Order history</h1>
+    <h1 class="hidden text-xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:block">Order history</h1>
 
     {{-- Search + expired filter --}}
     <div>

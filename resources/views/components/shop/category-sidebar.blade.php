@@ -15,8 +15,8 @@
         ['slug' => 'mobile-airtime', 'label' => 'Mobile top up & data', 'url' => route('shop.topups')],
         ['slug' => 'esims',          'label' => 'eSIMs',                'url' => route('shop.esims')],
         ['slug' => 'bill-payments',  'label' => 'Bill payments',        'url' => route('shop.bills')],
-        ['slug' => 'flights',        'label' => 'Flights',              'url' => null],
-        ['slug' => 'stays',          'label' => 'Stays',                'url' => null],
+        ['slug' => 'flights',        'label' => 'Flights',              'url' => route('shop.flights')],
+        ['slug' => 'stays',          'label' => 'Stays',                'url' => route('shop.stays')],
     ];
 @endphp
 

@@ -38,7 +38,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto flex max-w-3xl flex-col gap-6">
+<div class="flex w-full flex-col gap-6">
     {{-- Page heading --}}
     <div class="text-center sm:text-left">
         <h1 class="text-2xl font-bold tracking-tight text-black sm:text-3xl">Security</h1>

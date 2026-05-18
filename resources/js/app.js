@@ -323,6 +323,10 @@ document.addEventListener('livewire:navigated', bootAll);
  * and the product page both read/drive this single store.
  */
 document.addEventListener('alpine:init', () => {
+    // Active wallet index — shared so the desktop wallet card and the mobile
+    // wallet carousel always show the same wallet (synced live, no page reload).
+    window.Alpine.store('wallet', { active: 0 });
+
     window.Alpine.store('cart', {
         items: [],
         count: 0,
