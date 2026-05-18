@@ -268,7 +268,7 @@
                     class="relative flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-blue-100"
                     aria-label="Notifications"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('Notification 3.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
+                    <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
                     @if ($notificationCount > 0)
                         <span class="pointer-events-none absolute -top-0.5 -right-0.5 inline-flex">
                             <span class="absolute inset-0 inline-flex animate-ping rounded-full bg-red-400 opacity-75"></span>
@@ -299,7 +299,7 @@
                     @if ($notificationCount === 0)
                         <div class="flex flex-col items-center px-4 py-8 text-center">
                             <span class="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100">
-                                <img src="{{ asset('assets/' . rawurlencode('Notification 3.svg')) }}" alt="" class="h-6 w-6 opacity-40" loading="lazy">
+                                <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-6 w-6 opacity-40" loading="lazy">
                             </span>
                             <p class="mt-3 text-sm font-medium text-zinc-700">You're all caught up</p>
                             <p class="mt-1 text-xs text-zinc-600">New notifications will appear here.</p>
@@ -385,7 +385,7 @@
                             Account activity
                         </a>
                         <a href="{{ route('admin.notifications') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
-                            <img src="{{ asset('assets/' . rawurlencode('Notification 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
+                            <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Notifications Log
                         </a>
                     </div>
@@ -476,14 +476,7 @@
                 <div class="px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4">
                     <div class="mb-5 flex items-center justify-between">
                         <h2 id="admin-mobile-menu-title" class="text-lg font-bold text-zinc-900">Admin menu</h2>
-                        <button
-                            type="button"
-                            @click="menuOpen = false"
-                            class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
-                            aria-label="Close menu"
-                        >
-                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
-                        </button>
+                        <x-close-button @click="menuOpen = false" aria-label="Close menu" />
                     </div>
 
                     <div class="skeleton-stagger-fast grid grid-cols-4 gap-3">

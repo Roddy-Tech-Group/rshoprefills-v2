@@ -172,7 +172,7 @@
                 {{-- Notifications --}}
                 <a href="#" class="{{ $navItem(false) }}">
                     <span class="flex items-center gap-3">
-                        <img src="{{ asset('assets/' . rawurlencode('Notification 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
                         Notifications
                     </span>
                     @if ($notificationCount > 0)
@@ -576,7 +576,7 @@
 
                         <a href="#" class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <span class="flex items-center gap-3">
-                                <img src="{{ asset('assets/' . rawurlencode('Notification 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
+                                <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                                 Notifications
                             </span>
                             @if ($notificationCount > 0)
@@ -610,45 +610,26 @@
              ANYTHING that should stack vertically with the page content (mobile blue hero,
              slim inner-page bar, the page slot) goes INSIDE it — otherwise Flux's flex
              container puts them side-by-side with flux:main on mobile. --}}
-        <flux:main class="!p-0 bg-white">
+        <flux:main class="!p-0 bg-[#eff6ff] lg:bg-white">
 
         {{-- Mobile header (blue hero, visible only on mobile).
              Pages can extend the blue area by filling the $mobileHero slot
              (e.g. wallet card on the overview). Inner pages with their own sticky header
              (settings, password, appearance) skip this hero entirely. --}}
         @unless ($skipMobileHero)
-        <header class="bg-blue-600 px-5 pb-6 lg:hidden" style="padding-top: max(1.25rem, env(safe-area-inset-top));">
-            {{-- Top row: hamburger + brand pill + notifications --}}
-            <div class="mb-4 flex items-center justify-between gap-3">
-                <button
-                    type="button"
-                    x-data
-                    x-on:click="$dispatch('open-mobile-menu')"
-                    aria-label="Open menu"
-                    class="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/10 active:scale-95"
-                >
-                    <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
-                </button>
-
-                <a href="{{ route('home') }}" wire:navigate class="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-white/15">
-                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
-                    </svg>
-                    Back to shop
-                </a>
-
+        <header class="sticky top-0 z-30 rounded-b-[20px] bg-blue-600 px-5 pb-6 lg:hidden" style="padding-top: max(1.25rem, env(safe-area-inset-top));">
+            {{-- Greeting + notifications on one row. --}}
+            <div class="flex items-start justify-between gap-3 text-white">
+                <div class="min-w-0">
+                    <h1 class="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-3xl">
+                        <span class="truncate">Hello {{ $user?->name ? str($user->name)->before(' ') : 'there' }}</span>
+                        <svg class="h-6 w-6 shrink-0 text-white sm:h-7 sm:w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15"/>
+                        </svg>
+                    </h1>
+                    <p class="mt-1 text-sm text-blue-100/85">Welcome back</p>
+                </div>
                 <livewire:notifications-menu tone="light" />
-            </div>
-
-            {{-- Greeting row --}}
-            <div class="text-white">
-                <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                    <span class="truncate">Hello {{ $user?->name ? str($user->name)->before(' ') : 'there' }}</span>
-                    <svg class="h-6 w-6 shrink-0 text-white sm:h-7 sm:w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15"/>
-                    </svg>
-                </h1>
-                <p class="mt-1 text-sm text-blue-100/85">Welcome back</p>
             </div>
 
             {{-- Optional mobile hero content rendered inside the blue area --}}
@@ -686,7 +667,7 @@
             </div>
         @endif
 
-            <div class="min-h-full rounded-tl-[60px] rounded-tr-[60px] bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:rounded-tr-none lg:px-10 lg:py-8">
+            <div class="bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:min-h-full lg:rounded-tl-[60px] lg:px-10 lg:py-8">
                 <div class="mx-auto max-w-7xl">
                     {{ $slot }}
                 </div>
@@ -714,19 +695,6 @@
                 {{-- Tab bar shell --}}
                 <nav class="relative grid grid-cols-5 items-center rounded-t-3xl border-t border-zinc-100 bg-white px-1.5 py-2 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.08)]" aria-label="Primary">
 
-                    {{-- Sliding circle bubble. A perfect 48px disc centered on the active column.
-                         Position uses `left: calc(N * 20% + 10%)` (column center) + a -translate-x-1/2 to
-                         center the bubble on that point. Width % is column width (1/5 of nav). The static
-                         style on first paint matches Alpine's first :style evaluation so the bubble doesn't
-                         animate from column 0 on initial render. --}}
-                    <span
-                        aria-hidden="true"
-                        style="left: calc({{ $activeIndex }} * 20% + 10%);{{ $activeIndex === 2 ? ' opacity: 0;' : '' }}"
-                        :style="`left: calc(${active} * 20% + 10%);`"
-                        :class="active === 2 ? 'opacity-0' : 'opacity-100'"
-                        class="pointer-events-none absolute top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40 backdrop-blur-md ring-1 ring-white/60 shadow-sm shadow-zinc-900/5 transition-[left,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                    ></span>
-
                     @php
                         $tabs = [
                             ['idx' => 0, 'href' => route('dashboard'),         'icon' => 'Home.svg',           'label' => 'Home',         'nav' => true],
@@ -746,7 +714,13 @@
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-transform duration-200 active:scale-90"
                         >
-                            <img src="{{ asset('assets/' . rawurlencode($t['icon'])) }}" alt="" class="h-5 w-5" loading="lazy">
+                            {{-- Masked span so the icon tints blue when its tab is active (monochrome SVG -> exact colour). --}}
+                            <span
+                                aria-hidden="true"
+                                class="h-5 w-5 transition-colors duration-200"
+                                :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-900 dark:bg-zinc-100'"
+                                style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
+                            ></span>
                             <span class="text-[9px] font-medium leading-none text-blue-600 transition-opacity duration-200" :class="active === {{ $t['idx'] }} ? 'opacity-100 font-semibold' : 'opacity-70'">{{ $t['label'] }}</span>
                         </a>
                     @endforeach
@@ -763,7 +737,13 @@
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-transform duration-200 active:scale-90"
                         >
-                            <img src="{{ asset('assets/' . rawurlencode($t['icon'])) }}" alt="" class="h-5 w-5" loading="lazy">
+                            {{-- Masked span so the icon tints blue when its tab is active (monochrome SVG -> exact colour). --}}
+                            <span
+                                aria-hidden="true"
+                                class="h-5 w-5 transition-colors duration-200"
+                                :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-900 dark:bg-zinc-100'"
+                                style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
+                            ></span>
                             <span class="text-[9px] font-medium leading-none text-blue-600 transition-opacity duration-200" :class="active === {{ $t['idx'] }} ? 'opacity-100 font-semibold' : 'opacity-70'">{{ $t['label'] }}</span>
                         </a>
                     @endforeach
@@ -817,7 +797,7 @@
                 ['label' => 'Verify (KYC)',  'href' => route('dashboard.kyc'),       'icon' => 'customer.svg',       'tone' => 'bg-amber-500',    'nav' => true],
                 ['label' => 'Security',      'href' => route('dashboard.password'),  'icon' => 'admin access.svg',   'tone' => 'bg-violet-500',   'nav' => true],
                 ['label' => 'Appearance',    'href' => route('dashboard.appearance'),'icon' => 'Appearance.svg',     'tone' => 'bg-fuchsia-500',  'nav' => true],
-                ['label' => 'Notifications', 'href' => '#',                          'icon' => 'Notification 3.svg', 'tone' => 'bg-amber-500',    'nav' => false],
+                ['label' => 'Notifications', 'href' => '#',                          'icon' => 'notification 2.svg', 'tone' => 'bg-amber-500',    'nav' => false],
                 ['label' => 'Saved Cards',   'href' => '#',                          'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => false],
                 ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.png',       'tone' => 'bg-orange-500',   'nav' => true],
                 ['label' => 'Support',       'href' => '#',                          'icon' => 'support.svg',        'tone' => 'bg-cyan-500',     'nav' => false],
@@ -870,14 +850,7 @@
                     {{-- Header --}}
                     <div class="mb-5 flex items-center justify-between">
                         <h2 id="mobile-menu-title" class="text-lg font-bold text-zinc-900">Menu</h2>
-                        <button
-                            type="button"
-                            @click="menuOpen = false"
-                            class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
-                            aria-label="Close menu"
-                        >
-                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
-                        </button>
+                        <x-close-button @click="menuOpen = false" aria-label="Close menu" />
                     </div>
 
                     {{-- Card grid, staggered entrance --}}
@@ -888,7 +861,7 @@
                                 @if ($item['nav'] && $item['href'] !== '#') wire:navigate @endif
                                 @click="menuOpen = false"
                                 style="--i: {{ $i }}"
-                                class="group flex flex-col items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-2 py-3 text-center transition-transform duration-200 active:scale-95"
+                                class="group flex flex-col items-center justify-center gap-2 rounded-[6px] bg-zinc-100 px-2 py-3 text-center transition-transform duration-200 active:scale-95"
                             >
                                 <span class="flex h-12 w-12 items-center justify-center rounded-full {{ $item['tone'] }} shadow-sm transition-transform duration-200 group-hover:scale-105">
                                     <img src="{{ asset('assets/' . rawurlencode($item['icon'])) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">

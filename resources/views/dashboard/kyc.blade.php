@@ -53,7 +53,7 @@
 
         {{-- ─── Header ─── --}}
         <section>
-            <h1 class="text-2xl font-bold tracking-tight text-black sm:text-3xl">Identity verification</h1>
+            <h1 class="text-xl font-bold tracking-tight text-black sm:text-3xl">Identity verification</h1>
             <p class="mt-1 text-sm text-zinc-600">Verify your account to raise your transaction limits and unlock the top membership tiers.</p>
         </section>
 

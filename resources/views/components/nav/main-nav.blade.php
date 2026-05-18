@@ -155,9 +155,9 @@
                     use App\Domain\Shared\Enums\Currency;
 
                     $walletBalance = auth()->check() ? (float) (auth()->user()->wallet?->balance ?? 0) : null;
-                    $walletCurrency = auth()->check() ? (auth()->user()->wallet?->currency ?? 'USD') : null;
-                    $currencyCase = $walletCurrency ? Currency::tryFrom($walletCurrency) : null;
-                    $currencySymbol = $currencyCase?->symbol() ?? ($walletCurrency ? $walletCurrency.' ' : '');
+                    // wallet->currency is cast to the Currency enum — use it directly (no tryFrom on an enum).
+                    $currencyCase = auth()->check() ? (auth()->user()->wallet?->currency ?? Currency::USD) : null;
+                    $currencySymbol = $currencyCase?->symbol() ?? '';
 
                     // Gender-aware default avatar for authed users. Resolved at render time so the right
                     // portrait shows up everywhere the user's avatar is rendered until they upload one.
