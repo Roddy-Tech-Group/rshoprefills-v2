@@ -82,4 +82,9 @@ class PaymentAttempt extends Model
     {
         return $this->morphTo();
     }
+
+    public function paymentSession(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PaymentSession::class);
+    }
 }

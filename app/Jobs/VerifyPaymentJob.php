@@ -46,12 +46,22 @@ class VerifyPaymentJob implements ShouldQueue
                 // 1. Transition the order's payment status to Paid
                 $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Paid, $attempt->verification_payload);
 
-                // 2. Refresh Order to verify paid status
+                // 2. Synchronize active PaymentSession model if exists
+                $attempt->load('paymentSession');
+                if ($attempt->paymentSession) {
+                    $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+                    $sessionService->confirmSession($attempt->paymentSession, [
+                        'transaction_id' => $attempt->gateway_reference,
+                        'payload' => $attempt->verification_payload,
+                    ]);
+                }
+
+                // 3. Refresh Order to verify paid status
                 $order = Order::find($attempt->order_id);
 
                 PaymentConfirmed::dispatch($order, $attempt);
 
-                // 3. Dispatch fulfillment jobs for each order item
+                // 4. Dispatch fulfillment jobs for each order item
                 foreach ($order->items as $item) {
                     FulfillOrderItemJob::dispatch($item);
                 }

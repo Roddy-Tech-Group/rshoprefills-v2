@@ -32,58 +32,30 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $description = "Wallet Funding Ref #{$payable->reference}";
         }
 
-        // If mock key, return simulated payment link
-        if (str_contains($this->secretKey, 'MOCK')) {
-            $simulatedUrl = "https://flutterwave.mock/pay/{$attempt->id}?ref={$txRef}";
-            $attempt->gateway_reference = 'FLW-MOCK-' . uniqid();
-            $attempt->payment_url = $simulatedUrl;
-            $attempt->save();
+        $publicKey = config('services.flutterwave.public_key') ?: env('FLUTTERWAVE_PUBLIC_KEY') ?: 'FLW_PUB_KEY_MOCK';
 
-            return [
-                'payment_url' => $simulatedUrl,
-                'gateway_reference' => $attempt->gateway_reference,
-            ];
-        }
+        // Set attempt's gateway reference to tx_ref for tracking before webhook or capture
+        $attempt->gateway_reference = $txRef;
+        $attempt->payment_url = null;
+        $attempt->save();
 
-        try {
-            $response = Http::withToken($this->secretKey)
-                ->post("{$this->baseUrl}/payments", [
-                    'tx_ref' => $txRef,
-                    'amount' => $attempt->amount,
-                    'currency' => strtoupper($attempt->currency),
-                    'redirect_url' => route('payment.callback', ['provider' => 'flutterwave']),
-                    'customer' => [
-                        'email' => $attempt->user->email,
-                        'name' => $attempt->user->name,
-                    ],
-                    'customizations' => [
-                        'title' => $title,
-                        'description' => $description,
-                    ],
-                ]);
-
-            if ($response->failed()) {
-                Log::error('Flutterwave payment initialization failed', [
-                    'status' => $response->status(),
-                    'body' => $response->json(),
-                ]);
-                throw new \Exception('Failed to initialize Flutterwave payment.');
-            }
-
-            $body = $response->json();
-            $paymentUrl = $body['data']['link'] ?? null;
-
-            $attempt->payment_url = $paymentUrl;
-            $attempt->save();
-
-            return [
-                'payment_url' => $paymentUrl,
-                'gateway_reference' => $txRef,
-            ];
-        } catch (\Exception $e) {
-            Log::error('Flutterwave API error: ' . $e->getMessage());
-            throw $e;
-        }
+        return [
+            'provider' => 'flutterwave',
+            'mode' => 'inline',
+            'tx_ref' => $txRef,
+            'public_key' => $publicKey,
+            'amount' => (float)$attempt->amount,
+            'currency' => strtoupper($attempt->currency),
+            'customer' => [
+                'email' => $attempt->user->email,
+                'name' => $attempt->user->name,
+            ],
+            'customizations' => [
+                'title' => $title,
+                'description' => $description,
+            ],
+            'gateway_reference' => $txRef,
+        ];
     }
 
     public function verifyPayment(PaymentAttempt $attempt): bool
