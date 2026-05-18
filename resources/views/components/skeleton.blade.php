@@ -10,12 +10,12 @@
 ])
 
 @php
-    // Default radius is a uniform 6px for line/rect skeletons. Circles stay fully round.
+    // Default radius is a uniform 4px for line/rect skeletons. Circles stay fully round.
     // Shaped placeholders (logo tiles, card art) override `rounded` per-instance to mirror
     // the radius of the real content they stand in for.
     $shapeClasses = match ($shape) {
         'circle' => 'rounded-full',
-        default  => 'rounded-[6px]',
+        default  => 'rounded-[4px]',
     };
     $roundedClass = $rounded ?? $shapeClasses;
     $sizeClasses  = trim(($w ? $w.' ' : '').($h ? $h : ''));

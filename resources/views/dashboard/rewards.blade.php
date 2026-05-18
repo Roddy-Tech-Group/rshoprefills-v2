@@ -67,11 +67,11 @@
 @endphp
 
 <x-layouts.dashboard>
-    <div class="mx-auto flex max-w-5xl flex-col gap-8">
+    <div class="flex w-full flex-col gap-8">
 
         {{-- ─── Rcoin balance card ─── --}}
         <section>
-            <h1 class="text-2xl font-bold tracking-tight text-black sm:text-3xl">Your Rcoin</h1>
+            <h1 class="hidden text-xl font-bold tracking-tight text-black sm:text-3xl lg:block">Your Rcoin</h1>
 
             <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
                 <div class="flex items-start gap-4">

@@ -938,14 +938,7 @@
                 x-transition:leave-end="opacity-0 translate-y-3 scale-95"
                 class="relative w-full max-w-md rounded-2xl bg-blue-100 p-6 text-center shadow-2xl shadow-zinc-900/25"
             >
-                <button
-                    type="button"
-                    @click="show = false"
-                    aria-label="Dismiss"
-                    class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
-                >
-                    <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-4 w-4 object-contain" loading="lazy">
-                </button>
+                <x-close-button @click="show = false" aria-label="Dismiss" class="absolute right-3 top-3" />
 
                 {{-- The illustration is dark line-art drawn for a light background; give it
                      a fixed light-blue backing (literal hex so the dark remap leaves it light)

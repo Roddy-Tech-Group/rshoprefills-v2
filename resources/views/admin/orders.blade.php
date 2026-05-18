@@ -35,9 +35,14 @@
                                     default => 'bg-amber-50 text-amber-700',
                                 };
                             @endphp
-                            <tr>
-                                <td class="px-5 py-3 font-mono text-zinc-700">#{{ $order->order_number }}</td>
-                                <td class="px-5 py-3 font-medium text-zinc-900">{{ $order->user?->name ?? '—' }}</td>
+                            <tr
+                                onclick="window.location='{{ route('admin.order', $order) }}'"
+                                class="cursor-pointer transition-colors hover:bg-blue-50/40"
+                            >
+                                <td class="px-5 py-3">
+                                    <a href="{{ route('admin.order', $order) }}" class="font-mono font-semibold text-blue-600 hover:text-blue-700">#{{ $order->order_number }}</a>
+                                </td>
+                                <td class="px-5 py-3 font-medium text-zinc-900">{{ $order->user?->name ?? 'Unknown' }}</td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $order->items->count() }}</td>
                                 <td class="px-5 py-3 font-semibold text-zinc-900">{{ $order->display_currency }} {{ number_format((float) $order->total_amount, 2) }}</td>
                                 <td class="px-5 py-3">

@@ -155,12 +155,9 @@
                     use App\Domain\Shared\Enums\Currency;
 
                     $walletBalance = auth()->check() ? (float) (auth()->user()->wallet?->balance ?? 0) : null;
-                    $walletCurrency = auth()->check() ? (auth()->user()->wallet?->currency ?? 'USD') : null;
-                    $currencyCase = $walletCurrency instanceof Currency
-                        ? $walletCurrency
-                        : ($walletCurrency ? Currency::tryFrom($walletCurrency) : null);
-                    $currencySymbol = $currencyCase?->symbol()
-                        ?? (is_string($walletCurrency) ? $walletCurrency.' ' : ($walletCurrency instanceof Currency ? $walletCurrency->value.' ' : ''));
+                    // wallet->currency is cast to the Currency enum — use it directly (no tryFrom on an enum).
+                    $currencyCase = auth()->check() ? (auth()->user()->wallet?->currency ?? Currency::USD) : null;
+                    $currencySymbol = $currencyCase?->symbol() ?? '';
 
                     // Gender-aware default avatar for authed users. Resolved at render time so the right
                     // portrait shows up everywhere the user's avatar is rendered until they upload one.
@@ -472,13 +469,13 @@
                 </a>
 
                 {{-- Flights --}}
-                <a href="#" @click.prevent class="{{ $catLinkClass }} {{ $catLinkState('Flights') }}">
+                <a href="{{ route('shop.flights') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Flights') }}">
                     <img src="{{ asset('assets/' . rawurlencode('flight 2.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('Flights') }}" loading="lazy">
                     Flights
                 </a>
 
                 {{-- Stays --}}
-                <a href="#" @click.prevent class="{{ $catLinkClass }} {{ $catLinkState('Stays') }}">
+                <a href="{{ route('shop.stays') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Stays') }}">
                     <img src="{{ asset('assets/' . rawurlencode('stay 2.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('Stays') }}" loading="lazy">
                     Stays
                 </a>

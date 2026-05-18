@@ -201,6 +201,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         uploading: false,
         country: 'Cameroon',
         countryFlag: '🇨🇲',
+        countryCode: 'cm',
         language: 'English',
         gender: @js($authUser?->gender ?? ''),
         genderMenuOpen: false,
@@ -210,12 +211,12 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             this.$nextTick(() => { this.loaded = true; });
         }
     }"
-    x-on:locale-updated.window="country = $event.detail.country; countryFlag = $event.detail.countryFlag; language = $event.detail.language"
+    x-on:locale-updated.window="country = $event.detail.country; countryFlag = $event.detail.countryFlag; countryCode = $event.detail.countryCode; language = $event.detail.language"
     x-on:livewire-upload-start="uploading = true"
     x-on:livewire-upload-finish="uploading = false"
     x-on:livewire-upload-error="uploading = false"
     x-on:profile-updated.window="editingProfile = false"
-    class="mx-auto flex max-w-3xl flex-col gap-6 pb-4"
+    class="flex w-full flex-col gap-6 pb-4"
 >
     {{-- Desktop heading. On mobile the layout's sticky top bar shows the title, so this stays hidden there. --}}
     <div class="hidden items-center justify-between gap-3 lg:flex">
