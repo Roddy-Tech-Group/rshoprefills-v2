@@ -11,6 +11,7 @@ class ProductVariant extends Model
 
     protected $fillable = [
         'product_id',
+        'subcategory_id',
         'provider_offer_id',
         'sku',
         'currency',
@@ -41,5 +42,14 @@ class ProductVariant extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * The subcategory this specific offer belongs to. May differ from the
+     * parent product's subcategory when a product spans multiple subtypes.
+     */
+    public function subcategory()
+    {
+        return $this->belongsTo(Subcategory::class);
     }
 }

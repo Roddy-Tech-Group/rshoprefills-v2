@@ -65,15 +65,17 @@ class CartValidationService
             }
         }
 
-        // 3. Check pricing snapshot integrity
-        // Recalculate what the price *should* be right now
-        // Note: For variable products, the provider cost scales linearly.
-        // We assume CartPricingService calculates based on the variant cost,
-        // but for variable products, we might need to adjust the logic.
-        // For now, we compare the recalculated subtotal against the snapshot.
+        // 3. Check pricing snapshot integrity — recalculate what the unit price
+        // *should* be right now and compare against the snapshot.
+        //
+        // Money is compared with a 1-cent tolerance: a strict !== on floats
+        // falsely flags economically-identical prices that differ only in their
+        // binary representation (e.g. 11.01 is not exactly representable), which
+        // would block every checkout. A genuine markup/catalog change shifts the
+        // price by far more than a cent and is still caught.
         $currentPricing = $this->pricingService->calculatePricing($variant, $item->quantity);
 
-        if ((float) $item->unit_price_snapshot !== (float) $currentPricing['unit_price_snapshot']) {
+        if (abs((float) $item->unit_price_snapshot - (float) $currentPricing['unit_price_snapshot']) > 0.01) {
             $issues[] = 'price_updated';
         }
 

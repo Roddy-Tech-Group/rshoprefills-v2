@@ -72,6 +72,45 @@
     }
 }
 
+/* Scrollbars. Only the page (document) shows one — a thin, modern, rounded
+   bar. Every in-page scroll container (dropdown panels, scroll areas, modals)
+   shows NO scrollbar at all; the content still scrolls by wheel/touch/drag. */
+
+/* Default: hide every scrollbar. */
+* {
+    scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+    display: none;
+}
+
+/* Exception: the page itself keeps a modern slim scrollbar. */
+html,
+body {
+    scrollbar-width: thin;
+    scrollbar-color: #c4cad6 transparent;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: block;
+    width: 10px;
+}
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+    background: transparent;
+}
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+    background-color: #c4cad6;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+    background-color: #a0a8b8;
+}
+
 [data-flux-field] {
     @apply grid gap-2;
 }
@@ -108,15 +147,39 @@
     transition: box-shadow 280ms var(--ease-emphasis);
     will-change: transform;
 }
-/* Pointer-tracked light glare — a soft highlight that follows the cursor. */
+/* Pointer-tracked dot — a small pulsing blue dot that follows the cursor while
+   a card is hovered (replaces the old soft glare). cardTilt() sets --glare-x/y. */
 .card-3d-glare {
-    background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 0%),
-        rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 42%);
     opacity: 0;
-    transition: opacity 280ms var(--ease-emphasis);
+    transition: opacity 200ms var(--ease-emphasis);
 }
 .card-3d.is-tilting .card-3d-glare {
     opacity: 1;
+}
+.card-3d-glare::before,
+.card-3d-glare::after {
+    content: "";
+    position: absolute;
+    left: var(--glare-x, 50%);
+    top: var(--glare-y, 50%);
+    height: 12px;
+    width: 12px;
+    border-radius: 9999px;
+    transform: translate(-50%, -50%);
+}
+/* Solid dot. */
+.card-3d-glare::after {
+    background: #2563eb;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.65);
+}
+/* Expanding pulse ring around the dot. */
+.card-3d-glare::before {
+    background: rgba(37, 99, 235, 0.5);
+    animation: cardDotPulse 1.3s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes cardDotPulse {
+    0%        { transform: translate(-50%, -50%) scale(1);   opacity: 0.7; }
+    80%, 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
 }
 
 /* "Add to cart" success cue — a brief, confident bounce when the item lands. */
@@ -270,3 +333,178 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* ============================================================
+   DARK MODE
+   Applied when <html> carries `.dark` (set by the theme engine in
+   partials/theme-engine.blade.php — light / dark / auto).
+
+   The app is built entirely in light-mode Tailwind utilities, so
+   dark mode is a palette remap: the light surface/text utilities
+   are overridden under `.dark` to a navy-anchored dark ramp.
+   `.dark .bg-white` (specificity 0,2,0) wins over the `.bg-white`
+   utility, so no Blade markup needs to change.
+
+   Card surface = navy (#0c1a2e). Page sits darker so cards lift.
+   Intentionally-dark utilities (bg-zinc-800/900, bg-blue-950/900,
+   text-white) are deliberately NOT remapped — dark bars, hero
+   panels and button labels keep working as-is. Brand blue is kept.
+
+   Refine per-section by adding real `dark:` classes where a spot
+   needs something other than this global remap.
+   ============================================================ */
+.dark {
+    color-scheme: dark;
+}
+
+/* Surfaces — light backgrounds resolve to the navy dark ramp. */
+/* Cards — navy. Also <flux:main> (it carries `bg-white`): it frames the content
+   panel, sitting one step lighter than the panel's #070f1c so the rounded-tl
+   corner reads as a clean curve, the way white frames the pale panel in light mode. */
+.dark .bg-white          { background-color: #0c1a2e; }
+.dark .bg-zinc-50        { background-color: #101f33; }
+.dark .bg-zinc-100       { background-color: #070f1c; }   /* page background */
+.dark .bg-zinc-200       { background-color: #1a2b42; }   /* chips, hover, x-button */
+.dark .bg-\[\#eff6ff\]   { background-color: #070f1c; }   /* admin / customer page bg */
+.dark .bg-\[\#f9fafb\]   { background-color: #070f1c; }
+.dark .bg-\[\#ededee\]   { background-color: #101f33; }   /* product hero plate */
+
+/* Glass surfaces — semi-transparent white panels. */
+.dark .bg-white\/40 { background-color: rgb(12 26 46 / 0.55); }
+.dark .bg-white\/70 { background-color: rgb(12 26 46 / 0.80); }
+.dark .bg-white\/80 { background-color: rgb(12 26 46 / 0.86); }
+.dark .bg-white\/90 { background-color: rgb(12 26 46 / 0.92); }
+.dark .bg-white\/95 { background-color: rgb(12 26 46 / 0.95); }
+
+/* Blue tints used as subtle highlights / selected states. */
+.dark .bg-blue-50  { background-color: #15273f; }
+.dark .bg-blue-100 { background-color: #1d3252; }
+
+/* Text — dark text resolves to near-white; muted greys lighten. */
+.dark .text-black,
+.dark .text-zinc-900 { color: #f4f4f5; }
+.dark .text-zinc-800 { color: #e6e6e8; }
+.dark .text-zinc-700 { color: #d6d6da; }
+.dark .text-zinc-600 { color: #a6a6ad; }   /* muted body text */
+.dark .text-zinc-500 { color: #909098; }
+
+/* Borders, rings and dividers. */
+.dark .border-zinc-100,
+.dark .border-zinc-200 { border-color: #24364f; }
+.dark .ring-zinc-100,
+.dark .ring-zinc-200   { --tw-ring-color: #24364f; }
+.dark .divide-zinc-100 > *,
+.dark .divide-zinc-200 > * { border-color: #24364f; }
+/* Heavier borders (inputs) — a touch lighter so the field reads as a distinct
+   control on the navy surface, not a bright grey line. */
+.dark .border-zinc-300,
+.dark .border-zinc-400,
+.dark .border-zinc-500 { border-color: #36496b; }
+.dark .hover\:border-zinc-500:hover { border-color: #44597d; }
+
+/* Nav search box — a white resting border in dark mode so the field stands
+   out against the navy chrome. Focus still shows the blue border + ring
+   (the `border-zinc-400` class is only present while the field is closed). */
+.dark form[role="search"].border-zinc-400 { border-color: #ffffff; }
+
+/* Form controls — text colour for every input; a dark surface only for inputs
+   that actually paint their own background. Inputs marked `bg-transparent`
+   (e.g. the nav search field, which sits inside a styled form) are skipped so
+   they show the parent surface instead of a box of their own. */
+.dark input,
+.dark textarea,
+.dark select { color: #f4f4f5; }
+.dark input:not(.bg-transparent),
+.dark textarea:not(.bg-transparent),
+.dark select:not(.bg-transparent) { background-color: #0f1d31; }
+.dark input::placeholder,
+.dark textarea::placeholder { color: #8a93a3; }
+
+/* Skeleton shimmer reads as a lighter block on the dark surface. */
+.dark .skeleton { background-color: #1c2c44; }
+.dark .skeleton::after {
+    background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.12) 50%, transparent 100%);
+}
+
+/* Hover / focus background variants — the bare `.dark .bg-*` rules above do NOT
+   match `hover:bg-*` / `focus:bg-*` utility classes, so a hovered row, list
+   item or sidebar link would flash a bright light colour. Remap the common
+   ones to a subtle hover-lift (slightly lighter than the dark surface). */
+.dark .hover\:bg-white:hover,
+.dark .hover\:bg-zinc-50:hover,
+.dark .hover\:bg-zinc-100:hover  { background-color: #16273d; }
+.dark .hover\:bg-zinc-200:hover  { background-color: #1f3048; }
+.dark .hover\:bg-zinc-300:hover  { background-color: #243752; }
+.dark .hover\:bg-blue-50:hover   { background-color: #1f3354; }
+.dark .hover\:bg-blue-100:hover  { background-color: #274069; }
+.dark .hover\:bg-white\/70:hover { background-color: rgb(22 39 61 / 0.9); }
+.dark .focus\:bg-white:focus,
+.dark .focus\:bg-zinc-50:focus,
+.dark .focus\:bg-zinc-100:focus  { background-color: #16273d; }
+
+/* Blue accent text lightens so links / selected labels stay legible on dark. */
+.dark .text-blue-600,
+.dark .text-blue-700 { color: #60a5fa; }
+
+/* Dark icon SVGs (rendered as <img>) are dark artwork — invert every one to
+   light so they read on the dark surface. !important beats inline filters.
+   Opt a specific image out with class="no-dark-invert" if it is a colour
+   illustration that must keep its own hues. */
+.dark img[src$=".svg"]:not(.no-dark-invert) {
+    filter: brightness(0) invert(0.92) !important;
+}
+/* Crypto coin icons are colour brand marks (BTC orange, ETH, SOL, USDT) — the
+   blanket invert above would flatten them to white blobs. Keep their own hues.
+   Equal specificity to the rule above, declared after it, so this wins. */
+.dark img[src$=".svg"][src*="BTC"],
+.dark img[src$=".svg"][src*="ETH"],
+.dark img[src$=".svg"][src*="SOLANA"],
+.dark img[src$=".svg"][src*="USDT"] {
+    filter: none !important;
+}
+/* PNG coin icons (BNB, LTC) can't be recoloured by CSS — sit them on a light
+   disc so a dark logo stays visible against the dark surface. */
+.dark img[src*="BNB.png"],
+.dark img[src*="LTC.png"] {
+    background-color: #f4f4f5;
+    border-radius: 9999px;
+}
+/* referals.png is a monochrome dark icon PNG — the SVG invert above misses
+   PNGs, so invert it to white explicitly for the dark surface. */
+.dark img[src*="referals.png"] {
+    filter: brightness(0) invert(1) !important;
+}
+
+/* ------------------------------------------------------------
+   THEME-STATIC — elements that must look IDENTICAL in light and
+   dark mode. Mark the element (or its wrapper) with `theme-static`.
+   The order delivery card is the reason: resellers screenshot it to
+   hand to their own customers, so it must not shift with the
+   reseller's theme. These rules re-pin the LIGHT palette inside a
+   theme-static element, out-specifying the .dark remap above.
+   ------------------------------------------------------------ */
+.dark .theme-static.bg-white,
+.dark .theme-static .bg-white      { background-color: #ffffff; }
+.dark .theme-static.bg-zinc-50,
+.dark .theme-static .bg-zinc-50    { background-color: #fafafa; }
+.dark .theme-static.bg-zinc-100,
+.dark .theme-static .bg-zinc-100   { background-color: #f5f5f5; }
+.dark .theme-static.bg-zinc-200,
+.dark .theme-static .bg-zinc-200   { background-color: #e5e5e5; }
+.dark .theme-static .text-black,
+.dark .theme-static .text-zinc-900 { color: #171717; }
+.dark .theme-static .text-zinc-800 { color: #262626; }
+.dark .theme-static .text-zinc-700 { color: #404040; }
+.dark .theme-static .text-zinc-600 { color: #525252; }
+.dark .theme-static .text-zinc-500 { color: #737373; }
+.dark .theme-static .text-zinc-400 { color: #a3a3a3; }
+.dark .theme-static .text-blue-600,
+.dark .theme-static .text-blue-700 { color: #2563eb; }
+.dark .theme-static.border-zinc-100,
+.dark .theme-static .border-zinc-100 { border-color: #f5f5f5; }
+.dark .theme-static.border-zinc-200,
+.dark .theme-static .border-zinc-200 { border-color: #e5e5e5; }
+.dark .theme-static .ring-zinc-100 { --tw-ring-color: #f5f5f5; }
+.dark .theme-static .ring-zinc-200 { --tw-ring-color: #e5e5e5; }
+/* Icons inside a theme-static element keep their real artwork (no invert). */
+.dark .theme-static img[src$=".svg"] { filter: none !important; }

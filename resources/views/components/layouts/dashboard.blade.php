@@ -25,9 +25,10 @@
             $imgIconWhite = 'filter: brightness(0) invert(1);';
             $imgIconStyle = fn (bool $active) => $active ? $imgIconWhite : $imgIconBlack;
 
-            // Placeholder counts. Real counts will bind to Order / Notification models once they ship.
             $ordersCount = $user?->orders()->count() ?? 0;
-            $notificationCount = 0;
+            // Unread notification count — drives the sidebar/avatar/menu badges.
+            // The bell dropdown (<livewire:notifications-menu />) computes its own.
+            $notificationCount = $user?->notifications()->whereNull('read_at')->count() ?? 0;
 
             // Default avatar by gender. Backend hook: add a nullable `gender` enum (male|female|other) on users
             // and the right portrait is picked up automatically. Falls back to the male portrait until the column ships.
@@ -68,8 +69,14 @@
             {{-- SHOP section (expandable, mirrors admin Products dropdown) --}}
             <p class="mt-6 px-3 text-base font-bold text-zinc-900">Shop</p>
             <nav class="mt-2 flex flex-col gap-1" aria-label="Shop">
-                <div x-data="{ expanded: false }" class="flex flex-col gap-1">
-                    <button type="button" @click="expanded = !expanded" :aria-expanded="expanded.toString()" class="{{ $navItem(false) }} w-full">
+                <div
+                    x-data="{ expanded: false, locked: false }"
+                    @mouseenter="expanded = true"
+                    @mouseleave="if (! locked) expanded = false"
+                    @click.outside="locked = false; expanded = false"
+                    class="flex flex-col gap-1"
+                >
+                    <button type="button" @click.stop="locked = ! locked; expanded = locked" :aria-expanded="expanded.toString()" class="{{ $navItem(false) }} w-full">
                         <span class="flex items-center gap-3">
                             <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
                             Shop
@@ -108,7 +115,7 @@
             <nav class="mt-2 flex flex-col gap-1" aria-label="Account management">
                 {{-- Orders (placeholder route — view ships when dashboard.orders does) --}}
                 @php $active = $isCurrent('dashboard.orders*'); @endphp
-                <a href="#" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.orders') }}" wire:navigate class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/' . rawurlencode('order.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Orders
@@ -209,7 +216,9 @@
         </flux:sidebar>
 
         {{-- Top header (desktop only). Search is absolutely centered horizontally so it stays middle regardless of cart/profile width on the right. --}}
-        <flux:header sticky class="sticky top-0 z-40 hidden min-h-[64px] items-center gap-3 !border-b-0 bg-white/95 px-4 py-2 backdrop-blur-xl sm:px-6 lg:flex">
+        {{-- NOTE: no Flux `sticky` prop — it freezes `top` to a JS-read offsetTop and floats
+             the bar mid-page when the read races the body grid. `sticky top-0` below is pure CSS. --}}
+        <flux:header class="sticky top-0 z-40 hidden min-h-[64px] items-center gap-3 !border-b-0 bg-white/95 px-4 py-2 backdrop-blur-xl sm:px-6 lg:flex">
 
             {{-- Search bar (matches storefront home-nav style) with results panel --}}
             <div
@@ -284,7 +293,7 @@
                         @php
                             $searchItems = [
                                 ['Wallet',          'Top up & balance',       'Wallet.svg',         '#'],
-                                ['Orders',          'Recent purchases',       'order.svg',          '#'],
+                                ['Orders',          'Recent purchases',       'order.svg',          route('dashboard.orders')],
                                 ['Transactions',    'Activity history',       'transactions.svg',   '#'],
                                 ['Profile',         'Account information',    'user.svg',           route('dashboard.profile')],
                                 ['Security',        'Password & sessions',    'admin access.svg',   route('dashboard.password')],
@@ -356,11 +365,11 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
+                    class="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-2xl bg-white/80 px-3 py-2 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
                     role="menu"
                 >
                     {{-- Empty state --}}
-                    <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-6 py-7 text-center">
+                    <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
                         <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
                         <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
                         <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
@@ -368,15 +377,15 @@
 
                     {{-- Populated state --}}
                     <div x-show="$store.cart.count > 0" x-cloak>
-                        <div class="flex items-center justify-between px-5 pt-5">
+                        <div class="flex items-center justify-between px-3 pt-3">
                             <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
                             <span class="text-sm text-zinc-600" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
                         </div>
 
-                        <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <template x-for="item in $store.cart.items" :key="item.id">
-                                <li class="flex items-center gap-3 rounded-xl px-2 py-2.5">
-                                    <span class="flex aspect-[16/10] w-20 shrink-0 items-center justify-center overflow-hidden rounded-[2px] bg-white shadow-sm ring-1 ring-zinc-200">
+                                <li class="flex items-center gap-3 rounded-xl px-3 py-2.5">
+                                    <span class="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-zinc-200">
                                         <template x-if="item.logo">
                                             <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                         </template>
@@ -386,13 +395,7 @@
                                     </span>
                                     <span class="min-w-0 flex-1">
                                         <span class="block truncate text-sm font-bold text-zinc-900" x-text="item.name"></span>
-                                        <span class="block truncate text-xs text-zinc-500">
-                                            <span x-show="item.face_label" x-text="item.face_label"></span><span x-show="item.face_label && item.country"> &middot; </span><span x-text="item.country"></span>
-                                        </span>
-                                        <span class="block text-xs font-semibold text-zinc-700">
-                                            <span x-text="$store.cart.pay(item.unit_price)"></span>
-                                            <span x-show="$store.cart.showUsd" class="font-normal text-zinc-400" x-text="'(' + $store.cart.usd(item.unit_price_usd) + ')'"></span>
-                                        </span>
+                                        <span class="mt-0.5 block text-xs font-semibold text-zinc-700" x-text="$store.cart.pay(item.unit_price)"></span>
                                     </span>
                                     <span class="flex shrink-0 items-center gap-1.5">
                                         <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Decrease">
@@ -407,24 +410,22 @@
                             </template>
                         </ul>
 
-                        <div class="mx-5 flex items-start justify-between border-t border-zinc-200 py-4">
-                            <span class="text-sm font-medium text-zinc-700">Subtotal</span>
-                            <span class="text-right">
-                                <span class="block text-base font-bold tabular-nums text-zinc-900" x-text="$store.cart.pay($store.cart.subtotal)"></span>
-                                <span x-show="$store.cart.showUsd" class="block text-xs text-zinc-500" x-text="'(' + $store.cart.usd($store.cart.subtotalUsd) + ' USD)'"></span>
-                            </span>
-                        </div>
-
-                        <div class="flex gap-2 border-t border-zinc-100 bg-zinc-50 p-3">
-                            <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
+                        <div class="mt-3 flex gap-2 rounded-xl bg-zinc-50 px-3 py-3">
+                            <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
                                 View cart
                             </a>
-                            <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                            <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                                 Checkout
                             </a>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {{-- Notification bell (desktop) — hidden lg:block so it never doubles
+                 up with the mobile hero bell on small screens. --}}
+            <div class="hidden lg:block">
+                <livewire:notifications-menu tone="dark" />
             </div>
 
             {{-- Profile dropdown.
@@ -440,6 +441,7 @@
                     locked: false,
                     country: 'United States',
                     countryFlag: '🇺🇸',
+                    countryCode: 'US',
                     language: 'English',
                     currency: 'USD',
                     currencySymbol: '$',
@@ -462,7 +464,7 @@
                 @mouseleave="if (!locked) open = false"
                 @click.outside="open = false; locked = false; currencyMenuOpen = false"
                 @keydown.escape.window="open = false; locked = false; currencyMenuOpen = false"
-                @locale-updated.window="country = $event.detail.country; countryFlag = $event.detail.countryFlag; language = $event.detail.language"
+                @locale-updated.window="country = $event.detail.country; countryFlag = $event.detail.countryFlag; countryCode = $event.detail.countryCode; language = $event.detail.language"
                 class="relative"
             >
                 <button type="button" @click="locked = !locked; open = locked" :aria-expanded="open.toString()" aria-label="{{ $user?->name ?? 'Account' }}" class="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
@@ -530,7 +532,7 @@
                                 Country
                             </span>
                             <span class="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
-                                <span class="text-sm leading-none" x-text="countryFlag">🇺🇸</span>
+                                <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3 w-[18px] shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                                 <span class="max-w-[80px] truncate" x-text="country">United States</span>
                             </span>
                         </button>
@@ -608,7 +610,7 @@
              ANYTHING that should stack vertically with the page content (mobile blue hero,
              slim inner-page bar, the page slot) goes INSIDE it — otherwise Flux's flex
              container puts them side-by-side with flux:main on mobile. --}}
-        <flux:main class="!p-0 !bg-white">
+        <flux:main class="!p-0 bg-white">
 
         {{-- Mobile header (blue hero, visible only on mobile).
              Pages can extend the blue area by filling the $mobileHero slot
@@ -635,14 +637,7 @@
                     Back to shop
                 </a>
 
-                <button type="button" class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10 active:scale-95" aria-label="Notifications">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
-                    </svg>
-                    @if ($notificationCount > 0)
-                        <span class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{{ $notificationCount }}</span>
-                    @endif
-                </button>
+                <livewire:notifications-menu tone="light" />
             </div>
 
             {{-- Greeting row --}}
@@ -687,14 +682,7 @@
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
                 <h1 class="truncate text-base font-bold text-zinc-900">{{ $innerTitle }}</h1>
-                <button type="button" class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-700 transition-colors hover:bg-zinc-100 active:scale-95" aria-label="Notifications">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
-                    </svg>
-                    @if ($notificationCount > 0)
-                        <span class="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">{{ $notificationCount }}</span>
-                    @endif
-                </button>
+                <livewire:notifications-menu tone="dark" />
             </div>
         @endif
 
@@ -742,7 +730,7 @@
                     @php
                         $tabs = [
                             ['idx' => 0, 'href' => route('dashboard'),         'icon' => 'Home.svg',           'label' => 'Home',         'nav' => true],
-                            ['idx' => 1, 'href' => '#',                        'icon' => 'order.svg',          'label' => 'Orders',       'nav' => false],
+                            ['idx' => 1, 'href' => route('dashboard.orders'), 'icon' => 'order.svg',          'label' => 'Orders',       'nav' => true],
                             // index 2 is the FAB spacer — handled separately below
                             ['idx' => 3, 'href' => '#',                        'icon' => 'transactions 1.svg', 'label' => 'Transactions', 'nav' => false],
                             ['idx' => 4, 'href' => route('dashboard.profile'), 'icon' => 'Profile 1.svg',      'label' => 'Profile',      'nav' => true],
@@ -807,8 +795,8 @@
             x-init="
                 init();
                 // Profile dropdown chip listens for these events to keep its display values in sync.
-                $watch('country',  v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, language: language }));
-                $watch('language', v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, language: language }));
+                $watch('country',  v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
+                $watch('language', v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
             "
             x-on:open-locale-modal.window="localeModalOpen = true"
         >
@@ -822,7 +810,7 @@
             $mobileMenuItems = [
                 ['label' => 'Home',          'href' => route('dashboard'),           'icon' => 'Home.svg',           'tone' => 'bg-blue-500',     'nav' => true],
                 ['label' => 'Shop',          'href' => route('home'),                'icon' => 'Shop.svg',           'tone' => 'bg-pink-500',     'nav' => true],
-                ['label' => 'Orders',        'href' => '#',                          'icon' => 'order.svg',          'tone' => 'bg-sky-500',      'nav' => false],
+                ['label' => 'Orders',        'href' => route('dashboard.orders'),    'icon' => 'order.svg',          'tone' => 'bg-sky-500',      'nav' => true],
                 ['label' => 'Wallet',        'href' => '#',                          'icon' => 'Wallet.svg',         'tone' => 'bg-emerald-500',  'nav' => false],
                 ['label' => 'Transactions',  'href' => '#',                          'icon' => 'transactions 1.svg', 'tone' => 'bg-teal-500',     'nav' => false],
                 ['label' => 'Profile',       'href' => route('dashboard.profile'),   'icon' => 'Profile 1.svg',      'tone' => 'bg-indigo-500',   'nav' => true],
@@ -885,12 +873,10 @@
                         <button
                             type="button"
                             @click="menuOpen = false"
-                            class="flex h-9 w-9 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                            class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
                             aria-label="Close menu"
                         >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
+                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
                         </button>
                     </div>
 

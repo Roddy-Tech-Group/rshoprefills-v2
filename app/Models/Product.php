@@ -75,6 +75,22 @@ class Product extends Model
     }
 
     /**
+     * Deterministic solid tile colour for a brand/operator that has no logo,
+     * derived from its key so the same brand always renders the same colour.
+     * Used as a branded fallback — mobile-airtime operators carry no logo, so
+     * their cards become a coloured name tile instead of an empty box.
+     */
+    public static function tileColor(?string $key): string
+    {
+        $palette = [
+            '#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2',
+            '#db2777', '#4f46e5', '#ca8a04', '#0d9488', '#e11d48', '#9333ea',
+        ];
+
+        return $palette[abs(crc32((string) $key)) % count($palette)];
+    }
+
+    /**
      * Real flag image URL for an ISO-3166 country code, via flagcdn.com.
      * Country-flag emoji don't render on Windows desktop, so we use images
      * for consistent flags on every OS. Returns null for an invalid code.

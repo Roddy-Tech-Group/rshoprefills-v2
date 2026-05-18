@@ -245,15 +245,40 @@
         {{-- ─── Tier ladder ─── --}}
         <section>
             <h2 class="mb-3 text-sm font-bold text-black">Membership tiers</h2>
+            @php
+                // Solid-colour medal palettes per tier (no gradients — project rule).
+                // rim = outer disc, face = inner disc, ribbon = hanging tails, star = emblem.
+                $medals = [
+                    'Bronze'   => ['rim' => '#8a5a2b', 'face' => '#c47f3e', 'ribbon' => '#a3672f', 'star' => '#fdf1e0'],
+                    'Silver'   => ['rim' => '#7f8794', 'face' => '#c3c9d3', 'ribbon' => '#99a0ad', 'star' => '#ffffff'],
+                    'Gold'     => ['rim' => '#b07d12', 'face' => '#e6b03a', 'ribbon' => '#c99a26', 'star' => '#fffaef'],
+                    'Platinum' => ['rim' => '#5f6b7e', 'face' => '#9fadc4', 'ribbon' => '#8390a6', 'star' => '#ffffff'],
+                    'Diamond'  => ['rim' => '#0e7490', 'face' => '#3bbdf4', 'ribbon' => '#0a90b6', 'star' => '#ffffff'],
+                ];
+            @endphp
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 @foreach ($tierLadder as $tier)
-                    @php $reached = $rcoinBalance >= $tier['min']; $isCurrent = $tier['name'] === $currentTier['name']; @endphp
+                    @php
+                        $reached = $rcoinBalance >= $tier['min'];
+                        $isCurrent = $tier['name'] === $currentTier['name'];
+                        $m = $medals[$tier['name']] ?? $medals['Bronze'];
+                    @endphp
                     <div @class([
                         'rounded-2xl p-4 text-center ring-1 transition-colors',
                         'bg-blue-600 text-white ring-blue-600' => $isCurrent,
                         'bg-white text-zinc-900 ring-zinc-100' => ! $isCurrent && $reached,
                         'bg-white text-zinc-400 ring-zinc-100' => ! $reached,
                     ])>
+                        {{-- Tier medal — ribboned medallion with a star emblem. --}}
+                        <svg viewBox="0 0 48 56" class="mx-auto mb-3 h-14 w-12 {{ $reached ? '' : 'opacity-40' }}" aria-hidden="true">
+                            <path d="M15 24 L9 54 L19 46 Z" fill="{{ $m['ribbon'] }}"/>
+                            <path d="M33 24 L39 54 L29 46 Z" fill="{{ $m['ribbon'] }}"/>
+                            <circle cx="24" cy="20" r="19" fill="{{ $m['rim'] }}"/>
+                            <circle cx="24" cy="20" r="13.5" fill="{{ $m['face'] }}"/>
+                            <g transform="translate(15.5 11.5) scale(0.7)">
+                                <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z" fill="{{ $m['star'] }}"/>
+                            </g>
+                        </svg>
                         <p class="text-sm font-bold">{{ $tier['name'] }}</p>
                         <p @class(['mt-0.5 text-xs', 'text-white/80' => $isCurrent, 'text-zinc-500' => ! $isCurrent])>{{ number_format($tier['min']) }} Rcoin</p>
                         @if ($tier['requires'])
