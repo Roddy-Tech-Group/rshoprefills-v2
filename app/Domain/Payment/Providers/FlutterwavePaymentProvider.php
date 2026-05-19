@@ -294,11 +294,26 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             }
 
             $data = $response->json();
-            $innerData = $data['meta']['authorization'] ?? [];
             
+            if (($data['status'] ?? '') !== 'success') {
+                return [
+                    'status' => 'failed',
+                    'message' => 'Failed to initialize bank transfer: ' . ($data['message'] ?? 'Unknown error')
+                ];
+            }
+
+            $innerData = $data['meta']['authorization'] ?? $data['data']['meta']['authorization'] ?? [];
+            
+            if (empty($innerData) || empty($innerData['transfer_account'])) {
+                return [
+                    'status' => 'failed',
+                    'message' => 'Failed to generate bank transfer virtual account. Please make sure "Pay with Bank Transfer" is enabled in your Flutterwave dashboard under Settings > Payment Methods.'
+                ];
+            }
+
             $bankDetails = [
                 'bank_name' => $innerData['transfer_bank'] ?? 'Unknown Bank',
-                'account_number' => $innerData['transfer_account'] ?? 'Unknown Account',
+                'account_number' => $innerData['transfer_account'],
                 'account_name' => 'Flutterwave Account',
                 'amount' => $innerData['transfer_amount'] ?? $attempt->amount,
                 'expires_at' => now()->addMinutes(30)->toIso8601String(),
@@ -362,6 +377,67 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             return [
                 'status' => 'failed',
                 'message' => 'Failed to initialize mobile money: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    public function chargeApplePay(PaymentAttempt $attempt, array $details = []): array
+    {
+        if (str_contains($this->secretKey, 'MOCK')) {
+            $attempt->gateway_reference = 'FLW-MOCK-APPLE-' . uniqid();
+            $attempt->payment_status = PaymentStatus::Paid;
+            $attempt->confirmed_at = now();
+            $attempt->save();
+
+            return [
+                'status' => 'confirmed',
+                'transaction_id' => $attempt->gateway_reference,
+                'message' => 'Apple Pay payment successful'
+            ];
+        }
+
+        try {
+            $response = Http::withToken($this->secretKey)
+                ->post("{$this->baseUrl}/charges?type=applepay", [
+                    'amount' => (float)$attempt->amount,
+                    'currency' => strtoupper($attempt->currency),
+                    'email' => $attempt->user->email,
+                    'tx_ref' => $attempt->idempotency_key,
+                ]);
+
+            if ($response->failed()) {
+                return [
+                    'status' => 'failed',
+                    'message' => 'Failed to initialize Apple Pay: ' . ($response->json('message') ?? 'Unknown error')
+                ];
+            }
+
+            $data = $response->json();
+            $status = $data['status'] ?? 'error';
+            $innerData = $data['data'] ?? [];
+
+            if ($status === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
+                $attempt->gateway_reference = (string)$innerData['id'];
+                $attempt->payment_status = PaymentStatus::Paid;
+                $attempt->confirmed_at = now();
+                $attempt->verification_payload = $data;
+                $attempt->save();
+
+                return [
+                    'status' => 'confirmed',
+                    'transaction_id' => (string)$innerData['id'],
+                    'message' => 'Apple Pay payment successful'
+                ];
+            }
+
+            return [
+                'status' => 'failed',
+                'message' => $data['message'] ?? 'Apple Pay payment could not be completed.'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'failed',
+                'message' => 'Failed to charge Apple Pay: ' . $e->getMessage()
             ];
         }
     }

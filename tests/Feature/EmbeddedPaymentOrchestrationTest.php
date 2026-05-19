@@ -395,9 +395,9 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
     public function test_bank_transfer_flow(): void
     {
         $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
-            'currency' => 'USD',
-            'amount' => 10.0,
-            'display_currency' => 'USD',
+            'currency' => 'NGN',
+            'amount' => 5000.0,
+            'display_currency' => 'NGN',
         ]);
 
         $sessionId = $response->json('payment_session.id');
@@ -428,9 +428,9 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
     public function test_mobile_money_flow(): void
     {
         $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
-            'currency' => 'USD',
-            'amount' => 10.0,
-            'display_currency' => 'USD',
+            'currency' => 'XAF',
+            'amount' => 5000.0,
+            'display_currency' => 'XAF',
         ]);
 
         $sessionId = $response->json('payment_session.id');
@@ -493,5 +493,104 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                     ]
                 ]
             ]);
+    }
+
+    /**
+     * Test Apple Pay flow.
+     */
+    public function test_apple_pay_flow(): void
+    {
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'apple_pay',
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'confirmed');
+    }
+
+    /**
+     * Test currency to payment method constraint validations.
+     */
+    public function test_currency_to_payment_method_validation_errors(): void
+    {
+        // 1. Initiate USD funding (should reject mobile_money and bank_transfer)
+        $usdResponse = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+        $usdSessionId = $usdResponse->json('payment_session.id');
+
+        $payMobileMoney = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', ['id' => $usdSessionId]), [
+            'method' => 'mobile_money',
+            'details' => [
+                'phone_number' => '237671234567',
+                'network' => 'mtn',
+            ]
+        ]);
+        $payMobileMoney->assertStatus(422)
+            ->assertJsonFragment(['message' => 'The payment method mobile_money is not available for currency USD.']);
+
+        // 2. Initiate NGN funding (should reject mobile_money)
+        $ngnResponse = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'NGN',
+            'amount' => 5000.0,
+            'display_currency' => 'NGN',
+        ]);
+        $ngnSessionId = $ngnResponse->json('payment_session.id');
+
+        $payMobileMoneyNgn = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', ['id' => $ngnSessionId]), [
+            'method' => 'mobile_money',
+            'details' => [
+                'phone_number' => '237671234567',
+                'network' => 'mtn',
+            ]
+        ]);
+        $payMobileMoneyNgn->assertStatus(422)
+            ->assertJsonFragment(['message' => 'The payment method mobile_money is not available for currency NGN.']);
+
+        // 3. Initiate GBP funding (should reject bank_transfer)
+        $gbpResponse = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'GBP',
+            'amount' => 10.0,
+            'display_currency' => 'GBP',
+        ]);
+        $gbpSessionId = $gbpResponse->json('payment_session.id');
+
+        $payBankTransfer = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', ['id' => $gbpSessionId]), [
+            'method' => 'bank_transfer',
+        ]);
+        $payBankTransfer->assertStatus(422)
+            ->assertJsonFragment(['message' => 'The payment method bank_transfer is not available for currency GBP.']);
+    }
+
+    /**
+     * Test that crypto is accepted on non-USD currencies (e.g. NGN, GBP).
+     */
+    public function test_global_crypto_support(): void
+    {
+        $ngnResponse = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'NGN',
+            'amount' => 5000.0,
+            'display_currency' => 'NGN',
+        ]);
+        $ngnSessionId = $ngnResponse->json('payment_session.id');
+
+        $payCrypto = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', ['id' => $ngnSessionId]), [
+            'method' => 'crypto',
+            'details' => [
+                'pay_currency' => 'USDT',
+            ]
+        ]);
+        $payCrypto->assertStatus(200)
+            ->assertJsonPath('data.status', 'awaiting_transfer');
     }
 }

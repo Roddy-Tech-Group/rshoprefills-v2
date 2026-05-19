@@ -175,6 +175,32 @@ class PaymentSessionController extends Controller
 
         $method = $request->input('method');
         $details = $request->input('details', []);
+
+        // Validate that the payment method is supported in the session's currency
+        $currency = strtoupper($attempt->currency);
+        $supported = [
+            'USD' => ['card', 'apple_pay', 'crypto', 'wallet'],
+            'EUR' => ['card', 'apple_pay', 'crypto', 'wallet'],
+            'GBP' => ['card', 'apple_pay', 'crypto', 'wallet'],
+            'NGN' => ['card', 'apple_pay', 'bank_transfer', 'crypto', 'wallet'],
+            'GHS' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+            'XAF' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+            'XOF' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+        ];
+
+        if ($session->session_type === 'wallet') {
+            $allowedMethods = ['wallet'];
+        } elseif ($session->session_type === 'crypto') {
+            $allowedMethods = ['crypto'];
+        } else {
+            $allowedMethods = $supported[$currency] ?? ['card', 'apple_pay'];
+        }
+
+        if (!in_array($method, $allowedMethods)) {
+            return response()->json([
+                'message' => "The payment method {$method} is not available for currency {$currency}."
+            ], 422);
+        }
         
         $gatewayFactory = app(\App\Domain\Payment\Services\PaymentGatewayFactory::class);
 
@@ -205,6 +231,10 @@ class PaymentSessionController extends Controller
                 $flwProvider = $gatewayFactory->getProvider('flutterwave');
                 $result = $flwProvider->chargeBankTransfer($attempt);
             } 
+            elseif ($method === 'apple_pay') {
+                $flwProvider = $gatewayFactory->getProvider('flutterwave');
+                $result = $flwProvider->chargeApplePay($attempt, $details);
+            }
             elseif ($method === 'mobile_money') {
                 $request->validate([
                     'details.phone_number' => 'required|string',
