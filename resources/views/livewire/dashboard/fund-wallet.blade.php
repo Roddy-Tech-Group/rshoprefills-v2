@@ -190,7 +190,7 @@ new class extends Component
                 }
                 if (this.otpValue) {
                     body.otp = this.otpValue;
-                    body.flw_ref = this.session.payment_payload.flw_ref;
+                    body.flw_ref = this.session.payment_payload?.flw_ref || '';
                 }
 
                 let response = await fetch(`/api/payment-sessions/${this.session.id}/pay`, {
@@ -198,7 +198,7 @@ new class extends Component
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                     },
                     body: JSON.stringify(body)
                 });
