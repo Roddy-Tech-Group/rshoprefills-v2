@@ -15,9 +15,9 @@
 
     $user = auth()->user();
 
-    // ── Rcoin balance — no Rcoin ledger backend exists yet, so this is an honest
-    //    zero state (no fabricated balance). Bind to the Rcoin model when it ships;
-    //    the rest of the page computes off these values. ──
+    // ── Rcoin balance — there is no Rcoin ledger backend yet, so this is an
+    //    honest zero state (no fabricated balance). Bind to the Rcoin model when
+    //    it ships; the rest of the page computes off these values. ──
     $rcoinBalance = 0;
     $rcoinEarned  = 0;
 

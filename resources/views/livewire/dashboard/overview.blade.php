@@ -44,9 +44,10 @@ new #[Lazy] class extends Component
         $recentOrders = $user->orders()->with('items')->latest()->limit(3)->get();
 
         // Popular gift cards — same source as the storefront's "Popular Gift Cards"
-        // row (config/popular_brands.php), region-locked to the customer's resolved
-        // region (ResolveRegion middleware). One product per brand (MIN id dedupes
-        // the per-country rows), ordered by the curated list.
+        // row: the hand-curated config/popular_brands.php list, region-locked to the
+        // customer's resolved region (ResolveRegion middleware). One product per
+        // brand (MIN id dedupes the per-country rows), ordered by the curated list.
+        // (Admin-managed curation of this list is a planned follow-up.)
         $region = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
         $popularKeys = config('popular_brands.keys', []);
 
@@ -66,7 +67,8 @@ new #[Lazy] class extends Component
             ->take(5)
             ->values();
 
-        // Fallback so the row never renders empty in a small region.
+        // Fallback so the row never renders empty in a small region — any active
+        // gift-card brands available there.
         if ($popularProducts->isEmpty()) {
             $fallbackIds = Product::query()
                 ->where('is_active', true)
@@ -132,7 +134,7 @@ new #[Lazy] class extends Component
                 'balance'   => (float) $w->balance,
                 'formatted' => $symbolFor($code) . number_format((float) $w->balance, 2),
                 'type'      => $isCryptoCode((string) $code) ? 'crypto' : 'fiat',
-                'icon'      => $iconFile ? asset('assets/' . rawurlencode($iconFile)) : Product::flagUrl(match (strtoupper((string) $code)) { 'USD' => 'US', 'GBP' => 'GB', 'EUR' => 'EU', 'KES' => 'KE', 'ZAR' => 'ZA', 'UGX' => 'UG', 'TZS' => 'TZ', 'RWF' => 'RW', 'ZMW' => 'ZM', 'MWK' => 'MW', 'ETB' => 'ET', 'EGP' => 'EG', 'MAD' => 'MA', default => '' }),
+                'icon'      => $iconFile ? asset('assets/' . rawurlencode($iconFile)) : \App\Models\Product::flagUrl(match (strtoupper((string) $code)) { 'USD' => 'US', 'GBP' => 'GB', 'EUR' => 'EU', 'KES' => 'KE', 'ZAR' => 'ZA', 'UGX' => 'UG', 'TZS' => 'TZ', 'RWF' => 'RW', 'ZMW' => 'ZM', 'MWK' => 'MW', 'ETB' => 'ET', 'EGP' => 'EG', 'MAD' => 'MA', default => '' }),
                 'color'     => $colorFor($code),
             ];
         })->values();
@@ -495,7 +497,12 @@ new #[Lazy] class extends Component
             <div class="flex flex-col gap-6 lg:col-span-4">
 
                 {{-- RShop Rcoin card. No Rcoin ledger backend exists yet, so this shows
+<<<<<<< HEAD
                      a neutral intro state rather than fabricated balance/tier numbers. --}}
+=======
+                     a neutral intro state rather than fabricated balance/tier numbers.
+                     The rewards page carries the full (placeholder) breakdown. --}}
+>>>>>>> origin/MotionCodes
                 <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-start gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-blue-100">
