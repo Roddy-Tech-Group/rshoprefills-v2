@@ -80,7 +80,7 @@ class CheckoutController extends Controller
         $order = Order::query()
             ->where('order_number', $orderNumber)
             ->where('user_id', $request->user()?->id)
-            ->with(['items', 'paymentAttempts'])
+            ->with(['items', 'paymentAttempts.paymentSession'])
             ->firstOrFail();
 
         return view('shop.order', ['order' => $order]);

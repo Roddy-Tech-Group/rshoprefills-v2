@@ -87,6 +87,7 @@ Route::middleware('auth')->group(function () {
         Route::get('{id}', [\App\Http\Controllers\Api\PaymentSessionController::class, 'show'])->name('show');
         Route::get('{id}/status', [\App\Http\Controllers\Api\PaymentSessionController::class, 'status'])->name('status');
         Route::post('{id}/cancel', [\App\Http\Controllers\Api\PaymentSessionController::class, 'cancel'])->name('cancel');
+        Route::post('{id}/verify', [\App\Http\Controllers\Api\PaymentSessionController::class, 'verify'])->name('verify');
     });
 
     Route::get('transactions', [UserTransactionController::class, 'index'])->name('api.transactions.index');
