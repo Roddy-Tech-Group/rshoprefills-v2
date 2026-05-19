@@ -37,11 +37,23 @@
         ['key' => 'ton',       'label' => 'Ton'],
     ];
 
+    $user = auth()->user();
+    $walletBalances = [];
+    if ($user) {
+        foreach ($user->wallets as $w) {
+            $walletBalances[strtoupper($w->currency->value)] = (float) $w->balance;
+        }
+    }
+
     $methods = [
         ['key' => 'card',         'label' => 'Card',         'desc' => 'Visa, Mastercard'],
         ['key' => 'mobile_money', 'label' => 'Mobile Money', 'desc' => 'MTN, Orange'],
         ['key' => 'crypto',       'label' => 'Crypto',       'desc' => 'BTC, USDT, ETH and more'],
     ];
+
+    if ($user) {
+        $methods[] = ['key' => 'wallet', 'label' => 'Wallet', 'desc' => 'Pay with wallet balance'];
+    }
 
     $fieldClass = 'mt-1.5 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
 @endphp
@@ -57,7 +69,7 @@
             </div>
         @endif
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
             <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white py-24 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -162,7 +174,7 @@
                 </section>
 
                 {{-- ─── RIGHT: Select payment method ─── --}}
-                <form method="POST" action="{{ route('checkout.process') }}" @submit="submitting = true" class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-6">
+                <form method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-6">
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
@@ -170,6 +182,61 @@
                     <input type="hidden" name="currency" :value="$store.cart.currency">
 
                     <h2 class="text-lg font-bold text-zinc-900">Select payment method</h2>
+
+                    {{-- Checkout Currency Selector --}}
+                    <div class="mt-4" x-data="{ ccyOpen: false }">
+                        <label class="text-sm font-semibold text-zinc-900">Checkout currency</label>
+                        <p class="mt-0.5 text-xs text-zinc-600">Select the currency you wish to pay with.</p>
+                        <div class="relative mt-1.5" @click.outside="ccyOpen = false">
+                            <button
+                                type="button"
+                                @click="ccyOpen = !ccyOpen"
+                                class="flex w-full items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:outline-none"
+                            >
+                                <span class="flex items-center gap-2">
+                                    <span class="font-bold" x-text="$store.cart.currency"></span>
+                                    <span class="text-zinc-600">&middot;</span>
+                                    <span x-text="$store.cart.currency === 'USD' ? 'United States Dollar' : ($store.cart.currency === 'EUR' ? 'Euro' : ($store.cart.currency === 'GBP' ? 'British Pound' : ($store.cart.currency === 'NGN' ? 'Nigerian Naira' : ($store.cart.currency === 'XAF' ? 'Central African CFA Franc' : ''))))"></span>
+                                </span>
+                                <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-150" :class="ccyOpen && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="ccyOpen"
+                                x-cloak
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 -translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-start="opacity-100 translate-y-0"
+                                x-transition:leave-end="opacity-0 -translate-y-1"
+                                class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-zinc-200 bg-white/80 p-1 shadow-xl shadow-zinc-900/10 backdrop-blur-xl"
+                                role="listbox"
+                            >
+                                @foreach (\App\Domain\Shared\Enums\Currency::cases() as $c)
+                                    <button
+                                        type="button"
+                                        @click="
+                                            localStorage.setItem('locale.currency', '{{ $c->value }}');
+                                            window.dispatchEvent(new Event('currency-changed'));
+                                            ccyOpen = false;
+                                        "
+                                        class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
+                                        :class="$store.cart.currency === '{{ $c->value }}' ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100'"
+                                    >
+                                        <span>{{ $c->value }} &middot; {{ $c->label() }}</span>
+                                        <template x-if="$store.cart.currency === '{{ $c->value }}'">
+                                            <svg class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                        </template>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
 
                     {{-- Delivery email --}}
                     <div class="mt-4">
@@ -182,7 +249,7 @@
                     </div>
 
                     {{-- Method tabs --}}
-                    <div class="mt-5 grid grid-cols-3 gap-2">
+                    <div class="mt-5 grid grid-cols-2 sm:grid-cols-{{ count($methods) }} gap-2">
                         @foreach ($methods as $m)
                             <button type="button" @click="method = '{{ $m['key'] }}'"
                                 :class="method === '{{ $m['key'] }}' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500/20' : 'border-zinc-200 hover:border-zinc-300'"
@@ -303,6 +370,19 @@
                         </div>
                     </div>
 
+                    {{-- Wallet --}}
+                    <div x-show="method === 'wallet'" x-collapse x-cloak class="mt-5 space-y-3">
+                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-medium text-zinc-600">Available Balance</span>
+                                <span class="text-base font-bold text-zinc-900" x-text="$store.cart.pay(walletBalances[$store.cart.currency] || 0)"></span>
+                            </div>
+                            <div x-show="!hasSufficientWalletBalance()" class="mt-3 text-xs text-red-600 font-medium">
+                                Insufficient balance to pay for this order. Please fund your wallet or select a different payment method.
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- Coupon --}}
                     <div class="mt-5" x-data="{ open: false }">
                         <button type="button" @click="open = !open" class="text-sm font-semibold text-zinc-900 underline underline-offset-2 transition-colors hover:text-blue-700">
@@ -372,25 +452,293 @@
                 </form>
 
             </div>
+            
+            {{-- Checkout Payment Wizard Modal --}}
+            <div
+                x-show="open"
+                x-cloak
+                x-on:keydown.escape.window="closeModal()"
+                class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            >
+                <!-- Backdrop -->
+                <div
+                    x-show="open"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 bg-zinc-950/40 backdrop-blur-md"
+                    @click="closeModal()"
+                ></div>
+
+                <!-- Modal Content Wrapper -->
+                <div
+                    x-show="open"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    class="relative w-full max-w-md transform overflow-hidden rounded-[24px] bg-white p-6 shadow-2xl transition-all border border-zinc-100"
+                >
+                    <!-- Close button -->
+                    <button
+                        type="button"
+                        @click="closeModal()"
+                        class="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600 transition-colors focus:outline-none"
+                    >
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+
+                    <!-- Active Payment Session Details & Wizard -->
+                    <div x-show="session" class="mt-2">
+                        <!-- Card Auth: PIN Challenge -->
+                        <div x-show="paymentState === 'action_pin'">
+                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Card PIN Required</h3>
+                            <p class="text-xs text-zinc-600 mb-4">Enter your card 4-digit security PIN to authorize payment.</p>
+                            <div class="space-y-4">
+                                <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                                    Confirm PIN
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Card Auth: OTP Challenge -->
+                        <div x-show="paymentState === 'action_otp'">
+                            <h3 class="text-sm font-bold text-zinc-900 mb-2">OTP Verification</h3>
+                            <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
+                            <div class="space-y-4">
+                                <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                                    Verify OTP
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Card Auth: 3D Secure Redirect -->
+                        <div x-show="paymentState === 'action_3ds'">
+                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Secure Verification</h3>
+                            <p class="text-xs text-zinc-600 mb-4">Please complete the secure authentication inside the window below.</p>
+                            
+                            <div class="w-full border border-zinc-200 rounded-xl overflow-hidden bg-zinc-50" style="height: 350px;">
+                                <iframe :src="session?.payment_payload?.redirect_url" class="w-full h-full border-0"></iframe>
+                            </div>
+
+                            <button type="button" @click="startStatusPolling()" class="w-full mt-4 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                                I Have Completed Payment
+                            </button>
+                        </div>
+
+                        <!-- Bank Transfer virtual accounts display or Crypto invoice -->
+                        <div x-show="paymentState === 'awaiting_transfer'">
+                            <!-- If Bank Transfer details -->
+                            <template x-if="session?.payment_payload?.bank_details || session?.payment_payload?.account_number">
+                                <div>
+                                    <h3 class="text-sm font-bold text-zinc-900 mb-2">Virtual Bank Transfer</h3>
+                                    <p class="text-xs text-zinc-600 mb-4">Please make a transfer to the temporary virtual account below:</p>
+
+                                    <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3">
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="text-zinc-500">Bank Name</span>
+                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.bank_name"></span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="text-zinc-500">Account Number</span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="font-bold text-zinc-900 text-sm" x-text="bankDetails?.account_number"></span>
+                                                <button type="button" @click="copyToClipboard(bankDetails?.account_number)" class="text-blue-600 hover:text-blue-800 text-[10px] font-semibold">Copy</button>
+                                            </div>
+                                        </div>
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="text-zinc-500">Account Name</span>
+                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name"></span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-xs border-t border-zinc-200 pt-2">
+                                            <span class="text-zinc-500">Amount</span>
+                                            <span class="font-extrabold text-blue-700 text-sm" x-text="session?.currency + ' ' + Number(bankDetails?.amount || session?.amount).toFixed(2)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- If Crypto details -->
+                            <template x-if="session?.payment_payload?.qr_payload || session?.payment_payload?.pay_address">
+                                <div>
+                                    <h3 class="text-sm font-bold text-zinc-900 text-center mb-2">Crypto Payment Details</h3>
+                                    <p class="text-xs text-zinc-600 text-center mb-4">Send the exact amount of cryptocurrency shown to the address below:</p>
+
+                                    <div class="flex flex-col items-center gap-4 bg-zinc-50 p-4 border border-zinc-200 rounded-xl">
+                                        <!-- QR Code -->
+                                        <div class="flex shrink-0 flex-col items-center rounded-lg bg-white p-2 border border-zinc-150">
+                                            <img 
+                                                :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(session?.payment_payload?.qr_payload || '')" 
+                                                alt="Payment QR Code" 
+                                                class="h-28 w-28 object-contain"
+                                            />
+                                            <span class="mt-1 text-[9px] font-bold uppercase tracking-wider text-zinc-400">Scan to pay</span>
+                                        </div>
+
+                                        <!-- Details -->
+                                        <div class="w-full space-y-2 text-xs">
+                                            <div>
+                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">Cryptocurrency</span>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="rounded bg-blue-50 px-2 py-0.5 font-bold text-blue-700 uppercase" x-text="session?.payment_payload?.pay_currency || 'btc'"></span>
+                                                    <span class="text-[10px] font-medium text-zinc-500 uppercase" x-text="'Network: ' + (session?.payment_payload?.network || 'bitcoin')"></span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">Amount to Send</span>
+                                                <span class="font-bold text-zinc-900 text-sm" x-text="session?.payment_payload?.pay_amount"></span>
+                                                <span class="font-bold text-zinc-500 uppercase" x-text="session?.payment_payload?.pay_currency"></span>
+                                            </div>
+                                            <div>
+                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">Deposit Address</span>
+                                                <div class="mt-1 flex items-center gap-1">
+                                                    <input type="text" readonly :value="session?.payment_payload?.pay_address" class="w-full bg-zinc-100 px-2 py-1 rounded text-[10px] text-zinc-800 font-mono select-all outline-none">
+                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_address)" class="text-blue-600 hover:text-blue-800 text-[10px] font-semibold shrink-0">Copy</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="flex flex-col items-center mt-5 text-center">
+                                <svg class="h-5 w-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                <p class="text-xs font-semibold text-zinc-800 mt-2">Waiting for transfer...</p>
+                                <p class="text-[10px] text-zinc-500 mt-1">Status updates automatically. This temporary reference expires in 30 minutes.</p>
+                            </div>
+                        </div>
+
+                        <!-- Mobile money push prompt -->
+                        <div x-show="paymentState === 'awaiting_confirmation'">
+                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Authorize on Phone</h3>
+                            <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
+
+                            <div class="flex flex-col items-center py-6 text-center">
+                                <span class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 ring-8 ring-blue-100/50 mb-4">
+                                    <svg class="h-7 w-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                    </svg>
+                                </span>
+                                <svg class="h-6 w-6 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                <p class="text-xs font-semibold text-zinc-800 mt-3">Verifying payment authorization...</p>
+                            </div>
+                        </div>
+
+                        <!-- Processing state -->
+                        <div x-show="paymentState === 'processing'" class="flex flex-col items-center py-8 text-center">
+                            <svg class="h-10 w-10 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            <p class="mt-4 text-sm font-bold text-zinc-900">Processing transaction...</p>
+                            <p class="mt-1 text-xs text-zinc-500">Please do not close this window.</p>
+                        </div>
+
+                        <!-- Success state -->
+                        <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
+                            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-100">
+                                <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                </svg>
+                            </span>
+                            <h3 class="mt-4 text-base font-bold text-zinc-950">Payment Complete!</h3>
+                            <p class="mt-1.5 text-xs text-zinc-600 font-medium">Your order is confirmed. Redirecting now...</p>
+                        </div>
+
+                        <!-- Error state -->
+                        <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
+                            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 ring-8 ring-red-100">
+                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </span>
+                            <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
+                            <p class="mt-1.5 text-xs text-red-600 px-4" x-text="errorMessage"></p>
+                            
+                            <button type="button" @click="closeModal()" class="mt-6 rounded-xl bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
+                                Close &amp; Modify Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
+    </div>
     </div>
     </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates) {
+        window.checkoutPage = function (cryptoRates, walletBalances) {
             return {
                 method: 'card',
                 crypto: '',
                 network: '',
                 submitting: false,
                 cryptoRates: cryptoRates || {},
+                walletBalances: walletBalances || {},
+
+                // Wizard State
+                open: false,
+                session: null,
+                selectedMethod: null,
+                cardDetails: {
+                    card_number: '',
+                    cvv: '',
+                    expiry_month: '',
+                    expiry_year: '',
+                    card_holder: ''
+                },
+                pinValue: '',
+                otpValue: '',
+                momoDetails: {
+                    phone_number: '',
+                    network: ''
+                },
+                paymentState: 'idle',
+                errorMessage: '',
+                actionMessage: '',
+                bankDetails: null,
+                pollInterval: null,
+                redirectUrl: '',
+
+                init() {
+                    this.resetCardDetails();
+                },
+
+                resetCardDetails() {
+                    this.cardDetails = {
+                        card_number: '',
+                        cvv: '',
+                        expiry_month: '',
+                        expiry_year: '',
+                        card_holder: ''
+                    };
+                    this.momoDetails = {
+                        phone_number: '',
+                        network: ''
+                    };
+                },
 
                 coinMeta() {
                     return this.cryptoRates[this.crypto] || null;
                 },
 
-                // "Total amount to pay" — in the chosen coin for crypto, otherwise
-                // the customer's display currency.
                 totalLabel() {
                     const usd = Number(this.$store.cart.subtotalUsd || 0);
                     if (this.method === 'crypto') {
@@ -403,9 +751,14 @@
                     return this.$store.cart.pay(this.$store.cart.subtotal);
                 },
 
-                // Loyalty points: 0.5 per USD of the order, floored.
                 points() {
                     return Math.floor(Number(this.$store.cart.subtotalUsd || 0) * 0.5);
+                },
+
+                hasSufficientWalletBalance() {
+                    const balance = Number(this.walletBalances[this.$store.cart.currency] || 0);
+                    const total = Number(this.$store.cart.subtotal);
+                    return balance >= total;
                 },
 
                 canContinue() {
@@ -415,8 +768,202 @@
                     if (this.method === 'crypto') {
                         return !! this.crypto && !! this.network;
                     }
+                    if (this.method === 'wallet') {
+                        return this.hasSufficientWalletBalance();
+                    }
                     return true;
                 },
+
+                async submitCheckout(e) {
+                    this.submitting = true;
+                    this.errorMessage = '';
+                    try {
+                        const formData = new FormData(e.target);
+                        const response = await fetch('/checkout', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                            body: formData
+                        });
+
+                        const resData = await response.json();
+                        if (!response.ok) {
+                            this.submitting = false;
+                            this.errorMessage = resData.message || 'Checkout failed. Please try again.';
+                            alert(this.errorMessage);
+                            return;
+                        }
+
+                        const orderNumber = resData.order_number;
+                        const redirectUrl = resData.redirect_url;
+                        const sessionData = resData.payment_session;
+
+                        this.redirectUrl = redirectUrl;
+
+                        if (!sessionData) {
+                            window.location.href = redirectUrl;
+                            return;
+                        }
+
+                        this.session = sessionData;
+                        this.open = true;
+
+                        if (this.method === 'card') {
+                            const cardHolder = document.getElementById('card_name')?.value || '';
+                            const cardNumber = document.getElementById('card_number')?.value || '';
+                            const cardExpiry = document.getElementById('card_expiry')?.value || '';
+                            const cardCvc = document.getElementById('card_cvc')?.value || '';
+                            
+                            let expiryMonth = '';
+                            let expiryYear = '';
+                            if (cardExpiry.includes('/')) {
+                                const parts = cardExpiry.split('/');
+                                expiryMonth = parts[0].trim();
+                                expiryYear = parts[1].trim();
+                            } else if (cardExpiry.length === 4) {
+                                expiryMonth = cardExpiry.substring(0, 2);
+                                expiryYear = cardExpiry.substring(2, 4);
+                            }
+
+                            this.cardDetails = {
+                                card_number: cardNumber.replace(/\s+/g, ''),
+                                cvv: cardCvc,
+                                expiry_month: expiryMonth,
+                                expiry_year: expiryYear,
+                                card_holder: cardHolder
+                            };
+
+                            this.paymentState = 'processing';
+                            await this.paySession('card', this.cardDetails);
+                        } else if (this.method === 'mobile_money') {
+                            const networkInput = document.querySelector('input[name="momo_network"]')?.value || 'MTN';
+                            const phoneInput = document.getElementById('momo_phone')?.value || '';
+
+                            this.momoDetails = {
+                                phone_number: phoneInput,
+                                network: networkInput
+                            };
+
+                            this.paymentState = 'processing';
+                            await this.paySession('mobile_money', this.momoDetails);
+                        } else if (this.method === 'crypto') {
+                            this.paymentState = 'processing';
+                            await this.paySession('crypto', { pay_currency: this.crypto });
+                        }
+                    } catch (err) {
+                        this.submitting = false;
+                        alert('Network connection failed. Please check your internet.');
+                    }
+                },
+
+                async paySession(method, dataPayload = {}) {
+                    this.paymentState = 'processing';
+                    this.errorMessage = '';
+                    try {
+                        let body = {
+                            method: method,
+                            details: dataPayload
+                        };
+                        if (this.pinValue) {
+                            body.pin = this.pinValue;
+                        }
+                        if (this.otpValue) {
+                            body.otp = this.otpValue;
+                            body.flw_ref = this.session.payment_payload?.flw_ref || '';
+                        }
+
+                        let response = await fetch(`/api/payment-sessions/${this.session.id}/pay`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify(body)
+                        });
+
+                        let resData = await response.json();
+                        if (!response.ok) {
+                            this.paymentState = 'error';
+                            this.errorMessage = resData.message || 'Payment initiation failed.';
+                            return;
+                        }
+
+                        this.handlePayResponse(resData.data || resData);
+                    } catch (err) {
+                        this.paymentState = 'error';
+                        this.errorMessage = 'Network connection failed. Please check your internet.';
+                    }
+                },
+
+                handlePayResponse(sessionData) {
+                    this.session = sessionData;
+                    const status = sessionData.status;
+
+                    if (status === 'confirmed') {
+                        this.paymentState = 'success';
+                        setTimeout(() => { window.location.href = this.redirectUrl; }, 2000);
+                    } else if (status === 'failed') {
+                        this.paymentState = 'error';
+                        this.errorMessage = sessionData.payment_payload?.failure_reason || 'Transaction could not be completed.';
+                    } else if (status === 'awaiting_customer_action') {
+                        const action = sessionData.payment_payload?.action;
+                        if (action === 'pin') {
+                            this.paymentState = 'action_pin';
+                            this.pinValue = '';
+                        } else if (action === 'otp') {
+                            this.paymentState = 'action_otp';
+                            this.otpValue = '';
+                            this.actionMessage = sessionData.payment_payload?.message || 'Verification code sent';
+                        } else if (action === 'redirect') {
+                            this.paymentState = 'action_3ds';
+                            this.startStatusPolling();
+                        }
+                    } else if (status === 'awaiting_transfer') {
+                        this.paymentState = 'awaiting_transfer';
+                        this.bankDetails = sessionData.payment_payload?.bank_details || sessionData.payment_payload || null;
+                        this.startStatusPolling();
+                    } else if (status === 'awaiting_confirmation') {
+                        this.paymentState = 'awaiting_confirmation';
+                        this.actionMessage = sessionData.payment_payload?.message || 'Please accept the billing prompt on your device.';
+                        this.startStatusPolling();
+                    }
+                },
+
+                startStatusPolling() {
+                    if (this.pollInterval) clearInterval(this.pollInterval);
+                    this.pollInterval = setInterval(async () => {
+                        try {
+                            let res = await fetch(`/api/payment-sessions/${this.session.id}/status`);
+                            let data = await res.json();
+                            if (data.status === 'confirmed') {
+                                clearInterval(this.pollInterval);
+                                this.paymentState = 'success';
+                                setTimeout(() => { window.location.href = this.redirectUrl; }, 2000);
+                            } else if (data.status === 'failed') {
+                                clearInterval(this.pollInterval);
+                                this.paymentState = 'error';
+                                this.errorMessage = data.payment_payload?.failure_reason || 'Transaction failed.';
+                            }
+                        } catch (e) {}
+                    }, 4500);
+                },
+
+                copyToClipboard(text) {
+                    navigator.clipboard.writeText(text);
+                    alert('Copied to clipboard!');
+                },
+
+                closeModal() {
+                    this.open = false;
+                    this.submitting = false;
+                    this.session = null;
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                    }
+                }
             };
         };
     </script>

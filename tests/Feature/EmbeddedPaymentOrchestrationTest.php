@@ -104,7 +104,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
         $this->assertDatabaseHas('payment_sessions', [
             'id' => $sessionId,
             'provider' => 'flutterwave',
-            'status' => 'awaiting_payment',
+            'status' => 'awaiting_method',
             'amount' => 70000.0000, // 50 USD converted to NGN
             'display_currency' => 'USD',
         ]);
@@ -126,7 +126,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
         // Test Show endpoint
         $showResponse = $this->actingAs($this->user)->getJson(route('api.payment-sessions.show', $sessionId));
         $showResponse->assertStatus(200)
-            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonPath('data.status', 'awaiting_method')
             ->assertJsonPath('data.provider', 'flutterwave');
 
         // Test Status poll endpoint
@@ -134,7 +134,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
         $statusResponse->assertStatus(200)
             ->assertExactJson([
                 'id' => $sessionId,
-                'status' => 'awaiting_payment',
+                'status' => 'awaiting_method',
                 'is_expired' => false,
                 'confirmed_at' => null,
                 'failed_at' => null,
@@ -268,7 +268,230 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
         $this->assertDatabaseHas('payment_sessions', [
             'id' => $sessionId,
             'provider' => 'flutterwave',
-            'status' => 'awaiting_payment',
+            'status' => 'awaiting_method',
         ]);
+    }
+
+    /**
+     * Test immediate card payment confirmation when no mock auth mode is triggered.
+     */
+    public function test_card_payment_immediate_success(): void
+    {
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'card',
+            'details' => [
+                'card_number' => '4000 1111 2222 3333',
+                'cvv' => '123',
+                'expiry_month' => '12',
+                'expiry_year' => '28',
+            ]
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'confirmed');
+
+        $this->assertDatabaseHas('payment_sessions', [
+            'id' => $sessionId,
+            'status' => 'confirmed',
+        ]);
+    }
+
+    /**
+     * Test card payment requiring PIN flow.
+     */
+    public function test_card_payment_pin_required(): void
+    {
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        // Charge card with 5555 to trigger PIN authentication
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'card',
+            'details' => [
+                'card_number' => '5555 5555 5555 5555',
+                'cvv' => '123',
+                'expiry_month' => '12',
+                'expiry_year' => '28',
+            ]
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'awaiting_customer_action')
+            ->assertJsonPath('data.payment_payload.action', 'pin');
+
+        // Submit PIN
+        $pinResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'card',
+            'pin' => '1234',
+            'details' => [
+                'card_number' => '5555 5555 5555 5555',
+                'cvv' => '123',
+                'expiry_month' => '12',
+                'expiry_year' => '28',
+            ]
+        ]);
+
+        $pinResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'confirmed');
+    }
+
+    /**
+     * Test card payment requiring OTP flow.
+     */
+    public function test_card_payment_otp_required(): void
+    {
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        // Charge card with 7777 to trigger OTP authentication
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'card',
+            'details' => [
+                'card_number' => '7777 7777 7777 7777',
+                'cvv' => '123',
+                'expiry_month' => '12',
+                'expiry_year' => '28',
+            ]
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'awaiting_customer_action')
+            ->assertJsonPath('data.payment_payload.action', 'otp');
+
+        $flwRef = $payResponse->json('data.payment_payload.flw_ref');
+
+        // Submit OTP
+        $otpResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'card',
+            'otp' => '123456',
+            'flw_ref' => $flwRef,
+        ]);
+
+        $otpResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'confirmed');
+    }
+
+    /**
+     * Test bank transfer flow.
+     */
+    public function test_bank_transfer_flow(): void
+    {
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'bank_transfer',
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'awaiting_transfer')
+            ->assertJsonStructure([
+                'data' => [
+                    'payment_payload' => [
+                        'bank_details' => [
+                            'bank_name',
+                            'account_number',
+                            'account_name',
+                            'amount',
+                        ]
+                    ]
+                ]
+            ]);
+    }
+
+    /**
+     * Test mobile money flow.
+     */
+    public function test_mobile_money_flow(): void
+    {
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'mobile_money',
+            'details' => [
+                'phone_number' => '237671234567',
+                'network' => 'mtn',
+            ]
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'awaiting_confirmation')
+            ->assertJsonStructure([
+                'data' => [
+                    'payment_payload' => [
+                        'status',
+                        'message',
+                    ]
+                ]
+            ]);
+    }
+
+    /**
+     * Test crypto payment flow.
+     */
+    public function test_crypto_payment_flow(): void
+    {
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        // Note: Wallet funding uses flutterwave by default as defined in route, but we can update
+        // gateway of the attempt to 'crypto' dynamically for this test.
+        $session = PaymentSession::find($sessionId);
+        $session->paymentAttempt->update(['gateway' => 'crypto']);
+
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'crypto',
+            'details' => [
+                'pay_currency' => 'USDT',
+            ]
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'awaiting_transfer')
+            ->assertJsonStructure([
+                'data' => [
+                    'payment_payload' => [
+                        'status',
+                        'pay_address',
+                        'pay_amount',
+                        'pay_currency',
+                        'network',
+                    ]
+                ]
+            ]);
     }
 }

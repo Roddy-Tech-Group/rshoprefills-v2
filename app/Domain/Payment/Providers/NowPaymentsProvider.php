@@ -114,6 +114,111 @@ class NowPaymentsProvider implements PaymentProviderInterface
         };
     }
 
+    public function chargeCrypto(PaymentAttempt $attempt, string $payCurrency): array
+    {
+        $payCurrency = strtolower($payCurrency);
+        $txRef = $attempt->idempotency_key;
+
+        if (str_contains($this->apiKey, 'MOCK')) {
+            $gatewayRef = 'NP-MOCK-' . uniqid();
+            $payAddress = $this->resolveMockAddress($payCurrency);
+            $rate = match($payCurrency) {
+                'btc' => 0.000015,
+                'eth' => 0.0003,
+                'usdt' => 1.0,
+                'ltc' => 0.012,
+                default => 1.0,
+            };
+            $payAmount = round($attempt->amount * $rate, 6);
+            $network = $this->resolveNetwork($payCurrency);
+            $expiresAt = now()->addMinutes(30)->toIso8601String();
+
+            $attempt->gateway_reference = $gatewayRef;
+            $attempt->save();
+
+            return [
+                'status' => 'awaiting_transfer',
+                'invoice_id' => $gatewayRef,
+                'pay_address' => $payAddress,
+                'pay_amount' => (string)$payAmount,
+                'pay_currency' => $payCurrency,
+                'network' => $network,
+                'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
+                'expires_at' => $expiresAt,
+            ];
+        }
+
+        try {
+            $orderId = $attempt->order ? $attempt->order->id : null;
+            $description = $attempt->order ? "Order #{$attempt->order->order_number}" : "Wallet Deposit Ref #{$attempt->payable->reference}";
+
+            $payload = [
+                'price_amount' => $attempt->amount,
+                'price_currency' => strtoupper($attempt->currency),
+                'pay_currency' => $payCurrency,
+                'ipn_callback_url' => route('api.webhooks.nowpayments'),
+                'order_description' => $description,
+            ];
+            if ($orderId) {
+                $payload['order_id'] = $orderId;
+            }
+
+            $response = Http::withHeaders([
+                'x-api-key' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post("{$this->baseUrl}/invoice", $payload);
+
+            if ($response->failed()) {
+                Log::error('NowPayments invoice creation failed in chargeCrypto', [
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                ]);
+                return [
+                    'status' => 'failed',
+                    'message' => 'Failed to initialize NowPayments billing: ' . ($response->json('message') ?? 'Unknown error')
+                ];
+            }
+
+            $body = $response->json();
+            $gatewayRef = $body['id'] ?? null;
+            $payAddress = $body['pay_address'] ?? '';
+            $payAmount = $body['pay_amount'] ?? 0;
+            $network = $this->resolveNetwork($payCurrency);
+            $expiresAt = $body['expiration_date'] ?? now()->addMinutes(30)->toIso8601String();
+
+            $attempt->gateway_reference = $gatewayRef;
+            $attempt->save();
+
+            return [
+                'status' => 'awaiting_transfer',
+                'invoice_id' => $gatewayRef,
+                'pay_address' => $payAddress,
+                'pay_amount' => (string)$payAmount,
+                'pay_currency' => $payCurrency,
+                'network' => $network,
+                'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
+                'expires_at' => $expiresAt,
+            ];
+        } catch (\Exception $e) {
+            Log::error('NowPayments chargeCrypto API error: ' . $e->getMessage());
+            return [
+                'status' => 'failed',
+                'message' => 'Crypto initiation failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    private function resolveMockAddress(string $currency): string
+    {
+        return match (strtolower($currency)) {
+            'btc' => '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+            'eth' => '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+            'usdt' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+            'ltc' => 'LVKw7y21M3tA9JtFh69N2y3Y6L5w6M3Kfd',
+            default => '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+        };
+    }
+
     public function verifyPayment(PaymentAttempt $attempt): bool
     {
         if (str_contains($this->apiKey, 'MOCK')) {

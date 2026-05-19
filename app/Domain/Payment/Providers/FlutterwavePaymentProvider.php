@@ -58,6 +58,356 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         ];
     }
 
+    public function getEncryptionKey(): string
+    {
+        $key = config('services.flutterwave.encryption_key') ?: env('FLW_ENCRYPTION_KEY');
+        if ($key) {
+            return $key;
+        }
+        $secret = $this->secretKey;
+        $secMD5 = md5($secret);
+        return substr($secret, 0, 12) . substr($secMD5, 12);
+    }
+
+    public function encryptPayload(array $payload): string
+    {
+        $key = $this->getEncryptionKey();
+        $data = json_encode($payload);
+        $encrypted = openssl_encrypt($data, 'DES-EDE3', $key, OPENSSL_RAW_DATA);
+        return base64_encode($encrypted);
+    }
+
+    public function chargeCard(PaymentAttempt $attempt, array $cardDetails, ?array $auth = null): array
+    {
+        if (str_contains($this->secretKey, 'MOCK')) {
+            return $this->simulateMockCardCharge($attempt, $cardDetails, $auth);
+        }
+
+        $payload = [
+            'card_number' => str_replace(' ', '', $cardDetails['card_number']),
+            'cvv' => $cardDetails['cvv'],
+            'expiry_month' => $cardDetails['expiry_month'],
+            'expiry_year' => $cardDetails['expiry_year'],
+            'currency' => strtoupper($attempt->currency),
+            'amount' => (float)$attempt->amount,
+            'email' => $attempt->user->email,
+            'tx_ref' => $attempt->idempotency_key,
+            'fullname' => $cardDetails['card_holder'] ?? $attempt->user->name,
+        ];
+
+        if ($auth && isset($auth['pin'])) {
+            $payload['authorization'] = [
+                'mode' => 'pin',
+                'pin' => $auth['pin']
+            ];
+        }
+
+        $encrypted = $this->encryptPayload($payload);
+
+        try {
+            $response = Http::withToken($this->secretKey)
+                ->post("{$this->baseUrl}/charges?type=card", [
+                    'client' => $encrypted
+                ]);
+
+            if ($response->failed()) {
+                return [
+                    'status' => 'failed',
+                    'message' => 'Flutterwave card charge request failed: ' . ($response->json('message') ?? 'Unknown error')
+                ];
+            }
+
+            return $this->handleCardChargeResponse($attempt, $response->json(), $auth);
+        } catch (\Exception $e) {
+            return [
+                'status' => 'failed',
+                'message' => 'Error processing card charge: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    private function handleCardChargeResponse(PaymentAttempt $attempt, array $data, ?array $auth): array
+    {
+        $status = $data['status'] ?? 'error';
+        $message = $data['message'] ?? '';
+        $innerData = $data['data'] ?? [];
+
+        $suggestedAuth = $innerData['suggested_auth'] ?? null;
+        if ($suggestedAuth === 'PIN') {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'pin',
+                'message' => 'PIN is required'
+            ];
+        }
+
+        $authMode = $innerData['meta']['authorization']['mode'] ?? null;
+        if ($authMode === 'pin') {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'pin',
+                'message' => 'PIN is required'
+            ];
+        }
+
+        if ($authMode === 'otp') {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'otp',
+                'flw_ref' => $innerData['flw_ref'] ?? null,
+                'message' => $innerData['meta']['authorization']['fields'][0] ?? 'OTP sent to your phone/email'
+            ];
+        }
+
+        if ($authMode === 'redirect') {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'redirect',
+                'redirect_url' => $innerData['meta']['authorization']['redirect'] ?? null,
+                'message' => '3D Secure authentication required'
+            ];
+        }
+
+        if ($status === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
+            $attempt->gateway_reference = (string)$innerData['id'];
+            $attempt->payment_status = PaymentStatus::Paid;
+            $attempt->confirmed_at = now();
+            $attempt->verification_payload = $data;
+            $attempt->save();
+
+            return [
+                'status' => 'confirmed',
+                'transaction_id' => (string)$innerData['id'],
+                'message' => 'Payment successful'
+            ];
+        }
+
+        if (isset($innerData['status']) && $innerData['status'] === 'send_otp') {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'otp',
+                'flw_ref' => $innerData['flw_ref'] ?? null,
+                'message' => 'OTP sent to your phone/email'
+            ];
+        }
+
+        return [
+            'status' => 'failed',
+            'message' => $message ?: 'Card charge could not be processed'
+        ];
+    }
+
+    public function validateOTP(PaymentAttempt $attempt, string $otp, string $flwRef): array
+    {
+        if (str_contains($this->secretKey, 'MOCK')) {
+            if ($otp === '123456' || $otp === '1234') {
+                $attempt->payment_status = PaymentStatus::Paid;
+                $attempt->confirmed_at = now();
+                $attempt->gateway_reference = 'FLW-MOCK-VAL-' . uniqid();
+                $attempt->save();
+                return [
+                    'status' => 'confirmed',
+                    'transaction_id' => $attempt->gateway_reference,
+                    'message' => 'Payment validated successfully'
+                ];
+            }
+            return [
+                'status' => 'failed',
+                'message' => 'Invalid OTP'
+            ];
+        }
+
+        try {
+            $response = Http::withToken($this->secretKey)
+                ->post("{$this->baseUrl}/validate-charge", [
+                    'otp' => $otp,
+                    'flw_ref' => $flwRef,
+                    'type' => 'card'
+                ]);
+
+            if ($response->failed()) {
+                return [
+                    'status' => 'failed',
+                    'message' => 'OTP validation failed: ' . ($response->json('message') ?? 'Unknown error')
+                ];
+            }
+
+            $data = $response->json();
+            $innerData = $data['data'] ?? [];
+            if ($data['status'] === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
+                $attempt->gateway_reference = (string)$innerData['id'];
+                $attempt->payment_status = PaymentStatus::Paid;
+                $attempt->confirmed_at = now();
+                $attempt->verification_payload = $data;
+                $attempt->save();
+
+                return [
+                    'status' => 'confirmed',
+                    'transaction_id' => (string)$innerData['id'],
+                    'message' => 'Payment successful'
+                ];
+            }
+
+            return [
+                'status' => 'failed',
+                'message' => $data['message'] ?? 'OTP validation failed'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'failed',
+                'message' => 'OTP verification failed: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    public function chargeBankTransfer(PaymentAttempt $attempt): array
+    {
+        if (str_contains($this->secretKey, 'MOCK')) {
+            $bankDetails = [
+                'bank_name' => 'Wema Bank (RshopRefills Mock)',
+                'account_number' => '9982' . rand(100000, 999999),
+                'account_name' => 'RshopRefills-Deposit-' . $attempt->user->id,
+                'amount' => (float)$attempt->amount,
+                'expires_at' => now()->addHour()->toIso8601String(),
+            ];
+            return [
+                'status' => 'awaiting_transfer',
+                'bank_details' => $bankDetails
+            ];
+        }
+
+        try {
+            $response = Http::withToken($this->secretKey)
+                ->post("{$this->baseUrl}/charges?type=bank_transfer", [
+                    'tx_ref' => $attempt->idempotency_key,
+                    'amount' => (float)$attempt->amount,
+                    'currency' => 'NGN',
+                    'email' => $attempt->user->email,
+                    'fullname' => $attempt->user->name,
+                ]);
+
+            if ($response->failed()) {
+                return [
+                    'status' => 'failed',
+                    'message' => 'Failed to initialize bank transfer: ' . ($response->json('message') ?? 'Unknown error')
+                ];
+            }
+
+            $data = $response->json();
+            $innerData = $data['meta']['authorization'] ?? [];
+            
+            $bankDetails = [
+                'bank_name' => $innerData['transfer_bank'] ?? 'Unknown Bank',
+                'account_number' => $innerData['transfer_account'] ?? 'Unknown Account',
+                'account_name' => 'Flutterwave Account',
+                'amount' => $innerData['transfer_amount'] ?? $attempt->amount,
+                'expires_at' => now()->addMinutes(30)->toIso8601String(),
+            ];
+
+            return [
+                'status' => 'awaiting_transfer',
+                'bank_details' => $bankDetails
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'failed',
+                'message' => 'Failed to initialize bank transfer: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    public function chargeMobileMoney(PaymentAttempt $attempt, string $phoneNumber, string $network): array
+    {
+        if (str_contains($this->secretKey, 'MOCK')) {
+            return [
+                'status' => 'awaiting_confirmation',
+                'message' => 'Please authorize the push notification sent to your phone (' . $phoneNumber . ').'
+            ];
+        }
+
+        try {
+            $response = Http::withToken($this->secretKey)
+                ->post("{$this->baseUrl}/charges?type=mobile_money_franco", [
+                    'amount' => (float)$attempt->amount,
+                    'currency' => strtoupper($attempt->currency),
+                    'email' => $attempt->user->email,
+                    'phone_number' => $phoneNumber,
+                    'tx_ref' => $attempt->idempotency_key,
+                    'country' => 'CM',
+                    'network' => strtoupper($network),
+                ]);
+
+            if ($response->failed()) {
+                return [
+                    'status' => 'failed',
+                    'message' => 'Failed to initialize mobile money: ' . ($response->json('message') ?? 'Unknown error')
+                ];
+            }
+
+            $data = $response->json();
+            $status = $data['status'] ?? 'error';
+
+            if ($status === 'success') {
+                return [
+                    'status' => 'awaiting_confirmation',
+                    'message' => $data['message'] ?? 'Mobile money request sent. Please authorize on your phone.'
+                ];
+            }
+
+            return [
+                'status' => 'failed',
+                'message' => $data['message'] ?? 'Mobile money charge could not be initiated.'
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'failed',
+                'message' => 'Failed to initialize mobile money: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    private function simulateMockCardCharge(PaymentAttempt $attempt, array $cardDetails, ?array $auth): array
+    {
+        $cardNumber = str_replace(' ', '', $cardDetails['card_number']);
+
+        if ($cardNumber === '5555555555555555' && (!$auth || !isset($auth['pin']))) {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'pin',
+                'message' => 'PIN is required'
+            ];
+        }
+
+        if ($cardNumber === '7777777777777777' && (!$auth || !isset($auth['otp']))) {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'otp',
+                'flw_ref' => 'FLW-MOCK-REF-' . uniqid(),
+                'message' => 'OTP sent to your phone/email'
+            ];
+        }
+
+        if ($cardNumber === '9999999999999999' && (!$auth || !isset($auth['redirect_completed']))) {
+            return [
+                'status' => 'awaiting_customer_action',
+                'action' => 'redirect',
+                'redirect_url' => route('shop.coming-soon') . '?mock_3ds=' . $attempt->paymentSession->id,
+                'message' => '3D Secure authentication required'
+            ];
+        }
+
+        $attempt->gateway_reference = 'FLW-MOCK-TX-' . uniqid();
+        $attempt->payment_status = PaymentStatus::Paid;
+        $attempt->confirmed_at = now();
+        $attempt->save();
+
+        return [
+            'status' => 'confirmed',
+            'transaction_id' => $attempt->gateway_reference,
+            'message' => 'Payment successful'
+        ];
+    }
+
     public function verifyPayment(PaymentAttempt $attempt): bool
     {
         if (str_contains($this->secretKey, 'MOCK')) {

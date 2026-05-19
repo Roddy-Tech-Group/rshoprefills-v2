@@ -19,6 +19,7 @@ class PaymentSessionResource extends JsonResource
             'currency' => $this->currency,
             'display_currency' => $this->display_currency,
             'payment_payload' => $this->payment_payload,
+            'available_methods' => $this->getAvailableMethods(),
             'expires_at' => $this->expires_at?->toIso8601String(),
             'confirmed_at' => $this->confirmed_at?->toIso8601String(),
             'failed_at' => $this->failed_at?->toIso8601String(),

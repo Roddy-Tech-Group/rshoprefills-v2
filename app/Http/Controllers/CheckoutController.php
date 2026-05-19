@@ -64,8 +64,22 @@ class CheckoutController extends Controller
                 deliveryEmail: $data['delivery_email'],
             );
         } catch (Throwable $e) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'message' => 'Checkout could not be completed: '.$e->getMessage()
+                ], 422);
+            }
             return redirect()->route('shop.checkout')
                 ->with('checkout_status', 'Checkout could not be completed: '.$e->getMessage());
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            $session = $order->paymentAttempts()->latest()->first()?->paymentSession;
+            return response()->json([
+                'order_number' => $order->order_number,
+                'redirect_url' => route('shop.order', $order->order_number),
+                'payment_session' => $session ? new \App\Http\Resources\PaymentSessionResource($session) : null
+            ]);
         }
 
         return redirect()->route('shop.order', $order->order_number);
