@@ -65,11 +65,92 @@ class PaymentSessionController extends Controller
             return response()->json([
                 'message' => 'Payment session cancelled successfully.',
                 'status' => 'cancelled',
+                'is_expired' => $session->expires_at ? $session->expires_at->isPast() : false,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
             ], 400);
+        }
+    }
+
+    /**
+     * Trigger explicit verify/check of the payment session with the gateway.
+     */
+    public function verify(string $id, Request $request)
+    {
+        $session = PaymentSession::findOrFail($id);
+
+        if ($session->status === 'confirmed') {
+            return response()->json([
+                'status' => 'confirmed',
+                'message' => 'Payment session already confirmed.'
+            ]);
+        }
+
+        $attempt = $session->paymentAttempt;
+        if (!$attempt) {
+            return response()->json(['message' => 'Associated payment attempt not found.'], 404);
+        }
+
+        // Retrieve transaction ID from request if provided (e.g. from Flutterwave inline callback response)
+        if ($txId = $request->input('transaction_id')) {
+            $attempt->gateway_reference = $txId;
+            $attempt->save();
+        }
+
+        try {
+            $gatewayFactory = app(\App\Domain\Payment\Services\PaymentGatewayFactory::class);
+            $provider = $gatewayFactory->getProvider($attempt->gateway);
+            
+            // Call verifyPayment directly
+            $isPaid = $provider->verifyPayment($attempt);
+
+            if ($isPaid) {
+                // Confirm the payment session
+                $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+                $sessionService->confirmSession($session, [
+                    'transaction_id' => $attempt->gateway_reference,
+                    'payload' => $attempt->verification_payload,
+                ]);
+
+                // If it is an order checkout payment, fulfill it
+                if ($attempt->order) {
+                    $orderService = app(\App\Domain\Order\Services\OrderService::class);
+                    $orderService->transitionPaymentStatus($attempt->order, \App\Domain\Payment\Enums\PaymentStatus::Paid, $attempt->verification_payload);
+                    
+                    // Dispatch fulfillment jobs
+                    foreach ($attempt->order->items as $item) {
+                        \App\Jobs\FulfillOrderItemJob::dispatch($item);
+                    }
+                } 
+                // If it is wallet funding
+                elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                    $funding = $attempt->payable;
+                    if ($funding && $funding->status !== \App\Domain\Shared\Enums\FundingStatus::Completed) {
+                        $fundingService = app(\App\Domain\Wallet\Services\WalletFundingService::class);
+                        // Process funding safely
+                        $fundingService->processSuccessfulFunding(
+                            $funding->reference,
+                            $attempt->gateway_reference ?: 'DIRECT-' . uniqid(),
+                            $attempt->verification_payload ?: []
+                        );
+                    }
+                }
+
+                return response()->json([
+                    'status' => 'confirmed',
+                    'message' => 'Payment verified and session confirmed.'
+                ]);
+            }
+
+            return response()->json([
+                'status' => $session->fresh()->status,
+                'message' => 'Payment could not be verified yet. Please try again.'
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Explicit payment session verify failed: " . $e->getMessage());
+            return response()->json(['message' => 'Verification failed: ' . $e->getMessage()], 500);
         }
     }
 }
