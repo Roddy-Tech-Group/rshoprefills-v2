@@ -69,7 +69,7 @@
             </div>
         @endif
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
             <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white py-24 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -249,15 +249,15 @@
                     </div>
 
                     {{-- Method tabs --}}
-                    <div class="mt-5 grid grid-cols-2 sm:grid-cols-{{ count($methods) }} gap-2">
-                        @foreach ($methods as $m)
-                            <button type="button" @click="method = '{{ $m['key'] }}'"
-                                :class="method === '{{ $m['key'] }}' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500/20' : 'border-zinc-200 hover:border-zinc-300'"
+                    <div class="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <template x-for="m in getFilteredMethods()" :key="m.key">
+                            <button type="button" @click="method = m.key"
+                                :class="method === m.key ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500/20' : 'border-zinc-200 hover:border-zinc-300'"
                                 class="rounded-xl border bg-white px-3 py-2.5 text-left transition duration-150 active:scale-[0.98]">
-                                <span class="block text-sm font-bold text-zinc-900">{{ $m['label'] }}</span>
-                                <span class="mt-0.5 block text-[11px] leading-tight text-zinc-500">{{ $m['desc'] }}</span>
+                                <span class="block text-sm font-bold text-zinc-900" x-text="m.label"></span>
+                                <span class="mt-0.5 block text-[11px] leading-tight text-zinc-500" x-text="m.desc"></span>
                             </button>
-                        @endforeach
+                        </template>
                     </div>
 
                     {{-- Card --}}
@@ -268,16 +268,61 @@
                         </div>
                         <div>
                             <label for="card_number" class="text-sm font-semibold text-zinc-900">Card number</label>
-                            <input id="card_number" name="card_number" type="text" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" class="{{ $fieldClass }} tabular-nums">
+                            <div class="relative">
+                                <input 
+                                    id="card_number" 
+                                    name="card_number" 
+                                    type="text" 
+                                    inputmode="numeric" 
+                                    autocomplete="cc-number" 
+                                    placeholder="1234 1234 1234 1234" 
+                                    x-model="cardDetails.card_number"
+                                    @input="detectCardType"
+                                    class="{{ $fieldClass }} pr-16 tabular-nums"
+                                >
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none mt-1.5">
+                                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
+                                          x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
+                                          :class="{
+                                              'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
+                                              'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
+                                              'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
+                                              'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
+                                              'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
+                                              'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
+                                          }"
+                                    ></span>
+                                </div>
+                            </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label for="card_expiry" class="text-sm font-semibold text-zinc-900">Expiry</label>
-                                <input id="card_expiry" name="card_expiry" type="text" inputmode="numeric" autocomplete="cc-exp" placeholder="MM / YY" class="{{ $fieldClass }} tabular-nums">
+                                <input 
+                                    id="card_expiry" 
+                                    name="card_expiry" 
+                                    type="text" 
+                                    inputmode="numeric" 
+                                    autocomplete="cc-exp" 
+                                    placeholder="MM / YY" 
+                                    x-model="cardExpiryRaw"
+                                    @input="formatExpiry"
+                                    class="{{ $fieldClass }} tabular-nums"
+                                >
                             </div>
                             <div>
                                 <label for="card_cvc" class="text-sm font-semibold text-zinc-900">CVC</label>
-                                <input id="card_cvc" name="card_cvc" type="text" inputmode="numeric" autocomplete="cc-csc" placeholder="123" class="{{ $fieldClass }} tabular-nums">
+                                <input 
+                                    id="card_cvc" 
+                                    name="card_cvc" 
+                                    type="text" 
+                                    inputmode="numeric" 
+                                    autocomplete="cc-csc" 
+                                    placeholder="123" 
+                                    x-model="cardDetails.cvv"
+                                    maxlength="4"
+                                    class="{{ $fieldClass }} tabular-nums"
+                                >
                             </div>
                         </div>
                     </div>
@@ -497,6 +542,18 @@
 
                     <!-- Active Payment Session Details & Wizard -->
                     <div x-show="session" class="mt-2">
+                        <!-- Countdown timer banner -->
+                        <div x-show="['awaiting_transfer', 'awaiting_confirmation', 'action_pin', 'action_otp', 'action_3ds'].includes(paymentState)" 
+                             class="mb-5 flex items-center justify-between rounded-xl bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="h-4 w-4 animate-pulse text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Complete payment within:
+                            </span>
+                            <span class="font-extrabold text-sm tabular-nums text-amber-700" x-text="timerText"></span>
+                        </div>
+
                         <!-- Card Auth: PIN Challenge -->
                         <div x-show="paymentState === 'action_pin'">
                             <h3 class="text-sm font-bold text-zinc-900 mb-2">Card PIN Required</h3>
@@ -543,25 +600,28 @@
                                     <h3 class="text-sm font-bold text-zinc-900 mb-2">Virtual Bank Transfer</h3>
                                     <p class="text-xs text-zinc-600 mb-4">Please make a transfer to the temporary virtual account below:</p>
 
-                                    <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3">
+                                    <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3 shadow-inner">
                                         <div class="flex justify-between items-center text-xs">
-                                            <span class="text-zinc-500">Bank Name</span>
+                                            <span class="text-zinc-500 font-medium">Bank Name</span>
                                             <span class="font-bold text-zinc-900" x-text="bankDetails?.bank_name"></span>
                                         </div>
                                         <div class="flex justify-between items-center text-xs">
-                                            <span class="text-zinc-500">Account Number</span>
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="font-bold text-zinc-900 text-sm" x-text="bankDetails?.account_number"></span>
-                                                <button type="button" @click="copyToClipboard(bankDetails?.account_number)" class="text-blue-600 hover:text-blue-800 text-[10px] font-semibold">Copy</button>
+                                            <span class="text-zinc-500 font-medium">Account Number</span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded border border-zinc-150" x-text="bankDetails?.account_number"></span>
+                                                <button type="button" @click="copyToClipboard(bankDetails?.account_number, 'account')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded transition-all">
+                                                    <span x-show="!copiedStates['account']">Copy</span>
+                                                    <span x-show="copiedStates['account']" class="text-emerald-600 font-bold">Copied!</span>
+                                                </button>
                                             </div>
                                         </div>
                                         <div class="flex justify-between items-center text-xs">
-                                            <span class="text-zinc-500">Account Name</span>
-                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name"></span>
+                                            <span class="text-zinc-500 font-medium">Account Name</span>
+                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name || 'Flutterwave/Roddy Technologies'"></span>
                                         </div>
-                                        <div class="flex justify-between items-center text-xs border-t border-zinc-200 pt-2">
-                                            <span class="text-zinc-500">Amount</span>
-                                            <span class="font-extrabold text-blue-700 text-sm" x-text="session?.currency + ' ' + Number(bankDetails?.amount || session?.amount).toFixed(2)"></span>
+                                        <div class="flex justify-between items-center text-xs border-t border-zinc-200 pt-3">
+                                            <span class="text-zinc-500 font-medium">Amount</span>
+                                            <span class="font-extrabold text-blue-700 text-base tabular-nums" x-text="session?.currency + ' ' + Number(bankDetails?.amount || session?.amount).toFixed(2)"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -573,36 +633,45 @@
                                     <h3 class="text-sm font-bold text-zinc-900 text-center mb-2">Crypto Payment Details</h3>
                                     <p class="text-xs text-zinc-600 text-center mb-4">Send the exact amount of cryptocurrency shown to the address below:</p>
 
-                                    <div class="flex flex-col items-center gap-4 bg-zinc-50 p-4 border border-zinc-200 rounded-xl">
+                                    <div class="flex flex-col items-center gap-4 bg-zinc-50 p-4 border border-zinc-200 rounded-xl shadow-inner">
                                         <!-- QR Code -->
-                                        <div class="flex shrink-0 flex-col items-center rounded-lg bg-white p-2 border border-zinc-150">
+                                        <div class="flex shrink-0 flex-col items-center rounded-xl bg-white p-3 border border-zinc-150 shadow-sm">
                                             <img 
                                                 :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(session?.payment_payload?.qr_payload || '')" 
                                                 alt="Payment QR Code" 
-                                                class="h-28 w-28 object-contain"
+                                                class="h-32 w-32 object-contain"
                                             />
-                                            <span class="mt-1 text-[9px] font-bold uppercase tracking-wider text-zinc-400">Scan to pay</span>
+                                            <span class="mt-1.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">Scan to pay</span>
                                         </div>
 
                                         <!-- Details -->
-                                        <div class="w-full space-y-2 text-xs">
+                                        <div class="w-full space-y-3.5 text-xs">
                                             <div>
-                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">Cryptocurrency</span>
+                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Cryptocurrency / Network</span>
                                                 <div class="flex items-center gap-1.5">
                                                     <span class="rounded bg-blue-50 px-2 py-0.5 font-bold text-blue-700 uppercase" x-text="session?.payment_payload?.pay_currency || 'btc'"></span>
                                                     <span class="text-[10px] font-medium text-zinc-500 uppercase" x-text="'Network: ' + (session?.payment_payload?.network || 'bitcoin')"></span>
                                                 </div>
                                             </div>
                                             <div>
-                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">Amount to Send</span>
-                                                <span class="font-bold text-zinc-900 text-sm" x-text="session?.payment_payload?.pay_amount"></span>
-                                                <span class="font-bold text-zinc-500 uppercase" x-text="session?.payment_payload?.pay_currency"></span>
+                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Amount to Send</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded border border-zinc-150" x-text="session?.payment_payload?.pay_amount"></span>
+                                                    <span class="font-bold text-zinc-600 uppercase" x-text="session?.payment_payload?.pay_currency"></span>
+                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_amount, 'amount_crypto')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded transition-all">
+                                                        <span x-show="!copiedStates['amount_crypto']">Copy</span>
+                                                        <span x-show="copiedStates['amount_crypto']" class="text-emerald-600 font-bold">Copied!</span>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div>
-                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block">Deposit Address</span>
-                                                <div class="mt-1 flex items-center gap-1">
-                                                    <input type="text" readonly :value="session?.payment_payload?.pay_address" class="w-full bg-zinc-100 px-2 py-1 rounded text-[10px] text-zinc-800 font-mono select-all outline-none">
-                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_address)" class="text-blue-600 hover:text-blue-800 text-[10px] font-semibold shrink-0">Copy</button>
+                                                <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Deposit Address</span>
+                                                <div class="mt-1 flex items-center gap-1.5">
+                                                    <input type="text" readonly :value="session?.payment_payload?.pay_address" class="w-full bg-white px-2.5 py-1.5 rounded border border-zinc-200 text-[10px] text-zinc-800 font-mono select-all outline-none">
+                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_address, 'address')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold shrink-0 bg-blue-50 px-2.5 py-1.5 rounded transition-all border border-blue-100">
+                                                        <span x-show="!copiedStates['address']">Copy</span>
+                                                        <span x-show="copiedStates['address']" class="text-emerald-600 font-bold">Copied!</span>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -616,7 +685,7 @@
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                 </svg>
                                 <p class="text-xs font-semibold text-zinc-800 mt-2">Waiting for transfer...</p>
-                                <p class="text-[10px] text-zinc-500 mt-1">Status updates automatically. This temporary reference expires in 30 minutes.</p>
+                                <p class="text-[10px] text-zinc-500 mt-1">Status updates automatically as soon as payment is detected.</p>
                             </div>
                         </div>
 
@@ -626,8 +695,8 @@
                             <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
 
                             <div class="flex flex-col items-center py-6 text-center">
-                                <span class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 ring-8 ring-blue-100/50 mb-4">
-                                    <svg class="h-7 w-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <span class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 ring-8 ring-blue-100/50 mb-5">
+                                    <svg class="h-8 w-8 text-blue-600 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                     </svg>
                                 </span>
@@ -645,7 +714,7 @@
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                             </svg>
-                            <p class="mt-4 text-sm font-bold text-zinc-900">Processing transaction...</p>
+                            <p class="mt-4 text-sm font-bold text-zinc-900" x-text="method === 'apple_pay' ? 'Authorizing with Apple Pay...' : 'Processing transaction...'"></p>
                             <p class="mt-1 text-xs text-zinc-500">Please do not close this window.</p>
                         </div>
 
@@ -684,7 +753,7 @@
     </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates, walletBalances) {
+        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn) {
             return {
                 method: 'card',
                 crypto: '',
@@ -692,6 +761,36 @@
                 submitting: false,
                 cryptoRates: cryptoRates || {},
                 walletBalances: walletBalances || {},
+                isLoggedIn: isLoggedIn || false,
+
+                allMethods: [
+                    { key: 'card', label: 'Card', desc: 'Visa, Mastercard' },
+                    { key: 'mobile_money', label: 'Mobile Money', desc: 'MTN, Orange, Vodafone' },
+                    { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account' },
+                    { key: 'apple_pay', label: 'Apple Pay', desc: 'Pay via Apple Wallet' },
+                    { key: 'crypto', label: 'Crypto', desc: 'BTC, USDT, ETH and more' },
+                    { key: 'wallet', label: 'Wallet', desc: 'Pay with wallet balance' }
+                ],
+
+                getFilteredMethods() {
+                    const currency = this.$store.cart.currency;
+                    const mapping = {
+                        'USD': ['card', 'apple_pay', 'crypto', 'wallet'],
+                        'EUR': ['card', 'apple_pay', 'crypto', 'wallet'],
+                        'GBP': ['card', 'apple_pay', 'crypto', 'wallet'],
+                        'NGN': ['card', 'apple_pay', 'bank_transfer', 'crypto', 'wallet'],
+                        'GHS': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+                        'XAF': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+                        'XOF': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+                    };
+                    const allowedKeys = mapping[currency] || ['card', 'apple_pay', 'crypto'];
+                    return this.allMethods.filter(m => {
+                        if (m.key === 'wallet' && !this.isLoggedIn) {
+                            return false;
+                        }
+                        return allowedKeys.includes(m.key);
+                    });
+                },
 
                 // Wizard State
                 open: false,
@@ -717,8 +816,97 @@
                 pollInterval: null,
                 redirectUrl: '',
 
+                cardBrand: 'unknown',
+                cardExpiryRaw: '',
+                timerInterval: null,
+                timerText: '30:00',
+                copiedStates: {},
+
                 init() {
                     this.resetCardDetails();
+                    this.$watch('$store.cart.currency', (newVal) => {
+                        const methods = this.getFilteredMethods();
+                        const currentSupported = methods.some(m => m.key === this.method);
+                        if (!currentSupported && methods.length > 0) {
+                            this.method = methods[0].key;
+                        }
+                    });
+                },
+
+                detectCardType() {
+                    let num = this.cardDetails.card_number.replace(/\D/g, '');
+                    
+                    // Auto-format card number as they type (e.g. 1234 5678 1234 5678)
+                    let formatted = '';
+                    for (let i = 0; i < num.length; i++) {
+                        if (i > 0 && i % 4 === 0) {
+                            formatted += ' ';
+                        }
+                        formatted += num[i];
+                    }
+                    this.cardDetails.card_number = formatted;
+
+                    // Detect brand
+                    if (num.startsWith('4')) {
+                        this.cardBrand = 'visa';
+                    } else if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)/.test(num)) {
+                        this.cardBrand = 'mastercard';
+                    } else if (/^(506[0-1]|507[8-9]|6500)/.test(num)) {
+                        this.cardBrand = 'verve';
+                    } else if (/^(34|37)/.test(num)) {
+                        this.cardBrand = 'amex';
+                    } else if (/^(6011|65)/.test(num)) {
+                        this.cardBrand = 'discover';
+                    } else if (/^(35)/.test(num)) {
+                        this.cardBrand = 'jcb';
+                    } else {
+                        this.cardBrand = 'unknown';
+                    }
+                },
+
+                formatExpiry() {
+                    let exp = this.cardExpiryRaw.replace(/\D/g, '');
+                    if (exp.length > 2) {
+                        this.cardExpiryRaw = exp.slice(0, 2) + ' / ' + exp.slice(2, 4);
+                    } else {
+                        this.cardExpiryRaw = exp;
+                    }
+                    this.cardDetails.expiry_month = exp.slice(0, 2);
+                    this.cardDetails.expiry_year = exp.slice(2, 4);
+                },
+
+                startCountdown() {
+                    if (this.timerInterval) clearInterval(this.timerInterval);
+                    
+                    let expiresAt = this.session?.expires_at;
+                    let targetTime;
+                    
+                    if (expiresAt) {
+                        targetTime = new Date(expiresAt).getTime();
+                    } else {
+                        // Fallback: 30 minutes from now
+                        targetTime = Date.now() + (30 * 60 * 1000);
+                    }
+                    
+                    const updateTimer = () => {
+                        const now = Date.now();
+                        const diff = targetTime - now;
+                        
+                        if (diff <= 0) {
+                            clearInterval(this.timerInterval);
+                            this.timerText = '00:00';
+                            this.paymentState = 'error';
+                            this.errorMessage = 'Transaction time frame expired.';
+                            return;
+                        }
+                        
+                        const minutes = Math.floor(diff / 60000);
+                        const seconds = Math.floor((diff % 60000) / 1000);
+                        this.timerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    };
+                    
+                    updateTimer();
+                    this.timerInterval = setInterval(updateTimer, 1000);
                 },
 
                 resetCardDetails() {
@@ -733,6 +921,9 @@
                         phone_number: '',
                         network: ''
                     };
+                    this.cardBrand = 'unknown';
+                    this.cardExpiryRaw = '';
+                    this.copiedStates = {};
                 },
 
                 coinMeta() {
@@ -851,6 +1042,12 @@
                         } else if (this.method === 'crypto') {
                             this.paymentState = 'processing';
                             await this.paySession('crypto', { pay_currency: this.crypto });
+                        } else if (this.method === 'apple_pay') {
+                            this.paymentState = 'processing';
+                            await this.paySession('apple_pay', {});
+                        } else if (this.method === 'bank_transfer') {
+                            this.paymentState = 'processing';
+                            await this.paySession('bank_transfer', {});
                         }
                     } catch (err) {
                         this.submitting = false;
@@ -913,22 +1110,27 @@
                         if (action === 'pin') {
                             this.paymentState = 'action_pin';
                             this.pinValue = '';
+                            this.startCountdown();
                         } else if (action === 'otp') {
                             this.paymentState = 'action_otp';
                             this.otpValue = '';
                             this.actionMessage = sessionData.payment_payload?.message || 'Verification code sent';
+                            this.startCountdown();
                         } else if (action === 'redirect') {
                             this.paymentState = 'action_3ds';
                             this.startStatusPolling();
+                            this.startCountdown();
                         }
                     } else if (status === 'awaiting_transfer') {
                         this.paymentState = 'awaiting_transfer';
                         this.bankDetails = sessionData.payment_payload?.bank_details || sessionData.payment_payload || null;
                         this.startStatusPolling();
+                        this.startCountdown();
                     } else if (status === 'awaiting_confirmation') {
                         this.paymentState = 'awaiting_confirmation';
                         this.actionMessage = sessionData.payment_payload?.message || 'Please accept the billing prompt on your device.';
                         this.startStatusPolling();
+                        this.startCountdown();
                     }
                 },
 
@@ -951,9 +1153,15 @@
                     }, 4500);
                 },
 
-                copyToClipboard(text) {
-                    navigator.clipboard.writeText(text);
-                    alert('Copied to clipboard!');
+                copyToClipboard(text, key = 'default') {
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.copiedStates[key] = true;
+                        setTimeout(() => {
+                            this.copiedStates[key] = false;
+                        }, 2000);
+                    }).catch(() => {
+                        alert('Failed to copy to clipboard.');
+                    });
                 },
 
                 closeModal() {
@@ -962,6 +1170,9 @@
                     this.session = null;
                     if (this.pollInterval) {
                         clearInterval(this.pollInterval);
+                    }
+                    if (this.timerInterval) {
+                        clearInterval(this.timerInterval);
                     }
                 }
             };

@@ -215,8 +215,8 @@ class PaymentSession extends Model
             'supported_brands' => ['visa', 'mastercard', 'verve'],
         ];
 
-        // 2. Apple Pay is supported for USD and NGN
-        if (in_array($currency, ['USD', 'NGN'])) {
+        // 2. Apple Pay is supported globally (USD, EUR, GBP, NGN, GHS, XAF, XOF)
+        if (in_array($currency, ['USD', 'EUR', 'GBP', 'NGN', 'GHS', 'XAF', 'XOF'])) {
             $methods[] = [
                 'type' => 'apple_pay',
                 'provider' => 'flutterwave',
@@ -253,14 +253,24 @@ class PaymentSession extends Model
             ];
         }
 
-        // 4. XAF specific payment methods (Mobile Money)
-        if ($currency === 'XAF' || $currency === 'XOF') {
+        // 4. XAF, GHS specific payment methods (Mobile Money)
+        if (in_array($currency, ['XAF', 'XOF', 'GHS'])) {
             $methods[] = [
                 'type' => 'mobile_money',
                 'provider' => 'flutterwave',
                 'label' => 'Mobile Money',
-                'description' => 'MTN Mobile Money or Orange Money',
-                'supported_networks' => ['MTN', 'Orange'],
+                'description' => $currency === 'GHS' ? 'MTN, Vodafone, AirtelTigo Mobile Money' : 'MTN Mobile Money or Orange Money',
+                'supported_networks' => $currency === 'GHS' ? ['MTN', 'Vodafone', 'AirtelTigo'] : ['MTN', 'Orange'],
+            ];
+        }
+
+        // 5. Crypto is supported globally (USD, EUR, GBP, NGN, GHS, XAF, XOF)
+        if (in_array($currency, ['USD', 'EUR', 'GBP', 'NGN', 'GHS', 'XAF', 'XOF'])) {
+            $methods[] = [
+                'type' => 'crypto',
+                'provider' => 'nowpayments',
+                'label' => 'Crypto Transfer',
+                'description' => 'Pay via BTC, ETH, USDT, LTC',
             ];
         }
 

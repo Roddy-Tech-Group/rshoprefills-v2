@@ -25,7 +25,7 @@ class CheckoutController extends Controller
     {
         $data = $request->validate([
             'delivery_email' => ['required', 'email'],
-            'payment_method' => ['required', 'in:card,mobile_money,crypto,wallet'],
+            'payment_method' => ['required', 'in:card,mobile_money,crypto,wallet,bank_transfer,apple_pay'],
         ]);
 
         $user = $request->user();
@@ -39,21 +39,40 @@ class CheckoutController extends Controller
                 ->with('checkout_status', 'Your cart is empty.');
         }
 
-        // The UI offers card / mobile_money / crypto / wallet; the CheckoutService
-        // engine speaks wallet / flutterwave / crypto — card + mobile money both
-        // settle through Flutterwave.
-        $paymentMethod = match ($data['payment_method']) {
-            'wallet' => 'wallet',
-            'crypto' => 'crypto',
-            default => 'flutterwave',
-        };
-
         // Display currency comes from the customer's locale (hidden field on the
         // checkout form). Settlement is always USD; this is presentation only.
         $displayCurrency = strtoupper((string) $request->input('currency', 'USD'));
         if (strlen($displayCurrency) !== 3) {
             $displayCurrency = 'USD';
         }
+
+        // Verify currency-method compatibility behind the scenes
+        $supported = [
+            'USD' => ['card', 'apple_pay', 'crypto', 'wallet'],
+            'EUR' => ['card', 'apple_pay', 'crypto', 'wallet'],
+            'GBP' => ['card', 'apple_pay', 'crypto', 'wallet'],
+            'NGN' => ['card', 'apple_pay', 'bank_transfer', 'crypto', 'wallet'],
+            'GHS' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+            'XAF' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+            'XOF' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+        ];
+
+        $allowedMethods = $supported[$displayCurrency] ?? ['card', 'apple_pay'];
+        if (!in_array($data['payment_method'], $allowedMethods)) {
+            $msg = "The selected payment method is not available for {$displayCurrency}.";
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return redirect()->route('shop.checkout')
+                ->with('checkout_status', $msg);
+        }
+
+        // Map checkout page methods to backend payment providers
+        $paymentMethod = match ($data['payment_method']) {
+            'wallet' => 'wallet',
+            'crypto' => 'crypto',
+            default => 'flutterwave',
+        };
 
         try {
             $order = $this->checkoutService->placeOrder(
