@@ -26,6 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
             ResolveRegion::class,
         ]);
 
+        // Enable stateful sessions for API routes so AJAX requests can resolve the authenticated user
+        $middleware->api(append: [
+            \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+        ]);
+
         $middleware->redirectGuestsTo(fn () => request()->is('admin*') ? route('admin.login') : route('login'));
         $middleware->redirectUsersTo(fn () => request()->is('admin*') ? route('admin.dashboard') : route('dashboard'));
     })
