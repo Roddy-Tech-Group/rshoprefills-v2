@@ -291,6 +291,7 @@
                     <div x-show="searching" class="p-2">
                         <p class="px-3 pb-1 pt-2 text-xs font-semibold text-zinc-600">Products &amp; brands</p>
 
+                        {{-- Loading --}}
                         <div x-show="loading" class="flex items-center gap-2 px-3 py-6 text-sm text-zinc-500">
                             <svg class="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <circle class="opacity-30" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"/>
@@ -299,6 +300,7 @@
                             Searching the catalogue&hellip;
                         </div>
 
+                        {{-- Matches --}}
                         <template x-for="r in results" :key="r.slug">
                             <a :href="'/gift-cards/' + r.slug" class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-blue-100">
                                 <span class="flex min-w-0 items-center gap-3">
@@ -317,10 +319,12 @@
                             </a>
                         </template>
 
+                        {{-- No matches --}}
                         <div x-show="! loading && results.length === 0" class="px-3 py-6 text-center text-sm text-zinc-500">
                             No products match &ldquo;<span x-text="query"></span>&rdquo;.
                         </div>
 
+                        {{-- See all results --}}
                         <a
                             x-show="! loading && results.length > 0"
                             :href="'/gift-cards?q=' + encodeURIComponent(query)"

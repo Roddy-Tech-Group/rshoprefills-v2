@@ -573,6 +573,7 @@ window.dashboardSearch = function () {
         },
 
         async fetchResults(q) {
+            // Abort any in-flight request so stale results never overwrite fresh ones.
             if (this._aborter) this._aborter.abort();
             this._aborter = new AbortController();
 
