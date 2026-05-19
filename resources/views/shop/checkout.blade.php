@@ -1081,7 +1081,13 @@
                             body: JSON.stringify(body)
                         });
 
-                        let resData = await response.json();
+                        let resData;
+                        try {
+                            resData = await response.json();
+                        } catch (jsonErr) {
+                            resData = { message: 'Server error (' + response.status + '): ' + response.statusText };
+                        }
+
                         if (!response.ok) {
                             this.paymentState = 'error';
                             this.errorMessage = resData.message || 'Payment initiation failed.';
