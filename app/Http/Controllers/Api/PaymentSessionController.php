@@ -46,7 +46,7 @@ class PaymentSessionController extends Controller
         try {
             DB::transaction(function () use ($session) {
                 // Check if session can be cancelled
-                if (!in_array($session->status, ['pending', 'awaiting_payment'])) {
+                if (!in_array($session->status, ['pending', 'awaiting_method', 'awaiting_payment', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
                     throw new \DomainException("Cannot cancel payment session that is already {$session->status}.");
                 }
 
@@ -151,6 +151,145 @@ class PaymentSessionController extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Explicit payment session verify failed: " . $e->getMessage());
             return response()->json(['message' => 'Verification failed: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Pay/authorize the specified active payment session.
+     */
+    public function pay(string $id, Request $request)
+    {
+        $session = PaymentSession::findOrFail($id);
+
+        if (in_array($session->status, ['confirmed', 'failed', 'expired', 'cancelled'])) {
+            return response()->json([
+                'message' => 'Payment session is in a terminal state: ' . $session->status,
+                'status' => $session->status
+            ], 400);
+        }
+
+        $attempt = $session->paymentAttempt;
+        if (!$attempt) {
+            return response()->json(['message' => 'Associated payment attempt not found.'], 404);
+        }
+
+        $method = $request->input('method');
+        $details = $request->input('details', []);
+        
+        $gatewayFactory = app(\App\Domain\Payment\Services\PaymentGatewayFactory::class);
+
+        try {
+            $result = null;
+
+            if ($method === 'card') {
+                $flwProvider = $gatewayFactory->getProvider('flutterwave');
+                
+                if ($otp = $request->input('otp')) {
+                    $flwRef = $request->input('flw_ref') ?: ($session->payment_payload['flw_ref'] ?? '');
+                    $result = $flwProvider->validateOTP($attempt, $otp, $flwRef);
+                } 
+                elseif ($pin = $request->input('pin')) {
+                    $result = $flwProvider->chargeCard($attempt, $details, ['pin' => $pin]);
+                }
+                else {
+                    $request->validate([
+                        'details.card_number' => 'required|string',
+                        'details.cvv' => 'required|string',
+                        'details.expiry_month' => 'required|string',
+                        'details.expiry_year' => 'required|string',
+                    ]);
+                    $result = $flwProvider->chargeCard($attempt, $details);
+                }
+            } 
+            elseif ($method === 'bank_transfer') {
+                $flwProvider = $gatewayFactory->getProvider('flutterwave');
+                $result = $flwProvider->chargeBankTransfer($attempt);
+            } 
+            elseif ($method === 'mobile_money') {
+                $request->validate([
+                    'details.phone_number' => 'required|string',
+                    'details.network' => 'required|string',
+                ]);
+                $flwProvider = $gatewayFactory->getProvider('flutterwave');
+                $result = $flwProvider->chargeMobileMoney($attempt, $details['phone_number'], $details['network']);
+            } 
+            elseif ($method === 'crypto') {
+                $request->validate([
+                    'details.pay_currency' => 'required|string',
+                ]);
+                $npProvider = $gatewayFactory->getProvider('nowpayments');
+                $result = $npProvider->chargeCrypto($attempt, $details['pay_currency']);
+            } 
+            else {
+                return response()->json(['message' => 'Unsupported payment method.'], 400);
+            }
+
+            if (!$result || !isset($result['status'])) {
+                throw new \RuntimeException('Gateway returned empty response.');
+            }
+
+            if ($result['status'] === 'confirmed') {
+                $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+                $sessionService->confirmSession($session, [
+                    'transaction_id' => $result['transaction_id'] ?? $attempt->gateway_reference,
+                    'payload' => $result,
+                ]);
+
+                if ($attempt->order) {
+                    $orderService = app(\App\Domain\Order\Services\OrderService::class);
+                    $orderService->transitionPaymentStatus($attempt->order, \App\Domain\Payment\Enums\PaymentStatus::Paid, $result);
+                    foreach ($attempt->order->items as $item) {
+                        \App\Jobs\FulfillOrderItemJob::dispatch($item);
+                    }
+                } 
+                elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                    $funding = $attempt->payable;
+                    if ($funding && $funding->status !== \App\Domain\Shared\Enums\FundingStatus::Completed) {
+                        $fundingService = app(\App\Domain\Wallet\Services\WalletFundingService::class);
+                        $fundingService->processSuccessfulFunding(
+                            $funding->reference,
+                            $result['transaction_id'] ?? 'DIRECT-' . uniqid(),
+                            $result
+                        );
+                    }
+                }
+            } 
+            elseif ($result['status'] === 'awaiting_customer_action') {
+                $session->transitionTo('awaiting_customer_action');
+                $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
+                $session->save();
+            } 
+            elseif ($result['status'] === 'awaiting_transfer') {
+                $session->transitionTo('awaiting_transfer');
+                $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
+                $session->save();
+            } 
+            elseif ($result['status'] === 'awaiting_confirmation') {
+                $session->transitionTo('awaiting_confirmation');
+                $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
+                $session->save();
+            } 
+            elseif ($result['status'] === 'failed') {
+                $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+                $sessionService->failSession($session, $result['message'] ?? 'Payment failed', $result);
+                
+                if ($attempt->order) {
+                    $orderService = app(\App\Domain\Order\Services\OrderService::class);
+                    $orderService->transitionPaymentStatus($attempt->order, \App\Domain\Payment\Enums\PaymentStatus::Failed, $result);
+                } 
+                elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                    $funding = $attempt->payable;
+                    if ($funding) {
+                        $funding->update(['status' => \App\Domain\Shared\Enums\FundingStatus::Failed]);
+                    }
+                }
+            }
+
+            return new PaymentSessionResource($session->fresh());
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Payment session pay failed: " . $e->getMessage());
+            return response()->json(['message' => 'Payment processing failed: ' . $e->getMessage()], 400);
         }
     }
 }

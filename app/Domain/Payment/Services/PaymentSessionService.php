@@ -49,7 +49,12 @@ class PaymentSessionService
                 'expires_at' => $expiresAt,
             ]);
 
-            $session->transitionTo('awaiting_payment');
+            $initialStatus = match ($session->session_type) {
+                'wallet' => 'awaiting_payment',
+                'crypto' => 'awaiting_transfer',
+                default => 'awaiting_method',
+            };
+            $session->transitionTo($initialStatus);
 
             event(new PaymentSessionCreated($session));
 
@@ -89,7 +94,12 @@ class PaymentSessionService
                 'expires_at' => $expiresAt,
             ]);
 
-            $session->transitionTo('awaiting_payment');
+            $initialStatus = match ($session->session_type) {
+                'wallet' => 'awaiting_payment',
+                'crypto' => 'awaiting_transfer',
+                default => 'awaiting_method',
+            };
+            $session->transitionTo($initialStatus);
 
             event(new PaymentSessionCreated($session));
 
@@ -109,7 +119,7 @@ class PaymentSessionService
                 return;
             }
 
-            if ($session->status === 'awaiting_payment') {
+            if (in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
                 $session->transitionTo('processing');
             }
 
@@ -140,7 +150,7 @@ class PaymentSessionService
                 return;
             }
 
-            if ($session->status === 'awaiting_payment') {
+            if (in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
                 $session->transitionTo('processing');
             }
 
@@ -164,7 +174,7 @@ class PaymentSessionService
         DB::transaction(function () use ($session) {
             $session = PaymentSession::where('id', $session->id)->lockForUpdate()->firstOrFail();
 
-            if ($session->status !== 'awaiting_payment') {
+            if (!in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
                 return;
             }
 

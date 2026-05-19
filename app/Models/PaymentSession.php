@@ -118,19 +118,19 @@ class PaymentSession extends Model
     /**
      * Advance the session status strictly via the allowed transition matrix.
      *
-     * Allowed transitions:
-     * pending -> awaiting_payment
-     * awaiting_payment -> processing
-     * processing -> confirmed
-     * processing -> failed
-     * awaiting_payment -> expired
-     * awaiting_payment -> cancelled
+     * Allowed statuses:
+     * pending, awaiting_method, awaiting_customer_action, awaiting_transfer,
+     * awaiting_confirmation, processing, confirmed, failed, expired, cancelled.
      */
     public function transitionTo(string $newStatus): void
     {
         $allowedTransitions = [
-            'pending' => ['awaiting_payment'],
+            'pending' => ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'cancelled'],
             'awaiting_payment' => ['processing', 'expired', 'cancelled', 'confirmed', 'failed'],
+            'awaiting_method' => ['awaiting_customer_action', 'awaiting_transfer', 'awaiting_confirmation', 'processing', 'confirmed', 'failed', 'cancelled'],
+            'awaiting_customer_action' => ['processing', 'confirmed', 'failed', 'cancelled'],
+            'awaiting_transfer' => ['awaiting_confirmation', 'processing', 'confirmed', 'failed', 'expired', 'cancelled'],
+            'awaiting_confirmation' => ['confirmed', 'failed', 'expired', 'cancelled'],
             'processing' => ['confirmed', 'failed'],
             'confirmed' => [],
             'failed' => [],
@@ -158,5 +158,112 @@ class PaymentSession extends Model
         }
 
         $this->save();
+    }
+
+    /**
+     * Resolve the available payment methods dynamically based on session currency and configuration.
+     */
+    public function getAvailableMethods(): array
+    {
+        $currency = strtoupper($this->currency);
+        $methods = [];
+
+        // If Wallet session, return wallet payment
+        if ($this->session_type === 'wallet' || $currency === 'WALLET') {
+            return [
+                [
+                    'type' => 'wallet',
+                    'provider' => 'wallet',
+                    'label' => 'Wallet Balance',
+                    'description' => 'Pay instantly from your wallet balance'
+                ]
+            ];
+        }
+
+        // If Crypto session
+        $cryptoCurrencies = ['BTC', 'ETH', 'USDT', 'LTC'];
+        if ($this->session_type === 'crypto' || in_array($currency, $cryptoCurrencies)) {
+            $coin = strtolower($currency);
+            if ($coin === 'crypto') {
+                $coin = 'usdt'; // fallback/default
+            }
+            $payload = $this->payment_payload;
+            return [
+                [
+                    'type' => 'crypto',
+                    'provider' => 'nowpayments',
+                    'label' => 'Crypto Transfer',
+                    'description' => 'Pay via BTC, ETH, USDT, LTC',
+                    'coin' => $coin,
+                    'pay_address' => $payload['pay_address'] ?? null,
+                    'pay_amount' => $payload['pay_amount'] ?? null,
+                    'pay_currency' => $payload['pay_currency'] ?? $coin,
+                    'network' => $payload['network'] ?? null,
+                    'qr_payload' => $payload['qr_payload'] ?? null,
+                    'expires_at' => $payload['expires_at'] ?? null,
+                ]
+            ];
+        }
+
+        // For Fiat currencies via Flutterwave
+        // 1. Card is always available for fiat
+        $methods[] = [
+            'type' => 'card',
+            'provider' => 'flutterwave',
+            'label' => 'Card Payment',
+            'description' => 'Visa, Mastercard, Verve',
+            'supported_brands' => ['visa', 'mastercard', 'verve'],
+        ];
+
+        // 2. Apple Pay is supported for USD and NGN
+        if (in_array($currency, ['USD', 'NGN'])) {
+            $methods[] = [
+                'type' => 'apple_pay',
+                'provider' => 'flutterwave',
+                'label' => 'Apple Pay',
+                'description' => 'Pay securely with Apple Wallet',
+            ];
+        }
+
+        // 3. NGN specific payment methods
+        if ($currency === 'NGN') {
+            $payload = $this->payment_payload;
+            $methods[] = [
+                'type' => 'bank_transfer',
+                'provider' => 'flutterwave',
+                'label' => 'Bank Transfer',
+                'description' => 'Transfer directly to a dynamic virtual account',
+                'bank_name' => $payload['bank_name'] ?? null,
+                'account_number' => $payload['account_number'] ?? null,
+                'account_name' => $payload['account_name'] ?? null,
+                'amount' => $payload['amount'] ?? $this->amount,
+                'expires_at' => $payload['expires_at'] ?? null,
+            ];
+            $methods[] = [
+                'type' => 'opay',
+                'provider' => 'flutterwave',
+                'label' => 'Opay / Pocket',
+                'description' => 'Pay instantly with your Opay wallet',
+            ];
+            $methods[] = [
+                'type' => 'ussd',
+                'provider' => 'flutterwave',
+                'label' => 'USSD Code',
+                'description' => 'Dial a code to pay from your bank account',
+            ];
+        }
+
+        // 4. XAF specific payment methods (Mobile Money)
+        if ($currency === 'XAF' || $currency === 'XOF') {
+            $methods[] = [
+                'type' => 'mobile_money',
+                'provider' => 'flutterwave',
+                'label' => 'Mobile Money',
+                'description' => 'MTN Mobile Money or Orange Money',
+                'supported_networks' => ['MTN', 'Orange'],
+            ];
+        }
+
+        return $methods;
     }
 }
