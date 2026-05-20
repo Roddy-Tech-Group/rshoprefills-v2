@@ -23,20 +23,6 @@
     // Mobile-money networks. Static for now.
     $momoNetworks = ['MTN', 'Orange'];
 
-    // Crypto settlement networks. Static UI list — live per-coin availability and
-    // minimum amounts come from the crypto gateway and are a backend follow-up.
-    $cryptoNetworks = [
-        ['key' => 'ethereum',  'label' => 'Ethereum'],
-        ['key' => 'polygon',   'label' => 'Polygon'],
-        ['key' => 'bsc',       'label' => 'BNB Smart Chain'],
-        ['key' => 'arbitrum',  'label' => 'Arbitrum'],
-        ['key' => 'optimism',  'label' => 'Optimism'],
-        ['key' => 'avalanche', 'label' => 'Avalanche'],
-        ['key' => 'tron',      'label' => 'Tron'],
-        ['key' => 'solana',    'label' => 'Solana'],
-        ['key' => 'ton',       'label' => 'Ton'],
-    ];
-
     $user = auth()->user();
     $walletBalances = [];
     if ($user) {
@@ -178,7 +164,6 @@
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
-                    <input type="hidden" name="crypto_network" :value="network">
                     <input type="hidden" name="currency" :value="$store.cart.currency">
 
                     <h2 class="text-lg font-bold text-zinc-900">Select payment method</h2>
@@ -617,7 +602,7 @@
                                         </div>
                                         <div class="flex justify-between items-center text-xs">
                                             <span class="text-zinc-500 font-medium">Account Name</span>
-                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name || 'Flutterwave/Roddy Technologies'"></span>
+                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name || 'Roddy Technologies'"></span>
                                         </div>
                                         <div class="flex justify-between items-center text-xs border-t border-zinc-200 pt-3">
                                             <span class="text-zinc-500 font-medium">Amount</span>
