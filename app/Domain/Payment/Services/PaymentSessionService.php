@@ -156,10 +156,21 @@ class PaymentSessionService
 
             $session->transitionTo('failed');
 
+            // Full audit trail goes to metadata — never exposed to the client.
             $session->metadata = array_merge($session->metadata ?? [], [
                 'failure_reason' => $reason,
                 'failure_payload' => $payload,
             ]);
+
+            // Customer-facing reason ALSO goes on payment_payload — that's the
+            // field PaymentSessionResource exposes and the checkout wizard reads
+            // (`payment_payload?.failure_reason`). Without this, the customer
+            // always sees the generic "Transaction could not be completed."
+            // fallback regardless of the actual gateway error.
+            $session->payment_payload = array_merge($session->payment_payload ?? [], [
+                'failure_reason' => $reason,
+            ]);
+
             $session->save();
 
             event(new PaymentSessionFailed($session, $reason));

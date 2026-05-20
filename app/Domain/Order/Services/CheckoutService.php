@@ -41,9 +41,13 @@ class CheckoutService
         // 2. Generate a readable, unique order number
         $orderNumber = 'RSR-' . date('Ymd') . '-' . strtoupper(Str::random(6));
 
-        // 3. Atomically build Order, snapshot items, and link Cart in a DB transaction
+        // 3. Atomically build Order + snapshot items. The cart is read-locked here
+        //    but intentionally NOT deleted yet — see step 7. If the gateway init
+        //    in step 5 throws (encryption key, bad currency, network), we want
+        //    the cart to stay intact so the customer can retry without losing
+        //    their items. Cart deletion now lives at the end, after init succeeds.
         $order = DB::transaction(function () use ($user, $cart, $paymentMethod, $displayCurrency, $validatedTotals, $orderNumber, $deliveryEmail) {
-            
+
             // Re-lock the cart to avoid race conditions
             $lockedCart = Cart::where('id', $cart->id)->lockForUpdate()->firstOrFail();
 
@@ -90,10 +94,7 @@ class CheckoutService
                 ]);
             }
 
-            // Deactivate or clear cart
-            $lockedCart->items()->delete();
-            $lockedCart->status = 'abandoned'; // Done with this cart
-            $lockedCart->save();
+            // NOTE: Cart deletion intentionally deferred to step 7 (post-init).
 
             return $order;
         });
@@ -112,12 +113,38 @@ class CheckoutService
 
         OrderPlaced::dispatch($order);
 
-        // 5. Initialize payment attempt via the selected gateway
-        $provider = $this->paymentGatewayFactory->getProvider($paymentMethod);
-        $initResult = $provider->initializePayment($attempt);
+        // 5. Initialize payment attempt via the selected gateway. If this throws
+        //    (encryption key invalid, currency unsupported, network down, etc.)
+        //    the order goes to Failed and the exception re-raises — but the
+        //    customer's cart is preserved (see step 3 comment) so they can fix
+        //    the .env / pick another method and try again without re-adding items.
+        try {
+            $provider = $this->paymentGatewayFactory->getProvider($paymentMethod);
+            $initResult = $provider->initializePayment($attempt);
+        } catch (\Throwable $e) {
+            $order->update([
+                'order_status' => OrderStatus::Failed,
+                'payment_status' => PaymentStatus::Failed,
+            ]);
+            $attempt->update([
+                'payment_status' => PaymentStatus::Failed,
+                'failed_at' => now(),
+            ]);
+            throw $e;
+        }
 
         // 6. Create the PaymentSession
         $paymentSession = $this->paymentSessionService->createForOrder($order, $attempt, $initResult);
+
+        // 7. Init succeeded — NOW it's safe to clear the cart. Deferred from
+        //    step 3 so a thrown init wouldn't leave the customer with an empty
+        //    cart + orphan Pending order (and no way to retry without re-adding).
+        DB::transaction(function () use ($cart) {
+            $lockedCart = Cart::where('id', $cart->id)->lockForUpdate()->firstOrFail();
+            $lockedCart->items()->delete();
+            $lockedCart->status = 'abandoned';
+            $lockedCart->save();
+        });
 
         // 7. Handle internal Wallet flow immediately (it reserves then triggers fulfillment)
         if ($paymentMethod === 'wallet') {

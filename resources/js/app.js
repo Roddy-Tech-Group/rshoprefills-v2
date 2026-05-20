@@ -327,6 +327,40 @@ document.addEventListener('alpine:init', () => {
     // wallet carousel always show the same wallet (synced live, no page reload).
     window.Alpine.store('wallet', { active: 0 });
 
+    /**
+     * Customer-dashboard preferences. Persisted in localStorage so each customer's
+     * choice survives navigation and reloads. Hooked up via the Customize button's
+     * dropdown (overview.blade.php) — readers throughout the dashboard check
+     * `$store.dashPrefs.hideBalance` and the `.compact` class on <html>.
+     */
+    window.Alpine.store('dashPrefs', {
+        hideBalance: false,
+        compactMode: false,
+
+        init() {
+            try {
+                this.hideBalance = localStorage.getItem('dash.hideBalance') === 'true';
+                this.compactMode = localStorage.getItem('dash.compactMode') === 'true';
+            } catch (_) { /* localStorage blocked — defaults stand */ }
+            // Apply compact-mode class to <html> before first paint of the
+            // dashboard so the layout doesn't flicker from comfy → compact.
+            document.documentElement.classList.toggle('compact', this.compactMode);
+        },
+
+        setHideBalance(value) {
+            this.hideBalance = !! value;
+            try { localStorage.setItem('dash.hideBalance', this.hideBalance ? 'true' : 'false'); } catch (_) {}
+        },
+
+        setCompactMode(value) {
+            this.compactMode = !! value;
+            try { localStorage.setItem('dash.compactMode', this.compactMode ? 'true' : 'false'); } catch (_) {}
+            document.documentElement.classList.toggle('compact', this.compactMode);
+        },
+    });
+    // Stores aren't auto-init'd in Alpine 3 — call it ourselves.
+    window.Alpine.store('dashPrefs').init();
+
     window.Alpine.store('cart', {
         items: [],
         count: 0,

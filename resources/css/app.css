@@ -366,6 +366,15 @@ select:focus[data-flux-control] {
 .dark .bg-zinc-100       { background-color: #070f1c; }   /* page background */
 .dark .bg-zinc-200       { background-color: #1a2b42; }   /* chips, hover, x-button */
 .dark .bg-\[\#eff6ff\]   { background-color: #070f1c; }   /* admin / customer page bg */
+/* The customer dashboard puts `flux:main` at `lg:bg-white` so the curve element
+   on top of it has something to round against. `bg-white` becomes `#0c1a2e` in
+   dark mode (the sidebar colour), which made the curved corner reveal a wedge
+   of sidebar-colour next to the slightly-darker content area. Override the
+   flux:main bg on desktop in dark mode to match the content's dark bg so the
+   curve is invisible while the sidebar↔content contrast is preserved. */
+@media (min-width: 64rem) {
+    .dark .lg\:bg-white { background-color: #070f1c; }
+}
 .dark .bg-\[\#f9fafb\]   { background-color: #070f1c; }
 .dark .bg-\[\#ededee\]   { background-color: #101f33; }   /* product hero plate */
 
@@ -386,8 +395,8 @@ select:focus[data-flux-control] {
 .dark .text-zinc-900 { color: #f4f4f5; }
 .dark .text-zinc-800 { color: #e6e6e8; }
 .dark .text-zinc-700 { color: #d6d6da; }
-.dark .text-zinc-600 { color: #a6a6ad; }   /* muted body text */
-.dark .text-zinc-500 { color: #909098; }
+.dark .text-zinc-600 { color: #c8c8cd; }   /* muted body text — bumped from #a6a6ad for legibility on the dark navy backgrounds */
+.dark .text-zinc-500 { color: #b5b5bb; }   /* bumped from #909098 */
 
 /* Borders, rings and dividers. */
 .dark .border-zinc-100,
@@ -463,6 +472,16 @@ select:focus[data-flux-control] {
 .dark img[src$=".svg"][src*="USDT"] {
     filter: none !important;
 }
+/* Country flag SVGs (Ghana, Nigeria, Cameroon/XAF) are coloured artwork — the
+   blanket invert would flatten them to white blobs the same way crypto coins
+   would. Keep their own hues so the wallet / profile / footer flags render
+   correctly in dark mode. Flag PNGs from flagcdn (.png) are unaffected by the
+   SVG rule above, so they don't need an exception. */
+.dark img[src$=".svg"][src*="GH.svg"],
+.dark img[src$=".svg"][src*="NGN.svg"],
+.dark img[src$=".svg"][src*="XAF.svg"] {
+    filter: none !important;
+}
 /* PNG coin icons (BNB, LTC) can't be recoloured by CSS — sit them on a light
    disc so a dark logo stays visible against the dark surface. */
 .dark img[src*="BNB.png"],
@@ -509,3 +528,20 @@ select:focus[data-flux-control] {
 .dark .theme-static .ring-zinc-200 { --tw-ring-color: #e5e5e5; }
 /* Icons inside a theme-static element keep their real artwork (no invert). */
 .dark .theme-static img[src$=".svg"] { filter: none !important; }
+
+/* ------------------------------------------------------------
+   COMPACT MODE — toggled by the customer-dashboard's Customize
+   menu (writes `compact` onto <html>; persisted in localStorage
+   via the dashPrefs Alpine store in app.js).
+
+   Scope is intentionally narrow: only the dashboard's main content
+   area (`.bg-[#eff6ff]`). We don't tighten the sidebar, the modals,
+   or any storefront page — just the cards inside the dashboard.
+   ------------------------------------------------------------ */
+.compact .bg-\[\#eff6ff\] .gap-6     { gap: 1rem; }
+.compact .bg-\[\#eff6ff\] .gap-5     { gap: 0.75rem; }
+.compact .bg-\[\#eff6ff\] .p-5       { padding: 0.875rem; }
+.compact .bg-\[\#eff6ff\] .p-6       { padding: 1rem; }
+.compact .bg-\[\#eff6ff\] .sm\:p-6   { padding: 1rem; }
+.compact .bg-\[\#eff6ff\] .lg\:py-8  { padding-top: 1rem; padding-bottom: 1rem; }
+.compact .bg-\[\#eff6ff\] .py-6      { padding-top: 1rem; padding-bottom: 1rem; }
