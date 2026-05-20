@@ -111,14 +111,42 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 ]);
 
             if ($response->failed()) {
+                // Log the full HTTP failure so the actual Flutterwave message is
+                // visible in storage/logs/laravel.log instead of being swallowed
+                // into the generic wizard "Transaction could not be completed."
+                Log::error('Flutterwave card charge HTTP failed', [
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                    'tx_ref' => $attempt->idempotency_key,
+                ]);
                 return [
                     'status' => 'failed',
-                    'message' => 'Flutterwave card charge request failed: ' . ($response->json('message') ?? 'Unknown error')
+                    // Customer-facing — strip the gateway brand (per [[feedback-no-provider-names]]).
+                    'message' => 'Card charge request failed: ' . ($response->json('message') ?? 'Unknown error')
                 ];
             }
 
-            return $this->handleCardChargeResponse($attempt, $response->json(), $auth);
+            $body = $response->json();
+            $result = $this->handleCardChargeResponse($attempt, $body, $auth);
+
+            // Flutterwave often returns HTTP 200 with `status: error` for things
+            // like wrong currency / bad encryption key / invalid card. Surface
+            // those to the log too — without this, charge-rejected failures are
+            // silent (see prior bug: only NowPayments errors landed in the log).
+            if (($result['status'] ?? '') === 'failed') {
+                Log::error('Flutterwave card charge returned non-success', [
+                    'message' => $result['message'] ?? null,
+                    'body' => $body,
+                    'tx_ref' => $attempt->idempotency_key,
+                ]);
+            }
+
+            return $result;
         } catch (\Exception $e) {
+            Log::error('Flutterwave card charge exception', [
+                'message' => $e->getMessage(),
+                'tx_ref' => $attempt->idempotency_key,
+            ]);
             return [
                 'status' => 'failed',
                 'message' => 'Error processing card charge: ' . $e->getMessage()
@@ -132,7 +160,18 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $message = $data['message'] ?? '';
         $innerData = $data['data'] ?? [];
 
-        $suggestedAuth = $innerData['suggested_auth'] ?? null;
+        // Flutterwave returns auth metadata at different nesting depths depending
+        // on the response stage — TOP-LEVEL `meta` for the initial auth challenge
+        // (`Charge authorization data required` responses), nested `data.meta` for
+        // the transaction-level snapshot. Check both so the PIN/OTP/3DS branches
+        // actually fire instead of falling through to "failed".
+        $authMeta = $innerData['meta']['authorization']
+            ?? $data['meta']['authorization']
+            ?? null;
+        $authMode = $authMeta['mode'] ?? null;
+        $suggestedAuth = $innerData['suggested_auth'] ?? $data['suggested_auth'] ?? null;
+        $flwRef = $innerData['flw_ref'] ?? $data['flw_ref'] ?? null;
+
         if ($suggestedAuth === 'PIN') {
             return [
                 'status' => 'awaiting_customer_action',
@@ -141,7 +180,6 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             ];
         }
 
-        $authMode = $innerData['meta']['authorization']['mode'] ?? null;
         if ($authMode === 'pin') {
             return [
                 'status' => 'awaiting_customer_action',
@@ -154,8 +192,8 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'otp',
-                'flw_ref' => $innerData['flw_ref'] ?? null,
-                'message' => $innerData['meta']['authorization']['fields'][0] ?? 'OTP sent to your phone/email'
+                'flw_ref' => $flwRef,
+                'message' => $authMeta['fields'][0] ?? 'OTP sent to your phone/email'
             ];
         }
 
@@ -163,7 +201,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'redirect',
-                'redirect_url' => $innerData['meta']['authorization']['redirect'] ?? null,
+                'redirect_url' => $authMeta['redirect'] ?? null,
                 'message' => '3D Secure authentication required'
             ];
         }
@@ -186,7 +224,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'otp',
-                'flw_ref' => $innerData['flw_ref'] ?? null,
+                'flw_ref' => $flwRef,
                 'message' => 'OTP sent to your phone/email'
             ];
         }
