@@ -269,30 +269,64 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             {{-- Hero strip: avatar + name/email + edit toggle --}}
             <div class="relative px-5 pt-6 pb-5 sm:px-6">
                 <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
-                    {{-- Avatar with subtle ring + upload --}}
-                    <div class="relative">
+                    {{-- Avatar with subtle ring + upload (cropper-driven).
+                         Cropper.js loads from CDN at the bottom of this file.
+                         File picker opens a square-crop modal that handles
+                         upload + save in one shot. --}}
+                    <div class="relative"
+                        x-data="avatarCropper()"
+                        @keydown.escape.window="cropperOpen && closeCropper()"
+                    >
                         <span class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-50 ring-4 ring-white shadow-sm shadow-blue-600/10">
-                            @if ($avatar)
-                                <img src="{{ $avatar->temporaryUrl() }}" alt="" class="h-full w-full object-cover">
-                            @else
-                                <img src="{{ $hasAvatar ? $authUser->avatar_url : $defaultAvatar }}" alt="{{ $authUser?->name ?? 'Account' }}" class="h-full w-full object-cover">
-                            @endif
+                            <img src="{{ $hasAvatar ? $authUser->avatar_url : $defaultAvatar }}" alt="{{ $authUser?->name ?? 'Account' }}" class="h-full w-full object-cover">
 
-                            <span x-show="uploading" x-cloak class="absolute inset-0 flex items-center justify-center bg-white/75 backdrop-blur-sm">
+                            <span x-show="uploading || saving" x-cloak class="absolute inset-0 flex items-center justify-center bg-white/75 backdrop-blur-sm">
                                 <svg class="h-6 w-6 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="50 50" stroke-linecap="round"/>
                                 </svg>
                             </span>
                         </span>
 
-                        @if (!$avatar)
-                            <label for="avatar-input" class="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-2 ring-white transition-transform hover:scale-105 active:scale-95" aria-label="Upload profile photo">
-                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
-                                </svg>
-                            </label>
-                        @endif
-                        <input wire:model="avatar" id="avatar-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+                        <button type="button" @click="$refs.fileInput.click()" class="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-2 ring-white transition-transform hover:scale-105 active:scale-95" aria-label="Upload profile photo">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
+                            </svg>
+                        </button>
+
+                        <input x-ref="fileInput" @change="onFileChange" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+
+                        {{-- Cropper modal — opens when a file is picked --}}
+                        <template x-if="cropperOpen">
+                            <div class="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                                <div class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm" @click="!saving && closeCropper()" aria-hidden="true"></div>
+                                <div class="relative w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl shadow-zinc-900/25" role="dialog" aria-modal="true">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h3 class="text-base font-bold text-zinc-900">Crop your photo</h3>
+                                            <p class="mt-0.5 text-xs text-zinc-600">Drag the box, zoom with the corners. Square crop saves at 512×512.</p>
+                                        </div>
+                                        <x-close-button @click="closeCropper()" :disabled="false" />
+                                    </div>
+
+                                    <div class="mt-4 overflow-hidden rounded-xl bg-zinc-100" style="max-height: 60vh;">
+                                        {{-- Cropper.js mutates this <img>; it must be inside a sized container. --}}
+                                        <img x-ref="cropperImage" :src="imageSrc" alt="" class="block max-w-full" style="max-height: 60vh;">
+                                    </div>
+
+                                    <div class="mt-4 flex flex-wrap items-center gap-2">
+                                        <button type="button" @click="closeCropper()" :disabled="saving" class="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60">Cancel</button>
+                                        <button type="button" @click="saveCrop()" :disabled="saving" class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60">
+                                            <svg x-show="saving" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                            </svg>
+                                            <span x-show="!saving">Save photo</span>
+                                            <span x-show="saving">Uploading…</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     <div class="min-w-0 flex-1">
@@ -323,18 +357,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             @endif
                         </p>
 
-                        {{-- Avatar save/cancel + upload error --}}
-                        @if ($avatar)
-                            <div class="mt-3 flex flex-wrap items-center gap-2">
-                                <button type="button" wire:click="updateAvatar" class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-blue-700 active:scale-95">
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                    </svg>
-                                    Save photo
-                                </button>
-                                <button type="button" wire:click="$set('avatar', null)" class="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">Cancel</button>
-                            </div>
-                        @elseif ($hasAvatar)
+                        {{-- Remove photo (cropper handles upload+save in one shot, so
+                             the previous "Save photo / Cancel" pair lives inside the modal). --}}
+                        @if ($hasAvatar)
                             <button type="button" wire:click="removeAvatar" class="mt-2 text-xs font-medium text-red-600 transition-colors hover:text-red-700">Remove photo</button>
                         @endif
                     </div>
@@ -727,4 +752,119 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             </div>
         </div>
     </section>
+
+    {{-- Cropper.js — loaded from CDN. ~30 KB gz, only on this settings page.
+         The `avatarCropper()` Alpine component (defined below) opens a
+         square-crop modal when a file is picked, then uploads the cropped
+         512x512 JPEG via Livewire's programmatic upload API and triggers
+         updateAvatar() to persist.
+         These tags MUST sit inside the component's single root <div>
+         (Livewire requirement). The browser still hoists/handles them. --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+    <script>
+        window.avatarCropper = function () {
+        return {
+            cropperOpen: false,
+            imageSrc: null,
+            cropper: null,
+            saving: false,
+
+            onFileChange(event) {
+                const file = event.target.files && event.target.files[0];
+                if (! file) {
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.imageSrc = e.target.result;
+                    this.cropperOpen = true;
+                    this.$nextTick(() => this.initCropper());
+                };
+                reader.readAsDataURL(file);
+                // Reset so picking the same file again still fires @change.
+                event.target.value = '';
+            },
+
+            initCropper() {
+                if (typeof Cropper === 'undefined') {
+                    alert('Cropper failed to load. Check your network and try again.');
+                    this.closeCropper();
+                    return;
+                }
+                const img = this.$refs.cropperImage;
+                this.cropper = new Cropper(img, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    background: false,
+                    guides: true,
+                    center: true,
+                    movable: true,
+                    zoomable: true,
+                    rotatable: false,
+                    scalable: false,
+                });
+            },
+
+            closeCropper() {
+                if (this.cropper) {
+                    this.cropper.destroy();
+                    this.cropper = null;
+                }
+                this.imageSrc = null;
+                this.cropperOpen = false;
+            },
+
+            saveCrop() {
+                if (! this.cropper || this.saving) {
+                    return;
+                }
+                // $wire is a magic on the Alpine instance (provided by Livewire). Capture it
+                // here so the nested callbacks below see a stable reference; using bare
+                // `$wire` inside method bodies (vs HTML expressions) is undefined and throws.
+                const wire = this.$wire;
+                if (! wire) {
+                    alert('Livewire not initialised on this page. Refresh and try again.');
+                    return;
+                }
+                this.saving = true;
+                const canvas = this.cropper.getCroppedCanvas({
+                    width: 512,
+                    height: 512,
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high',
+                });
+                canvas.toBlob((blob) => {
+                    if (! blob) {
+                        this.saving = false;
+                        alert('Could not produce the cropped image.');
+                        return;
+                    }
+                    // Wrap the blob in a File so Livewire/PHP sees it with a name + mime.
+                    const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+
+                    wire.upload('avatar', file, () => {
+                        // Upload finished. Persist on the User. updateAvatar() can throw
+                        // server-side (validation, DB) — catch so the modal isn't stuck.
+                        wire.call('updateAvatar')
+                            .then(() => {
+                                this.saving = false;
+                                this.closeCropper();
+                            })
+                            .catch((err) => {
+                                console.error('updateAvatar failed:', err);
+                                this.saving = false;
+                                alert('Save failed. ' + (err && err.message ? err.message : 'Please try again.'));
+                            });
+                    }, (err) => {
+                        console.error('avatar upload failed:', err);
+                        this.saving = false;
+                        alert('Upload failed. Please try again.');
+                    });
+                }, 'image/jpeg', 0.92);
+            },
+        };
+    };
+    </script>
 </div>
