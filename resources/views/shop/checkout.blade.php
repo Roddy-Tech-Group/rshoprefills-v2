@@ -23,22 +23,17 @@
     // Mobile-money networks. Static for now.
     $momoNetworks = ['MTN', 'Orange'];
 
+    // Customer's wallet balances keyed by currency code. The wallet panel reads
+    // the balance for the active display currency directly from this array.
+    // (Method tabs themselves are driven by the JS `allMethods` array in
+    // checkoutPage() — currency, login state and Apple Pay availability decide
+    // which tiles render, so there is no parallel PHP `$methods` list.)
     $user = auth()->user();
     $walletBalances = [];
     if ($user) {
         foreach ($user->wallets as $w) {
             $walletBalances[strtoupper($w->currency->value)] = (float) $w->balance;
         }
-    }
-
-    $methods = [
-        ['key' => 'card',         'label' => 'Card',         'desc' => 'Visa, Mastercard'],
-        ['key' => 'mobile_money', 'label' => 'Mobile Money', 'desc' => 'MTN, Orange'],
-        ['key' => 'crypto',       'label' => 'Crypto',       'desc' => 'BTC, USDT, ETH and more'],
-    ];
-
-    if ($user) {
-        $methods[] = ['key' => 'wallet', 'label' => 'Wallet', 'desc' => 'Pay with wallet balance'];
     }
 
     $fieldClass = 'mt-1.5 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
@@ -387,17 +382,9 @@
                                 <p class="col-span-full text-sm text-zinc-600">No crypto currencies are enabled.</p>
                             @endforelse
                         </div>
-
-                        <p class="mt-4 text-sm font-semibold text-zinc-900">Network</p>
-                        <div class="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                            @foreach ($cryptoNetworks as $net)
-                                <button type="button" @click="network = '{{ $net['key'] }}'"
-                                    :class="network === '{{ $net['key'] }}' ? 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-500/20' : 'border-zinc-200 text-zinc-700 hover:border-zinc-300'"
-                                    class="rounded-xl border bg-white px-3 py-2 text-sm font-semibold transition-colors">
-                                    {{ $net['label'] }}
-                                </button>
-                            @endforeach
-                        </div>
+                        <p class="mt-3 text-xs text-zinc-600">
+                            Pick a coin and continue — the next step shows the exact wallet address and amount to send.
+                        </p>
                     </div>
 
                     {{-- Wallet --}}
@@ -742,7 +729,6 @@
             return {
                 method: 'card',
                 crypto: '',
-                network: '',
                 submitting: false,
                 cryptoRates: cryptoRates || {},
                 walletBalances: walletBalances || {},
@@ -771,6 +757,9 @@
                     const allowedKeys = mapping[currency] || ['card', 'apple_pay', 'crypto'];
                     return this.allMethods.filter(m => {
                         if (m.key === 'wallet' && !this.isLoggedIn) {
+                            return false;
+                        }
+                        if (m.key === 'apple_pay' && !this.applePayAvailable) {
                             return false;
                         }
                         return allowedKeys.includes(m.key);
@@ -807,8 +796,22 @@
                 timerText: '30:00',
                 copiedStates: {},
 
+                // Apple Pay availability — only shown on Safari + Apple devices that
+                // have it set up. ApplePaySession is undefined on other browsers, and
+                // throws if called in an unsupported context, so we guard fully.
+                applePayAvailable: false,
+
                 init() {
                     this.resetCardDetails();
+                    try {
+                        this.applePayAvailable = !! (
+                            window.ApplePaySession
+                            && typeof window.ApplePaySession.canMakePayments === 'function'
+                            && window.ApplePaySession.canMakePayments()
+                        );
+                    } catch (_) {
+                        this.applePayAvailable = false;
+                    }
                     this.$watch('$store.cart.currency', (newVal) => {
                         const methods = this.getFilteredMethods();
                         const currentSupported = methods.some(m => m.key === this.method);
@@ -942,7 +945,7 @@
                         return false;
                     }
                     if (this.method === 'crypto') {
-                        return !! this.crypto && !! this.network;
+                        return !! this.crypto;
                     }
                     if (this.method === 'wallet') {
                         return this.hasSufficientWalletBalance();
