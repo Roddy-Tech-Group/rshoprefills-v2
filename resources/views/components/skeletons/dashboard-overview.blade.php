@@ -22,8 +22,96 @@
             </div>
         </div>
 
+        {{-- Rcoin card --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex items-start gap-3">
+                <x-skeleton class="h-10 w-10 shrink-0" rounded="rounded-xl" />
+                <div class="flex-1 space-y-2">
+                    <x-skeleton class="h-3.5 w-24" />
+                    <x-skeleton class="h-6 w-28" />
+                </div>
+            </div>
+            <x-skeleton class="mt-4 h-3 w-56" />
+            <x-skeleton class="mt-4 h-10 w-full" rounded="rounded-xl" />
+        </div>
+
+        {{-- Recent Orders card --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex items-center justify-between">
+                <x-skeleton class="h-5 w-32" />
+                <x-skeleton class="h-3.5 w-12" />
+            </div>
+            <div class="skeleton-stagger-fast mt-4 space-y-3">
+                @for ($i = 0; $i < 3; $i++)
+                    <div class="flex items-center gap-3" style="--i: {{ $i }}">
+                        <x-skeleton class="h-12 w-12 shrink-0" rounded="rounded-xl" />
+                        <div class="min-w-0 flex-1 space-y-2">
+                            <x-skeleton class="h-3.5 w-40 max-w-[70%]" />
+                            <x-skeleton class="h-3 w-24 max-w-[45%]" />
+                        </div>
+                    </div>
+                @endfor
+            </div>
+        </div>
+
+        {{-- Shop by Category card (4 x 2 grid) --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex items-center justify-between">
+                <x-skeleton class="h-5 w-40" />
+                <x-skeleton class="h-3.5 w-12" />
+            </div>
+            <div class="mt-4 grid grid-cols-4 gap-3">
+                @for ($i = 0; $i < 8; $i++)
+                    <div class="flex flex-col items-center gap-2">
+                        <x-skeleton shape="circle" class="h-12 w-12" />
+                        <x-skeleton class="h-3 w-12" />
+                    </div>
+                @endfor
+            </div>
+        </div>
+
+        {{-- Popular Gift Cards card --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex items-center justify-between">
+                <x-skeleton class="h-5 w-44" />
+                <x-skeleton class="h-3.5 w-12" />
+            </div>
+            {{-- Horizontal scroll row on mobile, matches the brand-row layout. --}}
+            <div class="mt-4 -mx-1 flex gap-3 overflow-hidden">
+                @for ($i = 0; $i < 4; $i++)
+                    <div class="w-32 shrink-0">
+                        <x-skeleton class="aspect-[16/10] w-full" rounded="rounded-[15px]" />
+                        <x-skeleton class="mt-2 h-3.5 w-3/4" />
+                    </div>
+                @endfor
+            </div>
+        </div>
+
         {{-- Promo block --}}
         <x-skeleton class="h-[148px] w-full" rounded="rounded-2xl" />
+
+        {{-- Recent Transactions card --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex items-center justify-between">
+                <x-skeleton class="h-5 w-36" />
+                <x-skeleton class="h-3.5 w-12" />
+            </div>
+            <div class="skeleton-stagger-fast mt-4 space-y-3">
+                @for ($i = 0; $i < 4; $i++)
+                    <div class="flex items-center gap-3" style="--i: {{ $i }}">
+                        <x-skeleton class="h-11 w-11 shrink-0" rounded="rounded-xl" />
+                        <div class="min-w-0 flex-1 space-y-2">
+                            <x-skeleton class="h-3.5 w-36 max-w-[70%]" />
+                            <x-skeleton class="h-3 w-20 max-w-[45%]" />
+                        </div>
+                        <div class="flex shrink-0 flex-col items-end gap-2">
+                            <x-skeleton class="h-3.5 w-14" />
+                            <x-skeleton class="h-3 w-10" />
+                        </div>
+                    </div>
+                @endfor
+            </div>
+        </div>
     </div>
 
     {{-- ── DESKTOP (lg+) ───────────────────────────────────────── --}}
@@ -64,10 +152,9 @@
                         <x-skeleton class="h-4 w-48" />
                         <x-skeleton class="h-3 w-72" />
                     </div>
-                    <x-skeleton class="h-4 w-20 shrink-0" />
                 </div>
 
-                {{-- Shop by Category + Recommended card --}}
+                {{-- Shop by Category + Popular Gift Cards card --}}
                 <div class="rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="p-6">
                         <x-skeleton class="h-5 w-40" />
@@ -82,10 +169,20 @@
                     </div>
                     <div class="border-t border-zinc-100"></div>
                     <div class="p-6">
-                        <x-skeleton class="h-5 w-48" />
-                        <div class="mt-4 grid grid-cols-4 gap-3">
-                            @for ($i = 0; $i < 4; $i++)
-                                <x-skeleton class="h-32 w-full" rounded="rounded-2xl" />
+                        <div class="mb-4 flex items-end justify-between gap-4">
+                            <div class="space-y-2">
+                                <x-skeleton class="h-5 w-48" />
+                                <x-skeleton class="h-4 w-60" />
+                            </div>
+                            <x-skeleton class="h-4 w-12 shrink-0" />
+                        </div>
+                        {{-- Matches the real brand-row layout: 5 cards, aspect-[16/10] tiles. --}}
+                        <div class="grid grid-cols-5 gap-5">
+                            @for ($i = 0; $i < 5; $i++)
+                                <div class="rounded-2xl bg-white p-3 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                                    <x-skeleton class="aspect-[16/10] w-full" rounded="rounded-[15px]" />
+                                    <x-skeleton class="mt-3 h-4 w-3/4" />
+                                </div>
                             @endfor
                         </div>
                     </div>
@@ -105,7 +202,6 @@
                         </div>
                     </div>
                     <x-skeleton class="mt-4 h-3 w-56" />
-                    <x-skeleton class="mt-2 h-2 w-full" rounded="rounded-full" />
                     <x-skeleton class="mt-4 h-10 w-full" rounded="rounded-xl" />
                 </div>
 

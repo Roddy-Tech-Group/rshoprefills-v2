@@ -208,11 +208,19 @@ class extends Component {
                             </div>
                             <div class="flex items-center justify-between gap-4">
                                 <dt class="text-zinc-500">Total amount</dt>
-                                <dd class="font-bold text-zinc-900">{{ number_format((float) $order->total_amount, 2) }} {{ $order->display_currency }}</dd>
+                                {{-- total_amount is stored in settlement_currency (USD per CheckoutService), not display_currency.
+                                     Backend FX snapshot is currently a placeholder (exchange_rate_snapshot = 1.0), so we
+                                     render the truth of what was charged. --}}
+                                <dd class="font-bold text-zinc-900">{{ number_format((float) $order->total_amount, 2) }} {{ $order->settlement_currency ?: 'USD' }}</dd>
                             </div>
                         </dl>
 
-                        <a href="#" class="mt-4 inline-flex items-center gap-2 text-sm text-zinc-600 underline underline-offset-2 transition-colors hover:text-blue-700">
+                        <a
+                            href="https://wa.me/237676700173?text={{ rawurlencode('Hi Rshoprefill, I need help with order ' . $order->id) }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="mt-4 inline-flex items-center gap-2 text-sm text-zinc-600 underline underline-offset-2 transition-colors hover:text-blue-700"
+                        >
                             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
                             </svg>
@@ -235,6 +243,8 @@ class extends Component {
                                         : null;
                                     $country  = $countryNames[strtoupper((string) ($snap['country_code'] ?? ''))] ?? ($snap['country_code'] ?? null);
                                     $code     = $extractCode($item);
+                                    $redeemHtml = $snap['redeem_instructions'] ?? null;
+                                    $termsHtml  = $snap['terms_and_conditions'] ?? null;
                                 @endphp
                                 {{-- Gift card — brand logo + denomination, full width inside the order card.
                                      `theme-static`: resellers screenshot this to deliver to their own
@@ -295,10 +305,36 @@ class extends Component {
                                     @endif
                                 </div>
 
-                                {{-- Redeem / Terms — centered below the card. --}}
-                                <div class="mt-2.5 flex max-w-[340px] flex-wrap justify-center gap-x-8 gap-y-1 text-sm">
-                                    <a href="#" class="font-medium text-blue-600 transition-colors hover:text-blue-700">Redeem instructions</a>
-                                    <a href="#" class="font-medium text-zinc-600 transition-colors hover:text-zinc-900">Terms and conditions</a>
+                                {{-- Redeem / Terms — toggles inline disclosure panels populated
+                                     from product_snapshot (HTML, sanitized via brand sync). --}}
+                                <div x-data="{ panel: null }" class="mt-2.5 max-w-[340px]">
+                                    <div class="flex flex-wrap justify-center gap-x-8 gap-y-1 text-sm">
+                                        @if ($redeemHtml)
+                                            <button type="button"
+                                                @click="panel = (panel === 'redeem') ? null : 'redeem'"
+                                                :aria-expanded="(panel === 'redeem').toString()"
+                                                :class="panel === 'redeem' ? 'text-blue-700' : 'text-blue-600 hover:text-blue-700'"
+                                                class="font-medium transition-colors">Redeem instructions</button>
+                                        @endif
+                                        @if ($termsHtml)
+                                            <button type="button"
+                                                @click="panel = (panel === 'terms') ? null : 'terms'"
+                                                :aria-expanded="(panel === 'terms').toString()"
+                                                :class="panel === 'terms' ? 'text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'"
+                                                class="font-medium transition-colors">Terms and conditions</button>
+                                        @endif
+                                    </div>
+
+                                    @if ($redeemHtml)
+                                        <div x-show="panel === 'redeem'" x-collapse x-cloak class="mt-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-left text-xs leading-relaxed text-zinc-700 [&_a]:text-blue-600 [&_a]:underline [&>ol]:list-decimal [&>ol]:pl-5 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-5">
+                                            {!! $redeemHtml !!}
+                                        </div>
+                                    @endif
+                                    @if ($termsHtml)
+                                        <div x-show="panel === 'terms'" x-collapse x-cloak class="mt-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-left text-xs leading-relaxed text-zinc-700 [&_a]:text-blue-600 [&_a]:underline [&>ol]:list-decimal [&>ol]:pl-5 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-5">
+                                            {!! $termsHtml !!}
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
