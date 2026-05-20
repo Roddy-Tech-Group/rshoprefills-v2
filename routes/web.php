@@ -268,7 +268,11 @@ Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])
     ->name('shop.order');
 
 // Customer dashboard — gated by web guard. Admin operators have their own area at /admin/* via routes/admin.php.
-Route::middleware(['auth', 'verified'])->group(function () {
+// NOTE: 'verified' middleware intentionally NOT applied — verification stays a SOFT requirement so users
+// can use the app immediately after registration. The profile page surfaces the verification status badge
+// and the sidebar has a Verify Identity entry, so users have multiple paths to verify when they choose.
+// Re-add 'verified' here only if/when CTO wants to hard-gate the dashboard behind a confirmed email.
+Route::middleware(['auth'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 
     Route::view('dashboard/rewards', 'dashboard.rewards')->name('dashboard.rewards');
