@@ -1,12 +1,17 @@
 @php
     use App\Domain\Admin\Queries\DashboardMetricsQuery;
-    use App\Models\User;
 
     /** @var DashboardMetricsQuery $dashboardQuery */
     $dashboardQuery = app(DashboardMetricsQuery::class);
 
-    // ── Aggregated overview metrics ────────────────────────────────────
-    $metrics = $dashboardQuery->getOverviewMetrics();
+    // ── KPI cards — filtered by the top-right date range picker ──────
+    // `?range=today|7d|30d|90d|year|custom` (custom uses `?start=` + `?end=`).
+    // Missing or unknown values fall through to all-time.
+    $rangePreset = request('range');
+    $rangeStart  = request('start');
+    $rangeEnd    = request('end');
+
+    $metrics = $dashboardQuery->getOverviewMetrics($rangePreset, $rangeStart, $rangeEnd);
     $totalUsers        = (int)   $metrics['total_users'];
     $totalOrders       = (int)   $metrics['total_orders'];
     $totalRevenue      = (float) $metrics['total_revenue'];
@@ -18,9 +23,11 @@
     $latestUsers        = $dashboardQuery->getLatestUsers(5)->items();
     $latestTransactions = $dashboardQuery->getLatestTransactions(5)->items();
 
-    // ── Revenue chart series (defaults to 30-day range) ────────────────
-    // Range UI is Alpine-only for now; backend supports 7d/30d/6m/1y on the API endpoint.
-    $revenueData = $dashboardQuery->getRevenueChartData('30d');
+    // ── Revenue chart series — `?revenue_days=N` (1-30) ──────────────
+    // Backend now accepts a raw int day count, so the picker is a real
+    // 1-30 day slider rather than a 7d/30d bucket toggle.
+    $revenueDays = max(1, min(30, (int) request('revenue_days', 30)));
+    $revenueData = $dashboardQuery->getRevenueChartData($revenueDays);
 
     $chartW = 600;
     $chartH = 220;
@@ -50,23 +57,26 @@
         return implode(' ', $points);
     };
 
-    // ── New Users (last 6 months, ad-hoc since no backend timeseries) ──
-    $signups = User::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
-        ->where('created_at', '>=', now()->subMonths(6)->startOfMonth())
-        ->groupBy('month')
-        ->orderBy('month')
-        ->pluck('count', 'month');
-
-    $signupsByMonth = [];
-    for ($i = 5; $i >= 0; $i--) {
-        $m = now()->subMonths($i);
-        $signupsByMonth[$m->format('M')] = (int) ($signups[$m->format('Y-m')] ?? 0);
-    }
+    // ── New Users chart — `?signup_months=N` ─────────────────────────
+    // Backend method picks 1-24 months (caller-clamped). Default 6 to match
+    // the original behaviour. The dropdown above the chart drives this.
+    $signupMonths = max(1, min(24, (int) request('signup_months', 6)));
+    $signupsByMonth = $dashboardQuery->getNewUsersTimeseries($signupMonths);
     $maxSignups = max(1, ...array_values($signupsByMonth));
     $currentMonthLabel = now()->format('M');
 @endphp
 
 <x-layouts.admin>
+
+    {{-- Dark-mode text contrast on the KPI cards. The project's app.css remap of
+         `.dark .text-zinc-600` was sitting at a too-dim grey and Tailwind's dark
+         variants couldn't override it (custom dark variant uses :where() which
+         zeros specificity). Inline this rule so it ships with the HTML and beats
+         the cascade regardless of CSS pipeline state. --}}
+    <style>
+        html.dark .kpi-card .kpi-label { color: #f4f4f5 !important; }
+        html.dark .kpi-card .kpi-sub   { color: #d4d4d8 !important; }
+    </style>
 
     {{-- Page content (top bar lives in components/layouts/app/sidebar.blade.php so all admin pages share it).
          Padding is provided by the parent layout wrapper. --}}
@@ -75,25 +85,38 @@
         {{-- Heading moved to the top header. Just the date range picker stays here on the right.
              Range presets are Alpine-driven UI for now; backend wires them with wire:click when period filtering ships. --}}
         {{-- Date range selector (Alpine-driven). Custom range opens an inline date input pair. --}}
+        {{-- Range picker — drives KPI cards via the URL: ?range=KEY for presets
+             or ?range=custom plus ?start= and ?end= for the custom variant.
+             Each preset SPA-navigates so the top PHP block re-runs and the
+             cards re-aggregate against the new window. Initial selection is
+             derived from the current URL so the dropdown reflects what the
+             server actually applied. --}}
         <div
             x-data="{
                 open: false,
                 view: 'presets',
                 ranges: [
-                    { label: 'Today',        days: 0 },
-                    { label: 'Last 7 days',  days: 7 },
-                    { label: 'Last 30 days', days: 30 },
-                    { label: 'Last 90 days', days: 90 },
-                    { label: 'This year',    days: 365 },
+                    { label: 'Today',        key: 'today', days: 0 },
+                    { label: 'Last 7 days',  key: '7d',    days: 7 },
+                    { label: 'Last 30 days', key: '30d',   days: 30 },
+                    { label: 'Last 90 days', key: '90d',   days: 90 },
+                    { label: 'This year',    key: 'year',  days: 365 },
                 ],
-                selected: 2,
-                isCustom: false,
-                customStart: '',
-                customEnd: '',
+                selected: {{ in_array($rangePreset, ['today','7d','30d','90d','year'], true) ? collect(['today','7d','30d','90d','year'])->search($rangePreset) : -1 }},
+                isCustom: {{ $rangePreset === 'custom' ? 'true' : 'false' }},
+                customStart: @js($rangeStart ?? ''),
+                customEnd: @js($rangeEnd ?? ''),
                 customLabel: '',
                 fmt(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); },
                 isoToday() { const d = new Date(); return d.toISOString().slice(0, 10); },
                 isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); },
+                go(url) { window.Livewire ? window.Livewire.navigate(url) : window.location.assign(url); },
+                pick(i) {
+                    this.selected = i;
+                    this.isCustom = false;
+                    this.open = false;
+                    this.go('?range=' + this.ranges[i].key);
+                },
                 openCustom() {
                     this.view = 'custom';
                     if (!this.customStart) this.customStart = this.isoDaysAgo(30);
@@ -104,14 +127,16 @@
                     const s = new Date(this.customStart);
                     const e = new Date(this.customEnd);
                     if (e < s) return;
-                    this.customLabel = `${this.fmt(s)} - ${this.fmt(e)}`;
-                    this.isCustom = true;
-                    this.selected = -1;
-                    this.open = false;
-                    this.view = 'presets';
+                    this.go('?range=custom&start=' + this.customStart + '&end=' + this.customEnd);
+                },
+                clearRange() {
+                    this.go(window.location.pathname);
                 },
                 get rangeLabel() {
-                    if (this.isCustom && this.customLabel) return this.customLabel;
+                    if (this.isCustom && this.customStart && this.customEnd) {
+                        return this.fmt(new Date(this.customStart)) + ' - ' + this.fmt(new Date(this.customEnd));
+                    }
+                    if (this.selected < 0) return 'All time';
                     const end = new Date();
                     const start = new Date();
                     start.setDate(end.getDate() - this.ranges[this.selected].days);
@@ -151,10 +176,21 @@
             >
                 {{-- Presets view --}}
                 <div x-show="view === 'presets'" class="p-1.5">
+                    <button
+                        type="button"
+                        @click="clearRange()"
+                        :class="selected < 0 && !isCustom ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
+                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+                    >
+                        <span>All time</span>
+                        <svg x-show="selected < 0 && !isCustom" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                    </button>
                     <template x-for="(r, i) in ranges" :key="r.label">
                         <button
                             type="button"
-                            @click="selected = i; isCustom = false; open = false"
+                            @click="pick(i)"
                             :class="selected === i && !isCustom ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
                             class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
                         >
@@ -232,22 +268,11 @@
         </div>
 
         {{-- ─── KPI cards (real data) ────────────────────────────────── --}}
-        <div
-            x-data="{ navigating: false }"
-            x-on:livewire:navigate.window="navigating = true"
-            x-on:livewire:navigated.window="navigating = false"
-            class="relative"
-        >
-            <div x-show="navigating" x-cloak class="skeleton-stagger-fast absolute inset-0 z-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5" aria-hidden="true">
-                @for ($i = 0; $i < 5; $i++)
-                    <div class="rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 {{ $i === 4 ? 'col-span-2 lg:col-span-1' : '' }}" style="--i: {{ $i }}">
-                        <x-skeleton class="h-11 w-11 rounded-xl" />
-                        <x-skeleton class="mt-3 h-4 w-24" />
-                        <x-skeleton class="mt-1 h-7 w-28" />
-                        <x-skeleton class="mt-3 h-3 w-32" />
-                    </div>
-                @endfor
-            </div>
+        <div>
+            {{-- Previously had a livewire:navigate skeleton overlay here. Removed:
+                 admin pages run as full page loads (per 2026-05-16 sidebar fix), so
+                 `livewire:navigated` didn't reliably fire to hide the overlay —
+                 left grey skeletons sitting on top of the already-rendered text. --}}
 
         {{-- KPI grid. 2-col on mobile (tighter, denser), 5-col on desktop.
              The 5th card (Success Rate) spans both columns on mobile so the trailing card
@@ -258,7 +283,7 @@
                 $kpiCards = [
                     ['label' => 'Total Users',         'value' => number_format($totalUsers),       'sub' => 'All-time registered',     'tone' => 'bg-blue-200',    'icon' => 'trusted by millions.svg', 'span' => false],
                     ['label' => 'Total Orders',        'value' => number_format($totalOrders),      'sub' => 'Across all time',          'tone' => 'bg-orange-200',  'icon' => 'total orders.svg',         'span' => false],
-                    ['label' => 'Total Revenue',       'value' => '$' . number_format($totalRevenue, 2),       'sub' => 'Completed payments only',  'tone' => 'bg-emerald-200', 'icon' => 'total revenue.svg',         'span' => false],
+                    ['label' => 'Total Revenue',       'value' => '$' . number_format($totalRevenue, 2),       'sub' => 'Completed orders only',    'tone' => 'bg-emerald-200', 'icon' => 'total revenue.svg',         'span' => false],
                     ['label' => 'Total Transactions',  'value' => number_format($totalTransactions),'sub' => 'Payments + wallet activity','tone' => 'bg-amber-200',   'icon' => 'total transactions.svg',    'span' => false],
                     ['label' => 'Success Rate',        'value' => number_format($successRate, 2) . '%','sub' => 'Completed / total payments','tone' => 'bg-pink-200',    'icon' => 'Success rate.svg',          'span' => true],
                 ];
@@ -268,7 +293,7 @@
                 @php
                     $isSuccessRate = $kpi['label'] === 'Success Rate';
                 @endphp
-                <div class="relative flex flex-col overflow-hidden rounded-[20px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-5 {{ $kpi['span'] ? 'col-span-2 lg:col-span-1' : '' }}">
+                <div class="kpi-card relative flex flex-col overflow-hidden rounded-[20px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-5 {{ $kpi['span'] ? 'col-span-2 lg:col-span-1' : '' }}">
                     {{-- Decorative illustration on the Success Rate card (right side).
                          Gently floats via .animate-float (defined in app.css). Hidden from screen readers. --}}
                     @if ($isSuccessRate)
@@ -277,17 +302,24 @@
                             alt=""
                             aria-hidden="true"
                             loading="lazy"
-                            class="pointer-events-none absolute right-8 top-1/2 h-28 w-28 -translate-y-1/2 select-none object-contain opacity-90 animate-float sm:right-10 sm:h-32 sm:w-32 lg:right-6 lg:h-28 lg:w-28"
+                            class="no-dark-invert pointer-events-none absolute right-8 top-1/2 h-28 w-28 -translate-y-1/2 select-none object-contain opacity-90 animate-float sm:right-10 sm:h-32 sm:w-32 lg:right-6 lg:h-28 lg:w-28"
                         >
                     @endif
 
                     <div class="relative z-10 flex flex-1 flex-col {{ $isSuccessRate ? 'pr-24 sm:pr-32' : '' }}">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $kpi['tone'] }} sm:h-11 sm:w-11">
-                            <img src="{{ asset('assets/' . rawurlencode($kpi['icon'])) }}" alt="" class="h-5 w-5 sm:h-6 sm:w-6" loading="lazy">
+                            {{-- no-dark-invert keeps the small emoji-style icon in its original
+                                 dark artwork (against the pastel tile) instead of being flipped
+                                 white by the blanket dark-mode SVG invert in app.css. --}}
+                            <img src="{{ asset('assets/' . rawurlencode($kpi['icon'])) }}" alt="" class="no-dark-invert h-5 w-5 sm:h-6 sm:w-6" loading="lazy">
                         </span>
-                        <p class="mt-3 text-xs font-medium text-zinc-600 dark:text-zinc-200 sm:text-sm">{{ $kpi['label'] }}</p>
+                        {{-- `.kpi-label` / `.kpi-sub` get their dark-mode colour from the
+                             inline <style> block at the top of this view — bypasses the
+                             Tailwind dark variant which couldn't beat app.css's broader
+                             `.dark .text-zinc-600` remap. --}}
+                        <p class="kpi-label mt-3 text-xs font-medium text-zinc-600 sm:text-sm">{{ $kpi['label'] }}</p>
                         <p class="mt-0.5 text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{{ $kpi['value'] }}</p>
-                        <p class="mt-auto pt-3 text-[11px] text-zinc-600 dark:text-zinc-400 sm:text-xs">{{ $kpi['sub'] }}</p>
+                        <p class="kpi-sub mt-auto pt-3 text-[11px] text-zinc-600 sm:text-xs">{{ $kpi['sub'] }}</p>
                     </div>
                 </div>
             @endforeach
@@ -305,27 +337,88 @@
                         <h2 class="text-base font-semibold text-zinc-900">New Users</h2>
                         <img src="{{ asset('assets/' . rawurlencode('new info.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
                     </div>
-                    <button type="button" class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">
-                        6 Months
-                        <svg class="h-3 w-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
+
+                    {{-- Months selector — drives the bar chart via `?signup_months=N`.
+                         Backend method `getNewUsersTimeseries(N)` returns last-N-months
+                         counts including the current month. --}}
+                    <div
+                        x-data="{
+                            open: false,
+                            selected: {{ $signupMonths }},
+                            options: [3, 6, 12, 24],
+                            label(n) { return n + (n === 1 ? ' Month' : ' Months'); },
+                            pick(n) {
+                                this.selected = n;
+                                this.open = false;
+                                const url = '?signup_months=' + n;
+                                window.Livewire ? window.Livewire.navigate(url) : window.location.assign(url);
+                            },
+                        }"
+                        @click.outside="open = false"
+                        @keydown.escape.window="open = false"
+                        class="relative"
+                    >
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            :aria-expanded="open.toString()"
+                            class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                        >
+                            <span x-text="label(selected)">{{ $signupMonths }} {{ $signupMonths === 1 ? 'Month' : 'Months' }}</span>
+                            <svg class="h-3 w-3 text-zinc-600 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 -translate-y-1"
+                            style="display:none;"
+                            class="absolute right-0 top-full z-30 mt-2 w-[140px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                            role="menu"
+                        >
+                            <div class="p-1.5">
+                                <template x-for="n in options" :key="n">
+                                    <button
+                                        type="button"
+                                        @click="pick(n)"
+                                        :class="selected === n ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
+                                        class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors"
+                                    >
+                                        <span x-text="label(n)"></span>
+                                        <svg x-show="selected === n" class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                {{-- Real signup counts grouped by month (last 6 months including current). --}}
-                <div class="mt-6 flex h-56 items-end justify-between gap-3 sm:gap-5">
+                {{-- Real signup counts grouped by month (last 6 months including current).
+                     Layout: outer h-56 flex row with default items-stretch, so each column
+                     gets the full vertical space. The bar wrapper inside uses flex-1 to
+                     take everything above the month label, so the bar's `height: N%`
+                     resolves against a real pixel value (was 100% of an auto-sized
+                     parent before, which collapsed to 0 — bars were invisible). --}}
+                <div class="mt-6 flex h-56 justify-between gap-3 sm:gap-5">
                     @foreach ($signupsByMonth as $month => $count)
                         @php $heightPct = round(($count / $maxSignups) * 100, 2); @endphp
-                        <div class="flex flex-1 flex-col items-center gap-2">
-                            <div class="relative w-full" style="height: 100%;">
+                        <div class="flex flex-1 flex-col items-center">
+                            <div class="relative w-full flex-1">
                                 <div
                                     class="absolute bottom-0 w-full rounded-md {{ $month === $currentMonthLabel ? 'bg-blue-600' : 'bg-blue-200' }}"
                                     style="height: {{ max(2, $heightPct) }}%;"
                                     title="{{ $count }} new users"
                                 ></div>
                             </div>
-                            <span class="text-xs text-zinc-600">{{ $month }}</span>
+                            <span class="mt-2 text-xs text-zinc-600">{{ $month }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -343,9 +436,11 @@
                         <h2 class="text-base font-semibold text-zinc-900">Revenue Overview</h2>
                         <img src="{{ asset('assets/' . rawurlencode('new info.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
                     </div>
-                    {{-- Days selector (1 to 30) — Alpine-driven; backend wires to chart filter when ready --}}
+                    {{-- Days selector (1 to 30) — picks ?revenue_days=N and SPA-navigates so
+                         the top PHP block re-runs with the new range and the chart redraws.
+                         Backend now accepts raw int day counts so the picker is full-granularity. --}}
                     <div
-                        x-data="{ open: false, selected: 15 }"
+                        x-data="{ open: false, selected: {{ $revenueDays }} }"
                         @click.outside="open = false"
                         @keydown.escape.window="open = false"
                         class="relative"
@@ -378,7 +473,7 @@
                                 <template x-for="i in 30" :key="i">
                                     <button
                                         type="button"
-                                        @click="selected = i; open = false"
+                                        @click="selected = i; open = false; window.Livewire ? window.Livewire.navigate('?revenue_days=' + i) : window.location.assign('?revenue_days=' + i)"
                                         :class="selected === i ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
                                         class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors"
                                     >
@@ -423,31 +518,9 @@
         </div>
 
         {{-- ─── Tables row (real data) ──────────────────────────────── --}}
-        <div
-            x-data="{ navigating: false }"
-            x-on:livewire:navigate.window="navigating = true"
-            x-on:livewire:navigated.window="navigating = false"
-            class="relative"
-        >
-            <div x-show="navigating" x-cloak class="skeleton-stagger absolute inset-0 z-10 grid grid-cols-1 gap-4 lg:grid-cols-2" aria-hidden="true">
-                @for ($i = 0; $i < 2; $i++)
-                    <div class="overflow-hidden rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100" style="--i: {{ $i }}">
-                        <x-skeleton class="h-5 w-32" />
-                        <div class="skeleton-stagger-fast mt-5 space-y-3">
-                            @for ($r = 0; $r < 5; $r++)
-                                <div class="flex items-center gap-3" style="--i: {{ $r }}">
-                                    <x-skeleton shape="circle" class="h-9 w-9" />
-                                    <div class="flex-1 space-y-2">
-                                        <x-skeleton class="h-4 w-32" />
-                                        <x-skeleton class="h-3 w-44" />
-                                    </div>
-                                    <x-skeleton class="h-4 w-12" />
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
-                @endfor
-            </div>
+        <div>
+            {{-- Skeleton overlay removed — same reason as the KPI overlay above.
+                 The tables render with the page; no transitional placeholder needed. --}}
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
             {{-- Latest Users --}}
