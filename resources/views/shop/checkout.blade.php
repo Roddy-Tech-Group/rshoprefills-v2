@@ -233,9 +233,16 @@
                         <template x-for="m in getFilteredMethods()" :key="m.key">
                             <button type="button" @click="method = m.key"
                                 :class="method === m.key ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500/20' : 'border-zinc-200 hover:border-zinc-300'"
-                                class="rounded-xl border bg-white px-3 py-2.5 text-left transition duration-150 active:scale-[0.98]">
-                                <span class="block text-sm font-bold text-zinc-900" x-text="m.label"></span>
-                                <span class="mt-0.5 block text-[11px] leading-tight text-zinc-500" x-text="m.desc"></span>
+                                class="flex items-start gap-2.5 rounded-xl border bg-white px-3 py-2.5 text-left transition duration-150 active:scale-[0.98]">
+                                <span class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+                                    <template x-if="m.icon">
+                                        <img :src="m.icon" alt="" class="h-5 w-5 object-contain" loading="lazy">
+                                    </template>
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-bold text-zinc-900" x-text="m.label"></span>
+                                    <span class="mt-0.5 block text-[11px] leading-tight text-zinc-500" x-text="m.desc"></span>
+                                </span>
                             </button>
                         </template>
                     </div>
@@ -244,7 +251,7 @@
                     <div x-show="method === 'card'" x-collapse class="mt-5 space-y-3">
                         <div>
                             <label for="card_name" class="text-sm font-semibold text-zinc-900">Name on card</label>
-                            <input id="card_name" name="card_name" type="text" autocomplete="cc-name" placeholder="Full name" class="{{ $fieldClass }}">
+                            <input id="card_name" name="card_name" type="text" autocomplete="cc-name" placeholder="Full name" x-model="cardDetails.card_holder" class="{{ $fieldClass }}">
                         </div>
                         <div>
                             <label for="card_number" class="text-sm font-semibold text-zinc-900">Card number</label>
@@ -490,7 +497,8 @@
                     @click="closeModal()"
                 ></div>
 
-                <!-- Modal Content Wrapper -->
+                <!-- Modal Content Wrapper. Widens during 3DS so the bank's authentication
+                     iframe (designed for ~600x800) isn't squeezed into a 448px shell. -->
                 <div
                     x-show="open"
                     x-transition:enter="ease-out duration-300"
@@ -499,18 +507,11 @@
                     x-transition:leave="ease-in duration-200"
                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                    class="relative w-full max-w-md transform overflow-hidden rounded-[24px] bg-white p-6 shadow-2xl transition-all border border-zinc-100"
+                    :class="paymentState === 'action_3ds' ? 'max-w-3xl' : 'max-w-md'"
+                    class="relative w-full transform overflow-hidden rounded-[24px] bg-white p-6 shadow-2xl transition-all duration-300 border border-zinc-100"
                 >
                     <!-- Close button -->
-                    <button
-                        type="button"
-                        @click="closeModal()"
-                        class="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600 transition-colors focus:outline-none"
-                    >
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
+                    <x-close-button @click="closeModal()" class="absolute right-4 top-4" />
 
                     <!-- Active Payment Session Details & Wizard -->
                     <div x-show="session" class="mt-2">
@@ -554,9 +555,9 @@
                         <div x-show="paymentState === 'action_3ds'">
                             <h3 class="text-sm font-bold text-zinc-900 mb-2">Secure Verification</h3>
                             <p class="text-xs text-zinc-600 mb-4">Please complete the secure authentication inside the window below.</p>
-                            
-                            <div class="w-full border border-zinc-200 rounded-xl overflow-hidden bg-zinc-50" style="height: 350px;">
-                                <iframe :src="session?.payment_payload?.redirect_url" class="w-full h-full border-0"></iframe>
+
+                            <div class="w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 h-[75vh] min-h-[500px] max-h-[720px]">
+                                <iframe :src="session?.payment_payload?.redirect_url" class="h-full w-full border-0" allow="payment"></iframe>
                             </div>
 
                             <button type="button" @click="startStatusPolling()" class="w-full mt-4 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
@@ -735,12 +736,12 @@
                 isLoggedIn: isLoggedIn || false,
 
                 allMethods: [
-                    { key: 'card', label: 'Card', desc: 'Visa, Mastercard' },
-                    { key: 'mobile_money', label: 'Mobile Money', desc: 'MTN, Orange, Vodafone' },
-                    { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account' },
-                    { key: 'apple_pay', label: 'Apple Pay', desc: 'Pay via Apple Wallet' },
-                    { key: 'crypto', label: 'Crypto', desc: 'BTC, USDT, ETH and more' },
-                    { key: 'wallet', label: 'Wallet', desc: 'Pay with wallet balance' }
+                    { key: 'card', label: 'Card', desc: 'Visa, Mastercard', icon: '/assets/credit%20card%20payment.png' },
+                    { key: 'mobile_money', label: 'Mobile Money', desc: 'MTN, Orange, Vodafone', icon: '/assets/pay%20with%20crypto%20momo%20%2B.png' },
+                    { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account', icon: '/assets/Bank%20transfer.png' },
+                    { key: 'apple_pay', label: 'Apple Pay', desc: 'Pay via Apple Wallet', icon: '/assets/apply%20pay.png' },
+                    { key: 'crypto', label: 'Crypto', desc: 'USDT, BTC, ETH and more', icon: '/assets/USDT.svg' },
+                    { key: 'wallet', label: 'Wallet', desc: 'Pay with wallet balance', icon: '/assets/Wallet.svg' }
                 ],
 
                 getFilteredMethods() {
@@ -967,6 +968,21 @@
                             body: formData
                         });
 
+                        // Server may respond with HTML (e.g. a 302 redirect to the
+                        // checkout page on an empty-cart / non-JSON-aware fallback,
+                        // or a Laravel exception page). Detect that BEFORE calling
+                        // .json() so the customer sees a useful message instead of
+                        // the misleading "Network connection failed" caught below.
+                        const contentType = response.headers.get('content-type') || '';
+                        if (! contentType.includes('application/json')) {
+                            this.submitting = false;
+                            this.errorMessage = response.ok
+                                ? 'Checkout returned an unexpected response. Refresh the page and try again.'
+                                : 'Checkout failed (HTTP ' + response.status + '). Refresh the page and try again.';
+                            alert(this.errorMessage);
+                            return;
+                        }
+
                         const resData = await response.json();
                         if (!response.ok) {
                             this.submitting = false;
@@ -1039,7 +1055,15 @@
                         }
                     } catch (err) {
                         this.submitting = false;
-                        alert('Network connection failed. Please check your internet.');
+                        // fetch() itself throws TypeError on a real network failure;
+                        // anything else lands here too (response parse errors, etc.)
+                        // — show what we actually know instead of always blaming
+                        // the customer's internet.
+                        console.error('Checkout submit failed:', err);
+                        const msg = (err && err.name === 'TypeError')
+                            ? 'Network connection failed. Please check your internet.'
+                            : 'Could not complete checkout: ' + (err && err.message ? err.message : 'unexpected error') + '. Refresh the page and try again.';
+                        alert(msg);
                     }
                 },
 
@@ -1158,10 +1182,32 @@
                     });
                 },
 
+                /**
+                 * Close the wizard. Confirms first if a payment is mid-flight —
+                 * the customer may have already entered a card / PIN / OTP, started
+                 * a 3DS challenge, or is awaiting a bank/momo confirmation. Closing
+                 * mid-flight aborts the attempt but the backend session remains
+                 * authoritative (webhooks still settle if the bank completes).
+                 */
                 closeModal() {
+                    const inFlight = [
+                        'action_pin',
+                        'action_otp',
+                        'action_3ds',
+                        'awaiting_transfer',
+                        'awaiting_confirmation',
+                        'processing',
+                    ];
+                    if (this.session && inFlight.includes(this.paymentState)) {
+                        const ok = window.confirm('A payment is in progress. Closing this window will cancel the attempt. Continue?');
+                        if (! ok) {
+                            return;
+                        }
+                    }
                     this.open = false;
                     this.submitting = false;
                     this.session = null;
+                    this.paymentState = 'idle';
                     if (this.pollInterval) {
                         clearInterval(this.pollInterval);
                     }

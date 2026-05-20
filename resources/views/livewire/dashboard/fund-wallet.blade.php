@@ -198,7 +198,10 @@ new class extends Component
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                        // Unquoted CSS attribute selector on purpose — any inner double quote would
+                        // close the outer x-data attribute and dump every line of JS below into the
+                        // page as visible text (the wallet-card-overflow bug from session 2026-05-20).
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || ''
                     },
                     body: JSON.stringify(body)
                 });
@@ -281,9 +284,46 @@ new class extends Component
             alert('Copied to clipboard!');
         },
 
+        /** Icon URL for a payment-method type. Null = no icon, render letter fallback. */
+        methodIcon(type) {
+            const icons = {
+                card: '/assets/credit%20card%20payment.png',
+                apple_pay: '/assets/apply%20pay.png',
+                bank_transfer: '/assets/Bank%20transfer.png',
+                mobile_money: '/assets/mobile.svg',
+                crypto: '/assets/USDT.svg',
+                wallet: '/assets/Wallet.svg',
+            };
+            return icons[type] || null;
+        },
+
+        /**
+         * Close the wizard. Confirms first if a payment is mid-flight —
+         * the customer may have already entered a card / PIN / OTP, started
+         * a 3DS challenge, or is awaiting a bank/momo confirmation. Closing
+         * mid-flight aborts the attempt but the backend session remains
+         * authoritative (webhooks still settle if the bank completes).
+         */
         closeModal() {
+            const inFlight = [
+                'card_input',
+                'momo_input',
+                'action_pin',
+                'action_otp',
+                'action_3ds',
+                'awaiting_transfer',
+                'awaiting_confirmation',
+                'processing',
+            ];
+            if (this.session && inFlight.includes(this.paymentState)) {
+                const ok = window.confirm('A payment is in progress. Closing this window will cancel the attempt. Continue?');
+                if (! ok) {
+                    return;
+                }
+            }
             this.open = false;
             this.session = null;
+            this.paymentState = 'idle';
             if (this.pollInterval) {
                 clearInterval(this.pollInterval);
             }
@@ -314,15 +354,17 @@ new class extends Component
         </button>
     @endif
 
-    {{-- Fund modal --}}
+    {{-- Fund modal — wrapped in <template x-if> so the entire modal subtree only
+         exists in the DOM when `open === true`. This is more defensive than the
+         previous `x-show` approach: if Alpine init fails for any reason, the
+         modal markup isn't on the page at all (can't render in a stuck-open
+         state, can't intercept clicks). --}}
+    <template x-if="open">
     <div
-        x-show="open"
-        x-cloak
         x-on:keydown.escape.window="closeModal()"
         class="fixed inset-0 z-[80] flex items-center justify-center p-4"
     >
         <div
-            x-show="open"
             x-transition.opacity
             @click="closeModal()"
             class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm"
@@ -330,9 +372,9 @@ new class extends Component
         ></div>
 
         <div
-            x-show="open"
             x-transition
-            class="relative w-full max-w-md rounded-2xl bg-white p-6 text-left shadow-2xl shadow-zinc-900/25"
+            :class="paymentState === 'action_3ds' ? 'max-w-3xl' : 'max-w-md'"
+            class="relative w-full rounded-2xl bg-white p-6 text-left shadow-2xl shadow-zinc-900/25 transition-all duration-300"
             role="dialog"
             aria-modal="true"
         >
@@ -442,7 +484,15 @@ new class extends Component
                                 @click="selectPaymentMethod(method)"
                                 class="flex items-center gap-3 w-full p-4 border border-zinc-200 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 text-left transition duration-150"
                             >
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-900 font-bold text-xs uppercase" x-text="method.type.substring(0,2)"></span>
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+                                    {{-- Icon by method.type. Falls back to first 2 letters when no icon. --}}
+                                    <template x-if="methodIcon(method.type)">
+                                        <img :src="methodIcon(method.type)" alt="" class="h-6 w-6 object-contain" loading="lazy">
+                                    </template>
+                                    <template x-if="! methodIcon(method.type)">
+                                        <span class="text-zinc-900 font-bold text-xs uppercase" x-text="method.type.substring(0,2)"></span>
+                                    </template>
+                                </span>
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm font-semibold text-zinc-950" x-text="method.label"></p>
                                     <p class="text-xs text-zinc-500 truncate" x-text="method.description"></p>
@@ -523,9 +573,9 @@ new class extends Component
                 <div x-show="paymentState === 'action_3ds'">
                     <h3 class="text-sm font-bold text-zinc-900 mb-2">Secure Verification</h3>
                     <p class="text-xs text-zinc-600 mb-4">Please complete the secure authentication inside the window below.</p>
-                    
-                    <div class="w-full border border-zinc-200 rounded-xl overflow-hidden bg-zinc-50" style="height: 350px;">
-                        <iframe :src="session?.payment_payload?.redirect_url" class="w-full h-full border-0"></iframe>
+
+                    <div class="w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 h-[75vh] min-h-[500px] max-h-[720px]">
+                        <iframe :src="session?.payment_payload?.redirect_url" class="h-full w-full border-0" allow="payment"></iframe>
                     </div>
 
                     <button @click="startStatusPolling()" class="w-full mt-4 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
@@ -648,7 +698,7 @@ new class extends Component
                     </span>
                     <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
                     <p class="mt-1.5 text-xs text-red-600 px-4" x-text="errorMessage"></p>
-                    
+
                     <button type="button" @click="paymentState = 'select_method'" class="mt-6 rounded-xl bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
                         Try Another Method
                     </button>
@@ -656,4 +706,5 @@ new class extends Component
             </div>
         </div>
     </div>
+    </template>
 </div>

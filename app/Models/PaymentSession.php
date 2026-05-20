@@ -193,7 +193,7 @@ class PaymentSession extends Model
                     'type' => 'crypto',
                     'provider' => 'nowpayments',
                     'label' => 'Crypto Transfer',
-                    'description' => 'Pay via BTC, ETH, USDT, LTC',
+                    'description' => 'Pay via USDT, BTC, ETH, LTC',
                     'coin' => $coin,
                     'pay_address' => $payload['pay_address'] ?? null,
                     'pay_amount' => $payload['pay_amount'] ?? null,
@@ -270,7 +270,7 @@ class PaymentSession extends Model
                 'type' => 'crypto',
                 'provider' => 'nowpayments',
                 'label' => 'Crypto Transfer',
-                'description' => 'Pay via BTC, ETH, USDT, LTC',
+                'description' => 'Pay via USDT, BTC, ETH, LTC',
             ];
         }
 
