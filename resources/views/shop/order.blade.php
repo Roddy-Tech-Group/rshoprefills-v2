@@ -69,7 +69,11 @@
     $paymentMethod = $methodLabels[$order->payment_method] ?? 'Card';
     $deliveryEmail = $order->metadata['delivery_email'] ?? auth()->user()?->email;
 
-    $sym   = Product::currencySymbol($order->display_currency ?: 'USD');
+    // total_amount + line subtotals are stored in settlement_currency (USD per
+    // CheckoutService); display_currency is a presentation hint that the backend's
+    // FX pipeline doesn't yet convert against (exchange_rate_snapshot = 1.0 stub).
+    // Render against settlement_currency so the symbol and number agree.
+    $sym   = Product::currencySymbol($order->settlement_currency ?: 'USD');
     $money = fn ($v) => $sym . number_format((float) $v, 2);
 
     $points    = (int) floor((float) $order->total_amount * 0.5);
