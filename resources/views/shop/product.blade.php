@@ -900,67 +900,8 @@
         };
     </script>
 
-    {{-- Region notice — auto-shows on every gift-card product view and
-         auto-dismisses after 6 seconds. Backdrop click / X / Got it close early. --}}
-    @if ($categorySlug === 'gift-cards')
-        <div
-            x-data="{ show: false }"
-            x-init="$nextTick(() => show = true); setTimeout(() => show = false, 20000)"
-            :class="{ 'pointer-events-none': ! show }"
-            class="fixed inset-0 z-[60] flex items-center justify-center p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Gift card region notice"
-        >
-            {{-- Backdrop --}}
-            <div
-                x-show="show"
-                x-cloak
-                x-transition:enter="transition-opacity ease-out duration-200"
-                x-transition:enter-start="opacity-0"
-                x-transition:enter-end="opacity-100"
-                x-transition:leave="transition-opacity ease-in duration-150"
-                x-transition:leave-start="opacity-100"
-                x-transition:leave-end="opacity-0"
-                @click="show = false"
-                class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm"
-            ></div>
-
-            {{-- Notice card --}}
-            <div
-                x-show="show"
-                x-cloak
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 translate-y-3 scale-95"
-                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                x-transition:leave="transition ease-in duration-150"
-                x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                x-transition:leave-end="opacity-0 translate-y-3 scale-95"
-                class="relative w-full max-w-md rounded-2xl bg-blue-100 p-6 text-center shadow-2xl shadow-zinc-900/25"
-            >
-                <x-close-button @click="show = false" aria-label="Dismiss" class="absolute right-3 top-3" />
-
-                {{-- The illustration is dark line-art drawn for a light background; give it
-                     a fixed light-blue backing (literal hex so the dark remap leaves it light)
-                     so it stays legible whether the modal is light or dark. --}}
-                <div class="mx-auto w-fit rounded-2xl bg-[#e8f0fb] px-6 py-4">
-                    <img src="{{ asset('assets/' . rawurlencode('Gift card awareness pop up.png')) }}" alt="" class="mx-auto block h-36 w-auto object-contain" loading="eager">
-                </div>
-
-                <h2 class="mt-4 text-lg font-bold text-zinc-900">Gift cards are region-based</h2>
-                <p class="mt-2 text-sm leading-relaxed text-zinc-600">
-                    If you are redeeming a gift card from a region other than your own, switch your device's region to match the gift card's region before redeeming it.
-                </p>
-
-                <button
-                    type="button"
-                    @click="show = false"
-                    class="mt-5 inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                >
-                    Got it
-                </button>
-            </div>
-        </div>
-    @endif
+    {{-- Region notice lives on the checkout + order pages (amber strip), so we don't
+         interrupt browsing with a modal here. Customers see the warning at the point
+         it matters most — right before paying. --}}
 
 </x-layouts.app.header>
