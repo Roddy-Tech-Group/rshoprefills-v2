@@ -58,22 +58,13 @@ class PollPendingFulfillmentJob implements ShouldQueue
 
                     if ($allItemsFulfilled) {
                         $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Fulfilled);
-                        
-                        $walletPayment = $order->paymentAttempts()
-                            ->where('gateway', 'wallet')
-                            ->where('payment_status', PaymentStatus::Reserved)
-                            ->first();
-
-                        if ($walletPayment) {
-                            $walletProvider->finalizeDebit($walletPayment);
-                        }
                     }
                 } elseif ($status === FulfillmentStatus::Failed) {
                     $item->fulfillment_status = FulfillmentStatus::Failed;
                     $item->failed_at = now();
                     $item->save();
 
-                    FulfillmentFailed::dispatch($item);
+                    FulfillmentFailed::dispatch($item, 'Provider verification returned failed status');
 
                     // Handle refund safety
                     $order = $item->order;
