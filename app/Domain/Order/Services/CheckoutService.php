@@ -35,8 +35,15 @@ class CheckoutService
      */
     public function placeOrder(User $user, Cart $cart, string $paymentMethod, string $displayCurrency, ?string $deliveryEmail = null): Order
     {
-        // 1. Recalculate and validate cart items/prices
+        // 1. Recalculate and validate cart items/prices (in raw USD)
         $validatedTotals = $this->orderValidationService->validateForCheckout($cart);
+
+        // 1b. Resolve the display currency rate. The checkout page converts raw
+        //     USD prices into the customer's chosen currency using this rate
+        //     (e.g. USD × 1.04 = platform spread). The order must store the
+        //     display-currency amount so the charge matches what was shown.
+        $rate = \App\Models\CurrencyRate::resolve($displayCurrency);
+        $exchangeRate = (float) $rate->rate_per_usd;
 
         // 2. Generate a readable, unique order number
         $orderNumber = 'RSR-' . date('Ymd') . '-' . strtoupper(Str::random(6));
@@ -46,20 +53,26 @@ class CheckoutService
         //    in step 5 throws (encryption key, bad currency, network), we want
         //    the cart to stay intact so the customer can retry without losing
         //    their items. Cart deletion now lives at the end, after init succeeds.
-        $order = DB::transaction(function () use ($user, $cart, $paymentMethod, $displayCurrency, $validatedTotals, $orderNumber, $deliveryEmail) {
+        $order = DB::transaction(function () use ($user, $cart, $paymentMethod, $displayCurrency, $validatedTotals, $orderNumber, $deliveryEmail, $exchangeRate) {
 
             // Re-lock the cart to avoid race conditions
             $lockedCart = Cart::where('id', $cart->id)->lockForUpdate()->firstOrFail();
+            $lockedCart->load('items.product', 'items.variant');
+
+            // Convert settlement USD totals into the display currency.
+            $displaySubtotal = round($validatedTotals['subtotal'] * $exchangeRate, 4);
+            $displayMarkup   = round($validatedTotals['total_markup'] * $exchangeRate, 4);
+            $displayTotal    = round($validatedTotals['total'] * $exchangeRate, 4);
 
             $order = Order::create([
                 'user_id' => $user->id,
                 'order_number' => $orderNumber,
                 'cart_id' => $lockedCart->id,
-                'settlement_currency' => 'USD',
+                'settlement_currency' => $displayCurrency,
                 'display_currency' => $displayCurrency,
-                'subtotal_amount' => $validatedTotals['subtotal'],
-                'markup_amount' => $validatedTotals['total_markup'],
-                'total_amount' => $validatedTotals['total'],
+                'subtotal_amount' => $displaySubtotal,
+                'markup_amount' => $displayMarkup,
+                'total_amount' => $displayTotal,
                 'payment_method' => $paymentMethod,
                 'payment_status' => PaymentStatus::Unpaid,
                 'fulfillment_status' => FulfillmentStatus::NotStarted,
@@ -69,6 +82,9 @@ class CheckoutService
                     'delivery_email' => $deliveryEmail ?? $user->email,
                     'device_ip' => request()->ip(),
                     'user_agent' => request()->userAgent(),
+                    'exchange_rate' => $exchangeRate,
+                    'settlement_subtotal_usd' => $validatedTotals['subtotal'],
+                    'settlement_total_usd' => $validatedTotals['total'],
                 ],
             ]);
 
@@ -86,10 +102,10 @@ class CheckoutService
                     'variant_snapshot' => $item->variant->toArray(),
                     'quantity' => $item->quantity,
                     'display_currency' => $displayCurrency,
-                    'display_amount' => $item->display_amount,
+                    'display_amount' => round($item->display_amount * $exchangeRate, 4),
                     'provider_cost_usd' => $item->provider_cost_usd,
                     'markup_amount' => $item->markup_amount,
-                    'subtotal_amount' => $item->subtotal_snapshot,
+                    'subtotal_amount' => round($item->subtotal_snapshot * $exchangeRate, 4),
                     'fulfillment_status' => FulfillmentStatus::NotStarted,
                 ]);
             }
@@ -107,7 +123,7 @@ class CheckoutService
             'idempotency_key' => 'PAY-' . Str::uuid()->toString(),
             'currency' => $displayCurrency,
             'amount' => $order->total_amount,
-            'exchange_rate_snapshot' => 1.0000, // Display is same as settlement or map FX if needed
+            'exchange_rate_snapshot' => $exchangeRate,
             'payment_status' => PaymentStatus::Pending,
         ]);
 
@@ -149,16 +165,24 @@ class CheckoutService
         // 7. Handle internal Wallet flow immediately (it reserves then triggers fulfillment)
         if ($paymentMethod === 'wallet') {
             DB::transaction(function () use ($order, $attempt, $paymentSession) {
-                // If reserved successfully
+                // Reserve → confirm → debit in one atomic transaction.
                 $order->payment_status = PaymentStatus::Reserved;
                 $order->order_status = OrderStatus::Processing;
                 $order->save();
 
                 // Wallet confirms instantly
                 $this->paymentSessionService->confirmSession($paymentSession, ['transaction_id' => $attempt->gateway_reference]);
+
+                // Actually debit the wallet (unlock reserved funds + deduct + record transaction).
+                // Without this, funds stay locked but never deducted from the balance.
+                $this->walletPaymentProvider->finalizeDebit($attempt);
+
+                // Reflect the confirmed payment status on the order.
+                $order->payment_status = PaymentStatus::Paid;
+                $order->save();
             });
 
-            // Dispatch fulfillment immediately since funds are locked!
+            // Dispatch fulfillment — funds are now fully debited.
             foreach ($order->items as $item) {
                 FulfillOrderItemJob::dispatch($item);
             }

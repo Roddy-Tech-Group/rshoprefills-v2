@@ -1005,6 +1005,19 @@
                         this.session = sessionData;
                         this.open = true;
 
+                        if (this.method === 'wallet') {
+                            // Wallet payments confirm synchronously — skip the modal
+                            // and navigate straight to the order confirmation page.
+                            if (sessionData.status === 'confirmed') {
+                                window.location.href = this.redirectUrl;
+                            } else {
+                                // Unlikely fallback: session exists but not yet confirmed.
+                                this.paymentState = 'processing';
+                                this.startStatusPolling();
+                            }
+                            return;
+                        }
+
                         if (this.method === 'card') {
                             const cardHolder = document.getElementById('card_name')?.value || '';
                             const cardNumber = document.getElementById('card_number')?.value || '';
