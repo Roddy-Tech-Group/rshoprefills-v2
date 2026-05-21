@@ -244,11 +244,11 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'product_variant_id' => $variant->id,
             'quantity' => 1,
             'display_currency' => 'USD',
-            'display_amount' => 10.50,
+            'display_amount' => 11.00,
             'provider_cost_usd' => 9.50,
             'markup_amount' => 1.00,
-            'unit_price_snapshot' => 10.50,
-            'subtotal_snapshot' => 10.50,
+            'unit_price_snapshot' => 11.00,
+            'subtotal_snapshot' => 11.00,
         ]);
 
         $response = $this->actingAs($this->user)->postJson(route('api.checkout.place-order'), [
