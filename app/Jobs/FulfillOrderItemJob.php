@@ -74,17 +74,6 @@ class FulfillOrderItemJob implements ShouldQueue
 
                     if ($allItemsFulfilled) {
                         $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Fulfilled);
-                        
-                        // If it was a wallet payment, we need to capture / finalize debit
-                        $walletPayment = $order->paymentAttempts()
-                            ->where('gateway', 'wallet')
-                            ->where('payment_status', PaymentStatus::Reserved)
-                            ->first();
-
-                        if ($walletPayment) {
-                            $walletProvider->finalizeDebit($walletPayment);
-                            $orderService->transitionPaymentStatus($order, PaymentStatus::Paid);
-                        }
                     }
                 } elseif ($status === FulfillmentStatus::Processing || $status === FulfillmentStatus::Delayed) {
                     $item->save();
@@ -95,7 +84,7 @@ class FulfillOrderItemJob implements ShouldQueue
                     $item->failed_at = now();
                     $item->save();
 
-                    FulfillmentFailed::dispatch($item);
+                    FulfillmentFailed::dispatch($item, 'Provider returned failed status');
 
                     // For safety, handle wallet reversal if wallet checkout and all items fail or handle partial refund
                     $this->handleFailureReversal($item, $walletProvider);
@@ -109,7 +98,7 @@ class FulfillOrderItemJob implements ShouldQueue
             $item->failed_at = now();
             $item->save();
 
-            FulfillmentFailed::dispatch($item);
+            FulfillmentFailed::dispatch($item, $e->getMessage());
             $this->handleFailureReversal($item, $walletProvider);
         }
     }

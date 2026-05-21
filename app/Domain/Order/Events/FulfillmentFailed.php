@@ -10,5 +10,8 @@ class FulfillmentFailed
 {
     use Dispatchable, SerializesModels;
 
-    public function __construct(public OrderItem $item) {}
+    public function __construct(
+        public OrderItem $item,
+        public string $reason = 'Unknown fulfillment error'
+    ) {}
 }
