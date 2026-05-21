@@ -23,7 +23,17 @@ class CartPricingService
     public function calculatePricing(ProductVariant $variant, int $quantity): array
     {
         $cost = (float) $variant->cost_price;
-        $unitPriceUsd = $this->resolveRetailPrice($variant->product, $cost);
+
+        // Use face_value as the BASE for markup calculation. Customers see and
+        // recognise the face denomination ($15 card), so the selling price is
+        // face_value + markup% (e.g. $15 × 1.08 = $16.20). Previously cost_price
+        // was the base, creating a mismatch between the displayed denomination
+        // and the charged amount. Falls back to cost-based pricing when no
+        // face_value exists (e.g. newly-synced products without denominations).
+        $faceValue = (float) ($variant->face_value ?? $variant->retail_price ?? 0);
+        $base = $faceValue > 0 ? $faceValue : $cost;
+
+        $unitPriceUsd = $this->resolveRetailPrice($variant->product, $base);
         $subtotalUsd = $unitPriceUsd * $quantity;
 
         return [
