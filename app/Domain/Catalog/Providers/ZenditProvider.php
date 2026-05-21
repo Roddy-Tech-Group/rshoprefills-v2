@@ -14,7 +14,15 @@ class ZenditProvider implements ProviderInterface
     public function __construct()
     {
         $this->apiKey = config('services.zendit.api_key', env('ZENDIT_API_KEY', ''));
-        $this->baseUrl = config('services.zendit.base_url', env('ZENDIT_BASE_URL', 'https://api.zendit.io/v1'));
+
+        $explicitUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL');
+        if ($explicitUrl) {
+            $this->baseUrl = $explicitUrl;
+        } elseif (str_starts_with($this->apiKey, 'sand_')) {
+            $this->baseUrl = 'https://api.sandbox.zendit.io/v1';
+        } else {
+            $this->baseUrl = 'https://api.zendit.io/v1';
+        }
     }
 
     public function getProviderName(): string

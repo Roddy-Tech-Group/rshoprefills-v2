@@ -17,7 +17,17 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
     public function __construct()
     {
         $this->apiKey = config('services.zendit.api_key') ?: env('ZENDIT_API_KEY') ?: 'ZENDIT_API_KEY_MOCK';
-        $this->baseUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL') ?: 'https://api.zendit.io/v1';
+
+        // Explicit base URL from config/env always wins. Otherwise, auto-detect
+        // from the API key prefix: sandbox keys start with "sand_".
+        $explicitUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL');
+        if ($explicitUrl) {
+            $this->baseUrl = $explicitUrl;
+        } elseif (str_starts_with($this->apiKey, 'sand_')) {
+            $this->baseUrl = 'https://api.sandbox.zendit.io/v1';
+        } else {
+            $this->baseUrl = 'https://api.zendit.io/v1';
+        }
     }
 
     public function fulfill(OrderItem $item): array
