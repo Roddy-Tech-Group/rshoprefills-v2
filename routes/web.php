@@ -225,6 +225,9 @@ Route::get('bills/{brandSlug}', function (string $brandSlug) {
 Route::view('flights', 'shop.coming-soon', ['service' => 'flights'])->name('shop.flights');
 Route::view('stays', 'shop.coming-soon', ['service' => 'stays'])->name('shop.stays');
 
+// Help Center — static FAQ, topic filters and support contact details.
+Route::view('help', 'shop.help')->name('shop.help');
+
 // Cart page (HTML). Store-driven — it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 
