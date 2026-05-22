@@ -20,6 +20,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Console commands live under domain folders, which are NOT auto-discovered
+    // (only app/Console/Commands is). Register the domain command dirs so the
+    // scheduler (reconcile:*, zendit:*, etc.) can resolve them.
+    ->withCommands([
+        __DIR__.'/../app/Domain/Reconciliation/Console',
+        __DIR__.'/../app/Domain/Fulfillment/Console',
+        __DIR__.'/../app/Domain/Payment/Console',
+    ])
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'admin' => AdminAuth::class,

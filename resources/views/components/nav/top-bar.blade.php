@@ -32,7 +32,7 @@
             </button>
 
             {{-- Help --}}
-            <a href="#" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-medium text-zinc-900 hover:bg-zinc-200 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+            <a href="{{ route('shop.help') }}" wire:navigate class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-medium text-zinc-900 hover:bg-zinc-200 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                 <img src="{{ asset('assets/' . rawurlencode('new info.svg')) }}" alt="" class="w-5 h-5 shrink-0" loading="lazy">
                 <span>Help</span>
             </a>
