@@ -39,6 +39,8 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'services.flutterwave.secret_key' => 'FLW_SECRET_KEY_MOCK',
             'services.flutterwave.public_key' => 'FLW_PUB_KEY_MOCK',
             'services.nowpayments.api_key' => 'NOWPAYMENTS_KEY_MOCK',
+            'pricing.safety_markup_percent' => 10.0,
+            'pricing.min_margin_percent' => 1.0,
         ]);
 
         $this->user = User::factory()->create();

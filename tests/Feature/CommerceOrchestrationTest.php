@@ -42,6 +42,8 @@ class CommerceOrchestrationTest extends TestCase
             'services.zendit.api_key' => 'ZENDIT_API_KEY_MOCK',
             'services.flutterwave.secret_key' => 'FLW_SECRET_KEY_MOCK',
             'services.nowpayments.api_key' => 'NOWPAYMENTS_KEY_MOCK',
+            'pricing.safety_markup_percent' => 10.0,
+            'pricing.min_margin_percent' => 1.0,
         ]);
 
         $this->user = User::factory()->create();
