@@ -42,6 +42,8 @@ class CommerceOrchestrationTest extends TestCase
             'services.zendit.api_key' => 'ZENDIT_API_KEY_MOCK',
             'services.flutterwave.secret_key' => 'FLW_SECRET_KEY_MOCK',
             'services.nowpayments.api_key' => 'NOWPAYMENTS_KEY_MOCK',
+            'pricing.safety_markup_percent' => 10.0,
+            'pricing.min_margin_percent' => 1.0,
         ]);
 
         $this->user = User::factory()->create();
@@ -87,17 +89,20 @@ class CommerceOrchestrationTest extends TestCase
             'last_activity_at' => now(),
         ]);
 
+        // face_value ($10) + fixed $1 markup = $11 unit price.
+        // markup_amount is the per-unit rule markup ($1.00), stored on the cart
+        // item for snapshot purposes.
         CartItem::create([
             'cart_id' => $this->cart->id,
             'product_id' => $product->id,
             'product_variant_id' => $this->variant->id,
             'quantity' => 1,
             'display_currency' => 'USD',
-            'display_amount' => 10.50,
+            'display_amount' => 11.00,
             'provider_cost_usd' => 9.50,
             'markup_amount' => 1.00,
-            'unit_price_snapshot' => 10.50,
-            'subtotal_snapshot' => 10.50,
+            'unit_price_snapshot' => 11.00,
+            'subtotal_snapshot' => 11.00,
         ]);
     }
 
@@ -129,7 +134,7 @@ class CommerceOrchestrationTest extends TestCase
         $order = Order::first();
         $this->assertNotNull($order);
         $this->assertEquals(OrderStatus::Processing, $order->order_status);
-        $this->assertEquals(PaymentStatus::Reserved, $order->payment_status);
+        $this->assertEquals(PaymentStatus::Paid, $order->payment_status);
 
         // Verify Cart deactivation / converted state
         $cart = Cart::find($this->cart->id);
@@ -137,9 +142,10 @@ class CommerceOrchestrationTest extends TestCase
         $this->assertEquals(0, $cart->items()->count());
 
         // Verify Wallet balance locks
+        // Wallet is fully debited now (finalizeDebit runs in CheckoutService).
         $wallet->refresh();
-        $this->assertEquals(89.50, (float)$wallet->availableBalance());
-        $this->assertEquals(10.50, (float)$wallet->locked_balance);
+        $this->assertEquals(89.00, (float)$wallet->balance);
+        $this->assertEquals(0.00, (float)$wallet->locked_balance);
 
         // Verify fulfillment job was dispatched immediately
         Queue::assertPushed(FulfillOrderItemJob::class, 1);
@@ -182,7 +188,7 @@ class CommerceOrchestrationTest extends TestCase
 
         // Verify wallet debit finalized
         $wallet->refresh();
-        $this->assertEquals(89.50, (float)$wallet->balance);
+        $this->assertEquals(89.00, (float)$wallet->balance);
         $this->assertEquals(0.00, (float)$wallet->locked_balance);
 
         // Verify order completed
@@ -236,7 +242,7 @@ class CommerceOrchestrationTest extends TestCase
             'status' => 'successful',
             'txRef' => $attempt->idempotency_key,
             'id' => 'FLW-TEST-123',
-            'amount' => 10.50,
+            'amount' => 11.00,
             'currency' => 'USD',
         ], [
             'verif-hash' => 'FLW_SECRET_HASH_MOCK',
