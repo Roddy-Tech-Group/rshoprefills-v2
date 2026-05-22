@@ -64,11 +64,11 @@
             <nav class="lg:col-span-2" aria-label="Help">
                 <h3 class="text-base font-semibold text-zinc-900">Help</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Help center</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Contact us</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">How it works</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Order status</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Refund policy</a></li>
+                    <li><a href="{{ route('shop.help') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Help center</a></li>
+                    <li><a href="{{ route('shop.help') }}#contact" class="text-zinc-600 transition-colors hover:text-zinc-900">Contact us</a></li>
+                    <li><a href="{{ route('shop.help') }}#how-it-works" class="text-zinc-600 transition-colors hover:text-zinc-900">How it works</a></li>
+                    <li><a href="{{ route('dashboard.orders') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Order status</a></li>
+                    <li><a href="{{ route('shop.help') }}#faq" class="text-zinc-600 transition-colors hover:text-zinc-900">Refund policy</a></li>
                 </ul>
             </nav>
 
