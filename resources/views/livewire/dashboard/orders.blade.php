@@ -208,10 +208,9 @@ class extends Component {
                             </div>
                             <div class="flex items-center justify-between gap-4">
                                 <dt class="text-zinc-500">Total amount</dt>
-                                {{-- total_amount is stored in settlement_currency (USD per CheckoutService), not display_currency.
-                                     Backend FX snapshot is currently a placeholder (exchange_rate_snapshot = 1.0), so we
-                                     render the truth of what was charged. --}}
-                                <dd class="font-bold text-zinc-900">{{ number_format((float) $order->total_amount, 2) }} {{ $order->settlement_currency ?: 'USD' }}</dd>
+                                {{-- total_amount is stored in the customer's display currency
+                                     (face_value + markup, converted via the currency rate at order time). --}}
+                                <dd class="font-bold text-zinc-900">{{ number_format((float) $order->total_amount, 2) }} {{ $order->display_currency ?: 'USD' }}</dd>
                             </div>
                         </dl>
 

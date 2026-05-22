@@ -843,10 +843,10 @@
                     }
                 },
 
-                // Payable USD price for one unit of the selected variant: provider
-                // cost + markup. A fixed denomination carries a precomputed
-                // price_usd; a variable amount is converted from the card currency
-                // and marked up here.
+                // Payable USD price for one unit of the selected variant. Fixed
+                // denominations use the precomputed price_usd (face_value + markup).
+                // Variable amounts apply markup to the entered face value, matching
+                // the backend's CartPricingService logic.
                 unitPriceUsd() {
                     if (! this.selectedVariantId) {
                         return 0;
@@ -856,8 +856,10 @@
                         return 0;
                     }
                     if (variant.is_variable) {
-                        const costUsd = Number(this.amount || 0) / (this.customRate || 1);
-                        return this.applyMarkup(costUsd);
+                        // The entered amount is the face value in the card's currency.
+                        // Convert to USD, then apply markup (same as backend).
+                        const faceUsd = Number(this.amount || 0) / (this.customRate || 1);
+                        return this.applyMarkup(faceUsd);
                     }
                     return variant.price_usd || 0;
                 },

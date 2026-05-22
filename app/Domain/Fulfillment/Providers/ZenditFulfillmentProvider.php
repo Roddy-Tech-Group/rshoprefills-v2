@@ -17,20 +17,36 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
     public function __construct()
     {
         $this->apiKey = config('services.zendit.api_key') ?: env('ZENDIT_API_KEY') ?: 'ZENDIT_API_KEY_MOCK';
-        $this->baseUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL') ?: 'https://api.zendit.io/v1';
+
+        // Explicit base URL from config/env always wins. Otherwise, auto-detect
+        // from the API key prefix: sandbox keys start with "sand_".
+        $explicitUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL');
+        if ($explicitUrl) {
+            $this->baseUrl = $explicitUrl;
+        } elseif (str_starts_with($this->apiKey, 'sand_')) {
+            $this->baseUrl = 'https://api.sandbox.zendit.io/v1';
+        } else {
+            $this->baseUrl = 'https://api.zendit.io/v1';
+        }
     }
 
     public function fulfill(OrderItem $item): array
     {
         $offerId = $item->provider_offer_id;
-        $customIdentifier = 'RSR-ITEM-' . $item->id;
+
+        $email = 'dev@roddytechgroup.com';
+        $firstName = 'Rshop';
+        $lastName = 'Refills';
+
+        $transactionId = 'RSR-' . substr(str_replace('-', '', (string) $item->id), 0, 16);
 
         $requestPayload = [
             'offerId' => $offerId,
-            'customIdentifier' => $customIdentifier,
-            'smsNotification' => false,
-            'recipient' => [
-                'email' => $item->order->metadata['delivery_email'] ?? $item->order->user->email,
+            'transactionId' => $transactionId,
+            'fields' => [
+                ['key' => 'recipient.email', 'value' => $email],
+                ['key' => 'recipient.firstName', 'value' => $firstName],
+                ['key' => 'recipient.lastName', 'value' => $lastName]
             ]
         ];
 
@@ -43,7 +59,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
         // Mock mode
         if (str_contains($this->apiKey, 'MOCK')) {
-            $responsePayload = $this->getMockResponse($item, $customIdentifier);
+            $responsePayload = $this->getMockResponse($item, $requestPayload['transactionId']);
             
             FulfillmentLog::create([
                 'order_item_id' => $item->id,
@@ -63,7 +79,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         try {
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
-                ->post("{$this->baseUrl}/transactions", $requestPayload);
+                ->post("{$this->baseUrl}/vouchers/purchases", $requestPayload);
 
             $responseBody = $response->json() ?? [];
 
@@ -91,8 +107,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
-                'SUCCESS', 'COMPLETED' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING' => FulfillmentStatus::Processing,
+                'SUCCESS', 'COMPLETED', 'DONE' => FulfillmentStatus::Fulfilled,
+                'PENDING', 'PROCESSING', 'ACCEPTED', 'AUTHORIZED', 'IN_PROGRESS' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
@@ -138,7 +154,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
-                ->get("{$this->baseUrl}/transactions/{$txId}");
+                ->get("{$this->baseUrl}/vouchers/purchases/{$txId}");
 
             $responseBody = $response->json() ?? [];
 
@@ -151,8 +167,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
-                'SUCCESS', 'COMPLETED' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING' => FulfillmentStatus::Processing,
+                'SUCCESS', 'COMPLETED', 'DONE' => FulfillmentStatus::Fulfilled,
+                'PENDING', 'PROCESSING', 'ACCEPTED', 'AUTHORIZED', 'IN_PROGRESS' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
@@ -177,6 +193,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         // Normalize response to extract code/pin/eSIM QR
         $vouchers = $rawPayload['vouchers'] ?? [];
         $pins = [];
+        $flat = [];
+
         foreach ($vouchers as $v) {
             $pins[] = [
                 'code' => $v['code'] ?? null,
@@ -186,17 +204,53 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             ];
         }
 
-        $esim = $rawPayload['esim'] ?? null;
+        $receipt = $rawPayload['receipt'] ?? null;
+        if ($receipt) {
+            if (!empty($receipt['redemptionUrl'])) {
+                $flat['redemption_url'] = $receipt['redemptionUrl'];
+            }
+            if (!empty($receipt['epin'])) {
+                $flat['epin'] = $receipt['epin'];
+            }
+            if (!empty($receipt['instructions'])) {
+                $flat['instructions'] = $receipt['instructions'];
+            }
+        }
 
-        return [
+        if (!empty($pins)) {
+            $firstPin = $pins[0];
+            if (!empty($firstPin['code'])) {
+                $flat['code'] = $firstPin['code'];
+            }
+            if (!empty($firstPin['pin'])) {
+                $flat['pin'] = $firstPin['pin'];
+            }
+            if (!empty($firstPin['serialNumber'])) {
+                $flat['serial_number'] = $firstPin['serialNumber'];
+            }
+            if (!empty($firstPin['instructions'])) {
+                $flat['instructions'] = $flat['instructions'] ?? $firstPin['instructions'];
+            }
+        }
+
+        $esim = $rawPayload['esim'] ?? null;
+        $esimData = $esim ? [
+            'iccid' => $esim['iccid'] ?? null,
+            'lpaUrl' => $esim['lpaUrl'] ?? null,
+            'qrCodeUrl' => $esim['qrCodeUrl'] ?? null,
+            'manualActivationCode' => $esim['manualActivationCode'] ?? null,
+        ] : null;
+
+        if ($esimData) {
+            $flat['esim_iccid'] = $esimData['iccid'] ?? null;
+            $flat['esim_lpa'] = $esimData['lpaUrl'] ?? null;
+            $flat['esim_activation_code'] = $esimData['manualActivationCode'] ?? null;
+        }
+
+        return array_merge($flat, [
             'pins' => $pins,
-            'esim' => $esim ? [
-                'iccid' => $esim['iccid'] ?? null,
-                'lpaUrl' => $esim['lpaUrl'] ?? null,
-                'qrCodeUrl' => $esim['qrCodeUrl'] ?? null,
-                'manualActivationCode' => $esim['manualActivationCode'] ?? null,
-            ] : null,
-        ];
+            'esim' => $esimData,
+        ]);
     }
 
     private function getMockResponse(OrderItem $item, string $customIdentifier): array

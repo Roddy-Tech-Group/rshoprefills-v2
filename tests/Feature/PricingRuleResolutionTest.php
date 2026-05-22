@@ -54,7 +54,7 @@ class PricingRuleResolutionTest extends TestCase
             'product_id' => $product->id,
             'provider_offer_id' => 'offer-'.uniqid(),
             'currency' => 'USD',
-            'face_value' => 10,
+            'face_value' => $costPrice,
             'cost_price' => $costPrice,
             'retail_price' => $costPrice,
         ]);
