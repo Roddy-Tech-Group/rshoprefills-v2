@@ -31,12 +31,14 @@ class VerifyPaymentJob implements ShouldQueue
     ): void {
         Log::info("VerifyPaymentJob: checking payment status for attempt {$this->attempt->id}");
 
-        $attempt = PaymentAttempt::find($this->attempt->id);
-        if (!$attempt || in_array($attempt->payment_status, [PaymentStatus::Paid, PaymentStatus::Failed])) {
-            return;
-        }
+        // Prevent webhook race conditions by wrapping in a transaction with pessimistic lock
+        \Illuminate\Support\Facades\DB::transaction(function () use ($gatewayFactory, $orderService) {
+            $attempt = PaymentAttempt::where('id', $this->attempt->id)->lockForUpdate()->first();
+            
+            if (!$attempt || in_array($attempt->payment_status, [PaymentStatus::Paid, PaymentStatus::Failed])) {
+                return;
+            }
 
-        try {
             $provider = $gatewayFactory->getProvider($attempt->gateway);
             $isPaid = $provider->verifyPayment($attempt);
 
@@ -68,9 +70,6 @@ class VerifyPaymentJob implements ShouldQueue
             } else {
                 Log::warning("VerifyPaymentJob: payment verification returned unpaid/pending for attempt {$attempt->id}");
             }
-        } catch (\Exception $e) {
-            Log::error("Payment verification failed for attempt {$attempt->id}: " . $e->getMessage());
-            throw $e;
-        }
+        });
     }
 }

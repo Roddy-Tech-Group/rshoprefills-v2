@@ -65,7 +65,7 @@ Route::middleware('auth')->group(function () {
         Route::prefix('pin')->name('pin.')->group(function () {
             Route::get('status', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'status'])->name('status');
             Route::post('setup', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'setup'])->name('setup');
-            Route::post('verify', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'verify'])->name('verify');
+            Route::post('verify', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'verify'])->name('verify')->middleware('throttle:5,1');
             Route::put('change', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'change'])->name('change');
             Route::post('reset/request', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'requestReset'])->name('reset.request');
             Route::post('reset/confirm', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'confirmReset'])->name('reset.confirm');
@@ -74,7 +74,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('checkout')->name('api.checkout.')->group(function () {
-        Route::post('place-order', [\App\Http\Controllers\Api\CheckoutApiController::class, 'placeOrder'])->name('place-order');
+        Route::post('place-order', [\App\Http\Controllers\Api\CheckoutApiController::class, 'placeOrder'])->name('place-order')->middleware('throttle:10,1');
     });
 
     Route::prefix('orders')->name('api.orders.')->group(function () {

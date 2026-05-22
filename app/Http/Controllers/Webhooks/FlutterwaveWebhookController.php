@@ -62,13 +62,18 @@ class FlutterwaveWebhookController extends Controller
         }
 
         // 3. Dispatch the processing job asynchronously based on payable type
-        $attempt = \App\Models\PaymentAttempt::where('idempotency_key', $txRef)->first();
+        $attempt = \Illuminate\Support\Facades\DB::transaction(function () use ($txRef, $payload, $data) {
+            $att = \App\Models\PaymentAttempt::where('idempotency_key', $txRef)->lockForUpdate()->first();
+            
+            if ($att && ($att->payable_type === \App\Models\Order::class || !empty($att->order_id))) {
+                $att->webhook_payload = $payload;
+                $att->gateway_reference = $data['id'] ?? ($payload['id'] ?? $att->gateway_reference);
+                $att->save();
+            }
+            return $att;
+        });
         
         if ($attempt && ($attempt->payable_type === \App\Models\Order::class || !empty($attempt->order_id))) {
-            $attempt->webhook_payload = $payload;
-            $attempt->gateway_reference = $data['id'] ?? ($payload['id'] ?? $attempt->gateway_reference);
-            $attempt->save();
-            
             \App\Jobs\VerifyPaymentJob::dispatch($attempt);
         } else {
             ProcessFundingWebhookJob::dispatch($webhook->id);

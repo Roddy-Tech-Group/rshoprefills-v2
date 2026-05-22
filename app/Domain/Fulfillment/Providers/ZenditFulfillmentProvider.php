@@ -89,6 +89,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
         try {
             $response = Http::withoutVerifying()
+                ->timeout(15)
                 ->withToken($this->apiKey)
                 ->acceptJson()
                 ->post("{$this->baseUrl}{$endpoint}", $requestPayload);
@@ -171,6 +172,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             $endpoint = $isEsim ? "/esim/purchases/{$zenditTxId}" : "/vouchers/purchases/{$zenditTxId}";
 
             $response = Http::withoutVerifying()
+                ->timeout(10)
                 ->withToken($this->apiKey)
                 ->acceptJson()
                 ->get("{$this->baseUrl}{$endpoint}");
