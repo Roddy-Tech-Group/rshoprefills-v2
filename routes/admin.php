@@ -6,6 +6,9 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFintechController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
+use App\Http\Controllers\ThemeController;
+use App\Models\Order;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -21,16 +24,36 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::view('dashboard', 'admin.dashboard')->name('dashboard');
         Route::post('logout', [AdminLoginController::class, 'destroy'])->name('logout');
 
+        // Persists the admin's own light/dark/system preference, kept separate
+        // from the customer side (different table + guard).
+        Route::post('theme', [ThemeController::class, 'updateAdmin'])->name('theme');
+
         // Admin content views — read-only Blade pages backed by shipped models.
         // Replace with controllers when CRUD/actions ship.
         Route::view('products', 'admin.products')->name('products');
         Route::view('orders', 'admin.orders')->name('orders');
-        Route::get('orders/{order}', function (\App\Models\Order $order) {
+        Route::get('orders/{order}', function (Order $order) {
             return view('admin.order', [
                 'order' => $order->load(['user', 'items', 'paymentAttempts']),
             ]);
         })->name('order');
         Route::view('customers', 'admin.customers')->name('customers');
+        Route::get('customers/{user}', function (User $user) {
+            $user->load([
+                'wallets',
+                'orders' => fn ($query) => $query->latest()->limit(10),
+                'walletTransactions' => fn ($query) => $query->latest()->limit(10),
+            ]);
+
+            return view('admin.customer', [
+                'user' => $user,
+                'ordersCount' => $user->orders()->count(),
+                'totalSpent' => (float) $user->orders()
+                    ->whereIn('order_status', ['completed', 'partially_completed'])
+                    ->sum('total_amount'),
+                'unreadNotifications' => $user->notifications()->whereNull('read_at')->count(),
+            ]);
+        })->name('customer');
         Route::view('transactions', 'admin.transactions')->name('transactions');
         Route::view('wallets', 'admin.wallets')->name('wallets');
         Volt::route('rates', 'admin.rates')->name('rates');

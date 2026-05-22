@@ -21,7 +21,7 @@
 
 <div
     x-data="{
-        choice: localStorage.getItem('theme') || 'system',
+        choice: (window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system')),
         dark: (window.themeIsDark ? window.themeIsDark() : document.documentElement.classList.contains('dark')),
         open: false,
         locked: false,
@@ -32,7 +32,7 @@
             this.locked = false;
         },
     }"
-    x-on:theme-changed.window="dark = $event.detail.dark; choice = localStorage.getItem('theme') || 'system'"
+    x-on:theme-changed.window="dark = $event.detail.dark; choice = (window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'))"
     @mouseenter="open = true"
     @mouseleave="if (! locked) open = false"
     @click.outside="open = false; locked = false"
