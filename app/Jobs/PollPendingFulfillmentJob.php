@@ -70,7 +70,7 @@ class PollPendingFulfillmentJob implements ShouldQueue
                     $order = $item->order;
                     $walletPayment = $order->paymentAttempts()
                         ->where('gateway', 'wallet')
-                        ->where('payment_status', PaymentStatus::Reserved)
+                        ->whereIn('payment_status', [PaymentStatus::Reserved, PaymentStatus::Paid])
                         ->first();
 
                     if ($walletPayment) {
@@ -83,13 +83,19 @@ class PollPendingFulfillmentJob implements ShouldQueue
                         });
 
                         if (!$hasSuccessfulItem) {
-                            $walletProvider->releaseFunds($walletPayment);
+                            if ($walletPayment->payment_status === PaymentStatus::Reserved) {
+                                $walletProvider->releaseFunds($walletPayment);
+                            } else {
+                                $walletProvider->refundPayment($walletPayment, $order->total_amount);
+                            }
                             $order->payment_status = PaymentStatus::Failed;
                             $order->order_status = \App\Domain\Order\Enums\OrderStatus::Failed;
                             $order->failed_at = now();
                             $order->save();
                         } else {
-                            $walletProvider->refundPayment($walletPayment, $item->subtotal_amount);
+                            if ($walletPayment->payment_status !== PaymentStatus::Reserved) {
+                                $walletProvider->refundPayment($walletPayment, $item->subtotal_amount);
+                            }
                         }
                     }
                 } else {
