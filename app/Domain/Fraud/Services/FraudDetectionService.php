@@ -4,7 +4,7 @@ namespace App\Domain\Fraud\Services;
 
 use App\Models\User;
 use App\Notifications\CriticalSystemAlert;
-use Illuminate\Support\Facades\Cache;
+use App\Support\TaggedCache;
 use Illuminate\Support\Facades\Notification;
 
 class FraudDetectionService
@@ -21,7 +21,7 @@ class FraudDetectionService
 
         // 1. Velocity check: Too many purchases in a short window
         $purchaseCountKey = "fraud_velocity_purchases_{$user->id}";
-        $recentPurchases = Cache::tags(['fraud'])->get($purchaseCountKey, 0);
+        $recentPurchases = TaggedCache::for(['fraud'])->get($purchaseCountKey, 0);
 
         if ($recentPurchases > 10) {
             $flagged = true;
@@ -37,7 +37,7 @@ class FraudDetectionService
         // 3. IP address velocity (prevent carding attacks)
         if (! $flagged) {
             $ipVelocityKey = "fraud_velocity_ip_{$ip}";
-            $recentIpCheckouts = Cache::tags(['fraud'])->get($ipVelocityKey, 0);
+            $recentIpCheckouts = TaggedCache::for(['fraud'])->get($ipVelocityKey, 0);
 
             if ($recentIpCheckouts > 15) {
                 $flagged = true;
@@ -72,11 +72,11 @@ class FraudDetectionService
     public function recordCheckout(User $user, string $ip): void
     {
         $purchaseCountKey = "fraud_velocity_purchases_{$user->id}";
-        $currentPurchases = Cache::tags(['fraud'])->get($purchaseCountKey, 0);
-        Cache::tags(['fraud'])->put($purchaseCountKey, $currentPurchases + 1, now()->addHour());
+        $currentPurchases = TaggedCache::for(['fraud'])->get($purchaseCountKey, 0);
+        TaggedCache::for(['fraud'])->put($purchaseCountKey, $currentPurchases + 1, now()->addHour());
 
         $ipVelocityKey = "fraud_velocity_ip_{$ip}";
-        $currentIpCheckouts = Cache::tags(['fraud'])->get($ipVelocityKey, 0);
-        Cache::tags(['fraud'])->put($ipVelocityKey, $currentIpCheckouts + 1, now()->addHour());
+        $currentIpCheckouts = TaggedCache::for(['fraud'])->get($ipVelocityKey, 0);
+        TaggedCache::for(['fraud'])->put($ipVelocityKey, $currentIpCheckouts + 1, now()->addHour());
     }
 }

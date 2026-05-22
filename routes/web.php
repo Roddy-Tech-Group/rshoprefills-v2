@@ -9,8 +9,8 @@ use App\Http\Controllers\KycController;
 use App\Http\Controllers\ThemeController;
 use App\Models\CurrencyRate;
 use App\Models\Product;
+use App\Support\TaggedCache;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -64,7 +64,7 @@ Route::get('api/search/brands', function (Request $request) {
 Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     $brandSlug = strtolower($brandSlug);
 
-    $brandKey = Cache::tags(['catalog'])->remember("brand_slug_{$brandSlug}", 3600, function () use ($brandSlug) {
+    $brandKey = TaggedCache::for(['catalog'])->remember("brand_slug_{$brandSlug}", 3600, function () use ($brandSlug) {
         return Product::query()
             ->whereNotNull('brand_key')
             ->where('is_active', true)
@@ -77,7 +77,7 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
-    $product = Cache::tags(['catalog'])->remember("brand_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
+    $product = TaggedCache::for(['catalog'])->remember("brand_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
         $p = Product::query()
             ->where('brand_key', $brandKey)
             ->where('country_code', $requested)
@@ -116,7 +116,7 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
 Route::view('esims', 'shop.esims')->name('shop.esims');
 
 Route::get('esims/{slug}', function (string $slug) {
-    $product = Cache::tags(['catalog'])->remember("esim_product_{$slug}", 3600, function () use ($slug) {
+    $product = TaggedCache::for(['catalog'])->remember("esim_product_{$slug}", 3600, function () use ($slug) {
         return Product::query()
             ->where('slug', $slug)
             ->where('is_active', true)
@@ -143,7 +143,7 @@ Route::get('topups/{brandSlug}', function (string $brandSlug) {
 
     // Resolve the kebab-cased URL slug back to the actual brand_key, scoped to
     // the mobile-airtime category so it never collides with a gift-card brand.
-    $brandKey = Cache::tags(['catalog'])->remember("topup_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
+    $brandKey = TaggedCache::for(['catalog'])->remember("topup_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
         return Product::query()
             ->whereNotNull('brand_key')
             ->where('is_active', true)
@@ -157,7 +157,7 @@ Route::get('topups/{brandSlug}', function (string $brandSlug) {
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
-    $product = Cache::tags(['catalog'])->remember("topup_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
+    $product = TaggedCache::for(['catalog'])->remember("topup_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
         $base = fn () => Product::query()
             ->where('brand_key', $brandKey)
             ->where('is_active', true)
@@ -186,7 +186,7 @@ Route::view('bills', 'shop.bills')->name('shop.bills');
 Route::get('bills/{brandSlug}', function (string $brandSlug) {
     $brandSlug = strtolower($brandSlug);
 
-    $brandKey = Cache::tags(['catalog'])->remember("bill_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
+    $brandKey = TaggedCache::for(['catalog'])->remember("bill_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
         return Product::query()
             ->whereNotNull('brand_key')
             ->where('is_active', true)
@@ -200,7 +200,7 @@ Route::get('bills/{brandSlug}', function (string $brandSlug) {
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
-    $product = Cache::tags(['catalog'])->remember("bill_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
+    $product = TaggedCache::for(['catalog'])->remember("bill_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
         $base = fn () => Product::query()
             ->where('brand_key', $brandKey)
             ->where('is_active', true)

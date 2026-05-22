@@ -2,7 +2,7 @@
 
 namespace App\Domain\Shared\Services;
 
-use Illuminate\Support\Facades\Cache;
+use App\Support\TaggedCache;
 
 class CircuitBreaker
 {
@@ -28,20 +28,20 @@ class CircuitBreaker
     {
         $key = $this->getCacheKey();
 
-        $failures = Cache::tags(['circuit_breaker'])->get($key, 0);
+        $failures = TaggedCache::for(['circuit_breaker'])->get($key, 0);
         $failures++;
 
-        Cache::tags(['circuit_breaker'])->put($key, $failures, now()->addMinutes($this->decayMinutes));
+        TaggedCache::for(['circuit_breaker'])->put($key, $failures, now()->addMinutes($this->decayMinutes));
     }
 
     public function recordSuccess(): void
     {
-        Cache::tags(['circuit_breaker'])->forget($this->getCacheKey());
+        TaggedCache::for(['circuit_breaker'])->forget($this->getCacheKey());
     }
 
     public function isOpen(): bool
     {
-        $failures = Cache::tags(['circuit_breaker'])->get($this->getCacheKey(), 0);
+        $failures = TaggedCache::for(['circuit_breaker'])->get($this->getCacheKey(), 0);
 
         return $failures >= $this->maxFailures;
     }
