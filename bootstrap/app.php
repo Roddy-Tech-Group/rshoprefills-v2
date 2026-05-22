@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => AdminAuth::class,
         ]);
 
+        $middleware->append(\App\Http\Middleware\TraceRequestMiddleware::class);
+
         // Locks the storefront catalog to the customer's chosen country/region.
         $middleware->web(append: [
             ResolveRegion::class,
