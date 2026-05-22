@@ -107,8 +107,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
-                'SUCCESS', 'COMPLETED' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING', 'ACCEPTED' => FulfillmentStatus::Processing,
+                'SUCCESS', 'COMPLETED', 'DONE' => FulfillmentStatus::Fulfilled,
+                'PENDING', 'PROCESSING', 'ACCEPTED', 'AUTHORIZED', 'IN_PROGRESS' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
@@ -154,7 +154,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
-                ->get("{$this->baseUrl}/transactions/{$txId}");
+                ->get("{$this->baseUrl}/vouchers/purchases/{$txId}");
 
             $responseBody = $response->json() ?? [];
 
@@ -167,8 +167,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
-                'SUCCESS', 'COMPLETED' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING', 'ACCEPTED' => FulfillmentStatus::Processing,
+                'SUCCESS', 'COMPLETED', 'DONE' => FulfillmentStatus::Fulfilled,
+                'PENDING', 'PROCESSING', 'ACCEPTED', 'AUTHORIZED', 'IN_PROGRESS' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
@@ -193,6 +193,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         // Normalize response to extract code/pin/eSIM QR
         $vouchers = $rawPayload['vouchers'] ?? [];
         $pins = [];
+        $flat = [];
+
         foreach ($vouchers as $v) {
             $pins[] = [
                 'code' => $v['code'] ?? null,
@@ -202,17 +204,53 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             ];
         }
 
-        $esim = $rawPayload['esim'] ?? null;
+        $receipt = $rawPayload['receipt'] ?? null;
+        if ($receipt) {
+            if (!empty($receipt['redemptionUrl'])) {
+                $flat['redemption_url'] = $receipt['redemptionUrl'];
+            }
+            if (!empty($receipt['epin'])) {
+                $flat['epin'] = $receipt['epin'];
+            }
+            if (!empty($receipt['instructions'])) {
+                $flat['instructions'] = $receipt['instructions'];
+            }
+        }
 
-        return [
+        if (!empty($pins)) {
+            $firstPin = $pins[0];
+            if (!empty($firstPin['code'])) {
+                $flat['code'] = $firstPin['code'];
+            }
+            if (!empty($firstPin['pin'])) {
+                $flat['pin'] = $firstPin['pin'];
+            }
+            if (!empty($firstPin['serialNumber'])) {
+                $flat['serial_number'] = $firstPin['serialNumber'];
+            }
+            if (!empty($firstPin['instructions'])) {
+                $flat['instructions'] = $flat['instructions'] ?? $firstPin['instructions'];
+            }
+        }
+
+        $esim = $rawPayload['esim'] ?? null;
+        $esimData = $esim ? [
+            'iccid' => $esim['iccid'] ?? null,
+            'lpaUrl' => $esim['lpaUrl'] ?? null,
+            'qrCodeUrl' => $esim['qrCodeUrl'] ?? null,
+            'manualActivationCode' => $esim['manualActivationCode'] ?? null,
+        ] : null;
+
+        if ($esimData) {
+            $flat['esim_iccid'] = $esimData['iccid'] ?? null;
+            $flat['esim_lpa'] = $esimData['lpaUrl'] ?? null;
+            $flat['esim_activation_code'] = $esimData['manualActivationCode'] ?? null;
+        }
+
+        return array_merge($flat, [
             'pins' => $pins,
-            'esim' => $esim ? [
-                'iccid' => $esim['iccid'] ?? null,
-                'lpaUrl' => $esim['lpaUrl'] ?? null,
-                'qrCodeUrl' => $esim['qrCodeUrl'] ?? null,
-                'manualActivationCode' => $esim['manualActivationCode'] ?? null,
-            ] : null,
-        ];
+            'esim' => $esimData,
+        ]);
     }
 
     private function getMockResponse(OrderItem $item, string $customIdentifier): array
