@@ -125,7 +125,7 @@ class PaymentSession extends Model
     public function transitionTo(string $newStatus): void
     {
         $allowedTransitions = [
-            'pending' => ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'cancelled'],
+            'pending' => ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_customer_action', 'cancelled'],
             'awaiting_payment' => ['processing', 'expired', 'cancelled', 'confirmed', 'failed'],
             'awaiting_method' => ['awaiting_customer_action', 'awaiting_transfer', 'awaiting_confirmation', 'processing', 'confirmed', 'failed', 'cancelled'],
             'awaiting_customer_action' => ['processing', 'confirmed', 'failed', 'cancelled'],
@@ -145,7 +145,7 @@ class PaymentSession extends Model
             return;
         }
 
-        if (!isset($allowedTransitions[$currentStatus]) || !in_array($newStatus, $allowedTransitions[$currentStatus])) {
+        if (! isset($allowedTransitions[$currentStatus]) || ! in_array($newStatus, $allowedTransitions[$currentStatus])) {
             throw new \DomainException("Invalid payment session status transition from {$currentStatus} to {$newStatus}.");
         }
 
@@ -175,8 +175,8 @@ class PaymentSession extends Model
                     'type' => 'wallet',
                     'provider' => 'wallet',
                     'label' => 'Wallet Balance',
-                    'description' => 'Pay instantly from your wallet balance'
-                ]
+                    'description' => 'Pay instantly from your wallet balance',
+                ],
             ];
         }
 
@@ -188,6 +188,7 @@ class PaymentSession extends Model
                 $coin = 'usdt'; // fallback/default
             }
             $payload = $this->payment_payload;
+
             return [
                 [
                     'type' => 'crypto',
@@ -201,7 +202,7 @@ class PaymentSession extends Model
                     'network' => $payload['network'] ?? null,
                     'qr_payload' => $payload['qr_payload'] ?? null,
                     'expires_at' => $payload['expires_at'] ?? null,
-                ]
+                ],
             ];
         }
 

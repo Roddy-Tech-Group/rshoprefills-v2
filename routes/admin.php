@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFintechController;
 use App\Http\Controllers\Admin\AdminKycController;
+use App\Http\Controllers\Admin\AdminSreController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
 use App\Http\Controllers\ThemeController;
@@ -93,6 +94,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('reconciliation/pending', [AdminFintechController::class, 'pendingReconciliations'])->name('reconciliation.pending');
             Route::post('reconciliation/{id}/retry', [AdminFintechController::class, 'retryReconciliation'])->name('reconciliation.retry');
             Route::get('metrics', [AdminFintechController::class, 'metrics'])->name('metrics');
+        });
+
+        // Admin SRE & Enterprise Operations API
+        Route::prefix('api/sre')->name('api.sre.')->group(function () {
+            Route::get('audit-logs', [AdminSreController::class, 'auditLogs'])->name('audit-logs');
+            Route::get('ledger-events', [AdminSreController::class, 'ledgerEvents'])->name('ledger-events');
+            Route::get('reconciliation-reports', [AdminSreController::class, 'reconciliationReports'])->name('reconciliation-reports');
+            Route::get('system-metrics', [AdminSreController::class, 'systemMetrics'])->name('system-metrics');
         });
 
         // Admin Commerce Monitoring & Actions API

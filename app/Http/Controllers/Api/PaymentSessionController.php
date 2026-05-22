@@ -2,11 +2,20 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Order\Services\OrderService;
+use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Payment\Services\PaymentSessionService;
+use App\Domain\Shared\Enums\FundingStatus;
+use App\Domain\Wallet\Services\WalletFundingService;
 use App\Http\Controllers\Controller;
-use App\Models\PaymentSession;
 use App\Http\Resources\PaymentSessionResource;
+use App\Jobs\FulfillOrderItemJob;
+use App\Models\PaymentSession;
+use App\Models\WalletFunding;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PaymentSessionController extends Controller
 {
@@ -46,7 +55,7 @@ class PaymentSessionController extends Controller
         try {
             DB::transaction(function () use ($session) {
                 // Check if session can be cancelled
-                if (!in_array($session->status, ['pending', 'awaiting_method', 'awaiting_payment', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
+                if (! in_array($session->status, ['pending', 'awaiting_method', 'awaiting_payment', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
                     throw new \DomainException("Cannot cancel payment session that is already {$session->status}.");
                 }
 
@@ -54,9 +63,9 @@ class PaymentSessionController extends Controller
 
                 // Cancel polymorphic payment attempt
                 $attempt = $session->paymentAttempt;
-                if ($attempt && $attempt->payment_status !== \App\Domain\Payment\Enums\PaymentStatus::Paid) {
+                if ($attempt && $attempt->payment_status !== PaymentStatus::Paid) {
                     $attempt->update([
-                        'payment_status' => \App\Domain\Payment\Enums\PaymentStatus::Failed,
+                        'payment_status' => PaymentStatus::Failed,
                         'failed_at' => now(),
                     ]);
                 }
@@ -84,12 +93,12 @@ class PaymentSessionController extends Controller
         if ($session->status === 'confirmed') {
             return response()->json([
                 'status' => 'confirmed',
-                'message' => 'Payment session already confirmed.'
+                'message' => 'Payment session already confirmed.',
             ]);
         }
 
         $attempt = $session->paymentAttempt;
-        if (!$attempt) {
+        if (! $attempt) {
             return response()->json(['message' => 'Associated payment attempt not found.'], 404);
         }
 
@@ -100,15 +109,15 @@ class PaymentSessionController extends Controller
         }
 
         try {
-            $gatewayFactory = app(\App\Domain\Payment\Services\PaymentGatewayFactory::class);
+            $gatewayFactory = app(PaymentGatewayFactory::class);
             $provider = $gatewayFactory->getProvider($attempt->gateway);
-            
+
             // Call verifyPayment directly
             $isPaid = $provider->verifyPayment($attempt);
 
             if ($isPaid) {
                 // Confirm the payment session
-                $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+                $sessionService = app(PaymentSessionService::class);
                 $sessionService->confirmSession($session, [
                     'transaction_id' => $attempt->gateway_reference,
                     'payload' => $attempt->verification_payload,
@@ -116,23 +125,23 @@ class PaymentSessionController extends Controller
 
                 // If it is an order checkout payment, fulfill it
                 if ($attempt->order) {
-                    $orderService = app(\App\Domain\Order\Services\OrderService::class);
-                    $orderService->transitionPaymentStatus($attempt->order, \App\Domain\Payment\Enums\PaymentStatus::Paid, $attempt->verification_payload);
-                    
+                    $orderService = app(OrderService::class);
+                    $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Paid, $attempt->verification_payload);
+
                     // Dispatch fulfillment jobs
                     foreach ($attempt->order->items as $item) {
-                        \App\Jobs\FulfillOrderItemJob::dispatch($item);
+                        FulfillOrderItemJob::dispatch($item);
                     }
-                } 
+                }
                 // If it is wallet funding
-                elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                elseif ($attempt->payable_type === WalletFunding::class) {
                     $funding = $attempt->payable;
-                    if ($funding && $funding->status !== \App\Domain\Shared\Enums\FundingStatus::Completed) {
-                        $fundingService = app(\App\Domain\Wallet\Services\WalletFundingService::class);
+                    if ($funding && $funding->status !== FundingStatus::Completed) {
+                        $fundingService = app(WalletFundingService::class);
                         // Process funding safely
                         $fundingService->processSuccessfulFunding(
                             $funding->reference,
-                            $attempt->gateway_reference ?: 'DIRECT-' . uniqid(),
+                            $attempt->gateway_reference ?: 'DIRECT-'.uniqid(),
                             $attempt->verification_payload ?: []
                         );
                     }
@@ -140,17 +149,18 @@ class PaymentSessionController extends Controller
 
                 return response()->json([
                     'status' => 'confirmed',
-                    'message' => 'Payment verified and session confirmed.'
+                    'message' => 'Payment verified and session confirmed.',
                 ]);
             }
 
             return response()->json([
                 'status' => $session->fresh()->status,
-                'message' => 'Payment could not be verified yet. Please try again.'
+                'message' => 'Payment could not be verified yet. Please try again.',
             ]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Explicit payment session verify failed: " . $e->getMessage());
-            return response()->json(['message' => 'Verification failed: ' . $e->getMessage()], 500);
+            Log::error('Explicit payment session verify failed: '.$e->getMessage());
+
+            return response()->json(['message' => 'Verification failed: '.$e->getMessage()], 500);
         }
     }
 
@@ -163,13 +173,13 @@ class PaymentSessionController extends Controller
 
         if (in_array($session->status, ['confirmed', 'failed', 'expired', 'cancelled'])) {
             return response()->json([
-                'message' => 'Payment session is in a terminal state: ' . $session->status,
-                'status' => $session->status
+                'message' => 'Payment session is in a terminal state: '.$session->status,
+                'status' => $session->status,
             ], 400);
         }
 
         $attempt = $session->paymentAttempt;
-        if (!$attempt) {
+        if (! $attempt) {
             return response()->json(['message' => 'Associated payment attempt not found.'], 404);
         }
 
@@ -196,28 +206,26 @@ class PaymentSessionController extends Controller
             $allowedMethods = $supported[$currency] ?? ['card', 'apple_pay'];
         }
 
-        if (!in_array($method, $allowedMethods)) {
+        if (! in_array($method, $allowedMethods)) {
             return response()->json([
-                'message' => "The payment method {$method} is not available for currency {$currency}."
+                'message' => "The payment method {$method} is not available for currency {$currency}.",
             ], 422);
         }
-        
-        $gatewayFactory = app(\App\Domain\Payment\Services\PaymentGatewayFactory::class);
+
+        $gatewayFactory = app(PaymentGatewayFactory::class);
 
         try {
             $result = null;
 
             if ($method === 'card') {
                 $flwProvider = $gatewayFactory->getProvider('flutterwave');
-                
+
                 if ($otp = $request->input('otp')) {
                     $flwRef = $request->input('flw_ref') ?: ($session->payment_payload['flw_ref'] ?? '');
                     $result = $flwProvider->validateOTP($attempt, $otp, $flwRef);
-                } 
-                elseif ($pin = $request->input('pin')) {
+                } elseif ($pin = $request->input('pin')) {
                     $result = $flwProvider->chargeCard($attempt, $details, ['pin' => $pin]);
-                }
-                else {
+                } else {
                     $request->validate([
                         'details.card_number' => 'required|string',
                         'details.cvv' => 'required|string',
@@ -226,91 +234,102 @@ class PaymentSessionController extends Controller
                     ]);
                     $result = $flwProvider->chargeCard($attempt, $details);
                 }
-            } 
-            elseif ($method === 'bank_transfer') {
+            } elseif ($method === 'bank_transfer') {
                 $flwProvider = $gatewayFactory->getProvider('flutterwave');
                 $result = $flwProvider->chargeBankTransfer($attempt);
-            } 
-            elseif ($method === 'apple_pay') {
+            } elseif ($method === 'apple_pay') {
                 $flwProvider = $gatewayFactory->getProvider('flutterwave');
                 $result = $flwProvider->chargeApplePay($attempt, $details);
-            }
-            elseif ($method === 'mobile_money') {
+            } elseif ($method === 'mobile_money') {
                 $request->validate([
                     'details.phone_number' => 'required|string',
                     'details.network' => 'required|string',
                 ]);
                 $flwProvider = $gatewayFactory->getProvider('flutterwave');
                 $result = $flwProvider->chargeMobileMoney($attempt, $details['phone_number'], $details['network']);
-            } 
-            elseif ($method === 'crypto') {
+            } elseif ($method === 'crypto') {
                 $request->validate([
                     'details.pay_currency' => 'required|string',
                 ]);
                 $npProvider = $gatewayFactory->getProvider('nowpayments');
                 $result = $npProvider->chargeCrypto($attempt, $details['pay_currency']);
-            } 
-            else {
+            } elseif ($method === 'wallet') {
+                $request->validate([
+                    'details.auth_token' => 'required|string',
+                ]);
+
+                $walletProvider = $gatewayFactory->getProvider('wallet');
+
+                try {
+                    // Authorization (PIN auth token) reserves the funds. The debit
+                    // settles through the order's fulfillment lifecycle, matching the
+                    // CTO's wallet-PIN design (funds remain locked until then).
+                    $walletProvider->authorizeTransaction($attempt, $details['auth_token']);
+                    $result = [
+                        'status' => 'confirmed',
+                        'transaction_id' => $attempt->gateway_reference,
+                    ];
+                } catch (\Exception $e) {
+                    $result = [
+                        'status' => 'failed',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+            } else {
                 return response()->json(['message' => 'Unsupported payment method.'], 400);
             }
 
-            if (!$result || !isset($result['status'])) {
+            if (! $result || ! isset($result['status'])) {
                 throw new \RuntimeException('Gateway returned empty response.');
             }
 
             if ($result['status'] === 'confirmed') {
-                $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+                $sessionService = app(PaymentSessionService::class);
                 $sessionService->confirmSession($session, [
                     'transaction_id' => $result['transaction_id'] ?? $attempt->gateway_reference,
                     'payload' => $result,
                 ]);
 
                 if ($attempt->order) {
-                    $orderService = app(\App\Domain\Order\Services\OrderService::class);
-                    $orderService->transitionPaymentStatus($attempt->order, \App\Domain\Payment\Enums\PaymentStatus::Paid, $result);
+                    $orderService = app(OrderService::class);
+                    $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Paid, $result);
                     foreach ($attempt->order->items as $item) {
-                        \App\Jobs\FulfillOrderItemJob::dispatch($item);
+                        FulfillOrderItemJob::dispatch($item);
                     }
-                } 
-                elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                } elseif ($attempt->payable_type === WalletFunding::class) {
                     $funding = $attempt->payable;
-                    if ($funding && $funding->status !== \App\Domain\Shared\Enums\FundingStatus::Completed) {
-                        $fundingService = app(\App\Domain\Wallet\Services\WalletFundingService::class);
+                    if ($funding && $funding->status !== FundingStatus::Completed) {
+                        $fundingService = app(WalletFundingService::class);
                         $fundingService->processSuccessfulFunding(
                             $funding->reference,
-                            $result['transaction_id'] ?? 'DIRECT-' . uniqid(),
+                            $result['transaction_id'] ?? 'DIRECT-'.uniqid(),
                             $result
                         );
                     }
                 }
-            } 
-            elseif ($result['status'] === 'awaiting_customer_action') {
+            } elseif ($result['status'] === 'awaiting_customer_action') {
                 $session->transitionTo('awaiting_customer_action');
                 $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
                 $session->save();
-            } 
-            elseif ($result['status'] === 'awaiting_transfer') {
+            } elseif ($result['status'] === 'awaiting_transfer') {
                 $session->transitionTo('awaiting_transfer');
                 $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
                 $session->save();
-            } 
-            elseif ($result['status'] === 'awaiting_confirmation') {
+            } elseif ($result['status'] === 'awaiting_confirmation') {
                 $session->transitionTo('awaiting_confirmation');
                 $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
                 $session->save();
-            } 
-            elseif ($result['status'] === 'failed') {
-                $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+            } elseif ($result['status'] === 'failed') {
+                $sessionService = app(PaymentSessionService::class);
                 $sessionService->failSession($session, $result['message'] ?? 'Payment failed', $result);
-                
+
                 if ($attempt->order) {
-                    $orderService = app(\App\Domain\Order\Services\OrderService::class);
-                    $orderService->transitionPaymentStatus($attempt->order, \App\Domain\Payment\Enums\PaymentStatus::Failed, $result);
-                } 
-                elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                    $orderService = app(OrderService::class);
+                    $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Failed, $result);
+                } elseif ($attempt->payable_type === WalletFunding::class) {
                     $funding = $attempt->payable;
                     if ($funding) {
-                        $funding->update(['status' => \App\Domain\Shared\Enums\FundingStatus::Failed]);
+                        $funding->update(['status' => FundingStatus::Failed]);
                     }
                 }
             }
@@ -318,8 +337,9 @@ class PaymentSessionController extends Controller
             return new PaymentSessionResource($session->fresh());
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Payment session pay failed: " . $e->getMessage());
-            return response()->json(['message' => 'Payment processing failed: ' . $e->getMessage()], 400);
+            Log::error('Payment session pay failed: '.$e->getMessage());
+
+            return response()->json(['message' => 'Payment processing failed: '.$e->getMessage()], 400);
         }
     }
 }

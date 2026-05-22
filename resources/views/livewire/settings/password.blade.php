@@ -146,4 +146,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             </div>
         </form>
     </div>
+
+    {{-- Transaction PIN — authorizes wallet payments (4-digit). --}}
+    <livewire:settings.transaction-pin />
 </div>

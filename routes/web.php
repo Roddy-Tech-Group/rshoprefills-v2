@@ -10,6 +10,7 @@ use App\Http\Controllers\ThemeController;
 use App\Models\CurrencyRate;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -63,48 +64,46 @@ Route::get('api/search/brands', function (Request $request) {
 Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     $brandSlug = strtolower($brandSlug);
 
-    // Resolve the kebab-cased URL slug back to the actual brand_key. With ~692 unique
-    // brands the in-memory match is cheap and avoids needing a new column.
-    $brandKey = Product::query()
-        ->whereNotNull('brand_key')
-        ->where('is_active', true)
-        ->distinct()
-        ->pluck('brand_key')
-        ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+    $brandKey = Cache::tags(['catalog'])->remember("brand_slug_{$brandSlug}", 3600, function () use ($brandSlug) {
+        return Product::query()
+            ->whereNotNull('brand_key')
+            ->where('is_active', true)
+            ->distinct()
+            ->pluck('brand_key')
+            ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+    });
 
     abort_if(! $brandKey, 404);
 
-    // Region-locked: the country is the resolved region (ResolveRegion middleware),
-    // so a brand page always opens in the customer's locked country. Falls back to
-    // whichever country this brand is actually sold in if there's no stock there.
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
-    $product = Product::query()
-        ->where('brand_key', $brandKey)
-        ->where('country_code', $requested)
-        ->where('is_active', true)
-        ->with([
-            'subcategory:id,name,slug',
-            'category:id,name,slug',
-            'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
-        ])
-        ->first();
-
-    // If the brand isn't sold in the requested country, fall back to ANY country it
-    // IS sold in (prefer US, else the first available). Keeps the page from 404ing
-    // when the user lands directly without a matching locale.
-    if (! $product) {
-        $product = Product::query()
+    $product = Cache::tags(['catalog'])->remember("brand_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
+        $p = Product::query()
             ->where('brand_key', $brandKey)
+            ->where('country_code', $requested)
             ->where('is_active', true)
-            ->orderByRaw("country_code = 'US' DESC")
             ->with([
                 'subcategory:id,name,slug',
                 'category:id,name,slug',
                 'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
             ])
             ->first();
-    }
+
+        if (! $p) {
+            $p = Product::query()
+                ->where('brand_key', $brandKey)
+                ->where('is_active', true)
+                ->orderByRaw("country_code = 'US' DESC")
+                ->with([
+                    'subcategory:id,name,slug',
+                    'category:id,name,slug',
+                    'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
+                ])
+                ->first();
+        }
+
+        return $p;
+    });
 
     abort_if(! $product, 404);
 
@@ -117,16 +116,18 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
 Route::view('esims', 'shop.esims')->name('shop.esims');
 
 Route::get('esims/{slug}', function (string $slug) {
-    $product = Product::query()
-        ->where('slug', $slug)
-        ->where('is_active', true)
-        ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
-        ->with([
-            'category:id,name,slug',
-            'subcategory:id,name,slug',
-            'variants' => fn ($q) => $q->where('is_available', true)->orderBy('cost_price'),
-        ])
-        ->firstOrFail();
+    $product = Cache::tags(['catalog'])->remember("esim_product_{$slug}", 3600, function () use ($slug) {
+        return Product::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
+            ->with([
+                'category:id,name,slug',
+                'subcategory:id,name,slug',
+                'variants' => fn ($q) => $q->where('is_available', true)->orderBy('cost_price'),
+            ])
+            ->firstOrFail();
+    });
 
     return view('shop.esim', ['product' => $product]);
 })->name('shop.esim');
@@ -142,31 +143,34 @@ Route::get('topups/{brandSlug}', function (string $brandSlug) {
 
     // Resolve the kebab-cased URL slug back to the actual brand_key, scoped to
     // the mobile-airtime category so it never collides with a gift-card brand.
-    $brandKey = Product::query()
-        ->whereNotNull('brand_key')
-        ->where('is_active', true)
-        ->whereHas('category', fn ($q) => $q->where('slug', 'mobile-airtime'))
-        ->distinct()
-        ->pluck('brand_key')
-        ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+    $brandKey = Cache::tags(['catalog'])->remember("topup_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
+        return Product::query()
+            ->whereNotNull('brand_key')
+            ->where('is_active', true)
+            ->whereHas('category', fn ($q) => $q->where('slug', 'mobile-airtime'))
+            ->distinct()
+            ->pluck('brand_key')
+            ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+    });
 
     abort_if(! $brandKey, 404);
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
-    $base = fn () => Product::query()
-        ->where('brand_key', $brandKey)
-        ->where('is_active', true)
-        ->whereHas('category', fn ($q) => $q->where('slug', 'mobile-airtime'))
-        ->with([
-            'subcategory:id,name,slug',
-            'category:id,name,slug',
-            'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
-        ]);
+    $product = Cache::tags(['catalog'])->remember("topup_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
+        $base = fn () => Product::query()
+            ->where('brand_key', $brandKey)
+            ->where('is_active', true)
+            ->whereHas('category', fn ($q) => $q->where('slug', 'mobile-airtime'))
+            ->with([
+                'subcategory:id,name,slug',
+                'category:id,name,slug',
+                'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
+            ]);
 
-    // Region-locked, with a fallback to any country this operator is sold in.
-    $product = $base()->where('country_code', $requested)->first()
-        ?: $base()->orderByRaw("country_code = 'US' DESC")->first();
+        return $base()->where('country_code', $requested)->first()
+            ?: $base()->orderByRaw("country_code = 'US' DESC")->first();
+    });
 
     abort_if(! $product, 404);
 
@@ -182,30 +186,34 @@ Route::view('bills', 'shop.bills')->name('shop.bills');
 Route::get('bills/{brandSlug}', function (string $brandSlug) {
     $brandSlug = strtolower($brandSlug);
 
-    $brandKey = Product::query()
-        ->whereNotNull('brand_key')
-        ->where('is_active', true)
-        ->whereHas('category', fn ($q) => $q->where('slug', 'bill-payments'))
-        ->distinct()
-        ->pluck('brand_key')
-        ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+    $brandKey = Cache::tags(['catalog'])->remember("bill_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
+        return Product::query()
+            ->whereNotNull('brand_key')
+            ->where('is_active', true)
+            ->whereHas('category', fn ($q) => $q->where('slug', 'bill-payments'))
+            ->distinct()
+            ->pluck('brand_key')
+            ->first(fn ($key) => Str::kebab($key) === $brandSlug);
+    });
 
     abort_if(! $brandKey, 404);
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
-    $base = fn () => Product::query()
-        ->where('brand_key', $brandKey)
-        ->where('is_active', true)
-        ->whereHas('category', fn ($q) => $q->where('slug', 'bill-payments'))
-        ->with([
-            'subcategory:id,name,slug',
-            'category:id,name,slug',
-            'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
-        ]);
+    $product = Cache::tags(['catalog'])->remember("bill_product_{$brandKey}_{$requested}", 3600, function () use ($brandKey, $requested) {
+        $base = fn () => Product::query()
+            ->where('brand_key', $brandKey)
+            ->where('is_active', true)
+            ->whereHas('category', fn ($q) => $q->where('slug', 'bill-payments'))
+            ->with([
+                'subcategory:id,name,slug',
+                'category:id,name,slug',
+                'variants' => fn ($q) => $q->where('is_available', true)->orderBy('face_value'),
+            ]);
 
-    $product = $base()->where('country_code', $requested)->first()
-        ?: $base()->orderByRaw("country_code = 'US' DESC")->first();
+        return $base()->where('country_code', $requested)->first()
+            ?: $base()->orderByRaw("country_code = 'US' DESC")->first();
+    });
 
     abort_if(! $product, 404);
 

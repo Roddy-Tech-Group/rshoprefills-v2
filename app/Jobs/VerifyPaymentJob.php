@@ -2,18 +2,19 @@
 
 namespace App\Jobs;
 
-use App\Models\PaymentAttempt;
-use App\Models\Order;
-use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Order\Events\PaymentConfirmed;
 use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
-use App\Domain\Order\Events\PaymentConfirmed;
-use App\Domain\Order\Events\PaymentFailed;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Payment\Services\PaymentSessionService;
+use App\Models\Order;
+use App\Models\PaymentAttempt;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class VerifyPaymentJob implements ShouldQueue
@@ -21,6 +22,7 @@ class VerifyPaymentJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 5;
+
     public int $backoff = 10;
 
     public function __construct(protected PaymentAttempt $attempt) {}
@@ -31,12 +33,14 @@ class VerifyPaymentJob implements ShouldQueue
     ): void {
         Log::info("VerifyPaymentJob: checking payment status for attempt {$this->attempt->id}");
 
-        $attempt = PaymentAttempt::find($this->attempt->id);
-        if (!$attempt || in_array($attempt->payment_status, [PaymentStatus::Paid, PaymentStatus::Failed])) {
-            return;
-        }
+        // Prevent webhook race conditions by wrapping in a transaction with pessimistic lock
+        DB::transaction(function () use ($gatewayFactory, $orderService) {
+            $attempt = PaymentAttempt::where('id', $this->attempt->id)->lockForUpdate()->first();
 
-        try {
+            if (! $attempt || in_array($attempt->payment_status, [PaymentStatus::Paid, PaymentStatus::Failed])) {
+                return;
+            }
+
             $provider = $gatewayFactory->getProvider($attempt->gateway);
             $isPaid = $provider->verifyPayment($attempt);
 
@@ -49,7 +53,7 @@ class VerifyPaymentJob implements ShouldQueue
                 // 2. Synchronize active PaymentSession model if exists
                 $attempt->load('paymentSession');
                 if ($attempt->paymentSession) {
-                    $sessionService = app(\App\Domain\Payment\Services\PaymentSessionService::class);
+                    $sessionService = app(PaymentSessionService::class);
                     $sessionService->confirmSession($attempt->paymentSession, [
                         'transaction_id' => $attempt->gateway_reference,
                         'payload' => $attempt->verification_payload,
@@ -68,9 +72,6 @@ class VerifyPaymentJob implements ShouldQueue
             } else {
                 Log::warning("VerifyPaymentJob: payment verification returned unpaid/pending for attempt {$attempt->id}");
             }
-        } catch (\Exception $e) {
-            Log::error("Payment verification failed for attempt {$attempt->id}: " . $e->getMessage());
-            throw $e;
-        }
+        });
     }
 }
