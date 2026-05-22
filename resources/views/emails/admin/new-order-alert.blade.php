@@ -1,30 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Admin Order Alert</title>
-    <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9fafb; color: #111827; margin: 0; padding: 40px; }
-        .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f3f4f6; }
-        .header { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-        .alert-critical { color: #dc2626; }
-        .alert-normal { color: #2563eb; }
-        .text { font-size: 16px; line-height: 1.6; color: #4b5563; }
-        .badge { display: inline-block; padding: 6px 12px; background-color: #fecaca; color: #dc2626; border-radius: 4px; font-weight: 600; font-size: 14px; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        @if($isLargeTransaction)
-            <div class="header alert-critical">CRITICAL: Large Transaction Detected!</div>
-            <div class="badge">Suspicious Activity Threshold Tripped</div>
-        @else
-            <div class="header alert-normal">Admin Notification: New Order Placed</div>
-        @endif
-        <p class="text">A new Refill Order has been recorded in the platform database.</p>
-        <p class="text">Order Number: <strong>#{{ $orderNumber }}</strong></p>
-        <p class="text">Customer: <strong>{{ $customerName }}</strong> ({{ $customerEmail }})</p>
-        <p class="text">Amount: <strong>{{ number_format($totalAmount, 2) }} {{ $currency }}</strong></p>
-    </div>
-</body>
-</html>
+<x-emails.layout title="New order alert" preheader="A new order was placed on RshopRefills.">
+    @if ($isLargeTransaction)
+        <span style="display:inline-block; margin:0 0 12px; padding:6px 12px; background:#fee2e2; color:#b91c1c; border-radius:6px; font-size:12px; font-weight:700;">Large transaction</span>
+        <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#b91c1c;">A large order was placed.</h1>
+    @else
+        <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">A new order was placed.</h1>
+    @endif
+
+    <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">A new order has been recorded on the platform. Review the details below.</p>
+
+    <x-emails.panel title="Order">
+        <x-emails.row label="Order number" value="#{{ $orderNumber }}" />
+        <x-emails.row label="Customer" value="{{ $customerName }}" />
+        <x-emails.row label="Email" value="{{ $customerEmail }}" :strong="false" />
+        <x-emails.row label="Total" value="{{ $currency }} {{ number_format($totalAmount, 2) }}" />
+    </x-emails.panel>
+
+    <x-emails.button :url="url('/admin/orders')" align="center">Open in admin</x-emails.button>
+</x-emails.layout>

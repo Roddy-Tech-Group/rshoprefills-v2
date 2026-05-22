@@ -63,15 +63,31 @@
             <p class="mt-1 text-sm text-zinc-600">Your balances across every currency you hold.</p>
         </div>
 
-        {{-- Count summary --}}
-        <div class="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100">
-                <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
-            </span>
-            <div class="min-w-0">
-                <p class="text-2xl font-bold tracking-tight text-zinc-900">{{ $walletCount }}</p>
-                <p class="text-sm text-zinc-600">{{ \Illuminate\Support\Str::plural('wallet card', $walletCount) }} active</p>
+        {{-- Success banner after creating a wallet --}}
+        @if (session('wallet_created'))
+            <div class="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                </svg>
+                {{ session('wallet_created') }}
             </div>
+        @endif
+
+        {{-- Count summary (+ add-wallet action once at least one wallet exists, so a
+             customer can open another currency; the empty state carries it otherwise). --}}
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex min-w-0 items-center gap-4">
+                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
+                </span>
+                <div class="min-w-0">
+                    <p class="text-2xl font-bold tracking-tight text-zinc-900">{{ $walletCount }}</p>
+                    <p class="text-sm text-zinc-600">{{ \Illuminate\Support\Str::plural('wallet card', $walletCount) }} active</p>
+                </div>
+            </div>
+            @if ($walletCount > 0)
+                <livewire:dashboard.create-wallet wire:key="create-wallet-header" />
+            @endif
         </div>
 
         {{-- Wallet cards --}}
@@ -105,8 +121,11 @@
                 <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
                     <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-7 w-7" loading="lazy">
                 </span>
-                <p class="mt-4 text-base font-semibold text-zinc-900">No wallets yet</p>
-                <p class="mt-1 text-sm text-zinc-600">Fund a currency to open your first wallet card.</p>
+                <p class="mt-4 text-base font-semibold text-zinc-900">No wallet found</p>
+                <p class="mt-1 text-sm text-zinc-600">Your wallet is normally set up automatically. If it didn't, create one here to get started.</p>
+                <div class="mt-5 flex justify-center">
+                    <livewire:dashboard.create-wallet wire:key="create-wallet-empty" />
+                </div>
             </div>
         @endif
 

@@ -43,7 +43,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-5 py-3 font-semibold text-zinc-900">${{ number_format((float) $wallet->balance, 2) }}</td>
+                                <td class="px-5 py-3 font-semibold text-zinc-900">{{ \App\Models\Product::currencySymbol($wallet->currency->value) }}{{ number_format((float) $wallet->balance, 2) }}</td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $wallet->currency }}</td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $wallet->transactions->count() }}</td>
                                 <td class="px-5 py-3">

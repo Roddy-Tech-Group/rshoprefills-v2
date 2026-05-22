@@ -1,26 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Welcome to RshopRefills</title>
-    <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9fafb; color: #111827; margin: 0; padding: 40px; }
-        .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f3f4f6; }
-        .header { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 20px; }
-        .text { font-size: 16px; line-height: 1.6; color: #4b5563; }
-        .btn { display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 24px; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="header">RshopRefills</div>
-        <p class="text">Hi {{ $name }},</p>
-        @if($isGoogleAuth)
-            <p class="text">Welcome to RshopRefills! We're excited to have you on board. Your account was securely linked via Google Sign-In.</p>
-        @else
-            <p class="text">Welcome to RshopRefills! We're excited to have you on board. Start ordering eSIMs, Gift Cards, and Refills seamlessly.</p>
-        @endif
-        <a href="{{ url('/dashboard') }}" class="btn">Go to Dashboard</a>
-    </div>
-</body>
-</html>
+<x-emails.layout title="Welcome to RshopRefills" preheader="Your account is ready. Explore gift cards, eSIMs, top-ups and bills.">
+    <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">Welcome aboard, {{ $name }}.</h1>
+
+    @if ($isGoogleAuth)
+        <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">Your account is ready, securely linked through Google Sign-In. You are all set to start shopping digital products in seconds.</p>
+    @else
+        <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">Thanks for joining RshopRefills. Your account is ready, so you can start buying gift cards, eSIMs, mobile top-ups and bill payments in seconds.</p>
+    @endif
+
+    <x-emails.panel title="What you can do">
+        <p style="margin:0 0 8px; font-size:14px; line-height:1.55; color:#3f3f46;">Browse the catalogue and pay your way: card, mobile money, crypto or wallet.</p>
+        <p style="margin:0 0 8px; font-size:14px; line-height:1.55; color:#3f3f46;">Fund your wallet once, then check out instantly next time.</p>
+        <p style="margin:0; font-size:14px; line-height:1.55; color:#3f3f46;">Earn rewards on every order you place.</p>
+    </x-emails.panel>
+
+    <x-emails.button :url="url('/dashboard')" align="center">Go to your dashboard</x-emails.button>
+
+    <p style="margin:18px 0 0; font-size:13px; line-height:1.6; color:#a1a1aa;">You are receiving this email because an account was created with {{ $email }}.</p>
+</x-emails.layout>

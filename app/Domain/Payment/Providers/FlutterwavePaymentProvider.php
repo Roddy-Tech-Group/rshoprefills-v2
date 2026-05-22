@@ -2,15 +2,17 @@
 
 namespace App\Domain\Payment\Providers;
 
-use App\Models\PaymentAttempt;
-use App\Domain\Payment\Interfaces\PaymentProviderInterface;
 use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Interfaces\PaymentProviderInterface;
+use App\Models\PaymentAttempt;
+use App\Models\WalletFunding;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class FlutterwavePaymentProvider implements PaymentProviderInterface
 {
     private string $secretKey;
+
     private string $baseUrl;
 
     public function __construct()
@@ -27,7 +29,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $title = 'RshopRefills Order Refill';
         $description = $attempt->order ? "Order #{$attempt->order->order_number}" : "Payment Ref #{$txRef}";
 
-        if ($payable instanceof \App\Models\WalletFunding) {
+        if ($payable instanceof WalletFunding) {
             $title = 'RshopRefills Wallet Deposit';
             $description = "Wallet Funding Ref #{$payable->reference}";
         }
@@ -44,7 +46,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             'mode' => 'inline',
             'tx_ref' => $txRef,
             'public_key' => $publicKey,
-            'amount' => (float)$attempt->amount,
+            'amount' => (float) $attempt->amount,
             'currency' => strtoupper($attempt->currency),
             'customer' => [
                 'email' => $attempt->user->email,
@@ -66,7 +68,8 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         }
         $secret = $this->secretKey;
         $secMD5 = md5($secret);
-        return substr($secret, 0, 12) . substr($secMD5, 12);
+
+        return substr($secret, 0, 12).substr($secMD5, 12);
     }
 
     public function encryptPayload(array $payload): string
@@ -74,6 +77,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $key = $this->getEncryptionKey();
         $data = json_encode($payload);
         $encrypted = openssl_encrypt($data, 'DES-EDE3', $key, OPENSSL_RAW_DATA);
+
         return base64_encode($encrypted);
     }
 
@@ -89,7 +93,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             'expiry_month' => $cardDetails['expiry_month'],
             'expiry_year' => $cardDetails['expiry_year'],
             'currency' => strtoupper($attempt->currency),
-            'amount' => (float)$attempt->amount,
+            'amount' => (float) $attempt->amount,
             'email' => $attempt->user->email,
             'tx_ref' => $attempt->idempotency_key,
             'fullname' => $cardDetails['card_holder'] ?? $attempt->user->name,
@@ -98,7 +102,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         if ($auth && isset($auth['pin'])) {
             $payload['authorization'] = [
                 'mode' => 'pin',
-                'pin' => $auth['pin']
+                'pin' => $auth['pin'],
             ];
         }
 
@@ -107,7 +111,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         try {
             $response = Http::withToken($this->secretKey)
                 ->post("{$this->baseUrl}/charges?type=card", [
-                    'client' => $encrypted
+                    'client' => $encrypted,
                 ]);
 
             if ($response->failed()) {
@@ -119,10 +123,11 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                     'body' => $response->json(),
                     'tx_ref' => $attempt->idempotency_key,
                 ]);
+
                 return [
                     'status' => 'failed',
                     // Customer-facing — strip the gateway brand (per [[feedback-no-provider-names]]).
-                    'message' => 'Card charge request failed: ' . ($response->json('message') ?? 'Unknown error')
+                    'message' => 'Card charge request failed: '.($response->json('message') ?? 'Unknown error'),
                 ];
             }
 
@@ -147,9 +152,10 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 'message' => $e->getMessage(),
                 'tx_ref' => $attempt->idempotency_key,
             ]);
+
             return [
                 'status' => 'failed',
-                'message' => 'Error processing card charge: ' . $e->getMessage()
+                'message' => 'Error processing card charge: '.$e->getMessage(),
             ];
         }
     }
@@ -176,7 +182,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'pin',
-                'message' => 'PIN is required'
+                'message' => 'PIN is required',
             ];
         }
 
@@ -184,7 +190,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'pin',
-                'message' => 'PIN is required'
+                'message' => 'PIN is required',
             ];
         }
 
@@ -193,7 +199,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 'status' => 'awaiting_customer_action',
                 'action' => 'otp',
                 'flw_ref' => $flwRef,
-                'message' => $authMeta['fields'][0] ?? 'OTP sent to your phone/email'
+                'message' => $authMeta['fields'][0] ?? 'OTP sent to your phone/email',
             ];
         }
 
@@ -202,12 +208,12 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 'status' => 'awaiting_customer_action',
                 'action' => 'redirect',
                 'redirect_url' => $authMeta['redirect'] ?? null,
-                'message' => '3D Secure authentication required'
+                'message' => '3D Secure authentication required',
             ];
         }
 
         if ($status === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
-            $attempt->gateway_reference = (string)$innerData['id'];
+            $attempt->gateway_reference = (string) $innerData['id'];
             $attempt->payment_status = PaymentStatus::Paid;
             $attempt->confirmed_at = now();
             $attempt->verification_payload = $data;
@@ -215,8 +221,8 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
             return [
                 'status' => 'confirmed',
-                'transaction_id' => (string)$innerData['id'],
-                'message' => 'Payment successful'
+                'transaction_id' => (string) $innerData['id'],
+                'message' => 'Payment successful',
             ];
         }
 
@@ -225,13 +231,13 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 'status' => 'awaiting_customer_action',
                 'action' => 'otp',
                 'flw_ref' => $flwRef,
-                'message' => 'OTP sent to your phone/email'
+                'message' => 'OTP sent to your phone/email',
             ];
         }
 
         return [
             'status' => 'failed',
-            'message' => $message ?: 'Card charge could not be processed'
+            'message' => $message ?: 'Card charge could not be processed',
         ];
     }
 
@@ -241,17 +247,19 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             if ($otp === '123456' || $otp === '1234') {
                 $attempt->payment_status = PaymentStatus::Paid;
                 $attempt->confirmed_at = now();
-                $attempt->gateway_reference = 'FLW-MOCK-VAL-' . uniqid();
+                $attempt->gateway_reference = 'FLW-MOCK-VAL-'.uniqid();
                 $attempt->save();
+
                 return [
                     'status' => 'confirmed',
                     'transaction_id' => $attempt->gateway_reference,
-                    'message' => 'Payment validated successfully'
+                    'message' => 'Payment validated successfully',
                 ];
             }
+
             return [
                 'status' => 'failed',
-                'message' => 'Invalid OTP'
+                'message' => 'Invalid OTP',
             ];
         }
 
@@ -260,20 +268,20 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 ->post("{$this->baseUrl}/validate-charge", [
                     'otp' => $otp,
                     'flw_ref' => $flwRef,
-                    'type' => 'card'
+                    'type' => 'card',
                 ]);
 
             if ($response->failed()) {
                 return [
                     'status' => 'failed',
-                    'message' => 'OTP validation failed: ' . ($response->json('message') ?? 'Unknown error')
+                    'message' => 'OTP validation failed: '.($response->json('message') ?? 'Unknown error'),
                 ];
             }
 
             $data = $response->json();
             $innerData = $data['data'] ?? [];
             if ($data['status'] === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
-                $attempt->gateway_reference = (string)$innerData['id'];
+                $attempt->gateway_reference = (string) $innerData['id'];
                 $attempt->payment_status = PaymentStatus::Paid;
                 $attempt->confirmed_at = now();
                 $attempt->verification_payload = $data;
@@ -281,19 +289,19 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
                 return [
                     'status' => 'confirmed',
-                    'transaction_id' => (string)$innerData['id'],
-                    'message' => 'Payment successful'
+                    'transaction_id' => (string) $innerData['id'],
+                    'message' => 'Payment successful',
                 ];
             }
 
             return [
                 'status' => 'failed',
-                'message' => $data['message'] ?? 'OTP validation failed'
+                'message' => $data['message'] ?? 'OTP validation failed',
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'failed',
-                'message' => 'OTP verification failed: ' . $e->getMessage()
+                'message' => 'OTP verification failed: '.$e->getMessage(),
             ];
         }
     }
@@ -303,14 +311,15 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         if (str_contains($this->secretKey, 'MOCK')) {
             $bankDetails = [
                 'bank_name' => 'Wema Bank (RshopRefills Mock)',
-                'account_number' => '9982' . rand(100000, 999999),
-                'account_name' => 'RshopRefills-Deposit-' . $attempt->user->id,
-                'amount' => (float)$attempt->amount,
+                'account_number' => '9982'.rand(100000, 999999),
+                'account_name' => 'RshopRefills-Deposit-'.$attempt->user->id,
+                'amount' => (float) $attempt->amount,
                 'expires_at' => now()->addHour()->toIso8601String(),
             ];
+
             return [
                 'status' => 'awaiting_transfer',
-                'bank_details' => $bankDetails
+                'bank_details' => $bankDetails,
             ];
         }
 
@@ -318,7 +327,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $response = Http::withToken($this->secretKey)
                 ->post("{$this->baseUrl}/charges?type=bank_transfer", [
                     'tx_ref' => $attempt->idempotency_key,
-                    'amount' => (float)$attempt->amount,
+                    'amount' => (float) $attempt->amount,
                     'currency' => 'NGN',
                     'email' => $attempt->user->email,
                     'fullname' => $attempt->user->name,
@@ -327,25 +336,25 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             if ($response->failed()) {
                 return [
                     'status' => 'failed',
-                    'message' => 'Failed to initialize bank transfer: ' . ($response->json('message') ?? 'Unknown error')
+                    'message' => 'Failed to initialize bank transfer: '.($response->json('message') ?? 'Unknown error'),
                 ];
             }
 
             $data = $response->json();
-            
+
             if (($data['status'] ?? '') !== 'success') {
                 return [
                     'status' => 'failed',
-                    'message' => 'Failed to initialize bank transfer: ' . ($data['message'] ?? 'Unknown error')
+                    'message' => 'Failed to initialize bank transfer: '.($data['message'] ?? 'Unknown error'),
                 ];
             }
 
             $innerData = $data['meta']['authorization'] ?? $data['data']['meta']['authorization'] ?? [];
-            
+
             if (empty($innerData) || empty($innerData['transfer_account'])) {
                 return [
                     'status' => 'failed',
-                    'message' => 'Failed to generate bank transfer virtual account. Please make sure "Pay with Bank Transfer" is enabled in your Flutterwave dashboard under Settings > Payment Methods.'
+                    'message' => 'Failed to generate bank transfer virtual account. Please make sure "Pay with Bank Transfer" is enabled in your Flutterwave dashboard under Settings > Payment Methods.',
                 ];
             }
 
@@ -359,12 +368,12 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
             return [
                 'status' => 'awaiting_transfer',
-                'bank_details' => $bankDetails
+                'bank_details' => $bankDetails,
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'failed',
-                'message' => 'Failed to initialize bank transfer: ' . $e->getMessage()
+                'message' => 'Failed to initialize bank transfer: '.$e->getMessage(),
             ];
         }
     }
@@ -374,14 +383,14 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         if (str_contains($this->secretKey, 'MOCK')) {
             return [
                 'status' => 'awaiting_confirmation',
-                'message' => 'Please authorize the push notification sent to your phone (' . $phoneNumber . ').'
+                'message' => 'Please authorize the push notification sent to your phone ('.$phoneNumber.').',
             ];
         }
 
         try {
             $response = Http::withToken($this->secretKey)
                 ->post("{$this->baseUrl}/charges?type=mobile_money_franco", [
-                    'amount' => (float)$attempt->amount,
+                    'amount' => (float) $attempt->amount,
                     'currency' => strtoupper($attempt->currency),
                     'email' => $attempt->user->email,
                     'phone_number' => $phoneNumber,
@@ -393,7 +402,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             if ($response->failed()) {
                 return [
                     'status' => 'failed',
-                    'message' => 'Failed to initialize mobile money: ' . ($response->json('message') ?? 'Unknown error')
+                    'message' => 'Failed to initialize mobile money: '.($response->json('message') ?? 'Unknown error'),
                 ];
             }
 
@@ -403,18 +412,18 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             if ($status === 'success') {
                 return [
                     'status' => 'awaiting_confirmation',
-                    'message' => $data['message'] ?? 'Mobile money request sent. Please authorize on your phone.'
+                    'message' => $data['message'] ?? 'Mobile money request sent. Please authorize on your phone.',
                 ];
             }
 
             return [
                 'status' => 'failed',
-                'message' => $data['message'] ?? 'Mobile money charge could not be initiated.'
+                'message' => $data['message'] ?? 'Mobile money charge could not be initiated.',
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'failed',
-                'message' => 'Failed to initialize mobile money: ' . $e->getMessage()
+                'message' => 'Failed to initialize mobile money: '.$e->getMessage(),
             ];
         }
     }
@@ -422,7 +431,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
     public function chargeApplePay(PaymentAttempt $attempt, array $details = []): array
     {
         if (str_contains($this->secretKey, 'MOCK')) {
-            $attempt->gateway_reference = 'FLW-MOCK-APPLE-' . uniqid();
+            $attempt->gateway_reference = 'FLW-MOCK-APPLE-'.uniqid();
             $attempt->payment_status = PaymentStatus::Paid;
             $attempt->confirmed_at = now();
             $attempt->save();
@@ -430,14 +439,14 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             return [
                 'status' => 'confirmed',
                 'transaction_id' => $attempt->gateway_reference,
-                'message' => 'Apple Pay payment successful'
+                'message' => 'Apple Pay payment successful',
             ];
         }
 
         try {
             $response = Http::withToken($this->secretKey)
                 ->post("{$this->baseUrl}/charges?type=applepay", [
-                    'amount' => (float)$attempt->amount,
+                    'amount' => (float) $attempt->amount,
                     'currency' => strtoupper($attempt->currency),
                     'email' => $attempt->user->email,
                     'tx_ref' => $attempt->idempotency_key,
@@ -446,7 +455,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             if ($response->failed()) {
                 return [
                     'status' => 'failed',
-                    'message' => 'Failed to initialize Apple Pay: ' . ($response->json('message') ?? 'Unknown error')
+                    'message' => 'Failed to initialize Apple Pay: '.($response->json('message') ?? 'Unknown error'),
                 ];
             }
 
@@ -455,7 +464,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $innerData = $data['data'] ?? [];
 
             if ($status === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
-                $attempt->gateway_reference = (string)$innerData['id'];
+                $attempt->gateway_reference = (string) $innerData['id'];
                 $attempt->payment_status = PaymentStatus::Paid;
                 $attempt->confirmed_at = now();
                 $attempt->verification_payload = $data;
@@ -463,19 +472,19 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
                 return [
                     'status' => 'confirmed',
-                    'transaction_id' => (string)$innerData['id'],
-                    'message' => 'Apple Pay payment successful'
+                    'transaction_id' => (string) $innerData['id'],
+                    'message' => 'Apple Pay payment successful',
                 ];
             }
 
             return [
                 'status' => 'failed',
-                'message' => $data['message'] ?? 'Apple Pay payment could not be completed.'
+                'message' => $data['message'] ?? 'Apple Pay payment could not be completed.',
             ];
         } catch (\Exception $e) {
             return [
                 'status' => 'failed',
-                'message' => 'Failed to charge Apple Pay: ' . $e->getMessage()
+                'message' => 'Failed to charge Apple Pay: '.$e->getMessage(),
             ];
         }
     }
@@ -484,33 +493,33 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
     {
         $cardNumber = str_replace(' ', '', $cardDetails['card_number']);
 
-        if ($cardNumber === '5555555555555555' && (!$auth || !isset($auth['pin']))) {
+        if ($cardNumber === '5555555555555555' && (! $auth || ! isset($auth['pin']))) {
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'pin',
-                'message' => 'PIN is required'
+                'message' => 'PIN is required',
             ];
         }
 
-        if ($cardNumber === '7777777777777777' && (!$auth || !isset($auth['otp']))) {
+        if ($cardNumber === '7777777777777777' && (! $auth || ! isset($auth['otp']))) {
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'otp',
-                'flw_ref' => 'FLW-MOCK-REF-' . uniqid(),
-                'message' => 'OTP sent to your phone/email'
+                'flw_ref' => 'FLW-MOCK-REF-'.uniqid(),
+                'message' => 'OTP sent to your phone/email',
             ];
         }
 
-        if ($cardNumber === '9999999999999999' && (!$auth || !isset($auth['redirect_completed']))) {
+        if ($cardNumber === '9999999999999999' && (! $auth || ! isset($auth['redirect_completed']))) {
             return [
                 'status' => 'awaiting_customer_action',
                 'action' => 'redirect',
-                'redirect_url' => route('shop.coming-soon') . '?mock_3ds=' . $attempt->paymentSession->id,
-                'message' => '3D Secure authentication required'
+                'redirect_url' => route('shop.coming-soon').'?mock_3ds='.$attempt->paymentSession->id,
+                'message' => '3D Secure authentication required',
             ];
         }
 
-        $attempt->gateway_reference = 'FLW-MOCK-TX-' . uniqid();
+        $attempt->gateway_reference = 'FLW-MOCK-TX-'.uniqid();
         $attempt->payment_status = PaymentStatus::Paid;
         $attempt->confirmed_at = now();
         $attempt->save();
@@ -518,7 +527,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         return [
             'status' => 'confirmed',
             'transaction_id' => $attempt->gateway_reference,
-            'message' => 'Payment successful'
+            'message' => 'Payment successful',
         ];
     }
 
@@ -528,37 +537,87 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $attempt->payment_status = PaymentStatus::Paid;
             $attempt->confirmed_at = now();
             $attempt->save();
+
             return true;
         }
 
+        $txId = (string) $attempt->gateway_reference;
+
+        // Flutterwave's /transactions/{id}/verify needs the NUMERIC transaction
+        // id. 3DS / hosted flows often leave gateway_reference as the tx_ref
+        // string, so verify by reference (tx_ref) whenever we lack a numeric id.
+        if (! ctype_digit($txId)) {
+            return $this->verifyUsingReference($attempt);
+        }
+
         try {
-            $txId = $attempt->gateway_reference;
             $response = Http::withToken($this->secretKey)
                 ->get("{$this->baseUrl}/transactions/{$txId}/verify");
 
             if ($response->failed()) {
                 Log::error("Flutterwave transaction verification failed: {$txId}");
-                return false;
+
+                // Last resort: try the tx_ref lookup before giving up.
+                return $this->verifyUsingReference($attempt);
             }
 
             $body = $response->json();
-            $status = $body['data']['status'] ?? null;
-            $amount = $body['data']['amount'] ?? 0;
-            $currency = $body['data']['currency'] ?? '';
 
-            if ($status === 'successful' && (float)$amount >= (float)$attempt->amount && strtoupper($currency) === strtoupper($attempt->currency)) {
-                $attempt->payment_status = PaymentStatus::Paid;
-                $attempt->confirmed_at = now();
-                $attempt->verification_payload = $body;
-                $attempt->save();
-                return true;
-            }
-
-            return false;
+            return $this->applyVerificationResult($attempt, $body['data'] ?? [], $body);
         } catch (\Exception $e) {
-            Log::error('Flutterwave verification error: ' . $e->getMessage());
+            Log::error('Flutterwave verification error: '.$e->getMessage());
+
             return false;
         }
+    }
+
+    /**
+     * Verify an attempt by its tx_ref (used when we have no numeric transaction
+     * id, e.g. after a 3DS challenge). Captures the real id on success.
+     */
+    private function verifyUsingReference(PaymentAttempt $attempt): bool
+    {
+        $reference = $attempt->idempotency_key ?: (string) $attempt->gateway_reference;
+        $result = $this->verifyByReference($reference);
+
+        if (! $result) {
+            return false;
+        }
+
+        // Capture the real numeric transaction id for any later lookups/refunds.
+        if (! empty($result['transaction_id'])) {
+            $attempt->gateway_reference = (string) $result['transaction_id'];
+        }
+
+        return $this->applyVerificationResult($attempt, $result, $result['raw'] ?? $result);
+    }
+
+    /**
+     * Mark the attempt paid when the gateway reports success for the matching
+     * amount + currency. Shared by id- and reference-based verification.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $payload
+     */
+    private function applyVerificationResult(PaymentAttempt $attempt, array $data, array $payload): bool
+    {
+        $status = $data['status'] ?? null;
+        $amount = $data['amount'] ?? 0;
+        $currency = $data['currency'] ?? '';
+
+        if ($status === 'successful'
+            && (float) $amount >= (float) $attempt->amount
+            && strtoupper((string) $currency) === strtoupper((string) $attempt->currency)
+        ) {
+            $attempt->payment_status = PaymentStatus::Paid;
+            $attempt->confirmed_at = now();
+            $attempt->verification_payload = $payload;
+            $attempt->save();
+
+            return true;
+        }
+
+        return false;
     }
 
     public function refundPayment(PaymentAttempt $attempt, float $amount): bool
@@ -566,6 +625,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         if (str_contains($this->secretKey, 'MOCK')) {
             $attempt->payment_status = PaymentStatus::Refunded;
             $attempt->save();
+
             return true;
         }
 
@@ -578,14 +638,17 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
             if ($response->failed()) {
                 Log::error('Flutterwave refund failed', ['body' => $response->json()]);
+
                 return false;
             }
 
             $attempt->payment_status = PaymentStatus::Refunded;
             $attempt->save();
+
             return true;
         } catch (\Exception $e) {
-            Log::error('Flutterwave refund error: ' . $e->getMessage());
+            Log::error('Flutterwave refund error: '.$e->getMessage());
+
             return false;
         }
     }
@@ -597,16 +660,16 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 'status' => 'successful',
                 'amount' => 100.0,
                 'currency' => 'USD',
-                'transaction_id' => 'FLW-MOCK-' . uniqid(),
+                'transaction_id' => 'FLW-MOCK-'.uniqid(),
                 'tx_ref' => $txRef,
-                'raw' => ['simulated' => true]
+                'raw' => ['simulated' => true],
             ];
         }
 
         try {
             $response = Http::withToken($this->secretKey)
                 ->get("{$this->baseUrl}/transactions/verify_by_reference", [
-                    'tx_ref' => $txRef
+                    'tx_ref' => $txRef,
                 ]);
 
             if ($response->failed()) {
@@ -614,6 +677,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                     'status' => $response->status(),
                     'body' => $response->json(),
                 ]);
+
                 return null;
             }
 
@@ -627,13 +691,14 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                     'currency' => $data['currency'] ?? '',
                     'transaction_id' => $data['id'] ?? null,
                     'tx_ref' => $data['tx_ref'] ?? null,
-                    'raw' => $body
+                    'raw' => $body,
                 ];
             }
 
             return null;
         } catch (\Exception $e) {
-            Log::error('Flutterwave verifyByReference error: ' . $e->getMessage());
+            Log::error('Flutterwave verifyByReference error: '.$e->getMessage());
+
             return null;
         }
     }

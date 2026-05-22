@@ -50,7 +50,7 @@
                                 </td>
                                 <td class="px-5 py-3 font-semibold text-zinc-900">
                                     @if ($user->wallet)
-                                        ${{ number_format((float) $user->wallet->balance, 2) }} {{ $user->wallet->currency }}
+                                        {{ \App\Models\Product::currencySymbol($user->wallet->currency->value) }}{{ number_format((float) $user->wallet->balance, 2) }} {{ $user->wallet->currency->value }}
                                     @else
                                         <span class="text-zinc-600">No wallet</span>
                                     @endif

@@ -419,8 +419,8 @@
         </div>
     </div>
 
-    {{-- Category shortcut bar — desktop only. Hidden on mobile to remove the horizontal scroll noise. --}}
-    <div class="hidden md:block">
+    {{-- Category shortcut bar — horizontal scroll on mobile, centred on desktop. --}}
+    <div>
         <nav aria-label="Product categories" class="max-w-[1350px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex h-[40px] gap-1 overflow-x-auto justify-start md:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @php

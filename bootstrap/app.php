@@ -1,10 +1,13 @@
 <?php
 
 use App\Http\Middleware\AdminAuth;
+use App\Http\Middleware\EnsureAccountActive;
 use App\Http\Middleware\ResolveRegion;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Session\Middleware\StartSession;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -24,12 +27,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // Locks the storefront catalog to the customer's chosen country/region.
         $middleware->web(append: [
             ResolveRegion::class,
+            EnsureAccountActive::class,
         ]);
 
         // Enable stateful sessions for API routes so AJAX requests can resolve the authenticated user
         $middleware->api(append: [
-            \Illuminate\Cookie\Middleware\EncryptCookies::class,
-            \Illuminate\Session\Middleware\StartSession::class,
+            EncryptCookies::class,
+            StartSession::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => request()->is('admin*') ? route('admin.login') : route('login'));

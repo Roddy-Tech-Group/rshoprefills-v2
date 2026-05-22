@@ -116,6 +116,7 @@ new class extends Component
         actionMessage: '',
         bankDetails: null,
         pollInterval: null,
+        verifying: false,
 
         initPayment(session) {
             this.session = session;
@@ -279,6 +280,45 @@ new class extends Component
             }, 4500);
         },
 
+        /**
+         * Actively verify with the gateway. The passive /status poll only reads
+         * our DB, which never flips until the gateway webhook lands (unreachable
+         * in local dev). /verify queries the gateway directly and, on success,
+         * confirms the session + credits the wallet.
+         */
+        async verifyPayment() {
+            if (this.verifying) {
+                return;
+            }
+            this.verifying = true;
+            this.errorMessage = '';
+            try {
+                let response = await fetch(`/api/payment-sessions/${this.session.id}/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || ''
+                    },
+                    body: JSON.stringify({})
+                });
+                let data = await response.json();
+                if (data.status === 'confirmed') {
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                    }
+                    this.paymentState = 'success';
+                    setTimeout(() => { window.location.reload(); }, 1800);
+                    return;
+                }
+                this.verifying = false;
+                this.errorMessage = data.message || 'We could not confirm your payment yet. If you just completed it, wait a few seconds and try again.';
+            } catch (e) {
+                this.verifying = false;
+                this.errorMessage = 'Could not reach the server to verify. Please check your connection and try again.';
+            }
+        },
+
         copyToClipboard(text) {
             navigator.clipboard.writeText(text);
             alert('Copied to clipboard!');
@@ -373,7 +413,7 @@ new class extends Component
 
         <div
             x-transition
-            :class="paymentState === 'action_3ds' ? 'max-w-3xl' : 'max-w-md'"
+            :class="paymentState === 'action_3ds' ? 'max-w-lg' : 'max-w-md'"
             class="relative w-full rounded-2xl bg-white p-6 text-left shadow-2xl shadow-zinc-900/25 transition-all duration-300"
             role="dialog"
             aria-modal="true"
@@ -574,13 +614,18 @@ new class extends Component
                     <h3 class="text-sm font-bold text-zinc-900 mb-2">Secure Verification</h3>
                     <p class="text-xs text-zinc-600 mb-4">Please complete the secure authentication inside the window below.</p>
 
-                    <div class="w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 h-[75vh] min-h-[500px] max-h-[720px]">
+                    <div class="w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 h-[55vh] min-h-[400px] max-h-[520px]">
                         <iframe :src="session?.payment_payload?.redirect_url" class="h-full w-full border-0" allow="payment"></iframe>
                     </div>
 
-                    <button @click="startStatusPolling()" class="w-full mt-4 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
-                        I Have Completed Payment
+                    <button @click="verifyPayment()" :disabled="verifying" class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                        <svg x-show="verifying" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span x-text="verifying ? 'Verifying...' : 'I Have Completed Payment'"></span>
                     </button>
+                    <p x-show="errorMessage" x-cloak class="mt-2 text-center text-xs text-amber-600" x-text="errorMessage"></p>
                 </div>
 
                 <!-- Mobile Money input -->

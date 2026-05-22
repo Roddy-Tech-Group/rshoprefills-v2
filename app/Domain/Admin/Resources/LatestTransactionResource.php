@@ -21,6 +21,7 @@ class LatestTransactionResource extends JsonResource
             'customer_name' => $this->customer_name,
             'type' => $this->type,
             'amount' => (float) $this->amount,
+            'currency' => $this->currency,
             'status' => $this->status,
             'gateway' => $this->gateway,
             'source' => $this->source, // 'payment' or 'wallet_transaction'

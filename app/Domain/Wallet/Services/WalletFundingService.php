@@ -2,17 +2,20 @@
 
 namespace App\Domain\Wallet\Services;
 
+use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Payment\Services\PaymentSessionService;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\FundingStatus;
 use App\Domain\Shared\Enums\TransactionCategory;
-use App\Domain\Payment\Services\PaymentGatewayFactory;
-use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Transaction\Services\TransactionService;
+use App\Domain\Wallet\Events\FundingCompleted;
+use App\Domain\Wallet\Events\FundingFailed;
 use App\Domain\Wallet\Exceptions\WalletFundingException;
+use App\Models\PaymentAttempt;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletFunding;
-use App\Models\PaymentAttempt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -28,7 +31,7 @@ class WalletFundingService
         private readonly WalletService $walletService,
         private readonly CurrencyRateService $currencyRateService,
         private readonly FundingVerificationService $verificationService,
-        private readonly \App\Domain\Payment\Services\PaymentSessionService $paymentSessionService
+        private readonly PaymentSessionService $paymentSessionService
     ) {}
 
     /**
@@ -55,10 +58,10 @@ class WalletFundingService
         $settledAmountUsd = round($amount * $usdRate, 4);
 
         $reference = $this->transactionService->generateReference('FUND', $currency);
-        $idempotencyKey = 'fund_init_' . Str::random(16);
+        $idempotencyKey = 'fund_init_'.Str::random(16);
 
         return DB::transaction(function () use ($user, $wallet, $amount, $currency, $displayCurrency, $rate, $requestedAmount, $settledAmountUsd, $reference, $idempotencyKey) {
-            
+
             // 2. Create immutable funding attempt
             $funding = WalletFunding::create([
                 'user_id' => $user->id,
@@ -113,13 +116,14 @@ class WalletFundingService
         // 1. Locate and lock funding outside transaction or verify first
         $funding = WalletFunding::where('reference', $txRef)->first();
 
-        if (!$funding) {
+        if (! $funding) {
             Log::error('Wallet funding record not found.', ['tx_ref' => $txRef]);
             throw new \RuntimeException('Funding record not found.');
         }
 
         if ($funding->status === FundingStatus::Completed) {
             Log::info('Wallet funding already processed.', ['tx_ref' => $txRef]);
+
             return;
         }
 
@@ -130,7 +134,7 @@ class WalletFundingService
         // 2. Server-to-server verification with gateway OUTSIDE transaction so failures are stored
         $verified = $this->verificationService->verify($funding);
 
-        if (!$verified) {
+        if (! $verified) {
             $reason = 'Gateway verification failed or payload tampered.';
             $this->failFunding($funding, $reason, $rawPayload);
             throw WalletFundingException::verificationFailed($txRef, $reason);
@@ -171,7 +175,7 @@ class WalletFundingService
                 wallet: $wallet,
                 amount: (float) $funding->amount,
                 category: TransactionCategory::Funding,
-                description: 'Wallet funded via Flutterwave',
+                description: 'Wallet top-up',
                 reference: $funding->reference,
                 idempotencyKey: "fund-{$funding->reference}",
                 sourceType: 'wallet_fundings',
@@ -194,7 +198,7 @@ class WalletFundingService
             ]);
 
             DB::afterCommit(function () use ($funding) {
-                event(new \App\Domain\Wallet\Events\FundingCompleted($funding));
+                event(new FundingCompleted($funding));
             });
         });
 
@@ -231,6 +235,6 @@ class WalletFundingService
             }
         }
 
-        event(new \App\Domain\Wallet\Events\FundingFailed($funding, $reason));
+        event(new FundingFailed($funding, $reason));
     }
 }

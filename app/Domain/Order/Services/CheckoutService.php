@@ -2,21 +2,22 @@
 
 namespace App\Domain\Order\Services;
 
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Domain\Order\Enums\OrderStatus;
+use App\Domain\Order\Events\OrderPlaced;
+use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Providers\WalletPaymentProvider;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Payment\Services\PaymentSessionService;
+use App\Jobs\FulfillOrderItemJob;
 use App\Models\Cart;
+use App\Models\CurrencyRate;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentAttempt;
 use App\Models\User;
-use App\Domain\Order\Enums\OrderStatus;
-use App\Domain\Payment\Enums\PaymentStatus;
-use App\Domain\Fulfillment\Enums\FulfillmentStatus;
-use App\Domain\Payment\Services\PaymentGatewayFactory;
-use App\Domain\Payment\Providers\WalletPaymentProvider;
-use App\Domain\Order\Events\OrderPlaced;
-use App\Jobs\FulfillOrderItemJob;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CheckoutService
 {
@@ -24,7 +25,7 @@ class CheckoutService
         private readonly OrderValidationService $orderValidationService,
         private readonly PaymentGatewayFactory $paymentGatewayFactory,
         private readonly WalletPaymentProvider $walletPaymentProvider,
-        private readonly \App\Domain\Payment\Services\PaymentSessionService $paymentSessionService
+        private readonly PaymentSessionService $paymentSessionService
     ) {}
 
     /**
@@ -42,11 +43,17 @@ class CheckoutService
         //     USD prices into the customer's chosen currency using this rate
         //     (e.g. USD × 1.04 = platform spread). The order must store the
         //     display-currency amount so the charge matches what was shown.
-        $rate = \App\Models\CurrencyRate::resolve($displayCurrency);
+        $rate = CurrencyRate::resolve($displayCurrency);
         $exchangeRate = (float) $rate->rate_per_usd;
 
         // 2. Generate a readable, unique order number
-        $orderNumber = 'RSR-' . date('Ymd') . '-' . strtoupper(Str::random(6));
+        $orderNumber = 'RSR-'.date('Ymd').'-'.strtoupper(Str::random(6));
+
+        // 2b. Cancel any earlier still-pending order for this cart so retrying the
+        //     same cart does not pile up Pending rows for admins.
+        Order::where('cart_id', $cart->id)
+            ->where('order_status', OrderStatus::Pending)
+            ->update(['order_status' => OrderStatus::Cancelled]);
 
         // 3. Atomically build Order + snapshot items. The cart is read-locked here
         //    but intentionally NOT deleted yet — see step 7. If the gateway init
@@ -61,8 +68,8 @@ class CheckoutService
 
             // Convert settlement USD totals into the display currency.
             $displaySubtotal = round($validatedTotals['subtotal'] * $exchangeRate, 4);
-            $displayMarkup   = round($validatedTotals['total_markup'] * $exchangeRate, 4);
-            $displayTotal    = round($validatedTotals['total'] * $exchangeRate, 4);
+            $displayMarkup = round($validatedTotals['total_markup'] * $exchangeRate, 4);
+            $displayTotal = round($validatedTotals['total'] * $exchangeRate, 4);
 
             $order = Order::create([
                 'user_id' => $user->id,
@@ -120,7 +127,7 @@ class CheckoutService
             'order_id' => $order->id,
             'user_id' => $user->id,
             'gateway' => $paymentMethod,
-            'idempotency_key' => 'PAY-' . Str::uuid()->toString(),
+            'idempotency_key' => 'PAY-'.Str::uuid()->toString(),
             'currency' => $displayCurrency,
             'amount' => $order->total_amount,
             'exchange_rate_snapshot' => $exchangeRate,
@@ -152,15 +159,9 @@ class CheckoutService
         // 6. Create the PaymentSession
         $paymentSession = $this->paymentSessionService->createForOrder($order, $attempt, $initResult);
 
-        // 7. Init succeeded — NOW it's safe to clear the cart. Deferred from
-        //    step 3 so a thrown init wouldn't leave the customer with an empty
-        //    cart + orphan Pending order (and no way to retry without re-adding).
-        DB::transaction(function () use ($cart) {
-            $lockedCart = Cart::where('id', $cart->id)->lockForUpdate()->firstOrFail();
-            $lockedCart->items()->delete();
-            $lockedCart->status = 'abandoned';
-            $lockedCart->save();
-        });
+        // 7. The cart is intentionally NOT cleared here. It is cleared only when
+        //    the payment is CONFIRMED (PaymentSessionService::confirmSession), so
+        //    a failed or abandoned card/crypto payment keeps the cart for retry.
 
         // 7. Handle internal Wallet flow immediately (it reserves then triggers fulfillment)
         if ($paymentMethod === 'wallet') {

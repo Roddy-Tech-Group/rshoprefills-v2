@@ -6,6 +6,8 @@ use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\TransactionCategory;
 use App\Domain\Shared\Enums\WalletTransactionType;
 use App\Domain\Transaction\Services\TransactionService;
+use App\Domain\Wallet\Events\WalletCredited;
+use App\Domain\Wallet\Events\WalletDebited;
 use App\Domain\Wallet\Exceptions\CurrencyMismatchException;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Models\User;
@@ -95,7 +97,7 @@ class WalletService
 
             // Dispatch event after transaction successfully commits
             DB::afterCommit(function () use ($tx) {
-                event(new \App\Domain\Wallet\Events\WalletCredited($tx));
+                event(new WalletCredited($tx));
             });
 
             return $tx;
@@ -127,6 +129,11 @@ class WalletService
         return DB::transaction(function () use ($wallet, $amount, $category, $description, $reference, $idempotencyKey, $sourceType, $sourceId, $metadata) {
             $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
 
+            // Admin "hold funds" deactivates the wallet — block any spend from it.
+            if (! $lockedWallet->is_active) {
+                throw new \RuntimeException('This wallet is currently on hold.');
+            }
+
             $this->ensureSufficientBalance($lockedWallet, $amount);
 
             $balanceBefore = (float) $lockedWallet->balance;
@@ -155,7 +162,7 @@ class WalletService
 
             // Dispatch event after transaction successfully commits
             DB::afterCommit(function () use ($tx) {
-                event(new \App\Domain\Wallet\Events\WalletDebited($tx));
+                event(new WalletDebited($tx));
             });
 
             return $tx;

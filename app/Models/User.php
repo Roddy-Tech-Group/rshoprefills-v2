@@ -54,6 +54,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'avatar_url',
         'avatar',
         'theme',
+        'kyc_status',
+        'banned_at',
         'email_verified_at',
     ];
 
@@ -76,6 +78,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'banned_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -89,6 +92,14 @@ class User extends Authenticatable implements MustVerifyEmail
             ->explode(' ')
             ->map(fn (string $name) => Str::of($name)->substr(0, 1))
             ->implode('');
+    }
+
+    /**
+     * Whether the account is suspended (banned).
+     */
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
     }
 
     // ────────────────────────────────────────────────────────────
@@ -120,6 +131,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function walletTransactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class);
+    }
+
+    /**
+     * Get all KYC submissions for this user, newest first.
+     */
+    public function kycSubmissions(): HasMany
+    {
+        return $this->hasMany(KycSubmission::class)->latest();
     }
 
     /**

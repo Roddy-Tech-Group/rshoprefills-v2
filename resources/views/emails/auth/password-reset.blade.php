@@ -1,23 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Reset Password</title>
-    <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9fafb; color: #111827; margin: 0; padding: 40px; }
-        .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f3f4f6; }
-        .header { font-size: 24px; font-weight: bold; color: #2563eb; margin-bottom: 20px; }
-        .text { font-size: 16px; line-height: 1.6; color: #4b5563; }
-        .btn { display: inline-block; padding: 12px 24px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 24px; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="header">Reset Your Password</div>
-        <p class="text">Hi {{ $name }},</p>
-        <p class="text">You are receiving this email because we received a password reset request for your account.</p>
-        <a href="{{ $resetUrl }}" class="btn">Reset Password</a>
-        <p class="text" style="margin-top: 24px; font-size: 12px; color: #9ca3af;">If you did not request a password reset, no further action is required.</p>
-    </div>
-</body>
-</html>
+<x-emails.layout title="Reset your password" preheader="Reset your RshopRefills password. This link expires in 60 minutes.">
+    <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">Reset your password</h1>
+
+    <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">Hi {{ $name }}, we received a request to reset the password for your RshopRefills account. Tap the button below to choose a new one.</p>
+
+    <x-emails.button :url="$resetUrl" align="center">Reset password</x-emails.button>
+
+    <p style="margin:18px 0 0; font-size:13px; line-height:1.6; color:#71717a;">This link expires in 60 minutes. If the button does not work, copy and paste this URL into your browser:</p>
+    <p style="margin:6px 0 0; font-size:13px; line-height:1.6; word-break:break-all;"><a href="{{ $resetUrl }}" style="color:#2563eb;">{{ $resetUrl }}</a></p>
+
+    <p style="margin:18px 0 0; font-size:13px; line-height:1.6; color:#a1a1aa;">If you did not request a password reset, you can safely ignore this email. Your password will stay the same.</p>
+</x-emails.layout>

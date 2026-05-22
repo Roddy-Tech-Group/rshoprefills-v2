@@ -3,8 +3,8 @@
 namespace App\Domain\Notification\Channels;
 
 use App\Domain\Notification\DTOs\NotificationPayload;
-use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Notification\Enums\DeliveryStatus;
+use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Notification\Providers\MailProviderInterface;
 use App\Models\Notification;
 use App\Models\NotificationDelivery;
@@ -20,13 +20,14 @@ class EmailChannel implements NotificationChannelInterface
     {
         if (! $payload->mailable) {
             Log::warning('EmailChannel called without a Mailable object.');
+
             return;
         }
 
         try {
             // Render the mailable to HTML
             $htmlBody = $payload->mailable->render();
-            
+
             // Deliver email via provider
             $response = $this->mailProvider->send(
                 to: $payload->user->email,
@@ -78,7 +79,9 @@ class EmailChannel implements NotificationChannelInterface
                 'attempted_at' => now(),
             ]);
 
-            throw $e;
+            // Do NOT re-throw. A failed notification email must never break the
+            // action that triggered it (checkout, wallet funding, etc.). The
+            // failure is logged + recorded above for retry/audit.
         }
     }
 }

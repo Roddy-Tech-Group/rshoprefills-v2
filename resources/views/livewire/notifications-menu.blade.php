@@ -127,7 +127,7 @@ new class extends Component {
                 <button
                     type="button"
                     @if (! $n->read_at) wire:click="markRead('{{ $n->id }}')" @endif
-                    class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 {{ $n->read_at ? '' : 'bg-blue-50/60' }}"
+                    class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-white/5 {{ $n->read_at ? '' : 'bg-blue-50/60 dark:bg-blue-500/10' }}"
                     role="menuitem"
                 >
                     <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl {{ $toneColor($n->priority) }}">

@@ -241,7 +241,13 @@ class extends Component {
                                         ? Product::currencySymbol($faceCur).rtrim(rtrim(number_format((float) $faceVal, 2), '0'), '.')
                                         : null;
                                     $country  = $countryNames[strtoupper((string) ($snap['country_code'] ?? ''))] ?? ($snap['country_code'] ?? null);
-                                    $code     = $extractCode($item);
+                                    $payload  = (array) ($item->fulfillment_payload ?? []);
+                                    $cardPin  = (! empty($payload['pin']) && is_scalar($payload['pin'])) ? (string) $payload['pin'] : null;
+                                    $cardCode = null;
+                                    foreach (['code', 'voucher_code', 'redeem_code', 'card_number', 'serial'] as $credKey) {
+                                        if (! empty($payload[$credKey]) && is_scalar($payload[$credKey])) { $cardCode = (string) $payload[$credKey]; break; }
+                                    }
+                                    if ($cardCode === null && $cardPin === null) { $cardCode = $extractCode($item); }
                                     $redeemHtml = $snap['redeem_instructions'] ?? null;
                                     $termsHtml  = $snap['terms_and_conditions'] ?? null;
                                 @endphp
@@ -276,23 +282,27 @@ class extends Component {
                                     {{-- Card body space --}}
                                     <div class="h-14"></div>
 
-                                    {{-- Pin / code bar --}}
-                                    @if ($code)
-                                        <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3.5">
-                                            <span class="shrink-0 text-xs font-semibold uppercase tracking-wide text-zinc-500">Pin</span>
-                                            <span class="min-w-0 flex-1 truncate text-base font-bold tracking-wider text-zinc-900">{{ $code }}</span>
-                                            <button
-                                                type="button"
-                                                x-data="{ copied: false }"
-                                                @click="navigator.clipboard.writeText(@js($code)); copied = true; setTimeout(() => copied = false, 1500)"
-                                                class="shrink-0 text-zinc-400 transition-colors hover:text-blue-600"
-                                                aria-label="Copy redemption code"
-                                            >
-                                                <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/>
-                                                </svg>
-                                                <span x-show="copied" x-cloak class="text-xs font-bold text-emerald-600">Copied</span>
-                                            </button>
+                                    {{-- Code + PIN — each independently copyable. --}}
+                                    @if ($cardCode || $cardPin)
+                                        <div class="space-y-2">
+                                            @foreach (array_filter(['Code' => $cardCode, 'Pin' => $cardPin]) as $credLabel => $credValue)
+                                                <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3" wire:key="cred-{{ $item->id }}-{{ $credLabel }}">
+                                                    <span class="w-9 shrink-0 text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ $credLabel }}</span>
+                                                    <span class="min-w-0 flex-1 truncate text-base font-bold tracking-wider text-zinc-900">{{ $credValue }}</span>
+                                                    <button
+                                                        type="button"
+                                                        x-data="{ copied: false }"
+                                                        @click="navigator.clipboard.writeText(@js($credValue)); copied = true; setTimeout(() => copied = false, 1500)"
+                                                        class="shrink-0 text-zinc-400 transition-colors hover:text-blue-600"
+                                                        aria-label="Copy {{ $credLabel }}"
+                                                    >
+                                                        <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/>
+                                                        </svg>
+                                                        <span x-show="copied" x-cloak class="text-xs font-bold text-emerald-600">Copied</span>
+                                                    </button>
+                                                </div>
+                                            @endforeach
                                         </div>
                                     @else
                                         <div class="flex items-center gap-2 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-xs font-medium text-zinc-500">

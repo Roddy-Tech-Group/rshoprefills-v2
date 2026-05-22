@@ -249,83 +249,8 @@
                  admin account and kept separate from the customer side. --}}
             <x-theme-toggle class="h-10 w-10 rounded-xl text-zinc-600 hover:bg-blue-100" />
 
-            {{-- Notifications dropdown. Hover opens; click locks open.
-                 Backend hook: swap $notificationCount and loop real items inside the populated branch. --}}
-            @php $notificationCount = 1; @endphp
-            <div
-                x-data="{ open: false, locked: false }"
-                @mouseenter="if (!locked) open = true"
-                @mouseleave="if (!locked) open = false"
-                @click.outside="open = false; locked = false"
-                @keydown.escape.window="open = false; locked = false"
-                class="relative"
-            >
-                <button
-                    type="button"
-                    @click="locked = !locked; open = locked"
-                    :aria-expanded="open.toString()"
-                    class="relative flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-blue-100"
-                    aria-label="Notifications"
-                >
-                    <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
-                    @if ($notificationCount > 0)
-                        <span class="pointer-events-none absolute -top-0.5 -right-0.5 inline-flex">
-                            <span class="absolute inset-0 inline-flex animate-ping rounded-full bg-red-400 opacity-75"></span>
-                            <span class="relative inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{{ $notificationCount }}</span>
-                        </span>
-                    @endif
-                </button>
-
-                <div
-                    x-show="open"
-                    x-transition:enter="transition ease-out duration-150"
-                    x-transition:enter-start="opacity-0 -translate-y-1"
-                    x-transition:enter-end="opacity-100 translate-y-0"
-                    x-transition:leave="transition ease-in duration-100"
-                    x-transition:leave-start="opacity-100 translate-y-0"
-                    x-transition:leave-end="opacity-0 -translate-y-1"
-                    style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[320px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
-                    role="menu"
-                >
-                    <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
-                        <p class="text-sm font-semibold text-zinc-900">Notifications</p>
-                        @if ($notificationCount > 0)
-                            <span class="text-[11px] font-medium text-blue-600">{{ $notificationCount }} new</span>
-                        @endif
-                    </div>
-
-                    @if ($notificationCount === 0)
-                        <div class="flex flex-col items-center px-4 py-8 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100">
-                                <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-6 w-6 opacity-40" loading="lazy">
-                            </span>
-                            <p class="mt-3 text-sm font-medium text-zinc-700">You're all caught up</p>
-                            <p class="mt-1 text-xs text-zinc-600">New notifications will appear here.</p>
-                        </div>
-                    @else
-                        <div class="max-h-80 overflow-y-auto p-2">
-                            <a href="#" class="group flex items-start gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-zinc-100">
-                                <span class="mt-1 flex h-2 w-2 shrink-0 rounded-full bg-blue-600"></span>
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-medium text-zinc-900">New order placed</p>
-                                    <p class="mt-0.5 text-xs text-zinc-600">A customer just placed a new order.</p>
-                                    <p class="mt-1 text-[10px] text-zinc-600">just now</p>
-                                </div>
-                            </a>
-                        </div>
-                    @endif
-
-                    <div class="border-t border-zinc-100 p-1.5">
-                        <a href="#" class="group flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-600 hover:text-white">
-                            <svg class="h-4 w-4 text-zinc-600 transition group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z" />
-                            </svg>
-                            View all notifications
-                        </a>
-                    </div>
-                </div>
-            </div>
+            {{-- Admin notifications bell — real AdminNotification feed (KYC, orders, etc.). --}}
+            <livewire:admin.notifications-menu />
 
             {{-- Profile dropdown — wired to admin auth guard. Hover opens; click locks open. --}}
             @php $admin = Auth::guard('admin')->user(); @endphp
@@ -468,7 +393,7 @@
                 x-transition:leave-start="translate-y-0"
                 x-transition:leave-end="translate-y-full"
                 style="display: none;"
-                class="fixed inset-x-0 bottom-0 z-[70] rounded-t-3xl bg-white shadow-2xl shadow-zinc-900/25"
+                class="modal-norise fixed inset-x-0 bottom-0 z-[70] rounded-t-3xl bg-white shadow-2xl shadow-zinc-900/25"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="admin-mobile-menu-title"

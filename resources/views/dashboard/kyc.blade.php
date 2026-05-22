@@ -51,6 +51,15 @@
 <x-layouts.dashboard>
     <div class="flex w-full flex-col gap-8">
 
+        @if (session('status'))
+            <div class="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                </svg>
+                {{ session('status') }}
+            </div>
+        @endif
+
         {{-- ─── Header (desktop only — mobile uses the layout's slim top bar) ─── --}}
         <section class="hidden lg:block">
             <h1 class="text-xl font-bold tracking-tight text-black sm:text-3xl">Identity verification</h1>
@@ -170,15 +179,24 @@
                     </div>
                 @endif
 
-                {{-- Backend hook: replace action="#" with the KYC submission route.
-                     Field names below are the contract for that wiring. --}}
                 <form
                     method="POST"
-                    action="#"
+                    action="{{ route('kyc.submit') }}"
                     enctype="multipart/form-data"
                     class="mt-3 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6"
                 >
                     @csrf
+
+                    @if ($errors->any())
+                        <div class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 ring-1 ring-red-200">
+                            <p class="font-semibold">Please fix the following:</p>
+                            <ul class="mt-1 list-disc pl-5 text-xs">
+                                @foreach ($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {{-- Full legal name --}}

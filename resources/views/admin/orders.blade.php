@@ -1,8 +1,10 @@
 @php
     use App\Models\Order;
 
-    $orders = Order::with(['user', 'items'])->latest()->limit(50)->get();
-    $totalOrders = Order::count();
+    // Hide never-paid orders (abandoned / failed checkouts) so the list shows real orders only.
+    $hiddenStatuses = ['pending', 'cancelled', 'failed'];
+    $orders = Order::with(['user', 'items'])->whereNotIn('order_status', $hiddenStatuses)->latest()->limit(50)->get();
+    $totalOrders = Order::whereNotIn('order_status', $hiddenStatuses)->count();
 @endphp
 
 <x-layouts.admin>
