@@ -6,9 +6,12 @@ use App\Domain\Payment\Exceptions\InvalidWebhookException;
 use App\Domain\Payment\Services\FlutterwaveService;
 use App\Domain\Wallet\Jobs\ProcessFundingWebhookJob;
 use App\Http\Controllers\Controller;
+use App\Jobs\VerifyPaymentJob;
+use App\Models\Order;
+use App\Models\PaymentAttempt;
 use App\Models\PaymentWebhook;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class FlutterwaveWebhookController extends Controller
@@ -50,26 +53,32 @@ class FlutterwaveWebhookController extends Controller
         } catch (InvalidWebhookException $e) {
             Log::warning('Flutterwave webhook signature check failed.', [
                 'webhook_id' => $webhook->id,
-                'signature' => $signature
+                'signature' => $signature,
             ]);
 
             $webhook->update([
                 'processing_status' => 'failed',
-                'exception_traces' => 'Signature verification failed: ' . $e->getMessage(),
+                'exception_traces' => 'Signature verification failed: '.$e->getMessage(),
             ]);
 
             return response()->json(['message' => 'Unauthorized signature'], 401);
         }
 
         // 3. Dispatch the processing job asynchronously based on payable type
-        $attempt = \App\Models\PaymentAttempt::where('idempotency_key', $txRef)->first();
-        
-        if ($attempt && ($attempt->payable_type === \App\Models\Order::class || !empty($attempt->order_id))) {
-            $attempt->webhook_payload = $payload;
-            $attempt->gateway_reference = $data['id'] ?? ($payload['id'] ?? $attempt->gateway_reference);
-            $attempt->save();
-            
-            \App\Jobs\VerifyPaymentJob::dispatch($attempt);
+        $attempt = DB::transaction(function () use ($txRef, $payload, $data) {
+            $att = PaymentAttempt::where('idempotency_key', $txRef)->lockForUpdate()->first();
+
+            if ($att && ($att->payable_type === Order::class || ! empty($att->order_id))) {
+                $att->webhook_payload = $payload;
+                $att->gateway_reference = $data['id'] ?? ($payload['id'] ?? $att->gateway_reference);
+                $att->save();
+            }
+
+            return $att;
+        });
+
+        if ($attempt && ($attempt->payable_type === Order::class || ! empty($attempt->order_id))) {
+            VerifyPaymentJob::dispatch($attempt);
         } else {
             ProcessFundingWebhookJob::dispatch($webhook->id);
         }
@@ -82,7 +91,7 @@ class FlutterwaveWebhookController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Webhook queued for processing',
-            'webhook_id' => $webhook->id
+            'webhook_id' => $webhook->id,
         ], 200);
     }
 }

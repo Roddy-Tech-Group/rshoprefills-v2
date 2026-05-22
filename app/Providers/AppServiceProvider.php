@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Audit\Listeners\AuditLogListener;
 use App\Domain\Notification\Listeners\AdminEventNotifier;
 use App\Domain\Notification\Listeners\CreateDefaultPreferencesListener;
 use App\Domain\Notification\Listeners\SendFulfillmentNotificationListener;
@@ -16,6 +17,7 @@ use App\Domain\Wallet\Events\WalletDebited;
 use App\Http\View\Composers\CartComposer;
 use App\Listeners\CommerceNotificationListener;
 use App\Listeners\CreateWalletForNewUser;
+use App\Listeners\TransactionPinNotificationListener;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
@@ -53,6 +55,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Fan key platform events out to the admin-dashboard notification feed.
         Event::subscribe(AdminEventNotifier::class);
+
+        // Transaction PIN lifecycle emails (created, changed, locked, reset).
+        Event::subscribe(TransactionPinNotificationListener::class);
+
+        // Append security-relevant events to the audit log.
+        Event::subscribe(AuditLogListener::class);
 
         View::composer('*', CartComposer::class);
     }

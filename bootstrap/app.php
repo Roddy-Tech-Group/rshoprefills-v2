@@ -3,6 +3,7 @@
 use App\Http\Middleware\AdminAuth;
 use App\Http\Middleware\EnsureAccountActive;
 use App\Http\Middleware\ResolveRegion;
+use App\Http\Middleware\TraceRequestMiddleware;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => AdminAuth::class,
         ]);
+
+        $middleware->append(TraceRequestMiddleware::class);
 
         // Locks the storefront catalog to the customer's chosen country/region.
         $middleware->web(append: [

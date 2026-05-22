@@ -2,15 +2,14 @@
 
 namespace App\Domain\Payment\Providers;
 
-use App\Models\PaymentAttempt;
-use App\Models\Order;
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Interfaces\PaymentProviderInterface;
-use App\Domain\Wallet\Services\WalletService;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\TransactionCategory;
-use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Wallet\Services\TransactionPinService;
+use App\Domain\Wallet\Services\WalletService;
+use App\Models\PaymentAttempt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class WalletPaymentProvider implements PaymentProviderInterface
 {
@@ -23,8 +22,21 @@ class WalletPaymentProvider implements PaymentProviderInterface
         $user = $attempt->user;
         $currencyEnum = Currency::tryFrom(strtoupper($attempt->currency));
 
-        if (!$currencyEnum) {
+        if (! $currencyEnum) {
             throw new \Exception("Unsupported wallet currency: {$attempt->currency}");
+        }
+
+        // If the user has a transaction PIN, we delay locking the funds until they authorize.
+        if ($user->hasTransactionPin()) {
+            $attempt->payment_status = PaymentStatus::Pending;
+            $attempt->gateway_reference = 'WL-AUTH-REQUIRED-'.uniqid();
+            $attempt->save();
+
+            return [
+                'payment_url' => null,
+                'gateway_reference' => $attempt->gateway_reference,
+                'status' => 'awaiting_customer_action',
+            ];
         }
 
         $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
@@ -36,7 +48,7 @@ class WalletPaymentProvider implements PaymentProviderInterface
 
             // 2. Mark the payment attempt as reserved
             $attempt->payment_status = PaymentStatus::Reserved;
-            $attempt->gateway_reference = 'WL-LOCK-' . uniqid();
+            $attempt->gateway_reference = 'WL-LOCK-'.uniqid();
             $attempt->save();
         });
 
@@ -47,10 +59,38 @@ class WalletPaymentProvider implements PaymentProviderInterface
         ];
     }
 
+    /**
+     * Authorize a delayed wallet payment using an authorization token.
+     */
+    public function authorizeTransaction(PaymentAttempt $attempt, string $authToken): void
+    {
+        $user = $attempt->user;
+        $pinService = app(TransactionPinService::class);
+
+        if (! $pinService->validateAuthToken($user, $authToken)) {
+            throw new \Exception('Invalid or expired authorization token.');
+        }
+
+        $currencyEnum = Currency::from(strtoupper($attempt->currency));
+        $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
+
+        DB::transaction(function () use ($wallet, $attempt, $pinService, $user, $authToken) {
+            // Lock the funds now that we have authorization
+            $this->walletService->lockFunds($wallet, $attempt->amount);
+
+            $attempt->payment_status = PaymentStatus::Reserved;
+            $attempt->gateway_reference = 'WL-LOCK-'.uniqid();
+            $attempt->save();
+
+            // Consume the token so it cannot be reused
+            $pinService->consumeAuthToken($user, $authToken);
+        });
+    }
+
     public function verifyPayment(PaymentAttempt $attempt): bool
     {
         // For wallet, if the status is reserved or paid, it's verified.
-        return $attempt->payment_status === PaymentStatus::Paid 
+        return $attempt->payment_status === PaymentStatus::Paid
             || $attempt->payment_status === PaymentStatus::Reserved;
     }
 
@@ -63,7 +103,7 @@ class WalletPaymentProvider implements PaymentProviderInterface
         $currencyEnum = Currency::from(strtoupper($attempt->currency));
         $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
 
-        DB::transaction(function () use ($wallet, $attempt, $currencyEnum) {
+        DB::transaction(function () use ($wallet, $attempt) {
             // Unlock reserved funds first
             $this->walletService->unlockFunds($wallet, $attempt->amount);
 

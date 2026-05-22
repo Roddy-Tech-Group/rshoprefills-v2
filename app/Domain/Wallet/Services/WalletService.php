@@ -2,6 +2,7 @@
 
 namespace App\Domain\Wallet\Services;
 
+use App\Domain\Ledger\Models\FinancialLedgerEvent;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\TransactionCategory;
 use App\Domain\Shared\Enums\WalletTransactionType;
@@ -95,6 +96,24 @@ class WalletService
                 'metadata' => $metadata,
             ]);
 
+            // Record Immutable Ledger Event
+            $lastEvent = FinancialLedgerEvent::where('wallet_id', $lockedWallet->id)
+                ->orderByDesc('id')
+                ->first();
+
+            $eventData = [
+                'wallet_id' => $lockedWallet->id,
+                'wallet_transaction_id' => $tx->id,
+                'event_type' => 'credit',
+                'amount' => $amount,
+                'balance_after' => $balanceAfter,
+                'currency' => $lockedWallet->currency->value,
+            ];
+
+            $eventData['hash'] = FinancialLedgerEvent::generateHash($eventData, $lastEvent?->hash);
+
+            FinancialLedgerEvent::create($eventData);
+
             // Dispatch event after transaction successfully commits
             DB::afterCommit(function () use ($tx) {
                 event(new WalletCredited($tx));
@@ -159,6 +178,24 @@ class WalletService
                 'source_id' => $sourceId,
                 'metadata' => $metadata,
             ]);
+
+            // Record Immutable Ledger Event
+            $lastEvent = FinancialLedgerEvent::where('wallet_id', $lockedWallet->id)
+                ->orderByDesc('id')
+                ->first();
+
+            $eventData = [
+                'wallet_id' => $lockedWallet->id,
+                'wallet_transaction_id' => $tx->id,
+                'event_type' => 'debit',
+                'amount' => $amount,
+                'balance_after' => $balanceAfter,
+                'currency' => $lockedWallet->currency->value,
+            ];
+
+            $eventData['hash'] = FinancialLedgerEvent::generateHash($eventData, $lastEvent?->hash);
+
+            FinancialLedgerEvent::create($eventData);
 
             // Dispatch event after transaction successfully commits
             DB::afterCommit(function () use ($tx) {
@@ -230,6 +267,23 @@ class WalletService
 
             $lockedWallet->locked_balance += $amount;
             $lockedWallet->save();
+
+            // Record Immutable Ledger Event for locking
+            $lastEvent = FinancialLedgerEvent::where('wallet_id', $lockedWallet->id)
+                ->orderByDesc('id')
+                ->first();
+
+            $eventData = [
+                'wallet_id' => $lockedWallet->id,
+                'wallet_transaction_id' => null,
+                'event_type' => 'lock',
+                'amount' => $amount,
+                'balance_after' => $lockedWallet->balance, // balance unchanged by lock
+                'currency' => $lockedWallet->currency->value,
+            ];
+
+            $eventData['hash'] = FinancialLedgerEvent::generateHash($eventData, $lastEvent?->hash);
+            FinancialLedgerEvent::create($eventData);
         });
     }
 
@@ -247,6 +301,23 @@ class WalletService
 
             $lockedWallet->locked_balance -= $amount;
             $lockedWallet->save();
+
+            // Record Immutable Ledger Event for unlocking
+            $lastEvent = FinancialLedgerEvent::where('wallet_id', $lockedWallet->id)
+                ->orderByDesc('id')
+                ->first();
+
+            $eventData = [
+                'wallet_id' => $lockedWallet->id,
+                'wallet_transaction_id' => null,
+                'event_type' => 'unlock',
+                'amount' => $amount,
+                'balance_after' => $lockedWallet->balance, // balance unchanged by unlock
+                'currency' => $lockedWallet->currency->value,
+            ];
+
+            $eventData['hash'] = FinancialLedgerEvent::generateHash($eventData, $lastEvent?->hash);
+            FinancialLedgerEvent::create($eventData);
         });
     }
 

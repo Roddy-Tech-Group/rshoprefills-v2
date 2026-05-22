@@ -163,8 +163,12 @@ class CheckoutService
         //    the payment is CONFIRMED (PaymentSessionService::confirmSession), so
         //    a failed or abandoned card/crypto payment keeps the cart for retry.
 
-        // 7. Handle internal Wallet flow immediately (it reserves then triggers fulfillment)
-        if ($paymentMethod === 'wallet') {
+        // 7. Handle the internal wallet flow. When the wallet provider deferred for
+        //    transaction-PIN authorization (status "awaiting_customer_action"), we do
+        //    NOT touch funds here — the customer verifies their PIN on the frontend,
+        //    which calls the pay endpoint to authorize, debit, and dispatch fulfillment.
+        //    Only the no-PIN path settles synchronously below.
+        if ($paymentMethod === 'wallet' && ($initResult['status'] ?? null) !== 'awaiting_customer_action') {
             DB::transaction(function () use ($order, $attempt, $paymentSession) {
                 // Reserve → confirm → debit in one atomic transaction.
                 $order->payment_status = PaymentStatus::Reserved;

@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Cart\Services\CartManager;
+use App\Domain\Cart\Services\CartPricingService;
+use App\Domain\Fraud\Services\FraudDetectionService;
 use App\Domain\Order\Services\CheckoutService;
+use App\Http\Resources\PaymentSessionResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Throwable;
@@ -58,11 +61,12 @@ class CheckoutController extends Controller
         ];
 
         $allowedMethods = $supported[$displayCurrency] ?? ['card', 'apple_pay'];
-        if (!in_array($data['payment_method'], $allowedMethods)) {
+        if (! in_array($data['payment_method'], $allowedMethods)) {
             $msg = "The selected payment method is not available for {$displayCurrency}.";
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['message' => $msg], 422);
             }
+
             return redirect()->route('shop.checkout')
                 ->with('checkout_status', $msg);
         }
@@ -74,6 +78,19 @@ class CheckoutController extends Controller
             default => 'flutterwave',
         };
 
+        $fraudService = app(FraudDetectionService::class);
+        $cartTotals = app(CartPricingService::class)->calculateCartTotals($cart->items);
+        $amount = $cartTotals['total'];
+
+        if ($fraudService->isSuspiciousCheckout($user, $amount, $request->ip())) {
+            $msg = 'Your checkout attempt was flagged by our security systems. Please contact support.';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => $msg], 403);
+            }
+
+            return redirect()->route('shop.checkout')->with('checkout_status', $msg);
+        }
+
         try {
             $order = $this->checkoutService->placeOrder(
                 user: $user,
@@ -82,22 +99,26 @@ class CheckoutController extends Controller
                 displayCurrency: $displayCurrency,
                 deliveryEmail: $data['delivery_email'],
             );
+
+            $fraudService->recordCheckout($user, $request->ip());
         } catch (Throwable $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
-                    'message' => 'Checkout could not be completed: '.$e->getMessage()
+                    'message' => 'Checkout could not be completed: '.$e->getMessage(),
                 ], 422);
             }
+
             return redirect()->route('shop.checkout')
                 ->with('checkout_status', 'Checkout could not be completed: '.$e->getMessage());
         }
 
         if ($request->expectsJson() || $request->ajax()) {
             $session = $order->paymentAttempts()->latest()->first()?->paymentSession;
+
             return response()->json([
                 'order_number' => $order->order_number,
                 'redirect_url' => route('shop.order', $order->order_number),
-                'payment_session' => $session ? new \App\Http\Resources\PaymentSessionResource($session) : null
+                'payment_session' => $session ? new PaymentSessionResource($session) : null,
             ]);
         }
 

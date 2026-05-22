@@ -541,6 +541,27 @@
                             </div>
                         </div>
 
+                        <!-- Wallet Auth: Transaction PIN Challenge -->
+                        <div x-show="paymentState === 'wallet_pin'">
+                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Transaction PIN Required</h3>
+                            <p class="text-xs text-zinc-600 mb-4">Enter your 4-digit transaction PIN to authorize this payment from your wallet balance.</p>
+                            <div class="space-y-4">
+                                <input type="password" inputmode="numeric" x-model="walletPin" maxlength="4" placeholder="••••"
+                                    @keydown.enter.prevent="authorizeWalletPayment()"
+                                    class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <p x-show="errorMessage" x-cloak class="text-center text-xs text-red-600" x-text="errorMessage"></p>
+                                <button type="button" @click="authorizeWalletPayment()" :disabled="authorizingWallet"
+                                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                                    <svg x-show="authorizingWallet" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span x-text="authorizingWallet ? 'Authorizing...' : 'Authorize payment'"></span>
+                                </button>
+                                <a href="{{ route('dashboard.password') }}" class="block text-center text-[11px] font-medium text-zinc-500 underline underline-offset-2 hover:text-zinc-700">Manage your transaction PIN</a>
+                            </div>
+                        </div>
+
                         <!-- Card Auth: OTP Challenge -->
                         <div x-show="paymentState === 'action_otp'">
                             <h3 class="text-sm font-bold text-zinc-900 mb-2">OTP Verification</h3>
@@ -787,6 +808,8 @@
                 },
                 pinValue: '',
                 otpValue: '',
+                walletPin: '',
+                authorizingWallet: false,
                 momoDetails: {
                     phone_number: '',
                     network: ''
@@ -1014,14 +1037,16 @@
                         this.open = true;
 
                         if (this.method === 'wallet') {
-                            // Wallet payments confirm synchronously — skip the modal
-                            // and navigate straight to the order confirmation page.
                             if (sessionData.status === 'confirmed') {
+                                // No transaction PIN set — the wallet settled
+                                // synchronously at checkout. Go to the order page.
                                 window.location.href = this.redirectUrl;
                             } else {
-                                // Unlikely fallback: session exists but not yet confirmed.
-                                this.paymentState = 'processing';
-                                this.startStatusPolling();
+                                // A transaction PIN is required to authorize the
+                                // wallet debit. Prompt for it inside the modal.
+                                this.paymentState = 'wallet_pin';
+                                this.walletPin = '';
+                                this.errorMessage = '';
                             }
                             return;
                         }
@@ -1131,6 +1156,46 @@
                     } catch (err) {
                         this.paymentState = 'error';
                         this.errorMessage = 'Network connection failed. Please check your internet.';
+                    }
+                },
+
+                /**
+                 * Wallet authorization: verify the customer's 4-digit transaction
+                 * PIN to obtain a short-lived auth token, then authorize the wallet
+                 * debit through the pay endpoint.
+                 */
+                async authorizeWalletPayment() {
+                    const pin = (this.walletPin || '').trim();
+                    if (!/^\d{4}$/.test(pin)) {
+                        this.errorMessage = 'Enter your 4-digit transaction PIN.';
+                        return;
+                    }
+                    this.authorizingWallet = true;
+                    this.errorMessage = '';
+                    try {
+                        const res = await fetch('/api/wallets/pin/verify', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || ''
+                            },
+                            body: JSON.stringify({ pin })
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            this.authorizingWallet = false;
+                            // 422 returns { message, errors: { pin: [...] } }; 429 is a lockout/throttle.
+                            this.errorMessage = (data.errors?.pin?.[0]) || data.message || 'Could not verify your PIN.';
+                            return;
+                        }
+                        this.authorizingWallet = false;
+                        this.walletPin = '';
+                        // Authorize the debit with the single-use token.
+                        await this.paySession('wallet', { auth_token: data.auth_token });
+                    } catch (e) {
+                        this.authorizingWallet = false;
+                        this.errorMessage = 'Network error verifying your PIN. Please try again.';
                     }
                 },
 
