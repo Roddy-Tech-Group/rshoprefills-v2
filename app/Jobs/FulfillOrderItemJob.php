@@ -56,6 +56,8 @@ class FulfillOrderItemJob implements ShouldQueue
             }
 
             $item->fulfillment_status = FulfillmentStatus::Processing;
+            // Prevent double-spend: Set a temporary reference so concurrent jobs instantly exit on the guard above
+            $item->fulfillment_reference = 'PENDING-' . uniqid();
             $item->save();
 
             return true;
