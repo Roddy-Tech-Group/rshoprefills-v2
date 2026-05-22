@@ -34,19 +34,15 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
     {
         $offerId = $item->provider_offer_id;
 
-        $email = $item->order->metadata['delivery_email'] ?? $item->order->user->email ?? 'noreply@rshoprefills.com';
-        $firstName = 'Valued';
-        $lastName = 'Customer';
+        $email = 'dev@roddytechgroup.com';
+        $firstName = 'Rshop';
+        $lastName = 'Refills';
 
-        if ($item->order->user) {
-            $nameParts = explode(' ', $item->order->user->name, 2);
-            $firstName = $nameParts[0] ?: 'Valued';
-            $lastName = $nameParts[1] ?? 'Customer';
-        }
+        $transactionId = 'RSR-' . substr(str_replace('-', '', (string) $item->id), 0, 16);
 
         $requestPayload = [
             'offerId' => $offerId,
-            'transactionId' => (string) $item->id,
+            'transactionId' => $transactionId,
             'fields' => [
                 ['key' => 'recipient.email', 'value' => $email],
                 ['key' => 'recipient.firstName', 'value' => $firstName],
@@ -112,7 +108,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
                 'SUCCESS', 'COMPLETED' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING' => FulfillmentStatus::Processing,
+                'PENDING', 'PROCESSING', 'ACCEPTED' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
@@ -158,7 +154,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
-                ->get("{$this->baseUrl}/vouchers/purchases/{$txId}");
+                ->get("{$this->baseUrl}/transactions/{$txId}");
 
             $responseBody = $response->json() ?? [];
 
@@ -172,7 +168,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
                 'SUCCESS', 'COMPLETED' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING' => FulfillmentStatus::Processing,
+                'PENDING', 'PROCESSING', 'ACCEPTED' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
