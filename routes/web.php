@@ -4,6 +4,8 @@ use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
 use App\Http\Controllers\CartWebController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\EmailPreviewController;
+use App\Http\Controllers\KycController;
 use App\Http\Controllers\ThemeController;
 use App\Models\CurrencyRate;
 use App\Models\Product;
@@ -296,6 +298,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Persists the customer's light/dark/system preference (theme engine posts here).
     Route::post('preferences/theme', [ThemeController::class, 'update'])->name('preferences.theme');
+
+    // KYC identity-verification submission (documents stored on the private disk).
+    Route::post('dashboard/kyc', [KycController::class, 'store'])->name('kyc.submit');
 });
 
 // Legacy /settings/* URLs redirect to the new /dashboard/* paths so old bookmarks keep working.
@@ -305,5 +310,12 @@ Route::middleware(['auth'])->group(function () {
     Route::redirect('settings/password', 'dashboard/password');
     Route::redirect('settings/appearance', 'dashboard/appearance');
 });
+
+// Local-only email template previews — design the transactional emails in the
+// browser (no events fired, no mail sent). Never registered outside local.
+if (app()->environment('local')) {
+    Route::get('dev/emails', [EmailPreviewController::class, 'index'])->name('dev.emails.index');
+    Route::get('dev/emails/{key}', [EmailPreviewController::class, 'show'])->name('dev.emails.show');
+}
 
 require __DIR__.'/auth.php';

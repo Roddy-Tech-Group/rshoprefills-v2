@@ -33,6 +33,15 @@
 
     <div class="flex flex-1 flex-col gap-6">
 
+        @if (session('status'))
+            <div class="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                </svg>
+                {{ session('status') }}
+            </div>
+        @endif
+
         {{-- Back link --}}
         <a href="{{ route('admin.customers') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -78,12 +87,188 @@
             </dl>
         </div>
 
+        {{-- Admin actions: edit, ban, hold funds --}}
+        @php
+            $isBanned = $user->banned_at !== null;
+            $fundsHeld = $user->wallets->isNotEmpty() && $user->wallets->where('is_active', true)->isEmpty();
+        @endphp
+        <div x-data="{ editing: @js($errors->hasAny(['name', 'email', 'phone', 'gender'])) }" class="rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
+                <h3 class="text-sm font-bold text-zinc-900">Actions</h3>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" @click="editing = ! editing" class="inline-flex items-center gap-1.5 rounded-xl bg-zinc-100 px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-200">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+                        Edit
+                    </button>
+
+                    <form method="POST" action="{{ route('admin.customer.funds', $user) }}" onsubmit="return confirm('{{ $fundsHeld ? 'Release funds for this customer?' : 'Place funds on hold for this customer?' }}')">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors {{ $fundsHeld ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100' }}">
+                            {{ $fundsHeld ? 'Release funds' : 'Hold funds' }}
+                        </button>
+                    </form>
+
+                    <form method="POST" action="{{ route('admin.customer.ban', $user) }}" onsubmit="return confirm('{{ $isBanned ? 'Unban this customer?' : 'Ban this customer? They will be signed out and blocked from signing in.' }}')">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white transition-colors {{ $isBanned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700' }}">
+                            {{ $isBanned ? 'Unban' : 'Ban' }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            @if ($isBanned || $fundsHeld)
+                <div class="flex flex-wrap gap-2 px-5 pt-4">
+                    @if ($isBanned)
+                        <span class="inline-flex items-center rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 ring-1 ring-red-200">Suspended{{ $user->banned_at ? ' on '.$fmtDate($user->banned_at) : '' }}</span>
+                    @endif
+                    @if ($fundsHeld)
+                        <span class="inline-flex items-center rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200">Funds on hold</span>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Edit form --}}
+            <form x-show="editing" x-cloak method="POST" action="{{ route('admin.customer.update', $user) }}" class="px-5 py-4">
+                @csrf
+                @method('PATCH')
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Name</label>
+                        <input name="name" value="{{ old('name', $user->name) }}" class="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                        @error('name') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Email</label>
+                        <input name="email" type="email" value="{{ old('email', $user->email) }}" class="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                        @error('email') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Phone</label>
+                        <input name="phone" value="{{ old('phone', $user->phone) }}" class="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                        @error('phone') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Gender</label>
+                        <select name="gender" class="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                            <option value="">Not set</option>
+                            @foreach (['male', 'female', 'other'] as $g)
+                                <option value="{{ $g }}" @selected(old('gender', $user->gender) === $g)>{{ ucfirst($g) }}</option>
+                            @endforeach
+                        </select>
+                        @error('gender') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <button type="submit" class="mt-4 inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">Save changes</button>
+            </form>
+        </div>
+
+        {{-- Identity verification (KYC) --}}
+        @php
+            $kycTone = match ($user->kyc_status) {
+                'verified' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+                'pending'  => 'bg-amber-50 text-amber-700 ring-amber-200',
+                'rejected' => 'bg-red-50 text-red-700 ring-red-200',
+                default    => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+            };
+        @endphp
+        <div class="rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
+                <h3 class="text-sm font-bold text-zinc-900">Identity verification (KYC)</h3>
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 {{ $kycTone }}">{{ $user->kyc_status }}</span>
+            </div>
+
+            @if ($kyc)
+                <div class="px-5 py-4">
+                    <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-xs sm:grid-cols-3">
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Full name</dt>
+                            <dd class="mt-1 font-medium text-zinc-700">{{ $kyc->full_name }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Date of birth</dt>
+                            <dd class="mt-1 font-medium text-zinc-700">{{ optional($kyc->date_of_birth)->format('M j, Y') ?? '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Country</dt>
+                            <dd class="mt-1 font-medium text-zinc-700">{{ $kyc->country ?: '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Document type</dt>
+                            <dd class="mt-1 font-medium capitalize text-zinc-700">{{ str_replace('_', ' ', $kyc->document_type) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Document number</dt>
+                            <dd class="mt-1 font-medium text-zinc-700">{{ $kyc->document_number ?: '-' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Submitted</dt>
+                            <dd class="mt-1 font-medium text-zinc-700">{{ $fmtDate($kyc->created_at) }}</dd>
+                        </div>
+                    </dl>
+
+                    {{-- Documents — streamed from the private disk, admin-only. --}}
+                    <p class="mt-5 text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Documents</p>
+                    <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        @foreach (['front' => 'Document front', 'back' => 'Document back', 'selfie' => 'Selfie'] as $docType => $docLabel)
+                            @php
+                                $docPath = match ($docType) {
+                                    'front' => $kyc->document_front_path,
+                                    'back' => $kyc->document_back_path,
+                                    default => $kyc->selfie_path,
+                                };
+                            @endphp
+                            @if ($docPath)
+                                <a href="{{ route('admin.kyc.document', [$kyc, $docType]) }}" target="_blank" rel="noopener" class="group block overflow-hidden rounded-xl border border-zinc-200">
+                                    <img src="{{ route('admin.kyc.document', [$kyc, $docType]) }}" alt="{{ $docLabel }}" class="h-32 w-full bg-zinc-50 object-cover transition-transform duration-200 group-hover:scale-105">
+                                    <p class="px-3 py-1.5 text-[11px] font-medium text-zinc-600">{{ $docLabel }}</p>
+                                </a>
+                            @endif
+                        @endforeach
+                    </div>
+
+                    {{-- Review actions / outcome --}}
+                    @if ($kyc->status === 'pending')
+                        <div x-data="{ rejecting: @js($errors->has('reason')) }" class="mt-5 border-t border-zinc-100 pt-4">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <form method="POST" action="{{ route('admin.kyc.approve', $kyc) }}">
+                                    @csrf
+                                    <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                        Approve
+                                    </button>
+                                </form>
+                                <button type="button" @click="rejecting = ! rejecting" class="inline-flex items-center gap-1.5 rounded-xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-200 transition-colors hover:bg-red-100">Reject</button>
+                            </div>
+
+                            <form x-show="rejecting" x-cloak method="POST" action="{{ route('admin.kyc.reject', $kyc) }}" class="mt-3">
+                                @csrf
+                                <textarea name="reason" rows="2" required placeholder="Reason for rejection (the customer will see this)" class="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-red-500 focus:ring-2 focus:ring-red-500/15">{{ old('reason') }}</textarea>
+                                @error('reason') <p class="mt-1 text-xs font-medium text-red-600">{{ $message }}</p> @enderror
+                                <button type="submit" class="mt-2 inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700">Confirm rejection</button>
+                            </form>
+                        </div>
+                    @else
+                        <div class="mt-5 border-t border-zinc-100 pt-4 text-xs text-zinc-600">
+                            <p><span class="font-semibold capitalize">{{ $kyc->status }}</span>{{ $kyc->reviewed_at ? ' on '.$fmtDate($kyc->reviewed_at) : '' }}{{ $kyc->reviewer ? ' by '.$kyc->reviewer->name : '' }}.</p>
+                            @if ($kyc->status === 'rejected' && $kyc->rejection_reason)
+                                <p class="mt-1 text-red-600">Reason: {{ $kyc->rejection_reason }}</p>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            @else
+                <div class="px-5 py-10 text-center text-sm text-zinc-600">This customer has not submitted KYC documents.</div>
+            @endif
+        </div>
+
         {{-- Lifetime stats --}}
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
             @php
-                $walletLabel = $primaryWallet
-                    ? '$' . number_format($primaryWallet->availableBalance(), 2) . ' ' . $primaryWallet->currency->value
-                    : 'No wallet';
+                // Headline balance: every wallet summed and converted to USD.
+                $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
+                $walletTotalUsd = $user->wallets->sum(fn ($w) => $rateService->convert((float) $w->balance, $w->currency->value, 'USD'));
+                $walletLabel = '$' . number_format($walletTotalUsd, 2) . ' USD';
             @endphp
             @foreach ([
                 ['Total orders', number_format($ordersCount)],
@@ -107,10 +292,10 @@
                 @forelse ($user->wallets as $wallet)
                     <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
                         <div>
-                            <p class="text-sm font-bold text-zinc-900">${{ number_format((float) $wallet->balance, 2) }} {{ $wallet->currency->value }}</p>
+                            <p class="text-sm font-bold text-zinc-900">{{ \App\Models\Product::currencySymbol($wallet->currency->value) }}{{ number_format((float) $wallet->balance, 2) }} {{ $wallet->currency->value }}</p>
                             <p class="mt-0.5 text-[11px] text-zinc-800">
-                                Available ${{ number_format($wallet->availableBalance(), 2) }}
-                                · Locked ${{ number_format((float) $wallet->locked_balance, 2) }}
+                                Available {{ \App\Models\Product::currencySymbol($wallet->currency->value) }}{{ number_format($wallet->availableBalance(), 2) }}
+                                · Locked {{ \App\Models\Product::currencySymbol($wallet->currency->value) }}{{ number_format((float) $wallet->locked_balance, 2) }}
                             </p>
                         </div>
                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 {{ $wallet->is_active ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-zinc-100 text-zinc-700 ring-zinc-200' }}">

@@ -2,7 +2,19 @@
 
 namespace App\Providers;
 
+use App\Domain\Notification\Listeners\AdminEventNotifier;
+use App\Domain\Notification\Listeners\CreateDefaultPreferencesListener;
+use App\Domain\Notification\Listeners\SendFulfillmentNotificationListener;
+use App\Domain\Notification\Listeners\SendOrderConfirmationListener;
+use App\Domain\Notification\Listeners\SendWalletCreditNotificationListener;
+use App\Domain\Notification\Listeners\SendWalletDebitNotificationListener;
+use App\Domain\Notification\Listeners\SendWelcomeEmailListener;
+use App\Domain\Notification\Providers\MailProviderInterface;
+use App\Domain\Notification\Providers\ResendProvider;
+use App\Domain\Wallet\Events\WalletCredited;
+use App\Domain\Wallet\Events\WalletDebited;
 use App\Http\View\Composers\CartComposer;
+use App\Listeners\CommerceNotificationListener;
 use App\Listeners\CreateWalletForNewUser;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
@@ -17,8 +29,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(
-            \App\Domain\Notification\Providers\MailProviderInterface::class,
-            \App\Domain\Notification\Providers\ResendProvider::class
+            MailProviderInterface::class,
+            ResendProvider::class
         );
     }
 
@@ -28,16 +40,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(Registered::class, CreateWalletForNewUser::class);
-        Event::listen(Registered::class, \App\Domain\Notification\Listeners\CreateDefaultPreferencesListener::class);
-        Event::listen(Registered::class, \App\Domain\Notification\Listeners\SendWelcomeEmailListener::class);
+        Event::listen(Registered::class, CreateDefaultPreferencesListener::class);
+        Event::listen(Registered::class, SendWelcomeEmailListener::class);
 
-        Event::listen(\App\Domain\Wallet\Events\WalletCredited::class, \App\Domain\Notification\Listeners\SendWalletCreditNotificationListener::class);
-        Event::listen(\App\Domain\Wallet\Events\WalletDebited::class, \App\Domain\Notification\Listeners\SendWalletDebitNotificationListener::class);
+        Event::listen(WalletCredited::class, SendWalletCreditNotificationListener::class);
+        Event::listen(WalletDebited::class, SendWalletDebitNotificationListener::class);
 
-        Event::subscribe(\App\Domain\Notification\Listeners\SendOrderConfirmationListener::class);
-        Event::subscribe(\App\Domain\Notification\Listeners\SendFulfillmentNotificationListener::class);
+        Event::subscribe(SendOrderConfirmationListener::class);
+        Event::subscribe(SendFulfillmentNotificationListener::class);
 
-        Event::subscribe(\App\Listeners\CommerceNotificationListener::class);
+        Event::subscribe(CommerceNotificationListener::class);
+
+        // Fan key platform events out to the admin-dashboard notification feed.
+        Event::subscribe(AdminEventNotifier::class);
+
         View::composer('*', CartComposer::class);
     }
 }

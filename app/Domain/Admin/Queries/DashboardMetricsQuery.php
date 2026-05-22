@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -87,13 +88,13 @@ class DashboardMetricsQuery
      * Resolve a preset string + optional custom bounds into [start, end] Carbon
      * instances or [null, null] for all-time.
      *
-     * @return array{0: ?\Illuminate\Support\Carbon, 1: ?\Illuminate\Support\Carbon}
+     * @return array{0: ?Carbon, 1: ?Carbon}
      */
     private function resolveRange(?string $preset, ?string $start, ?string $end): array
     {
         if ($preset === 'custom' && $start && $end) {
             try {
-                return [\Illuminate\Support\Carbon::parse($start)->startOfDay(), \Illuminate\Support\Carbon::parse($end)->endOfDay()];
+                return [Carbon::parse($start)->startOfDay(), Carbon::parse($end)->endOfDay()];
             } catch (\Throwable $e) {
                 return [null, null];
             }
@@ -101,10 +102,10 @@ class DashboardMetricsQuery
 
         return match ($preset) {
             'today' => [now()->startOfDay(), now()],
-            '7d'    => [now()->subDays(7), now()],
-            '30d'   => [now()->subDays(30), now()],
-            '90d'   => [now()->subDays(90), now()],
-            'year'  => [now()->startOfYear(), now()],
+            '7d' => [now()->subDays(7), now()],
+            '30d' => [now()->subDays(30), now()],
+            '90d' => [now()->subDays(90), now()],
+            'year' => [now()->startOfYear(), now()],
             default => [null, null],
         };
     }
@@ -228,6 +229,7 @@ class DashboardMetricsQuery
                 'users.name as customer_name',
                 DB::raw("'payment' as type"),
                 'payment_attempts.amount',
+                'payment_attempts.currency',
                 'payment_attempts.payment_status as status',
                 'payment_attempts.created_at as date',
                 'payment_attempts.gateway as gateway',
@@ -242,6 +244,7 @@ class DashboardMetricsQuery
                 'users.name as customer_name',
                 'wallet_transactions.type as type',
                 'wallet_transactions.amount',
+                'wallet_transactions.currency',
                 DB::raw("'completed' as status"), // Wallet txns are recorded as completed
                 'wallet_transactions.created_at as date',
                 DB::raw("'wallet' as gateway"),

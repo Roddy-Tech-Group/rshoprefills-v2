@@ -22,7 +22,7 @@ class OrderFulfilledMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Your digital product is ready! - RshopRefills",
+            subject: 'Your digital product is ready! - RshopRefills',
         );
     }
 
@@ -33,9 +33,7 @@ class OrderFulfilledMail extends Mailable
             with: [
                 'name' => $this->user->name,
                 'orderNumber' => $this->item->order->order_number,
-                'productName' => $this->item->product_name,
-                'voucherCode' => $this->item->voucher_code,
-                'pinCode' => $this->item->pin_code,
+                'item' => $this->item,
             ]
         );
     }

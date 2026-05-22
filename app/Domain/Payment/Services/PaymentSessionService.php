@@ -2,17 +2,17 @@
 
 namespace App\Domain\Payment\Services;
 
-use App\Models\PaymentSession;
-use App\Models\PaymentAttempt;
-use App\Models\Order;
-use App\Models\WalletFunding;
-use App\Domain\Payment\Events\PaymentSessionCreated;
 use App\Domain\Payment\Events\PaymentSessionConfirmed;
-use App\Domain\Payment\Events\PaymentSessionFailed;
+use App\Domain\Payment\Events\PaymentSessionCreated;
 use App\Domain\Payment\Events\PaymentSessionExpired;
-use Illuminate\Support\Str;
+use App\Domain\Payment\Events\PaymentSessionFailed;
+use App\Models\Cart;
+use App\Models\Order;
+use App\Models\PaymentAttempt;
+use App\Models\PaymentSession;
+use App\Models\WalletFunding;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PaymentSessionService
 {
@@ -29,7 +29,7 @@ class PaymentSessionService
                 'provider' => $attempt->gateway,
                 'session_type' => $this->resolveSessionType($attempt->gateway),
                 'status' => 'pending',
-                'client_reference' => 'SESS_' . Str::random(40),
+                'client_reference' => 'SESS_'.Str::random(40),
                 'provider_reference' => $providerInitData['gateway_reference'] ?? $attempt->gateway_reference,
                 'provider_transaction_id' => null,
                 'amount' => $attempt->amount,
@@ -75,7 +75,7 @@ class PaymentSessionService
                 'provider' => $attempt->gateway,
                 'session_type' => $this->resolveSessionType($attempt->gateway),
                 'status' => 'pending',
-                'client_reference' => 'SESS_' . Str::random(40),
+                'client_reference' => 'SESS_'.Str::random(40),
                 'provider_reference' => $providerInitData['gateway_reference'] ?? $attempt->gateway_reference,
                 'provider_transaction_id' => null,
                 'amount' => $attempt->amount,
@@ -134,6 +134,19 @@ class PaymentSessionService
 
             $session->save();
 
+            // Clear the customer's cart only now that payment is confirmed. This
+            // is deferred from checkout init so a failed/abandoned card or crypto
+            // payment keeps the cart intact for retry. (No-op for wallet funding,
+            // which has no order/cart.)
+            $cartId = $session->paymentAttempt?->order?->cart_id;
+            if ($cartId) {
+                $cart = Cart::find($cartId);
+                if ($cart) {
+                    $cart->items()->delete();
+                    $cart->update(['status' => 'abandoned']);
+                }
+            }
+
             event(new PaymentSessionConfirmed($session));
         });
     }
@@ -185,7 +198,7 @@ class PaymentSessionService
         DB::transaction(function () use ($session) {
             $session = PaymentSession::where('id', $session->id)->lockForUpdate()->firstOrFail();
 
-            if (!in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
+            if (! in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
                 return;
             }
 

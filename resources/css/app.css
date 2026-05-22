@@ -392,6 +392,7 @@ select:focus[data-flux-control] {
 
 /* Text — dark text resolves to near-white; muted greys lighten. */
 .dark .text-black,
+.dark .text-zinc-950,
 .dark .text-zinc-900 { color: #f4f4f5; }
 .dark .text-zinc-800 { color: #e6e6e8; }
 .dark .text-zinc-700 { color: #d6d6da; }

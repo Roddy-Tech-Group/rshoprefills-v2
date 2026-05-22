@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Admin\AdminCatalogController;
 use App\Http\Controllers\Admin\AdminCommerceController;
+use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFintechController;
+use App\Http\Controllers\Admin\AdminKycController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
 use App\Http\Controllers\ThemeController;
@@ -52,8 +54,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     ->whereIn('order_status', ['completed', 'partially_completed'])
                     ->sum('total_amount'),
                 'unreadNotifications' => $user->notifications()->whereNull('read_at')->count(),
+                'kyc' => $user->kycSubmissions()->first(),
             ]);
         })->name('customer');
+
+        // KYC review — serve documents from the private disk + approve / reject.
+        Route::get('kyc/{submission}/document/{type}', [AdminKycController::class, 'document'])->name('kyc.document');
+        Route::post('kyc/{submission}/approve', [AdminKycController::class, 'approve'])->name('kyc.approve');
+        Route::post('kyc/{submission}/reject', [AdminKycController::class, 'reject'])->name('kyc.reject');
+
+        // Customer admin actions: edit profile, ban/unban, hold/release funds.
+        Route::patch('customers/{user}', [AdminCustomerController::class, 'update'])->name('customer.update');
+        Route::post('customers/{user}/ban', [AdminCustomerController::class, 'toggleBan'])->name('customer.ban');
+        Route::post('customers/{user}/funds', [AdminCustomerController::class, 'toggleFunds'])->name('customer.funds');
         Route::view('transactions', 'admin.transactions')->name('transactions');
         Route::view('wallets', 'admin.wallets')->name('wallets');
         Volt::route('rates', 'admin.rates')->name('rates');

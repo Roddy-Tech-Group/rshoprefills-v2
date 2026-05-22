@@ -624,7 +624,7 @@
                                     <td class="px-5 py-3 text-[11px] font-mono text-zinc-600">{{ $reference }}</td>
                                     <td class="px-5 py-3 text-[11px] font-medium text-zinc-900">{{ $tx->customer_name ?? '—' }}</td>
                                     <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $typeLabel }}</td>
-                                    <td class="px-5 py-3 text-[11px] font-semibold text-zinc-900">${{ number_format((float) $tx->amount, 2) }}</td>
+                                    <td class="px-5 py-3 text-[11px] font-semibold text-zinc-900">{{ \App\Models\Product::currencySymbol($tx->currency ?? 'USD') }}{{ number_format((float) $tx->amount, 2) }}</td>
                                     <td class="px-5 py-3">
                                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusClasses }}">
                                             {{ ucfirst((string) $statusValue) }}
