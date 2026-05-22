@@ -33,3 +33,34 @@ Artisan::command('zendit:sync-giftcards', function () {
 
     $this->info('Zendit Gift Card and Brand Sync completed successfully!');
 })->purpose('Sync Gift Cards and Brand Assets from Zendit API');
+
+// Bug #4 fix: Fulfillment fallback sweeper.
+//
+// For non-wallet gateways (card, bank, crypto), fulfillment is triggered by the
+// Flutterwave/NowPayments webhook → VerifyPaymentJob chain. If the webhook is
+// delayed, dropped, or the queue worker was offline at the time of payment, all
+// order items remain at NotStarted indefinitely — no refund fires, no voucher is
+// delivered, and the customer's money appears lost.
+//
+// This sweeper runs every 5 minutes and re-dispatches FulfillOrderItemJob for
+// any paid order whose items are still NotStarted after a 10-minute grace window.
+\Illuminate\Support\Facades\Schedule::call(function () {
+    $cutoff = now()->subMinutes(10);
+
+    $orphanedOrders = \App\Models\Order::query()
+        ->where('payment_status', \App\Domain\Payment\Enums\PaymentStatus::Paid)
+        ->where('fulfillment_status', \App\Domain\Fulfillment\Enums\FulfillmentStatus::NotStarted)
+        ->where('placed_at', '<=', $cutoff)
+        ->with('items')
+        ->get();
+
+    foreach ($orphanedOrders as $order) {
+        foreach ($order->items as $item) {
+            if ($item->fulfillment_status === \App\Domain\Fulfillment\Enums\FulfillmentStatus::NotStarted) {
+                \Illuminate\Support\Facades\Log::warning("Fulfillment sweeper: re-dispatching FulfillOrderItemJob for orphaned item {$item->id} on order {$order->order_number}");
+                \App\Jobs\FulfillOrderItemJob::dispatch($item);
+            }
+        }
+    }
+})->everyFiveMinutes()->name('fulfillment:rescue-orphaned-orders');
+

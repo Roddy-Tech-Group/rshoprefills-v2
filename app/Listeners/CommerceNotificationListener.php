@@ -27,9 +27,6 @@ class CommerceNotificationListener
         Log::info("Notification: Payment of {$event->attempt->amount} {$event->attempt->currency} confirmed for Order #{$event->order->order_number}. Fulfillment initiated.");
     }
 
-    /**
-     * Handle FulfillmentSucceeded event.
-     */
     public function onFulfillmentSucceeded(FulfillmentSucceeded $event): void
     {
         $item = $event->item;
@@ -37,6 +34,10 @@ class CommerceNotificationListener
         $email = $order->metadata['delivery_email'] ?? $order->user->email;
 
         Log::info("Notification: Fulfillment success for Order #{$order->order_number}, Item: {$item->id}. Delivery dispatched to {$email}.");
+
+        if ($email) {
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OrderFulfilledMail($item));
+        }
     }
 
     /**
