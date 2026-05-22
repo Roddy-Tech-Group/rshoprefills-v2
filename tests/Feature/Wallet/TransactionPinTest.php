@@ -28,6 +28,7 @@ class TransactionPinTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         $this->user = User::factory()->create(['password' => Hash::make('password123')]);
     }
 
