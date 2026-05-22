@@ -250,6 +250,26 @@ class PaymentSessionController extends Controller
                 $npProvider = $gatewayFactory->getProvider('nowpayments');
                 $result = $npProvider->chargeCrypto($attempt, $details['pay_currency']);
             } 
+            elseif ($method === 'wallet') {
+                $request->validate([
+                    'details.auth_token' => 'required|string',
+                ]);
+                
+                $walletProvider = $gatewayFactory->getProvider('wallet');
+                
+                try {
+                    $walletProvider->authorizeTransaction($attempt, $details['auth_token']);
+                    $result = [
+                        'status' => 'confirmed',
+                        'transaction_id' => $attempt->gateway_reference,
+                    ];
+                } catch (\Exception $e) {
+                    $result = [
+                        'status' => 'failed',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+            }
             else {
                 return response()->json(['message' => 'Unsupported payment method.'], 400);
             }
