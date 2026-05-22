@@ -18,13 +18,10 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
     {
         $this->apiKey = config('services.zendit.api_key') ?: env('ZENDIT_API_KEY') ?: 'ZENDIT_API_KEY_MOCK';
 
-        // Explicit base URL from config/env always wins. Otherwise, auto-detect
-        // from the API key prefix: sandbox keys start with "sand_".
+        // Explicit base URL from config/env always wins.
         $explicitUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL');
         if ($explicitUrl) {
             $this->baseUrl = $explicitUrl;
-        } elseif (str_starts_with($this->apiKey, 'sand_')) {
-            $this->baseUrl = 'https://api.sandbox.zendit.io/v1';
         } else {
             $this->baseUrl = 'https://api.zendit.io/v1';
         }
@@ -34,27 +31,41 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
     {
         $offerId = $item->provider_offer_id;
 
+        $title = strtolower($item->product_snapshot['name'] ?? '');
+        $isEsim = ($item->product_snapshot['category']['slug'] ?? '') === 'esims' || strpos($title, 'esim') !== false;
+
         $email = 'dev@roddytechgroup.com';
         $firstName = 'Rshop';
         $lastName = 'Refills';
 
-        $transactionId = 'RSR-' . substr(str_replace('-', '', (string) $item->id), 0, 16);
+        $customTransactionId = 'RSR-' . str_replace('-', '', (string) $item->id);
 
-        $requestPayload = [
-            'offerId' => $offerId,
-            'transactionId' => $transactionId,
-            'fields' => [
-                ['key' => 'recipient.email', 'value' => $email],
-                ['key' => 'recipient.firstName', 'value' => $firstName],
-                ['key' => 'recipient.lastName', 'value' => $lastName]
-            ]
-        ];
+        if ($isEsim) {
+            $requestPayload = [
+                'offerId' => $offerId,
+                'transactionId' => $customTransactionId,
+            ];
+            $endpoint = '/esim/purchases';
+        } else {
+            $requestPayload = [
+                'offerId' => $offerId,
+                'transactionId' => $customTransactionId,
+                'fields' => [
+                    ['key' => 'recipient.email', 'value' => $email],
+                    ['key' => 'recipient.firstName', 'value' => $firstName],
+                    ['key' => 'recipient.lastName', 'value' => $lastName]
+                ]
+            ];
 
-        // For variable price items, Zendit requires sendAmount in minor units
-        if (isset($item->variant_snapshot['is_variable']) && $item->variant_snapshot['is_variable']) {
-            $divisor = (float)($item->variant_snapshot['metadata']['send']['currencyDivisor'] ?? 100);
-            // Display amount represents selected face value
-            $requestPayload['sendAmount'] = (int)($item->display_amount * $divisor);
+            // For variable price items, Zendit requires value in minor units
+            if (isset($item->variant_snapshot['is_variable']) && $item->variant_snapshot['is_variable']) {
+                $divisor = (float)($item->variant_snapshot['metadata']['send']['currencyDivisor'] ?? 100);
+                $requestPayload['value'] = [
+                    'type' => 'PRICE',
+                    'value' => (int)round($item->display_amount * $divisor)
+                ];
+            }
+            $endpoint = '/vouchers/purchases';
         }
 
         // Mock mode
@@ -77,9 +88,10 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         }
 
         try {
-            $response = Http::withToken($this->apiKey)
+            $response = Http::withoutVerifying()
+                ->withToken($this->apiKey)
                 ->acceptJson()
-                ->post("{$this->baseUrl}/vouchers/purchases", $requestPayload);
+                ->post("{$this->baseUrl}{$endpoint}", $requestPayload);
 
             $responseBody = $response->json() ?? [];
 
@@ -92,7 +104,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
                 'error_message' => $response->successful() ? null : $response->body(),
             ]);
 
-            if ($response->failed()) {
+            if ($response->failed() || !isset($responseBody['transactionId'])) {
                 Log::error("Zendit transaction failed: {$item->id}", [
                     'status' => $response->status(),
                     'body' => $responseBody,
@@ -108,13 +120,14 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
                 'SUCCESS', 'COMPLETED', 'DONE' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING', 'ACCEPTED', 'AUTHORIZED', 'IN_PROGRESS' => FulfillmentStatus::Processing,
+                'PENDING', 'PROCESSING', 'AUTHORIZED', 'IN_PROGRESS', 'ACCEPTED' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
             return [
                 'status' => $statusEnum,
-                'reference' => $responseBody['transactionId'] ?? null,
+                // In v1, they poll using Zendit's returned transactionId!
+                'reference' => $responseBody['transactionId'],
                 'payload' => $responseBody,
             ];
         } catch (\Exception $e) {
@@ -147,20 +160,30 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         }
 
         try {
-            $txId = $item->fulfillment_reference;
-            if (!$txId) {
+            $zenditTxId = $item->fulfillment_reference;
+            if (!$zenditTxId) {
+                Log::warning("Zendit verifyStatus: no fulfillment_reference on item {$item->id}");
                 return ['status' => FulfillmentStatus::Failed, 'payload' => []];
             }
 
-            $response = Http::withToken($this->apiKey)
+            $title = strtolower($item->product_snapshot['name'] ?? '');
+            $isEsim = ($item->product_snapshot['category']['slug'] ?? '') === 'esims' || strpos($title, 'esim') !== false;
+            $endpoint = $isEsim ? "/esim/purchases/{$zenditTxId}" : "/vouchers/purchases/{$zenditTxId}";
+
+            $response = Http::withoutVerifying()
+                ->withToken($this->apiKey)
                 ->acceptJson()
-                ->get("{$this->baseUrl}/vouchers/purchases/{$txId}");
+                ->get("{$this->baseUrl}{$endpoint}");
 
             $responseBody = $response->json() ?? [];
 
             if ($response->failed()) {
+                Log::error("Zendit verifyStatus failed for {$zenditTxId}", [
+                    'http_status' => $response->status(),
+                    'body'        => $responseBody,
+                ]);
                 return [
-                    'status' => FulfillmentStatus::Failed,
+                    'status' => FulfillmentStatus::Processing,
                     'payload' => $responseBody,
                 ];
             }
@@ -168,7 +191,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             $txStatus = $responseBody['status'] ?? 'PENDING';
             $statusEnum = match (strtoupper($txStatus)) {
                 'SUCCESS', 'COMPLETED', 'DONE' => FulfillmentStatus::Fulfilled,
-                'PENDING', 'PROCESSING', 'ACCEPTED', 'AUTHORIZED', 'IN_PROGRESS' => FulfillmentStatus::Processing,
+                'PENDING', 'PROCESSING', 'AUTHORIZED', 'IN_PROGRESS', 'ACCEPTED' => FulfillmentStatus::Processing,
                 default => FulfillmentStatus::Failed,
             };
 
@@ -178,7 +201,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             ];
         } catch (\Exception $e) {
             Log::error("Zendit verifyStatus exception: " . $e->getMessage());
-            return ['status' => FulfillmentStatus::Failed, 'payload' => []];
+            return ['status' => FulfillmentStatus::Processing, 'payload' => []];
         }
     }
 
@@ -191,21 +214,25 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
     public function normalizeResponse(array $rawPayload): array
     {
         // Normalize response to extract code/pin/eSIM QR
-        $vouchers = $rawPayload['vouchers'] ?? [];
+        $items = $rawPayload['items'] ?? [];
         $pins = [];
         $flat = [];
 
-        foreach ($vouchers as $v) {
+        foreach ($items as $v) {
             $pins[] = [
                 'code' => $v['code'] ?? null,
                 'pin' => $v['pin'] ?? null,
                 'serialNumber' => $v['serialNumber'] ?? null,
                 'instructions' => $v['redemptionInstructions'] ?? null,
+                'redemption_url' => $v['redemptionUrl'] ?? null,
             ];
         }
 
         $receipt = $rawPayload['receipt'] ?? null;
         if ($receipt) {
+            if (!empty($receipt['voucherId']) && empty($pins)) {
+                $pins[] = ['pin' => $receipt['voucherId']];
+            }
             if (!empty($receipt['redemptionUrl'])) {
                 $flat['redemption_url'] = $receipt['redemptionUrl'];
             }
@@ -231,20 +258,23 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             if (!empty($firstPin['instructions'])) {
                 $flat['instructions'] = $flat['instructions'] ?? $firstPin['instructions'];
             }
+            if (!empty($firstPin['redemption_url'])) {
+                $flat['redemption_url'] = $flat['redemption_url'] ?? $firstPin['redemption_url'];
+            }
         }
 
-        $esim = $rawPayload['esim'] ?? null;
-        $esimData = $esim ? [
-            'iccid' => $esim['iccid'] ?? null,
-            'lpaUrl' => $esim['lpaUrl'] ?? null,
-            'qrCodeUrl' => $esim['qrCodeUrl'] ?? null,
-            'manualActivationCode' => $esim['manualActivationCode'] ?? null,
-        ] : null;
-
-        if ($esimData) {
-            $flat['esim_iccid'] = $esimData['iccid'] ?? null;
-            $flat['esim_lpa'] = $esimData['lpaUrl'] ?? null;
-            $flat['esim_activation_code'] = $esimData['manualActivationCode'] ?? null;
+        $esimData = null;
+        $confirmation = $rawPayload['confirmation'] ?? null;
+        if ($confirmation && !empty($confirmation['iccid'])) {
+            $esimData = [
+                'iccid' => $confirmation['iccid'] ?? null,
+                'lpaUrl' => $confirmation['smdpAddress'] ?? null,
+                'manualActivationCode' => $confirmation['activationCode'] ?? null,
+            ];
+            
+            $flat['esim_iccid'] = $esimData['iccid'];
+            $flat['esim_lpa'] = $esimData['lpaUrl'];
+            $flat['esim_activation_code'] = $esimData['manualActivationCode'];
         }
 
         return array_merge($flat, [
