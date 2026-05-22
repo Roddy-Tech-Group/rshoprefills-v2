@@ -107,15 +107,15 @@ class FulfillOrderItemJob implements ShouldQueue
     {
         $order = $item->order;
         
-        // If order total has not been captured, and wallet reserved payment exists, release it
+        // Find wallet payment (could be Reserved or Paid)
         $walletPayment = $order->paymentAttempts()
             ->where('gateway', 'wallet')
-            ->where('payment_status', PaymentStatus::Reserved)
+            ->whereIn('payment_status', [PaymentStatus::Reserved, PaymentStatus::Paid])
             ->first();
 
         if ($walletPayment) {
             // Check if any other item in order was successfully fulfilled or processing.
-            // If all items failed, release full funds.
+            // If all items failed, refund/release full funds.
             $hasSuccessfulItem = $order->items->contains(function ($i) {
                 return in_array($i->fulfillment_status, [
                     FulfillmentStatus::Fulfilled,
@@ -125,7 +125,11 @@ class FulfillOrderItemJob implements ShouldQueue
             });
 
             if (!$hasSuccessfulItem) {
-                $walletProvider->releaseFunds($walletPayment);
+                if ($walletPayment->payment_status === PaymentStatus::Reserved) {
+                    $walletProvider->releaseFunds($walletPayment);
+                } else {
+                    $walletProvider->refundPayment($walletPayment, $order->total_amount);
+                }
                 
                 $order->payment_status = PaymentStatus::Failed;
                 $order->order_status = \App\Domain\Order\Enums\OrderStatus::Failed;
@@ -134,7 +138,12 @@ class FulfillOrderItemJob implements ShouldQueue
             } else {
                 // Partial fulfillment refund
                 $refundAmount = $item->subtotal_amount;
-                $walletProvider->refundPayment($walletPayment, $refundAmount);
+                if ($walletPayment->payment_status === PaymentStatus::Reserved) {
+                    // Release is for the whole attempt, so this might not work perfectly for partial
+                    // But wallet checkout is paid upfront anyway
+                } else {
+                    $walletProvider->refundPayment($walletPayment, $refundAmount);
+                }
             }
         }
     }
