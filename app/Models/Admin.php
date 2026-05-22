@@ -23,6 +23,7 @@ use Illuminate\Support\Str;
  * @property string $password
  * @property AdminRole $role
  * @property string|null $avatar_url
+ * @property string $theme "light" | "dark" | "system"
  * @property bool $is_active
  * @property Carbon|null $last_login_at
  * @property string|null $remember_token
@@ -49,6 +50,7 @@ class Admin extends Authenticatable
         'password',
         'role',
         'avatar_url',
+        'theme',
         'is_active',
         'last_login_at',
     ];

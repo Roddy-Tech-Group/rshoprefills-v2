@@ -245,6 +245,10 @@
                 </div>
             </div>
 
+            {{-- Theme toggle — admin's own light/dark/system control, saved per
+                 admin account and kept separate from the customer side. --}}
+            <x-theme-toggle class="h-10 w-10 rounded-xl text-zinc-600 hover:bg-blue-100" />
+
             {{-- Notifications dropdown. Hover opens; click locks open.
                  Backend hook: swap $notificationCount and loop real items inside the populated branch. --}}
             @php $notificationCount = 1; @endphp

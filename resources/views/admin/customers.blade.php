@@ -57,7 +57,7 @@
                                 </td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $user->created_at->format('M j, Y') }}</td>
                                 <td class="px-5 py-3 text-right">
-                                    <a href="#" class="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50">View</a>
+                                    <a href="{{ route('admin.customer', $user) }}" class="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50">View</a>
                                 </td>
                             </tr>
                         @empty

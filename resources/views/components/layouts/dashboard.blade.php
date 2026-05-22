@@ -10,14 +10,14 @@
             $isCurrent = fn (...$patterns) => request()->routeIs(...$patterns);
 
             $navItem = fn (bool $active) => $active
-                ? 'group flex items-center justify-between gap-3 rounded-2xl bg-blue-600 px-3 py-3 text-sm font-semibold text-white shadow-sm'
-                : 'group flex items-center justify-between gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-100 hover:text-blue-700';
+                ? 'group flex items-center justify-between gap-3 rounded-[20px] bg-blue-600 px-3 py-3 text-sm font-semibold text-white shadow-sm'
+                : 'group flex items-center justify-between gap-3 rounded-[20px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-100 hover:text-blue-700';
             $iconCls = fn (bool $active) => $active
                 ? 'h-5 w-5 shrink-0 text-white'
                 : 'h-5 w-5 shrink-0 text-zinc-600 transition-colors group-hover:text-blue-700';
             $subItem = fn (bool $active) => $active
-                ? 'flex items-center gap-3 rounded-2xl bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-700'
-                : 'flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-blue-100 hover:text-blue-700';
+                ? 'flex items-center gap-3 rounded-[20px] bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-700'
+                : 'flex items-center gap-3 rounded-[20px] px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-blue-100 hover:text-blue-700';
             // Inline style filters that force a colored SVG (loaded as <img>) to render either as pure black
             // (default state) or pure white (active state). Keeps all sidebar icons visually consistent
             // regardless of the source SVG's own colors.

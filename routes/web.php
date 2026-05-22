@@ -4,6 +4,7 @@ use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
 use App\Http\Controllers\CartWebController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ThemeController;
 use App\Models\CurrencyRate;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -292,6 +293,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('dashboard/profile', 'settings.profile')->name('dashboard.profile');
     Volt::route('dashboard/password', 'settings.password')->name('dashboard.password');
     Volt::route('dashboard/appearance', 'settings.appearance')->name('dashboard.appearance');
+
+    // Persists the customer's light/dark/system preference (theme engine posts here).
+    Route::post('preferences/theme', [ThemeController::class, 'update'])->name('preferences.theme');
 });
 
 // Legacy /settings/* URLs redirect to the new /dashboard/* paths so old bookmarks keep working.

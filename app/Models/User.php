@@ -26,6 +26,7 @@ use Illuminate\Support\Str;
  * @property string|null $gender "male" | "female" | "other"
  * @property string|null $google_id
  * @property string|null $avatar_url
+ * @property string $theme "light" | "dark" | "system"
  * @property Carbon|null $email_verified_at
  * @property string|null $password
  * @property string|null $remember_token
@@ -52,6 +53,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_id',
         'avatar_url',
         'avatar',
+        'theme',
         'email_verified_at',
     ];
 
