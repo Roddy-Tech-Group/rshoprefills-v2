@@ -7,9 +7,7 @@ use App\Domain\Order\Events\FulfillmentSucceeded;
 use App\Domain\Order\Events\OrderPlaced;
 use App\Domain\Order\Events\PaymentConfirmed;
 use App\Domain\Order\Events\RefundIssued;
-use App\Mail\OrderFulfilledMail;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class CommerceNotificationListener
 {
@@ -35,11 +33,10 @@ class CommerceNotificationListener
         $order = $item->order;
         $email = $order->metadata['delivery_email'] ?? $order->user->email;
 
+        // The customer fulfilled email + in-app notification are owned by
+        // SendFulfillmentNotificationListener. This subscriber only logs, so the
+        // customer does not receive a duplicate fulfilled email.
         Log::info("Notification: Fulfillment success for Order #{$order->order_number}, Item: {$item->id}. Delivery dispatched to {$email}.");
-
-        if ($email) {
-            Mail::to($email)->send(new OrderFulfilledMail($item));
-        }
     }
 
     /**
