@@ -64,3 +64,10 @@ Artisan::command('zendit:sync-giftcards', function () {
     }
 })->everyFiveMinutes()->name('fulfillment:rescue-orphaned-orders');
 
+// Enterprise Reconciliation Engine Scheduling
+\Illuminate\Support\Facades\Schedule::command('reconcile:wallet-balances')->dailyAt('02:00');
+\Illuminate\Support\Facades\Schedule::command('reconcile:orphaned-sessions')->hourly();
+
+// Enterprise Provider Monitoring
+\Illuminate\Support\Facades\Schedule::command('zendit:check-balance --threshold=500')->hourly();
+

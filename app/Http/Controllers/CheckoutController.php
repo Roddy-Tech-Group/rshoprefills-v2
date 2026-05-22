@@ -74,6 +74,18 @@ class CheckoutController extends Controller
             default => 'flutterwave',
         };
 
+        $fraudService = app(\App\Domain\Fraud\Services\FraudDetectionService::class);
+        $cartTotals = app(\App\Domain\Cart\Services\CartPricingService::class)->calculateCartTotals($cart->items);
+        $amount = $cartTotals['total'];
+
+        if ($fraudService->isSuspiciousCheckout($user, $amount, $request->ip())) {
+            $msg = 'Your checkout attempt was flagged by our security systems. Please contact support.';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => $msg], 403);
+            }
+            return redirect()->route('shop.checkout')->with('checkout_status', $msg);
+        }
+
         try {
             $order = $this->checkoutService->placeOrder(
                 user: $user,
@@ -82,6 +94,8 @@ class CheckoutController extends Controller
                 displayCurrency: $displayCurrency,
                 deliveryEmail: $data['delivery_email'],
             );
+            
+            $fraudService->recordCheckout($user, $request->ip());
         } catch (Throwable $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([

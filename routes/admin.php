@@ -59,6 +59,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('metrics', [AdminFintechController::class, 'metrics'])->name('metrics');
         });
 
+        // Admin SRE & Enterprise Operations API
+        Route::prefix('api/sre')->name('api.sre.')->group(function () {
+            Route::get('audit-logs', [\App\Http\Controllers\Admin\AdminSreController::class, 'auditLogs'])->name('audit-logs');
+            Route::get('ledger-events', [\App\Http\Controllers\Admin\AdminSreController::class, 'ledgerEvents'])->name('ledger-events');
+            Route::get('reconciliation-reports', [\App\Http\Controllers\Admin\AdminSreController::class, 'reconciliationReports'])->name('reconciliation-reports');
+            Route::get('system-metrics', [\App\Http\Controllers\Admin\AdminSreController::class, 'systemMetrics'])->name('system-metrics');
+        });
+
         // Admin Commerce Monitoring & Actions API
         Route::prefix('api/commerce')->name('api.commerce.')->group(function () {
             Route::get('orders', [AdminCommerceController::class, 'listOrders'])->name('orders');

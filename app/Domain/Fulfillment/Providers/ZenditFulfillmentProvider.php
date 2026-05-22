@@ -87,6 +87,16 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             ];
         }
 
+        $breaker = new \App\Domain\Shared\Services\CircuitBreaker('zendit_api', 10, 5);
+        if ($breaker->isOpen()) {
+            Log::warning("Zendit API circuit breaker is OPEN. Failing gracefully for item {$item->id}");
+            return [
+                'status' => FulfillmentStatus::Failed,
+                'reference' => null,
+                'payload' => ['error' => 'Zendit API circuit breaker is open due to recent failures. Please try again later.'],
+            ];
+        }
+
         try {
             $response = Http::withoutVerifying()
                 ->timeout(15)
@@ -106,6 +116,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             ]);
 
             if ($response->failed() || !isset($responseBody['transactionId'])) {
+                $breaker->recordFailure();
                 Log::error("Zendit transaction failed: {$item->id}", [
                     'status' => $response->status(),
                     'body' => $responseBody,
@@ -125,6 +136,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
                 default => FulfillmentStatus::Failed,
             };
 
+            $breaker->recordSuccess();
+
             return [
                 'status' => $statusEnum,
                 // In v1, they poll using Zendit's returned transactionId!
@@ -132,6 +145,8 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
                 'payload' => $responseBody,
             ];
         } catch (\Exception $e) {
+            $breaker->recordFailure();
+            
             Log::error("Zendit fulfillment exception: " . $e->getMessage());
             
             FulfillmentLog::create([
