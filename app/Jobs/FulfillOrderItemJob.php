@@ -97,17 +97,11 @@ class FulfillOrderItemJob implements ShouldQueue
 
                     FulfillmentSucceeded::dispatch($item);
 
-                    // Check if parent order is completed (all items fulfilled)
-                    $order = Order::where('id', $item->order_id)->lockForUpdate()->first();
-                    $allItemsFulfilled = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Fulfilled);
-
-                    if ($allItemsFulfilled) {
-                        $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Fulfilled);
-                    }
+                    $this->checkOrderCompletion($item->order_id, $orderService);
                 } elseif ($status === FulfillmentStatus::Processing || $status === FulfillmentStatus::Delayed) {
                     $item->save();
                     // Schedule status polling job
-                    PollPendingFulfillmentJob::dispatch($item)->delay(now()->addMinutes(1));
+                    PollPendingFulfillmentJob::dispatch($item)->delay(now()->addSeconds(10));
                 } else {
                     // Failed
                     $item->failed_at = now();
@@ -117,6 +111,8 @@ class FulfillOrderItemJob implements ShouldQueue
 
                     // Handle wallet reversal if wallet checkout and all items failed
                     $this->handleFailureReversal($item, $walletProvider);
+                    
+                    $this->checkOrderCompletion($item->order_id, $orderService);
                 }
             });
 
@@ -162,6 +158,8 @@ class FulfillOrderItemJob implements ShouldQueue
 
             FulfillmentFailed::dispatch($item, 'Job permanently failed: '.$e->getMessage());
             $this->handleFailureReversal($item, $walletProvider);
+            
+            $this->checkOrderCompletion($item->order_id, app(OrderService::class));
         });
     }
 
@@ -204,6 +202,30 @@ class FulfillOrderItemJob implements ShouldQueue
                     $walletProvider->refundPayment($walletPayment, $refundAmount);
                 }
                 // If Reserved, the full reservation will be settled when remaining items resolve.
+            }
+        }
+    }
+
+    private function checkOrderCompletion(string $orderId, OrderService $orderService): void
+    {
+        $order = Order::where('id', $orderId)->lockForUpdate()->first();
+        if (! $order) return;
+
+        $isOrderFinished = $order->items->every(fn ($i) => in_array($i->fulfillment_status, [
+            FulfillmentStatus::Fulfilled,
+            FulfillmentStatus::Failed
+        ]));
+
+        if ($isOrderFinished) {
+            $allFailed = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Failed);
+            $allFulfilled = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Fulfilled);
+            
+            if ($allFailed) {
+                $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Failed);
+            } elseif ($allFulfilled) {
+                $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Fulfilled);
+            } else {
+                $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::PartiallyFulfilled);
             }
         }
     }

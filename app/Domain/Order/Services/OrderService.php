@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Domain\Payment\Providers\WalletPaymentProvider;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -48,9 +49,28 @@ class OrderService
             
             $order->fulfillment_status = $newStatus;
 
-            if ($newStatus === FulfillmentStatus::Fulfilled) {
+            if (in_array($newStatus, [FulfillmentStatus::Fulfilled, FulfillmentStatus::PartiallyFulfilled])) {
                 $order->order_status = OrderStatus::Completed;
                 $order->completed_at = now();
+
+                // Settle reserved wallet payments (PIN flow)
+                $walletPayment = $order->paymentAttempts()
+                    ->where('gateway', 'wallet')
+                    ->where('payment_status', PaymentStatus::Reserved)
+                    ->first();
+
+                if ($walletPayment) {
+                    $walletProvider = app(WalletPaymentProvider::class);
+                    $walletProvider->finalizeDebit($walletPayment);
+                    $order->payment_status = PaymentStatus::Paid;
+                    
+                    if ($newStatus === FulfillmentStatus::PartiallyFulfilled) {
+                        $failedTotal = $order->items->where('fulfillment_status', FulfillmentStatus::Failed)->sum('subtotal_amount');
+                        if ($failedTotal > 0) {
+                            $walletProvider->refundPayment($walletPayment, $failedTotal);
+                        }
+                    }
+                }
             } elseif ($newStatus === FulfillmentStatus::Failed) {
                 $order->order_status = OrderStatus::Failed;
                 $order->failed_at = now();
