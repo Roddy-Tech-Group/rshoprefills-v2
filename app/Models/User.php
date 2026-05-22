@@ -29,6 +29,11 @@ use Illuminate\Support\Str;
  * @property Carbon|null $email_verified_at
  * @property string|null $password
  * @property string|null $remember_token
+ * @property string|null $transaction_pin
+ * @property Carbon|null $transaction_pin_set_at
+ * @property int $transaction_pin_attempts
+ * @property Carbon|null $transaction_pin_locked_until
+ * @property Carbon|null $last_transaction_pin_used_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -63,6 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'transaction_pin',
     ];
 
     /**
@@ -75,6 +81,9 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'transaction_pin_set_at' => 'datetime',
+            'transaction_pin_locked_until' => 'datetime',
+            'last_transaction_pin_used_at' => 'datetime',
         ];
     }
 
@@ -161,5 +170,54 @@ class User extends Authenticatable implements MustVerifyEmail
     public function notificationPreference(): HasOne
     {
         return $this->hasOne(NotificationPreference::class, 'user_id');
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Transaction PIN Orchestration
+    // ────────────────────────────────────────────────────────────
+
+    public function hasTransactionPin(): bool
+    {
+        return !is_null($this->transaction_pin);
+    }
+
+    public function verifyTransactionPin(string $pin): bool
+    {
+        if (!$this->hasTransactionPin()) {
+            return false;
+        }
+        return \Illuminate\Support\Facades\Hash::check($pin, $this->transaction_pin);
+    }
+
+    public function incrementTransactionPinAttempts(): void
+    {
+        $this->transaction_pin_attempts++;
+        $this->save();
+    }
+
+    public function resetTransactionPinAttempts(): void
+    {
+        if ($this->transaction_pin_attempts > 0 || $this->transaction_pin_locked_until !== null) {
+            $this->transaction_pin_attempts = 0;
+            $this->transaction_pin_locked_until = null;
+            $this->save();
+        }
+    }
+
+    public function lockTransactionPin(int $minutes = 15): void
+    {
+        $this->transaction_pin_locked_until = now()->addMinutes($minutes);
+        $this->save();
+    }
+
+    public function isTransactionPinLocked(): bool
+    {
+        return $this->transaction_pin_locked_until && $this->transaction_pin_locked_until->isFuture();
+    }
+
+    public function markTransactionPinUsed(): void
+    {
+        $this->last_transaction_pin_used_at = now();
+        $this->save();
     }
 }

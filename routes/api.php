@@ -60,6 +60,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/fundings/{reference}', [UserWalletController::class, 'fundingDetails'])->name('fundings.show');
         Route::get('{currency}', [UserWalletController::class, 'show'])->name('show');
         Route::post('fund/initiate', [UserWalletController::class, 'initiateFunding'])->name('fund.initiate');
+
+        // Transaction PIN Routes
+        Route::prefix('pin')->name('pin.')->group(function () {
+            Route::get('status', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'status'])->name('status');
+            Route::post('setup', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'setup'])->name('setup');
+            Route::post('verify', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'verify'])->name('verify');
+            Route::put('change', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'change'])->name('change');
+            Route::post('reset/request', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'requestReset'])->name('reset.request');
+            Route::post('reset/confirm', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'confirmReset'])->name('reset.confirm');
+            Route::delete('remove', [\App\Http\Controllers\Api\Wallet\TransactionPinController::class, 'remove'])->name('remove');
+        });
     });
 
     Route::prefix('checkout')->name('api.checkout.')->group(function () {

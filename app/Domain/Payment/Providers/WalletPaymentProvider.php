@@ -27,6 +27,19 @@ class WalletPaymentProvider implements PaymentProviderInterface
             throw new \Exception("Unsupported wallet currency: {$attempt->currency}");
         }
 
+        // If the user has a transaction PIN, we delay locking the funds until they authorize.
+        if ($user->hasTransactionPin()) {
+            $attempt->payment_status = PaymentStatus::Pending;
+            $attempt->gateway_reference = 'WL-AUTH-REQUIRED-' . uniqid();
+            $attempt->save();
+
+            return [
+                'payment_url' => null,
+                'gateway_reference' => $attempt->gateway_reference,
+                'status' => 'awaiting_customer_action',
+            ];
+        }
+
         $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
 
         // Run in transaction with pessimistic lock
@@ -45,6 +58,34 @@ class WalletPaymentProvider implements PaymentProviderInterface
             'gateway_reference' => $attempt->gateway_reference,
             'status' => 'reserved',
         ];
+    }
+
+    /**
+     * Authorize a delayed wallet payment using an authorization token.
+     */
+    public function authorizeTransaction(PaymentAttempt $attempt, string $authToken): void
+    {
+        $user = $attempt->user;
+        $pinService = app(\App\Domain\Wallet\Services\TransactionPinService::class);
+
+        if (!$pinService->validateAuthToken($user, $authToken)) {
+            throw new \Exception("Invalid or expired authorization token.");
+        }
+
+        $currencyEnum = Currency::from(strtoupper($attempt->currency));
+        $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
+
+        DB::transaction(function () use ($wallet, $attempt, $pinService, $user, $authToken) {
+            // Lock the funds now that we have authorization
+            $this->walletService->lockFunds($wallet, $attempt->amount);
+
+            $attempt->payment_status = PaymentStatus::Reserved;
+            $attempt->gateway_reference = 'WL-LOCK-' . uniqid();
+            $attempt->save();
+
+            // Consume the token so it cannot be reused
+            $pinService->consumeAuthToken($user, $authToken);
+        });
     }
 
     public function verifyPayment(PaymentAttempt $attempt): bool

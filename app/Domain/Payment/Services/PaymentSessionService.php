@@ -50,7 +50,7 @@ class PaymentSessionService
             ]);
 
             $initialStatus = match ($session->session_type) {
-                'wallet' => 'awaiting_payment',
+                'wallet' => $order->user->hasTransactionPin() ? 'awaiting_customer_action' : 'awaiting_payment',
                 'crypto' => 'awaiting_transfer',
                 default => 'awaiting_method',
             };

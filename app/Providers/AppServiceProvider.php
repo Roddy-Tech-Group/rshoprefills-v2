@@ -38,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
         Event::subscribe(\App\Domain\Notification\Listeners\SendFulfillmentNotificationListener::class);
 
         Event::subscribe(\App\Listeners\CommerceNotificationListener::class);
+        Event::subscribe(\App\Listeners\TransactionPinNotificationListener::class);
         View::composer('*', CartComposer::class);
     }
 }
