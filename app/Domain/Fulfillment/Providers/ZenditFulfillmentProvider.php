@@ -33,14 +33,24 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
     public function fulfill(OrderItem $item): array
     {
         $offerId = $item->provider_offer_id;
-        $customIdentifier = 'RSR-ITEM-' . $item->id;
+
+        $email = $item->order->metadata['delivery_email'] ?? $item->order->user->email ?? 'noreply@rshoprefills.com';
+        $firstName = 'Valued';
+        $lastName = 'Customer';
+
+        if ($item->order->user) {
+            $nameParts = explode(' ', $item->order->user->name, 2);
+            $firstName = $nameParts[0] ?: 'Valued';
+            $lastName = $nameParts[1] ?? 'Customer';
+        }
 
         $requestPayload = [
             'offerId' => $offerId,
-            'customIdentifier' => $customIdentifier,
-            'smsNotification' => false,
-            'recipient' => [
-                'email' => $item->order->metadata['delivery_email'] ?? $item->order->user->email,
+            'transactionId' => (string) $item->id,
+            'fields' => [
+                ['key' => 'recipient.email', 'value' => $email],
+                ['key' => 'recipient.firstName', 'value' => $firstName],
+                ['key' => 'recipient.lastName', 'value' => $lastName]
             ]
         ];
 
@@ -53,7 +63,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
         // Mock mode
         if (str_contains($this->apiKey, 'MOCK')) {
-            $responsePayload = $this->getMockResponse($item, $customIdentifier);
+            $responsePayload = $this->getMockResponse($item, $requestPayload['transactionId']);
             
             FulfillmentLog::create([
                 'order_item_id' => $item->id,
@@ -73,7 +83,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         try {
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
-                ->post("{$this->baseUrl}/transactions", $requestPayload);
+                ->post("{$this->baseUrl}/vouchers/purchases", $requestPayload);
 
             $responseBody = $response->json() ?? [];
 
@@ -148,7 +158,7 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
             $response = Http::withToken($this->apiKey)
                 ->acceptJson()
-                ->get("{$this->baseUrl}/transactions/{$txId}");
+                ->get("{$this->baseUrl}/vouchers/purchases/{$txId}");
 
             $responseBody = $response->json() ?? [];
 
