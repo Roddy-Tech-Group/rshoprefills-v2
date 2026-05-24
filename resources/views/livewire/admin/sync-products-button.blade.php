@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SyncAiraloEsimsJob;
 use App\Jobs\SyncZenditEsimsJob;
 use App\Jobs\SyncZenditGiftCardsJob;
 use Livewire\Volt\Component;
@@ -23,6 +24,7 @@ new class extends Component
     {
         SyncZenditGiftCardsJob::dispatch();
         SyncZenditEsimsJob::dispatch();
+        SyncAiraloEsimsJob::dispatch();
 
         $this->queued = true;
     }

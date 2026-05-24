@@ -8,8 +8,8 @@
     $hasPlans = $variants->isNotEmpty();
     $pricing  = app(CartPricingService::class);
 
-    // "United States Data eSIM" -> "United States".
-    $regionLabel = (string) str($product->name)->replaceLast(' Data eSIM', '')->trim();
+    // "United States Data eSIM" or "United States eSIM" -> "United States".
+    $regionLabel = (string) str($product->name)->replaceLast(' Data eSIM', '')->replaceLast(' eSIM', '')->trim();
     $flag        = Product::flagUrl($product->country_code);
 
     // Compact plan payload for Alpine: each variant is a data plan. `price` is the
@@ -21,6 +21,9 @@
         return [
             'id'       => $v->id,
             'data'     => (string) ($meta['data_limit'] ?? 'Data plan'),
+            'voice'    => $meta['voice_limit'] ?? null,
+            'sms'      => $meta['sms_limit'] ?? null,
+            'supports_voice' => (bool) ($meta['supports_voice'] ?? false),
             'validity' => (int) ($meta['validity_days'] ?? 0),
             'network'  => $meta['network'] ?? null,
             'topup'    => (bool) ($meta['supports_topup'] ?? false),
@@ -69,9 +72,9 @@
                                 @endif
                             </span>
                         </div>
-                        <h1 class="mt-6 text-2xl font-bold text-white">{{ $regionLabel }} Data eSIM</h1>
+                        <h1 class="mt-6 text-2xl font-bold text-white">{{ $regionLabel }} eSIM</h1>
                         <p class="mt-2 max-w-sm text-sm leading-relaxed text-blue-100">
-                            {{ $product->description ?: 'High-speed data eSIM. Scan the QR code to activate, no physical SIM required.' }}
+                            {{ $product->description ?: 'High-speed eSIM. Scan the QR code to activate, no physical SIM required.' }}
                         </p>
                     </div>
 
@@ -118,7 +121,7 @@
                 class="flex flex-col gap-5"
             >
                 <div>
-                    <h2 class="text-xl font-bold text-zinc-900">Choose a data plan</h2>
+                    <h2 class="text-xl font-bold text-zinc-900">Choose a plan</h2>
                     <p class="mt-1 text-sm text-zinc-600">Pick the data amount and validity that fits your trip.</p>
                 </div>
 
@@ -143,12 +146,26 @@
                                         <span x-show="selectedId === {{ $p['id'] }}" class="h-2.5 w-2.5 rounded-full bg-blue-600"></span>
                                     </span>
                                     <div class="min-w-0">
-                                        <p class="text-base font-bold text-zinc-900">{{ $p['data'] }}</p>
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-base font-bold text-zinc-900">{{ $p['data'] }}</p>
+                                            @if ($p['supports_voice'])
+                                                <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-blue-700">
+                                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                                    </svg>
+                                                    +Number
+                                                </span>
+                                            @endif
+                                        </div>
                                         <p class="mt-0.5 text-xs text-zinc-600">
                                             @if ($p['validity'] > 0)
-                                                {{ $p['validity'] }} {{ $p['validity'] === 1 ? 'day' : 'days' }} validity
+                                                {{ $p['validity'] }} {{ $p['validity'] === 1 ? 'day' : 'days' }}
                                             @else
-                                                Flexible validity
+                                                Flexible
+                                            @endif
+                                            @if ($p['supports_voice'])
+                                                <span class="text-zinc-400">&middot;</span> {{ $p['voice'] ?? 'Voice' }}
+                                                <span class="text-zinc-400">&middot;</span> {{ $p['sms'] ?? 'SMS' }}
                                             @endif
                                             @if ($p['network'] && $p['network'] !== 'Multiple')
                                                 <span class="text-zinc-400">&middot;</span> {{ $p['network'] }}

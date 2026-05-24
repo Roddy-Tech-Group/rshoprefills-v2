@@ -199,7 +199,7 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue' => ['critical', 'webhooks', 'payments', 'fulfillment', 'notifications', 'default'],
+            'queue' => ['critical', 'webhooks', 'payments', 'fulfillment', 'airalo', 'zendit', 'notifications', 'default'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,
