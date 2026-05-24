@@ -18,9 +18,9 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
 
     public function __construct()
     {
-        $this->baseUrl = config('services.airalo.base_url', 'https://sandbox-partners-api.airalo.com/v2');
-        $this->clientId = config('services.airalo.client_id', '');
-        $this->clientSecret = config('services.airalo.client_secret', '');
+        $this->baseUrl = (string) config('services.airalo.base_url', 'https://partners-api.airalo.com/v2');
+        $this->clientId = (string) config('services.airalo.client_id', '');
+        $this->clientSecret = (string) config('services.airalo.client_secret', '');
     }
 
     private function getAccessToken(): string
