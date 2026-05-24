@@ -650,9 +650,28 @@
                         @if (! empty($item->fulfillment_payload))
                             <div class="mt-2 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200">
                                 <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Redemption details</p>
-                                @foreach ((array) $item->fulfillment_payload as $value)
-                                    @if (is_scalar($value))
-                                        <p class="mt-1 text-sm font-bold tabular-nums text-zinc-900">{{ $value }}</p>
+                                
+                                @if(!empty($item->fulfillment_payload['phone_number']))
+                                    <div class="mt-2 mb-2 flex items-center gap-2 rounded-md bg-blue-100 px-3 py-2 text-blue-800">
+                                        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                        <span class="text-sm font-bold tracking-wide">{{ $item->fulfillment_payload['phone_number'] }}</span>
+                                    </div>
+                                @endif
+
+                                @if(!empty($item->fulfillment_payload['qrcode_url']))
+                                    <div class="mt-2 mb-2">
+                                        <img src="{{ $item->fulfillment_payload['qrcode_url'] }}" alt="eSIM QR" class="h-32 w-32 rounded bg-white p-2 ring-1 ring-zinc-200">
+                                    </div>
+                                @endif
+
+                                @foreach ((array) $item->fulfillment_payload as $key => $value)
+                                    @if (is_scalar($value) && !in_array($key, ['raw_response', 'qrcode_url', 'phone_number']))
+                                        <p class="mt-1 text-sm font-bold tabular-nums text-zinc-900 break-all">
+                                            <span class="text-[10px] text-zinc-500 font-normal uppercase">{{ str_replace('_', ' ', $key) }}:</span>
+                                            {{ $value }}
+                                        </p>
                                     @endif
                                 @endforeach
                             </div>

@@ -19,7 +19,7 @@ return [
     ],
 
     'zendit' => [
-        'base_url' => env('ZENDIT_BASE_URL', 'https://api.zendit.io/v1'),
+        'base_url' => env('ZENDIT_BASE_URL'),
         'api_key' => env('ZENDIT_API_KEY'),
         'secret' => env('ZENDIT_SECRET'),
     ],
