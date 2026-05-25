@@ -103,7 +103,7 @@ class CheckoutService
                     'product_variant_id' => $item->product_variant_id,
                     'category_id' => $item->product->category_id,
                     'subcategory_id' => $item->product->subcategory_id,
-                    'provider_name' => $item->product->provider_name,
+                    'provider_name' => $item->variant->metadata['provider'] ?? $item->product->provider_name,
                     'provider_offer_id' => $item->variant->provider_offer_id,
                     'product_snapshot' => $item->product->toArray(),
                     'variant_snapshot' => $item->variant->toArray(),
