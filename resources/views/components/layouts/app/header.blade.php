@@ -38,6 +38,9 @@
     </head>
     <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased">
 
+        {{-- Translation engine (auto-detect + manual switching from the locale modal) --}}
+        @include('partials.translate-engine')
+
         <div
             x-data="storefrontLocale()"
             x-init="init()"
@@ -55,6 +58,10 @@
             </main>
 
             <x-footer />
+
+            <x-back-to-top />
+
+            <x-cookie-consent />
 
             <x-nav.locale-modal />
         </div>

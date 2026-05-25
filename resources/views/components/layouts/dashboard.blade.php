@@ -5,6 +5,9 @@
     </head>
     <body class="min-h-screen bg-[#eff6ff] text-zinc-900">
 
+        {{-- Translation engine (auto-detect + manual switching from the locale modal) --}}
+        @include('partials.translate-engine')
+
         @php
             $user = Auth::user();
             $isCurrent = fn (...$patterns) => request()->routeIs(...$patterns);

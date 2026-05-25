@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,6 +18,20 @@ class HelpPageTest extends TestCase
             ->assertOk()
             ->assertSee('How can we help?')
             ->assertSee('Frequently asked questions')
-            ->assertSee('support@rshoprefills.com');
+            ->assertSee('info@rshoprefill.com');
+    }
+
+    public function test_account_dropdown_links_are_wired_for_authenticated_users(): void
+    {
+        $this->withoutVite();
+        $user = User::factory()->create();
+
+        // Rendering any storefront page exercises the authed nav dropdown.
+        $this->actingAs($user)
+            ->get(route('shop.help'))
+            ->assertOk()
+            ->assertSee(route('dashboard.orders'), false)
+            ->assertSee(route('dashboard.rewards'), false)
+            ->assertSee(route('dashboard.kyc'), false);
     }
 }
