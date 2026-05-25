@@ -2,10 +2,13 @@
 
 use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartWebController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EmailPreviewController;
 use App\Http\Controllers\KycController;
+use App\Http\Controllers\PressController;
 use App\Http\Controllers\ThemeController;
 use App\Models\CurrencyRate;
 use App\Models\Product;
@@ -110,10 +113,38 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.brand');
 
-// eSIM storefront — a coverage-region listing + a per-region data-plan detail page.
-// Mirrors the gift-cards pattern: a Route::view listing + a slug detail route.
-// Each Product in the `esims` category is a coverage region; each variant is a data plan.
-Route::view('esims', 'shop.esims')->name('shop.esims');
+// eSIM storefront — a single store page. Each Product in the `esims` category is
+// a coverage region; each variant is a data plan. The `esims` entry point resolves
+// a default region (the visitor's country, then US, then the first available) and
+// renders the store; the in-page country picker switches regions via the slug route.
+Route::get('esims', function () {
+    $country = strtoupper((string) (request()->query('country') ?: request()->attributes->get('region') ?: 'US'));
+
+    $resolve = function (callable $modify) {
+        $query = Product::query()
+            ->where('is_active', true)
+            ->whereHas('category', fn ($c) => $c->where('slug', 'esims'))
+            ->with([
+                'category:id,name,slug',
+                'subcategory:id,name,slug',
+                'variants' => fn ($v) => $v->where('is_available', true)->orderBy('cost_price'),
+            ]);
+
+        $modify($query);
+
+        return $query->first();
+    };
+
+    $product = $resolve(fn ($q) => $q->where('country_code', $country))
+        ?? $resolve(fn ($q) => $q->orderByRaw("country_code = 'US' DESC")->orderBy('name'));
+
+    // No eSIM coverage regions synced yet — fall back to the empty-state page.
+    if (! $product) {
+        return view('shop.esims');
+    }
+
+    return view('shop.esim', ['product' => $product]);
+})->name('shop.esims');
 
 Route::get('esims/{slug}', function (string $slug) {
     $product = TaggedCache::for(['catalog'])->remember("esim_product_{$slug}", 3600, function () use ($slug) {
@@ -227,6 +258,73 @@ Route::view('stays', 'shop.coming-soon', ['service' => 'stays'])->name('shop.sta
 
 // Help Center — static FAQ, topic filters and support contact details.
 Route::view('help', 'shop.help')->name('shop.help');
+
+// How It Works — marketing walkthrough of the buying flow.
+Route::view('how-it-works', 'shop.how-it-works')->name('shop.how-it-works');
+
+// Contact — storefront contact page + message submission (stored + admin-notified).
+Route::get('contact', [ContactController::class, 'index'])->name('shop.contact');
+Route::post('contact', [ContactController::class, 'store'])->name('contact.send');
+
+// Refund and Cancellation Policy.
+Route::view('refund-policy', 'shop.refund-policy')->name('shop.refund-policy');
+
+// Privacy Policy.
+Route::view('privacy', 'shop.privacy')->name('shop.privacy');
+
+// Cookie Policy.
+Route::view('cookie-policy', 'shop.cookie-policy')->name('shop.cookie-policy');
+
+// Compliance and Regulatory Framework.
+Route::view('compliance', 'shop.compliance')->name('shop.compliance');
+
+// About.
+Route::view('about', 'shop.about')->name('shop.about');
+
+// Mobile app — "in development" landing page.
+Route::view('mobile-app', 'shop.mobile-app')->name('shop.mobile-app');
+
+// Earn Points — Rcoin rewards programme.
+Route::view('earn-points', 'shop.earn-points')->name('shop.earn-points');
+
+// FAQ — comprehensive frequently asked questions.
+Route::view('faq', 'shop.faq')->name('shop.faq');
+
+// Press and Media — newsroom grid + single post view.
+Route::get('press', [PressController::class, 'index'])->name('shop.press');
+Route::get('press/{slug}', [PressController::class, 'show'])->name('shop.press.show');
+
+// Blog — articles grid + single post view.
+Route::get('blog', [BlogController::class, 'index'])->name('shop.blog');
+Route::get('blog/{slug}', [BlogController::class, 'show'])->name('shop.blog.show');
+
+// Terms of Service.
+Route::view('terms', 'shop.terms')->name('shop.terms');
+
+// Accessibility statement.
+Route::view('accessibility', 'shop.accessibility')->name('shop.accessibility');
+
+// HTML sitemap — a human-friendly index of every section.
+Route::view('sitemap', 'shop.sitemap')->name('shop.sitemap');
+
+// XML sitemap for search engines (lists public pages only).
+Route::get('sitemap.xml', function () {
+    $names = [
+        'home', 'shop.gift-cards', 'shop.esims', 'shop.topups', 'shop.bills',
+        'shop.flights', 'shop.stays', 'shop.cart', 'shop.help', 'shop.how-it-works',
+        'shop.contact', 'shop.about', 'shop.privacy', 'shop.terms', 'shop.cookie-policy',
+        'shop.refund-policy', 'shop.compliance', 'shop.accessibility', 'shop.sitemap',
+    ];
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+    $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+    foreach ($names as $name) {
+        $xml .= '  <url><loc>'.e(route($name)).'</loc></url>'."\n";
+    }
+    $xml .= '</urlset>';
+
+    return response($xml, 200, ['Content-Type' => 'application/xml']);
+})->name('sitemap.xml');
 
 // Cart page (HTML). Store-driven — it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');

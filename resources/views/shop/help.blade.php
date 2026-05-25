@@ -2,7 +2,7 @@
     // Help Center — static FAQ + topic filters + contact details. Customer-facing,
     // so copy stays generic (no payment-provider names). Search and topic cards
     // filter the FAQ list client-side via Alpine.
-    $supportEmail = 'support@rshoprefills.com';
+    $supportEmail = 'info@rshoprefill.com';
 
     $topics = [
         ['cat' => 'Orders & Delivery',        'desc' => 'Tracking, codes and delivery times.',     'path' => 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5'],
@@ -56,7 +56,7 @@
         }"
     >
         {{-- ── Hero + search ─────────────────────────────────────── --}}
-        <section class="border-b border-zinc-100 bg-blue-50/60">
+        <section class="border-b border-zinc-100 bg-blue-50">
             <div class="mx-auto w-full max-w-[1000px] px-4 py-14 text-center sm:px-6 sm:py-20">
                 <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">
                     Help Center

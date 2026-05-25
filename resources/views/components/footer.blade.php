@@ -45,18 +45,38 @@
                         </svg>
                     </a>
                 </div>
+
+                {{-- Get the app --}}
+                <p class="mt-8 text-xs font-semibold uppercase tracking-wider text-zinc-500">Get the app</p>
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <a href="{{ route('shop.mobile-app') }}" wire:navigate aria-label="Download on the App Store (in development)" class="inline-flex items-center gap-2 rounded-[8px] px-4 py-2 text-white transition-opacity hover:opacity-90" style="background-color: #18181b;">
+                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+                        <span class="text-left leading-none">
+                            <span class="block text-[10px]">Get it on</span>
+                            <span class="block text-sm font-semibold">App Store</span>
+                        </span>
+                    </a>
+                    <a href="{{ route('shop.mobile-app') }}" wire:navigate aria-label="Get it on Google Play (in development)" class="inline-flex items-center gap-2 rounded-[8px] px-4 py-2 text-white transition-opacity hover:opacity-90" style="background-color: #18181b;">
+                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3.5l14 8.5-14 8.5z"/></svg>
+                        <span class="text-left leading-none">
+                            <span class="block text-[10px]">Download on</span>
+                            <span class="block text-sm font-semibold">Google Play</span>
+                        </span>
+                    </a>
+                </div>
             </div>
 
             {{-- Shop --}}
-            <nav class="lg:col-span-2" aria-label="Shop">
-                <h3 class="text-base font-semibold text-zinc-900">Shop</h3>
+            <nav class="lg:col-span-2" aria-label="Popular gift cards">
+                <h3 class="text-base font-semibold text-zinc-900">Popular gift cards</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="{{ route('shop.gift-cards') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Gift Cards</a></li>
-                    <li><a href="{{ route('shop.esims') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">eSIMs</a></li>
-                    <li><a href="{{ route('shop.topups') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Mobile top up</a></li>
-                    <li><a href="{{ route('shop.bills') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Bill payments</a></li>
-                    <li><a href="{{ route('shop.flights') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Flights</a></li>
-                    <li><a href="{{ route('shop.stays') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Stays</a></li>
+                    <li><a href="{{ route('shop.brand', 'amazon') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Amazon</a></li>
+                    <li><a href="{{ route('shop.brand', 'apple') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Apple</a></li>
+                    <li><a href="{{ route('shop.brand', 'steam') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Steam</a></li>
+                    <li><a href="{{ route('shop.brand', 'playstation') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">PlayStation</a></li>
+                    <li><a href="{{ route('shop.brand', 'xbox') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Xbox</a></li>
+                    <li><a href="{{ route('shop.brand', 'netflix') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Netflix</a></li>
+                    <li><a href="{{ route('shop.gift-cards') }}" wire:navigate class="font-medium text-blue-600 transition-colors hover:text-blue-700">View all gift cards</a></li>
                 </ul>
             </nav>
 
@@ -65,10 +85,11 @@
                 <h3 class="text-base font-semibold text-zinc-900">Help</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="{{ route('shop.help') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Help center</a></li>
-                    <li><a href="{{ route('shop.help') }}#contact" class="text-zinc-600 transition-colors hover:text-zinc-900">Contact us</a></li>
-                    <li><a href="{{ route('shop.help') }}#how-it-works" class="text-zinc-600 transition-colors hover:text-zinc-900">How it works</a></li>
+                    <li><a href="{{ route('shop.faq') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">FAQs</a></li>
+                    <li><a href="{{ route('shop.contact') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Contact us</a></li>
+                    <li><a href="{{ route('shop.how-it-works') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">How it works</a></li>
+                    <li><a href="{{ route('shop.earn-points') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Earn points</a></li>
                     <li><a href="{{ route('dashboard.orders') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Order status</a></li>
-                    <li><a href="{{ route('shop.help') }}#faq" class="text-zinc-600 transition-colors hover:text-zinc-900">Refund policy</a></li>
                 </ul>
             </nav>
 
@@ -76,10 +97,16 @@
             <nav class="lg:col-span-2" aria-label="Company">
                 <h3 class="text-base font-semibold text-zinc-900">Company</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">About us</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Blog</a></li>
+                    <li><a href="{{ route('shop.about') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">About us</a></li>
+                    <li><a href="{{ route('shop.blog') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Blog</a></li>
                     <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Careers</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Press</a></li>
+                    <li><a href="{{ route('shop.press') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Press &amp; Media</a></li>
+                    <li>
+                        <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center gap-2 text-zinc-600 transition-colors hover:text-zinc-900">
+                            <span>WebApp Active</span>
+                            <span class="shrink-0 rounded-full" style="display: inline-block; width: 0.5rem; height: 0.5rem; background-color: #22c55e;"></span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
 
@@ -87,10 +114,11 @@
             <nav class="lg:col-span-2" aria-label="Legal">
                 <h3 class="text-base font-semibold text-zinc-900">Legal</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Privacy</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Terms of Service</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Cookie Policy</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Compliance</a></li>
+                    <li><a href="{{ route('shop.privacy') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Privacy</a></li>
+                    <li><a href="{{ route('shop.terms') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Terms of Service</a></li>
+                    <li><a href="{{ route('shop.cookie-policy') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Cookie Policy</a></li>
+                    <li><a href="{{ route('shop.compliance') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Compliance</a></li>
+                    <li><a href="{{ route('shop.refund-policy') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Refund policy</a></li>
                 </ul>
             </nav>
 
@@ -131,7 +159,7 @@
 
             <p class="text-xs">Version 2.0.0</p>
 
-            <a href="#" class="text-xs font-medium transition-colors hover:text-zinc-900">Cookie settings</a>
+            <a href="{{ route('shop.cookie-policy') }}#manage" class="text-xs font-medium transition-colors hover:text-zinc-900">Cookie settings</a>
         </div>
 
         {{-- Divider --}}
@@ -139,7 +167,7 @@
 
         {{-- Bottom bar --}}
         <div class="flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <p>&copy; 2026 RshopRefills. All rights reserved.</p>
+            <p class="max-w-xl">&copy; 2026 RshopRefill.com. All rights reserved. RshopRefill is a wholly-owned product of Roddy Technologies LTD, Registered.</p>
 
             <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
                 {{-- Locale chip: opens the same modal the nav uses --}}
@@ -150,8 +178,8 @@
                     <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-3.5 w-3.5 shrink-0 opacity-70">
                     <span x-text="language">English</span>
                 </button>
-                <a href="#" class="transition-colors hover:text-zinc-900">Sitemap</a>
-                <a href="#" class="transition-colors hover:text-zinc-900">Accessibility</a>
+                <a href="{{ route('shop.sitemap') }}" wire:navigate class="transition-colors hover:text-zinc-900">Sitemap</a>
+                <a href="{{ route('shop.accessibility') }}" wire:navigate class="transition-colors hover:text-zinc-900">Accessibility</a>
             </div>
         </div>
 

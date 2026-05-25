@@ -839,6 +839,10 @@ window.storefrontLocale = function () {
             // Tell the cart store to re-price when the display currency changes
             // (covers non-shop pages, where reloadIfShop does not navigate).
             this.$watch('currency', () => window.dispatchEvent(new CustomEvent('currency-changed')));
+
+            // Tell the translate engine (partials/translate-engine.blade.php) to
+            // re-translate the page when the language changes from the locale modal.
+            this.$watch('language', (val) => window.dispatchEvent(new CustomEvent('language-changed', { detail: val })));
         },
     };
 };
