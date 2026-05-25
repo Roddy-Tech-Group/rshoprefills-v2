@@ -28,15 +28,16 @@ class ZenditEsimNormalizer implements CatalogNormalizerInterface
         // 3. Determine Region/Country Grouping
         // For eSIMs, the product represents the coverage area (e.g., "United States eSIM", "Europe Regional eSIM")
         // We do NOT use the brand name to separate products unless it's a completely different region.
-        $countryCode = strtoupper($rawItem['country'] ?? 'Global');
+        $rawCountry = strtoupper($rawItem['country'] ?? 'WW');
+        $countryCode = strlen($rawCountry) === 2 ? $rawCountry : 'WW';
         $currencyCode = strtoupper($rawItem['currency'] ?? 'USD');
 
         // Use region if available to make the name nicer, e.g., "Europe", "Global", or fallback to country.
-        $regionName = $rawItem['region'] ?? $countryCode;
+        $regionName = $rawItem['region'] ?? ($countryCode === 'WW' ? 'Global' : $countryCode);
 
         // We will group by the country/region string.
         $productSlug = Str::slug("esim-{$countryCode}-{$regionName}");
-        $productName = $countryCode === 'GLOBAL' ? 'Global Data eSIM' : "{$regionName} Data eSIM";
+        $productName = $countryCode === 'WW' ? 'Global Data eSIM' : "{$regionName} Data eSIM";
 
         $product = Product::updateOrCreate(
             [
@@ -64,11 +65,16 @@ class ZenditEsimNormalizer implements CatalogNormalizerInterface
         // Extract eSIM specific metadata
         // Zendit usually returns these in fields like 'dataAmount', 'validity', etc.
         $metadata = [
+            'provider' => 'zendit',
+            'provider_package_id' => $offerId,
+            'plan_type' => 'data_only',
+            'supports_data' => true,
+            'supports_voice' => false,
+            'supports_sms' => false,
             'data_limit' => $rawItem['dataAmount'] ?? 'Unknown',
             'validity_days' => (int) ($rawItem['validity'] ?? 0),
             'coverage' => isset($rawItem['coverage']) ? (array) $rawItem['coverage'] : [$countryCode],
             'network' => $rawItem['brand'] ?? 'Multiple', // Brand is usually the telecom operator
-            'plan_type' => 'data_only',
             'activation_policy' => 'automatic',
             'supports_topup' => (bool) ($rawItem['supportsTopup'] ?? false),
             // Store entire raw snapshot for debugging

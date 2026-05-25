@@ -24,7 +24,7 @@ class PollPendingFulfillmentJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 20; // Allow polling up to 20 times (20 minutes total)
+    public int $tries = 120; // Allow polling up to 120 times (20 minutes total)
 
     public function __construct(protected OrderItem $item) {}
 
@@ -65,13 +65,7 @@ class PollPendingFulfillmentJob implements ShouldQueue
 
                     FulfillmentSucceeded::dispatch($item);
 
-                    // Check if parent order is completed (all items fulfilled)
-                    $order = Order::where('id', $item->order_id)->lockForUpdate()->first();
-                    $allItemsFulfilled = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Fulfilled);
-
-                    if ($allItemsFulfilled) {
-                        $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Fulfilled);
-                    }
+                    $this->checkOrderCompletion($item->order_id, $orderService);
                 } elseif ($status === FulfillmentStatus::Failed) {
                     $item->fulfillment_status = FulfillmentStatus::Failed;
                     $item->failed_at = now();
@@ -79,38 +73,8 @@ class PollPendingFulfillmentJob implements ShouldQueue
 
                     FulfillmentFailed::dispatch($item, 'Provider verification returned failed status');
 
-                    // Handle refund safety
-                    $order = $item->order;
-                    $walletPayment = $order->paymentAttempts()
-                        ->where('gateway', 'wallet')
-                        ->whereIn('payment_status', [PaymentStatus::Reserved, PaymentStatus::Paid])
-                        ->first();
-
-                    if ($walletPayment) {
-                        $hasSuccessfulItem = $order->items->contains(function ($i) {
-                            return in_array($i->fulfillment_status, [
-                                FulfillmentStatus::Fulfilled,
-                                FulfillmentStatus::Processing,
-                                FulfillmentStatus::Delayed,
-                            ]);
-                        });
-
-                        if (! $hasSuccessfulItem) {
-                            if ($walletPayment->payment_status === PaymentStatus::Reserved) {
-                                $walletProvider->releaseFunds($walletPayment);
-                            } else {
-                                $walletProvider->refundPayment($walletPayment, $order->total_amount);
-                            }
-                            $order->payment_status = PaymentStatus::Failed;
-                            $order->order_status = OrderStatus::Failed;
-                            $order->failed_at = now();
-                            $order->save();
-                        } else {
-                            if ($walletPayment->payment_status !== PaymentStatus::Reserved) {
-                                $walletProvider->refundPayment($walletPayment, $item->subtotal_amount);
-                            }
-                        }
-                    }
+                    $this->handleFailureReversal($item, $walletProvider);
+                    $this->checkOrderCompletion($item->order_id, $orderService);
                 } else {
                     // Still pending/processing — signal that we need to re-queue after the transaction
                     $needsRelease = true;
@@ -119,17 +83,17 @@ class PollPendingFulfillmentJob implements ShouldQueue
 
             // Bug #5 fix: call release() AFTER the transaction has committed, not inside it
             if ($needsRelease) {
-                $this->release(60); // Release back to queue in 60 seconds
+                $this->release(10); // Release back to queue in 10 seconds
             }
 
         } catch (\Exception $e) {
             Log::error("Fulfillment status polling exception for item {$item->id}: ".$e->getMessage());
-            $this->release(60);
+            $this->release(10);
         }
     }
 
     /**
-     * Bug #6 fix: Handle permanent job failure after all 20 polling attempts are exhausted.
+     * Bug #6 fix: Handle permanent job failure after all 120 polling attempts are exhausted.
      * Without this, items stay stuck in 'processing' with no refund and no alert.
      */
     public function failed(\Throwable $e): void
@@ -148,40 +112,72 @@ class PollPendingFulfillmentJob implements ShouldQueue
             $item->failed_at = now();
             $item->save();
 
-            FulfillmentFailed::dispatch($item, 'Polling exhausted after 20 attempts: '.$e->getMessage());
+            FulfillmentFailed::dispatch($item, 'Polling exhausted after 120 attempts: '.$e->getMessage());
 
-            // Trigger wallet reversal if applicable
-            $order = $item->order;
-            $walletPayment = $order->paymentAttempts()
-                ->where('gateway', 'wallet')
-                ->whereIn('payment_status', [PaymentStatus::Reserved, PaymentStatus::Paid])
-                ->first();
+            $this->handleFailureReversal($item, $walletProvider);
+            $this->checkOrderCompletion($item->order_id, app(OrderService::class));
+        });
+    }
 
-            if ($walletPayment) {
-                $hasSuccessfulItem = $order->items->contains(function ($i) {
-                    return in_array($i->fulfillment_status, [
-                        FulfillmentStatus::Fulfilled,
-                        FulfillmentStatus::Processing,
-                        FulfillmentStatus::Delayed,
-                    ]);
-                });
+    private function handleFailureReversal(OrderItem $item, WalletPaymentProvider $walletProvider): void
+    {
+        $order = $item->order;
 
-                if (! $hasSuccessfulItem) {
-                    if ($walletPayment->payment_status === PaymentStatus::Reserved) {
-                        $walletProvider->releaseFunds($walletPayment);
-                    } else {
-                        $walletProvider->refundPayment($walletPayment, $order->total_amount);
-                    }
-                    $order->payment_status = PaymentStatus::Failed;
-                    $order->order_status = OrderStatus::Failed;
-                    $order->failed_at = now();
-                    $order->save();
+        $walletPayment = $order->paymentAttempts()
+            ->where('gateway', 'wallet')
+            ->whereIn('payment_status', [PaymentStatus::Reserved, PaymentStatus::Paid])
+            ->first();
+
+        if ($walletPayment) {
+            $hasSuccessfulItem = $order->items->contains(function ($i) {
+                return in_array($i->fulfillment_status, [
+                    FulfillmentStatus::Fulfilled,
+                    FulfillmentStatus::Processing,
+                    FulfillmentStatus::Delayed,
+                ]);
+            });
+
+            if (! $hasSuccessfulItem) {
+                if ($walletPayment->payment_status === PaymentStatus::Reserved) {
+                    $walletProvider->releaseFunds($walletPayment);
                 } else {
-                    if ($walletPayment->payment_status === PaymentStatus::Paid) {
-                        $walletProvider->refundPayment($walletPayment, $item->subtotal_amount);
-                    }
+                    $walletProvider->refundPayment($walletPayment, $order->total_amount);
+                }
+
+                $order->payment_status = PaymentStatus::Failed;
+                $order->order_status = OrderStatus::Failed;
+                $order->failed_at = now();
+                $order->save();
+            } else {
+                $refundAmount = $item->subtotal_amount;
+                if ($walletPayment->payment_status === PaymentStatus::Paid) {
+                    $walletProvider->refundPayment($walletPayment, $refundAmount);
                 }
             }
-        });
+        }
+    }
+
+    private function checkOrderCompletion(string $orderId, OrderService $orderService): void
+    {
+        $order = Order::where('id', $orderId)->lockForUpdate()->first();
+        if (! $order) return;
+
+        $isOrderFinished = $order->items->every(fn ($i) => in_array($i->fulfillment_status, [
+            FulfillmentStatus::Fulfilled,
+            FulfillmentStatus::Failed
+        ]));
+
+        if ($isOrderFinished) {
+            $allFailed = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Failed);
+            $allFulfilled = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Fulfilled);
+            
+            if ($allFailed) {
+                $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Failed);
+            } elseif ($allFulfilled) {
+                $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Fulfilled);
+            } else {
+                $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::PartiallyFulfilled);
+            }
+        }
     }
 }
