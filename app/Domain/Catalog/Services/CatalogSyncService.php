@@ -21,11 +21,12 @@ class CatalogSyncService
     {
         $rawPayload = $this->provider->fetchCatalog($page, $limit);
 
-        // Zendit's catalog endpoints (/vouchers/offers, /esim/offers, /topups/offers) return:
-        //   { "total": int, "limit": int, "offset": int, "list": [ ...items... ] }
-        // Fall back to legacy "data" / "meta" keys so this works if any provider returns the older shape.
+        // Providers return different shapes:
+        //   Zendit: { "total": int, "limit": int, "offset": int, "list": [ ...items... ] }
+        //   Airalo: { "data": [ ...items... ], "links": {...}, "meta": { "current_page", "last_page", "total" } }
         $items = $rawPayload['list'] ?? $rawPayload['data'] ?? [];
-        $total = $rawPayload['total'] ?? ($rawPayload['meta']['totalCount'] ?? 0);
+        $meta = $rawPayload['meta'] ?? [];
+        $total = $rawPayload['total'] ?? ($meta['total'] ?? ($meta['totalCount'] ?? 0));
 
         $processedItems = 0;
 
@@ -34,9 +35,19 @@ class CatalogSyncService
             $processedItems++;
         }
 
+        // Prefer explicit page metadata (Airalo), then a "next" link, then fall back
+        // to offset math against the total (Zendit).
+        if (isset($meta['current_page'], $meta['last_page'])) {
+            $hasMore = (int) $meta['current_page'] < (int) $meta['last_page'];
+        } elseif (! empty($rawPayload['links']['next'])) {
+            $hasMore = true;
+        } else {
+            $hasMore = $total > 0 && ($page * $limit) < $total;
+        }
+
         return [
             'processed' => $processedItems,
-            'has_more' => $total > 0 && ($page * $limit) < $total,
+            'has_more' => $hasMore,
             'total' => $total,
         ];
     }

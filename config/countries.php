@@ -110,5 +110,16 @@ return [
 
         // Z
         'Zambia' => 'ZM', 'Zimbabwe' => 'ZW',
+
+        // Territories & dependencies (eSIM coverage that isn't a sovereign country)
+        'Anguilla' => 'AI', 'Netherlands Antilles' => 'AN', 'Aruba' => 'AW', 'Åland Islands' => 'AX',
+        'Saint Barthélemy' => 'BL', 'Bermuda' => 'BM', 'Caribbean Netherlands' => 'BQ', 'Curaçao' => 'CW',
+        'Faroe Islands' => 'FO', 'French Guiana' => 'GF', 'Guernsey' => 'GG', 'Gibraltar' => 'GI',
+        'Greenland' => 'GL', 'Guadeloupe' => 'GP', 'Guam' => 'GU', 'Hong Kong' => 'HK',
+        'Canary Islands' => 'IC', 'Israel' => 'IL', 'Isle of Man' => 'IM', 'Iran' => 'IR',
+        'Jersey' => 'JE', 'Cayman Islands' => 'KY', 'Saint Martin' => 'MF', 'Macau' => 'MO',
+        'Martinique' => 'MQ', 'Montserrat' => 'MS', 'Puerto Rico' => 'PR', 'Palestine' => 'PS',
+        'Réunion' => 'RE', 'Russia' => 'RU', 'Sint Maarten' => 'SX', 'Turks and Caicos Islands' => 'TC',
+        'Taiwan' => 'TW', 'British Virgin Islands' => 'VG', 'U.S. Virgin Islands' => 'VI', 'Mayotte' => 'YT',
     ],
 ];

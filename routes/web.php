@@ -7,6 +7,7 @@ use App\Http\Controllers\CartWebController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EmailPreviewController;
+use App\Http\Controllers\EsimStoreController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
 use App\Http\Controllers\ThemeController;
@@ -113,55 +114,13 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.brand');
 
-// eSIM storefront — a single store page. Each Product in the `esims` category is
-// a coverage region; each variant is a data plan. The `esims` entry point resolves
-// a default region (the visitor's country, then US, then the first available) and
-// renders the store; the in-page country picker switches regions via the slug route.
-Route::get('esims', function () {
-    $country = strtoupper((string) (request()->query('country') ?: request()->attributes->get('region') ?: 'US'));
-
-    $resolve = function (callable $modify) {
-        $query = Product::query()
-            ->where('is_active', true)
-            ->whereHas('category', fn ($c) => $c->where('slug', 'esims'))
-            ->with([
-                'category:id,name,slug',
-                'subcategory:id,name,slug',
-                'variants' => fn ($v) => $v->where('is_available', true)->orderBy('cost_price'),
-            ]);
-
-        $modify($query);
-
-        return $query->first();
-    };
-
-    $product = $resolve(fn ($q) => $q->where('country_code', $country))
-        ?? $resolve(fn ($q) => $q->orderByRaw("country_code = 'US' DESC")->orderBy('name'));
-
-    // No eSIM coverage regions synced yet — fall back to the empty-state page.
-    if (! $product) {
-        return view('shop.esims');
-    }
-
-    return view('shop.esim', ['product' => $product]);
-})->name('shop.esims');
-
-Route::get('esims/{slug}', function (string $slug) {
-    $product = TaggedCache::for(['catalog'])->remember("esim_product_{$slug}", 3600, function () use ($slug) {
-        return Product::query()
-            ->where('slug', $slug)
-            ->where('is_active', true)
-            ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
-            ->with([
-                'category:id,name,slug',
-                'subcategory:id,name,slug',
-                'variants' => fn ($q) => $q->where('is_available', true)->orderBy('cost_price'),
-            ])
-            ->firstOrFail();
-    });
-
-    return view('shop.esim', ['product' => $product]);
-})->name('shop.esim');
+// eSIM storefront — a single store page per country. Each Product in the `esims`
+// category is one supplier's coverage for a region; the controller MERGES all
+// suppliers' plans for a country so data + voice show together. The `esims` entry
+// point resolves a default country; the slug route opens a specific region.
+Route::get('esims', [EsimStoreController::class, 'index'])->name('shop.esims');
+Route::get('esims/country/{code}', [EsimStoreController::class, 'country'])->name('shop.esim.country');
+Route::get('esims/{slug}', [EsimStoreController::class, 'show'])->name('shop.esim');
 
 // Mobile top-up — mirrors the gift-card flow exactly: a brand listing + a
 // brand-level detail page. Operators are the Products in the `mobile-airtime`

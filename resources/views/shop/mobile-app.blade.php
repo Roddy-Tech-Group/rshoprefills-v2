@@ -26,7 +26,7 @@
                 </span>
             </span>
             <span class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-white opacity-90" style="background-color: #18181b;">
-                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3.5l14 8.5-14 8.5z"/></svg>
+                <img src="{{ asset('assets/'.rawurlencode('Playstore 2.png')) }}" alt="" width="24" height="24" class="block h-6 w-6 shrink-0 object-contain" loading="lazy">
                 <span class="text-left leading-none">
                     <span class="block text-xs">Download on</span>
                     <span class="block text-sm font-semibold">Google Play</span>

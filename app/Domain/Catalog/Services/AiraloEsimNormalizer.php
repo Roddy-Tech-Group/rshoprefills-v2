@@ -58,24 +58,48 @@ class AiraloEsimNormalizer implements CatalogNormalizerInterface
             $network = $operator['title'] ?? 'Multiple';
             $packages = $operator['packages'] ?? [];
 
+            // Real carrier networks for this operator (Airalo exposes them per coverage
+            // as { name, types: [...] }, e.g. T-Mobile 5G / Verizon 5G). Deduped by name.
+            $networksByName = [];
+            foreach (($operator['coverages'] ?? []) as $coverage) {
+                foreach (($coverage['networks'] ?? []) as $net) {
+                    if (! is_array($net) || empty($net['name'])) {
+                        continue;
+                    }
+                    $speed = null;
+                    foreach ((array) ($net['types'] ?? []) as $type) {
+                        $s = is_array($type) ? ($type['name'] ?? null) : $type;
+                        if ($s) {
+                            $speed = $s;
+                        }
+                    }
+                    $networksByName[$net['name']] = $speed;
+                }
+            }
+            $networksDetail = [];
+            foreach ($networksByName as $name => $speed) {
+                $networksDetail[] = ['name' => $name, 'speed' => $speed];
+            }
+
             foreach ($packages as $pkg) {
                 $offerId = $pkg['id'] ?? null;
-                if (!$offerId) {
+                if (! $offerId) {
                     continue;
                 }
 
                 $costPrice = (float) ($pkg['net_price'] ?? $pkg['price'] ?? 0);
                 $faceValue = (float) ($pkg['price'] ?? $costPrice);
 
-                $planTypeStr = strtolower($operator['plan_type'] ?? 'data');
-                $supportsVoice = str_contains($planTypeStr, 'voice') || !empty($pkg['voice']);
-                $supportsSms = str_contains($planTypeStr, 'text') || str_contains($planTypeStr, 'sms') || !empty($pkg['text']);
-                $supportsData = str_contains($planTypeStr, 'data') || !empty($pkg['data']);
+                // Voice/SMS come ONLY from the package's real numeric allowance. The
+                // operator-level plan_type is unreliable (it tags data-only packages
+                // as voice). No "Included" placeholder — show only what the data says.
+                $voiceVal = $pkg['voice'] ?? null;
+                $smsVal = $pkg['text'] ?? null;
+                $supportsVoice = is_numeric($voiceVal) && (float) $voiceVal > 0;
+                $supportsSms = is_numeric($smsVal) && (float) $smsVal > 0;
+                $supportsData = ! empty($pkg['data']) || ! empty($pkg['is_unlimited']);
 
-                $planType = 'data_only';
-                if ($supportsVoice || $supportsSms) {
-                    $planType = 'voice_sms_data';
-                }
+                $planType = ($supportsVoice || $supportsSms) ? 'voice_sms_data' : 'data_only';
 
                 $metadata = [
                     'provider' => 'airalo',
@@ -84,12 +108,13 @@ class AiraloEsimNormalizer implements CatalogNormalizerInterface
                     'supports_data' => $supportsData,
                     'supports_voice' => $supportsVoice,
                     'supports_sms' => $supportsSms,
-                    'data_limit' => $pkg['data'] ?? 'Unknown',
-                    'voice_limit' => $pkg['voice'] ?? ($supportsVoice ? 'Included' : null),
-                    'sms_limit' => $pkg['text'] ?? ($supportsSms ? 'Included' : null),
+                    'data_limit' => $pkg['data'] ?? null,
+                    'voice_limit' => $supportsVoice ? (string) $voiceVal : null,
+                    'sms_limit' => $supportsSms ? (string) $smsVal : null,
                     'validity_days' => (int) ($pkg['day'] ?? 0),
                     'countries' => [$countryCode], // Could be an array for regional
                     'network' => $network,
+                    'networks_detail' => $networksDetail,
                     'activation_policy' => $operator['activation_policy'] ?? 'automatic',
                     'is_rechargeable' => (bool) ($operator['rechargeability'] ?? false),
                     'raw_payload' => $pkg,

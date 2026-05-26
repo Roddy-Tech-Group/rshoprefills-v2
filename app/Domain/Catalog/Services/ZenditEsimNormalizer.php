@@ -58,9 +58,16 @@ class ZenditEsimNormalizer implements CatalogNormalizerInterface
         );
 
         // 4. Create/Update Variant (The actual data plan)
+        // Zendit sends `cost` and `price` as objects: { fixed: 8121, currencyDivisor: 100 }.
+        // The real amount is fixed / currencyDivisor (e.g. 8121/100 = $81.21). Casting the
+        // object straight to float previously yielded 1.0, flat-pricing every eSIM at ~$1.
         $offerId = $rawItem['offerId'];
-        $costPrice = (float) ($rawItem['cost'] ?? 0);
-        $faceValue = (float) ($rawItem['faceValue'] ?? $costPrice);
+        $cost = is_array($rawItem['cost'] ?? null) ? $rawItem['cost'] : [];
+        $price = is_array($rawItem['price'] ?? null) ? $rawItem['price'] : [];
+        $costDivisor = (($cost['currencyDivisor'] ?? 100) ?: 100);
+        $priceDivisor = (($price['currencyDivisor'] ?? 100) ?: 100);
+        $costPrice = isset($cost['fixed']) ? (float) $cost['fixed'] / $costDivisor : 0.0;
+        $faceValue = isset($price['fixed']) ? (float) $price['fixed'] / $priceDivisor : $costPrice;
 
         // Extract eSIM specific metadata
         // Zendit usually returns these in fields like 'dataAmount', 'validity', etc.
