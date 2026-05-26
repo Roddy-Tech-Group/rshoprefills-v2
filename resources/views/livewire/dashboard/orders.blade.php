@@ -247,9 +247,35 @@ class extends Component {
                                     foreach (['code', 'voucher_code', 'redeem_code', 'card_number', 'serial'] as $credKey) {
                                         if (! empty($payload[$credKey]) && is_scalar($payload[$credKey])) { $cardCode = (string) $payload[$credKey]; break; }
                                     }
-                                    if ($cardCode === null && $cardPin === null) { $cardCode = $extractCode($item); }
+                                    // eSIM delivery is shaped completely differently from a gift card:
+                                    // a QR image (qrcode_url) plus the SM-DP+ address (lpa) and an
+                                    // activation code (matching_id) for manual entry. The presence of
+                                    // any one of those payload keys flips the render to the eSIM card.
+                                    $esim = null;
+                                    if (! empty($payload['qrcode_url']) || ! empty($payload['lpa']) || ! empty($payload['iccid'])) {
+                                        $esimManual = (array) ($payload['esim'] ?? []);
+                                        $esim = [
+                                            'qr'      => is_scalar($payload['qrcode_url'] ?? null) ? (string) $payload['qrcode_url'] : null,
+                                            'lpa'     => is_scalar($payload['lpa'] ?? null) ? (string) $payload['lpa'] : null,
+                                            'code'    => is_scalar($esimManual['manualActivationCode'] ?? null) ? (string) $esimManual['manualActivationCode'] : null,
+                                            'iccid'   => is_scalar($payload['iccid'] ?? null) ? (string) $payload['iccid'] : null,
+                                            // iOS tap-to-install URL — opens the eSIM provisioning flow
+                                            // directly on iPhone (iOS 17.4+) without a QR scan.
+                                            'install' => is_scalar($payload['direct_install_url'] ?? null)
+                                                ? (string) $payload['direct_install_url']
+                                                : (is_scalar($esimManual['directInstallUrl'] ?? null) ? (string) $esimManual['directInstallUrl'] : null),
+                                        ];
+                                    }
+                                    if (! $esim && $cardCode === null && $cardPin === null) { $cardCode = $extractCode($item); }
                                     $redeemHtml = $snap['redeem_instructions'] ?? null;
                                     $termsHtml  = $snap['terms_and_conditions'] ?? null;
+                                    // Apple gift cards: build the redeem deep-link so iPhone customers can
+                                    // tap once and have Apple's eShop open the App Store redemption sheet
+                                    // with the code pre-filled. Format documented at apps.apple.com/redeem.
+                                    $appleRedeemUrl = null;
+                                    if (! $esim && $cardCode && in_array(strtolower((string) $brandKey), ['apple', 'itunes', 'app-store', 'apple-itunes'], true)) {
+                                        $appleRedeemUrl = 'https://apps.apple.com/redeem?ctx=gifts&code='.rawurlencode($cardCode);
+                                    }
                                 @endphp
                                 {{-- Gift card — brand logo + denomination, full width inside the order card.
                                      `theme-static`: resellers screenshot this to deliver to their own
@@ -282,8 +308,44 @@ class extends Component {
                                     {{-- Card body space --}}
                                     <div class="h-14"></div>
 
-                                    {{-- Code + PIN — each independently copyable. --}}
-                                    @if ($cardCode || $cardPin)
+                                    @if ($esim)
+                                        {{-- eSIM: QR for scan + SM-DP+ address and activation code for manual entry. --}}
+                                        <div class="space-y-2">
+                                            @if ($esim['qr'])
+                                                <div class="flex flex-col items-center gap-2 rounded-[10px] border-2 border-zinc-100 bg-white p-4">
+                                                    <img src="{{ $esim['qr'] }}" alt="eSIM activation QR code" class="h-44 w-44 object-contain" loading="lazy">
+                                                    <p class="text-center text-xs font-medium text-zinc-600">Scan this QR from another device to install your eSIM.</p>
+                                                </div>
+                                            @endif
+                                            @if ($esim['install'])
+                                                {{-- One-tap install on iPhone (iOS 17.4+). The link opens Apple's
+                                                     eSIM provisioning flow without needing the QR scan. --}}
+                                                <a href="{{ $esim['install'] }}" class="flex items-center justify-center gap-2 rounded-[10px] bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800">
+                                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+                                                    Install on this iPhone
+                                                </a>
+                                            @endif
+                                            @foreach (array_filter(['SM-DP+' => $esim['lpa'], 'Code' => $esim['code'], 'ICCID' => $esim['iccid']]) as $credLabel => $credValue)
+                                                <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3" wire:key="esim-{{ $item->id }}-{{ $credLabel }}">
+                                                    <span class="w-14 shrink-0 text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ $credLabel }}</span>
+                                                    <span class="min-w-0 flex-1 truncate text-sm font-bold tracking-wider text-zinc-900">{{ $credValue }}</span>
+                                                    <button
+                                                        type="button"
+                                                        x-data="{ copied: false }"
+                                                        @click="navigator.clipboard.writeText(@js($credValue)); copied = true; setTimeout(() => copied = false, 1500)"
+                                                        class="shrink-0 text-zinc-400 transition-colors hover:text-blue-600"
+                                                        aria-label="Copy {{ $credLabel }}"
+                                                    >
+                                                        <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/>
+                                                        </svg>
+                                                        <span x-show="copied" x-cloak class="text-xs font-bold text-emerald-600">Copied</span>
+                                                    </button>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @elseif ($cardCode || $cardPin)
+                                        {{-- Gift card — code + PIN, each independently copyable. --}}
                                         <div class="space-y-2">
                                             @foreach (array_filter(['Code' => $cardCode, 'Pin' => $cardPin]) as $credLabel => $credValue)
                                                 <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3" wire:key="cred-{{ $item->id }}-{{ $credLabel }}">
@@ -303,6 +365,15 @@ class extends Component {
                                                     </button>
                                                 </div>
                                             @endforeach
+
+                                            @if ($appleRedeemUrl)
+                                                {{-- Apple deep link: on iPhone/iPad the App Store opens with the
+                                                     code pre-filled, ready to add to the user's Apple account. --}}
+                                                <a href="{{ $appleRedeemUrl }}" class="flex items-center justify-center gap-2 rounded-[10px] bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-800">
+                                                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+                                                    Add to Apple account
+                                                </a>
+                                            @endif
                                         </div>
                                     @else
                                         <div class="flex items-center gap-2 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-xs font-medium text-zinc-500">
