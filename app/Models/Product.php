@@ -101,7 +101,9 @@ class Product extends Model
             return null;
         }
 
-        return 'https://flagcdn.com/w40/'.strtolower($iso).'.png';
+        // w160 keeps flags crisp on retina at the sizes we render them; flagcdn is a
+        // CDN and the PNGs are only a few KB, so it still loads fast (and we lazy-load).
+        return 'https://flagcdn.com/w160/'.strtolower($iso).'.png';
     }
 
     /**

@@ -1,3 +1,4 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';
 
@@ -9,7 +10,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Satoshi-Regular', 'Satoshi', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -147,39 +148,10 @@ body::-webkit-scrollbar-thumb:hover {
     transition: box-shadow 280ms var(--ease-emphasis);
     will-change: transform;
 }
-/* Pointer-tracked dot — a small pulsing blue dot that follows the cursor while
-   a card is hovered (replaces the old soft glare). cardTilt() sets --glare-x/y. */
+/* Pointer dot removed — the .card-3d-glare span stays in the DOM (cardTilt()
+   still writes --glare-x/y harmlessly), but renders nothing. */
 .card-3d-glare {
-    opacity: 0;
-    transition: opacity 200ms var(--ease-emphasis);
-}
-.card-3d.is-tilting .card-3d-glare {
-    opacity: 1;
-}
-.card-3d-glare::before,
-.card-3d-glare::after {
-    content: "";
-    position: absolute;
-    left: var(--glare-x, 50%);
-    top: var(--glare-y, 50%);
-    height: 12px;
-    width: 12px;
-    border-radius: 9999px;
-    transform: translate(-50%, -50%);
-}
-/* Solid dot. */
-.card-3d-glare::after {
-    background: #2563eb;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.65);
-}
-/* Expanding pulse ring around the dot. */
-.card-3d-glare::before {
-    background: rgba(37, 99, 235, 0.5);
-    animation: cardDotPulse 1.3s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-@keyframes cardDotPulse {
-    0%        { transform: translate(-50%, -50%) scale(1);   opacity: 0.7; }
-    80%, 100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+    display: none;
 }
 
 /* "Add to cart" success cue — a brief, confident bounce when the item lands. */

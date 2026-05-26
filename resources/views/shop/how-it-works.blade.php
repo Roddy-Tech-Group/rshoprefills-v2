@@ -21,11 +21,13 @@
         ['src' => 'twitch.webp',    'name' => 'Twitch',      'tagline' => 'Support your streamers',   'color' => '#9146ff'],
     ])->map(fn ($l) => ['src' => $img($l['src']), 'name' => $l['name'], 'tagline' => $l['tagline'], 'color' => $l['color']])->all();
 
+    // 'mono' => flatten the blue line-art icon to black in light mode + white in
+    // dark mode (brightness-0 dark:invert). Coloured crypto logos stay as-is.
     $payments = [
-        ['src' => 'credit card payment.png',    'name' => 'Card'],
-        ['src' => 'apply pay.png',              'name' => 'Apple Pay'],
-        ['src' => 'Bank transfer.png',          'name' => 'Bank Transfer'],
-        ['src' => 'pay with crypto momo +.png', 'name' => 'Mobile Money'],
+        ['src' => 'credit card payment.png',    'name' => 'Card',          'mono' => true],
+        ['src' => 'apply pay.png',              'name' => 'Apple Pay',     'mono' => true],
+        ['src' => 'Bank transfer.png',          'name' => 'Bank Transfer', 'mono' => true],
+        ['src' => 'MOMO.svg',                   'name' => 'Mobile Money', 'mono' => true],
         ['src' => 'BTC.svg',                    'name' => 'Bitcoin'],
         ['src' => 'USDT.svg',                   'name' => 'USDT'],
         ['src' => 'ETH.svg',                    'name' => 'Ethereum'],
@@ -196,7 +198,7 @@
                 <div class="hiw-marquee flex w-max items-center gap-4">
                     @foreach (array_merge($payments, $payments) as $pay)
                         <div class="flex shrink-0 items-center gap-2.5 rounded-xl bg-white px-4 py-3 ring-1 ring-zinc-100">
-                            <img src="{{ $img($pay['src']) }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
+                            <img src="{{ $img($pay['src']) }}" alt="" @class(['h-6 w-6 object-contain', 'brightness-0 dark:invert' => ! empty($pay['mono'])]) loading="lazy">
                             <span class="whitespace-nowrap text-sm font-semibold text-zinc-800">{{ $pay['name'] }}</span>
                         </div>
                     @endforeach
@@ -215,7 +217,7 @@
                     <div class="grid grid-cols-2 gap-3">
                         @foreach (array_slice($payments, 0, 6) as $pay)
                             <div class="flex items-center gap-2.5 rounded-xl bg-white px-3 py-3 ring-1 ring-zinc-100">
-                                <img src="{{ $img($pay['src']) }}" alt="" class="h-6 w-6 shrink-0 object-contain" loading="lazy">
+                                <img src="{{ $img($pay['src']) }}" alt="" @class(['h-6 w-6 shrink-0 object-contain', 'brightness-0 dark:invert' => ! empty($pay['mono'])]) loading="lazy">
                                 <span class="truncate text-xs font-semibold text-zinc-800">{{ $pay['name'] }}</span>
                             </div>
                         @endforeach

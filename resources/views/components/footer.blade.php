@@ -57,8 +57,8 @@
                         </span>
                     </a>
                     <a href="{{ route('shop.mobile-app') }}" wire:navigate aria-label="Get it on Google Play (in development)" class="inline-flex items-center gap-2 rounded-[8px] px-4 py-2 text-white transition-opacity hover:opacity-90" style="background-color: #18181b;">
-                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 3.5l14 8.5-14 8.5z"/></svg>
-                        <span class="text-left leading-none">
+                        <img src="{{ asset('assets/'.rawurlencode('Playstore 2.png')) }}" alt="" width="24" height="24" class="block h-6 w-6 shrink-0 object-contain" loading="lazy">
+                        <span class="text-left leading-tight">
                             <span class="block text-[10px]">Download on</span>
                             <span class="block text-sm font-semibold">Google Play</span>
                         </span>
@@ -66,9 +66,9 @@
                 </div>
             </div>
 
-            {{-- Shop --}}
-            <nav class="lg:col-span-2" aria-label="Popular gift cards">
-                <h3 class="text-base font-semibold text-zinc-900">Popular gift cards</h3>
+            {{-- Popular --}}
+            <nav class="lg:col-span-2" aria-label="Popular">
+                <h3 class="text-base font-semibold text-zinc-900">Popular</h3>
                 <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="{{ route('shop.brand', 'amazon') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Amazon</a></li>
                     <li><a href="{{ route('shop.brand', 'apple') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Apple</a></li>
@@ -77,6 +77,9 @@
                     <li><a href="{{ route('shop.brand', 'xbox') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Xbox</a></li>
                     <li><a href="{{ route('shop.brand', 'netflix') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Netflix</a></li>
                     <li><a href="{{ route('shop.gift-cards') }}" wire:navigate class="font-medium text-blue-600 transition-colors hover:text-blue-700">View all gift cards</a></li>
+                    <li><a href="{{ route('shop.esim.country', 'US') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">United States eSIM</a></li>
+                    <li><a href="{{ route('shop.esim.country', 'GB') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">United Kingdom eSIM</a></li>
+                    <li><a href="{{ route('shop.esims') }}" wire:navigate class="font-medium text-blue-600 transition-colors hover:text-blue-700">View all eSIMs</a></li>
                 </ul>
             </nav>
 

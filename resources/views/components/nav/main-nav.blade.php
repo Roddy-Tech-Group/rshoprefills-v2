@@ -66,7 +66,7 @@
                         class="flex-1 min-w-0 bg-transparent text-base text-zinc-800 placeholder:text-zinc-600 outline-none"
                     />
                     {{-- Ctrl+K hint — shown while the field is empty; the clear button takes its place once typing starts. --}}
-                    <kbd x-show="query.length === 0" class="pointer-events-none inline-flex shrink-0 items-center rounded-md border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-zinc-500" aria-hidden="true">Ctrl K</kbd>
+                    <kbd x-show="query.length === 0" class="pointer-events-none inline-flex shrink-0 items-center rounded-[5px] border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-zinc-500" aria-hidden="true">Ctrl K</kbd>
                     <button type="button" x-show="query.length > 0" @click="clear()" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300 focus:outline-none" aria-label="Clear">
                         <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="w-4 h-4 object-contain" loading="lazy">
                     </button>
