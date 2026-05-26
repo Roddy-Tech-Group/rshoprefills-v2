@@ -64,10 +64,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('kyc/{submission}/approve', [AdminKycController::class, 'approve'])->name('kyc.approve');
         Route::post('kyc/{submission}/reject', [AdminKycController::class, 'reject'])->name('kyc.reject');
 
-        // Customer admin actions: edit profile, ban/unban, hold/release funds.
+        // Customer admin actions: edit profile, ban/unban, hold/release funds,
+        // and send a direct (email + dashboard) message.
         Route::patch('customers/{user}', [AdminCustomerController::class, 'update'])->name('customer.update');
         Route::post('customers/{user}/ban', [AdminCustomerController::class, 'toggleBan'])->name('customer.ban');
         Route::post('customers/{user}/funds', [AdminCustomerController::class, 'toggleFunds'])->name('customer.funds');
+        Route::post('customers/{user}/message', [AdminCustomerController::class, 'message'])->name('customer.message');
+        // Friendly fallback: a GET on the same path (URL bar, back-button, link
+        // prefetch) redirects to the customer page instead of 405ing.
+        Route::get('customers/{user}/message', fn (User $user) => redirect()->route('admin.customer', $user));
         Route::view('transactions', 'admin.transactions')->name('transactions');
         Route::view('wallets', 'admin.wallets')->name('wallets');
         Volt::route('rates', 'admin.rates')->name('rates');

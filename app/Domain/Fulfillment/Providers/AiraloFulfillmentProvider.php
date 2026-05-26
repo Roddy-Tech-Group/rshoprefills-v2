@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Log;
 class AiraloFulfillmentProvider implements FulfillmentProviderInterface
 {
     private string $baseUrl;
+
     private string $clientId;
+
     private string $clientSecret;
 
     public function __construct()
@@ -74,6 +76,7 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
 
             if ($response->failed()) {
                 Log::error("Airalo transaction failed: {$item->id}", ['body' => $responseBody]);
+
                 return [
                     'status' => FulfillmentStatus::Failed,
                     'reference' => null,
@@ -83,6 +86,7 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
 
             // Airalo v2 usually returns success and a generated order ID in 'data'
             $orderData = $responseBody['data'] ?? [];
+
             return [
                 'status' => FulfillmentStatus::Fulfilled, // Assuming synchronous response for eSIM payload
                 'reference' => $orderData['id'] ?? null,
@@ -90,7 +94,7 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
             ];
 
         } catch (\Exception $e) {
-            Log::error('Airalo fulfillment exception: ' . $e->getMessage());
+            Log::error('Airalo fulfillment exception: '.$e->getMessage());
 
             FulfillmentLog::create([
                 'order_item_id' => $item->id,
@@ -112,7 +116,7 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
     public function verifyStatus(OrderItem $item): array
     {
         try {
-            if (!$item->fulfillment_reference) {
+            if (! $item->fulfillment_reference) {
                 return ['status' => FulfillmentStatus::Failed, 'payload' => []];
             }
 
@@ -143,15 +147,20 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
     {
         // Extract QR, ICCID, LPA, and Phone Number from Airalo payload
         $data = $rawPayload['data'] ?? [];
-        
+
         // Airalo returns a list of sims generated
         $sims = $data['sims'] ?? [];
         $firstSim = $sims[0] ?? [];
 
         $lpa = $firstSim['lpa'] ?? null;
-        $qrCodeUrl = $firstSim['qr_code_url'] ?? null;
+        // Airalo's actual field name is `qrcode_url` (one word). The earlier
+        // `qr_code_url` lookup silently nulled the QR on every fulfilment.
+        $qrCodeUrl = $firstSim['qrcode_url'] ?? null;
         $manualActivationCode = $firstSim['matching_id'] ?? null; // For Airalo, matching_id is often the manual code
-        
+        // iOS tap-to-install link Airalo provides — opens the eSIM setup flow
+        // directly on iPhone, no QR scan needed.
+        $directInstallUrl = $firstSim['direct_apple_installation_url'] ?? null;
+
         // Compile manual text if applicable
         $manualText = null;
         if ($lpa && $manualActivationCode) {
@@ -170,15 +179,17 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
             'phone_number' => $phoneNumber,
             'provider_reference' => $data['id'] ?? null,
             'network' => $data['operator'] ?? null,
+            'direct_install_url' => $directInstallUrl,
             'raw_response' => $rawPayload,
-            
+
             // Format to generic pins/esim array for UI backwards compatibility
             'pins' => [],
             'esim' => [
                 'iccid' => $firstSim['iccid'] ?? null,
                 'lpaUrl' => $lpa,
                 'manualActivationCode' => $manualActivationCode,
-            ]
+                'directInstallUrl' => $directInstallUrl,
+            ],
         ];
     }
 }

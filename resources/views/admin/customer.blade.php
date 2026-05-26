@@ -92,13 +92,18 @@
             $isBanned = $user->banned_at !== null;
             $fundsHeld = $user->wallets->isNotEmpty() && $user->wallets->where('is_active', true)->isEmpty();
         @endphp
-        <div x-data="{ editing: @js($errors->hasAny(['name', 'email', 'phone', 'gender'])) }" class="rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div x-data="{ editing: @js($errors->hasAny(['name', 'email', 'phone', 'gender'])), warning: @js($errors->hasAny(['type', 'body'])) }" class="rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
                 <h3 class="text-sm font-bold text-zinc-900">Actions</h3>
                 <div class="flex flex-wrap items-center gap-2">
                     <button type="button" @click="editing = ! editing" class="inline-flex items-center gap-1.5 rounded-xl bg-zinc-100 px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-200">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
                         Edit
+                    </button>
+
+                    <button type="button" @click="warning = true" class="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 transition-colors hover:bg-amber-100">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                        Warn
                     </button>
 
                     <form method="POST" action="{{ route('admin.customer.funds', $user) }}" onsubmit="return confirm('{{ $fundsHeld ? 'Release funds for this customer?' : 'Place funds on hold for this customer?' }}')">
@@ -115,6 +120,46 @@
                         </button>
                     </form>
                 </div>
+            </div>
+
+            {{-- Warn / message modal --}}
+            <div x-show="warning" x-cloak @keydown.escape.window="warning = false" class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+                <div x-show="warning" @click="warning = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40"></div>
+                <form x-show="warning" x-transition method="POST" action="{{ route('admin.customer.message', $user) }}" class="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                    @csrf
+                    <div class="flex items-start justify-between gap-4 border-b border-zinc-100 px-5 py-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-zinc-900">Send a message</h3>
+                            <p class="mt-0.5 text-xs text-zinc-600">Emails {{ $user->email }} and pushes a notification to their dashboard.</p>
+                        </div>
+                        <button type="button" @click="warning = false" aria-label="Close" class="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="space-y-4 px-5 py-4">
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Type</p>
+                            <div class="mt-2 grid grid-cols-2 gap-2">
+                                @foreach (['notification' => ['Notification', 'border-blue-500 bg-blue-50 text-blue-700 ring-blue-500/20'], 'warning' => ['Warning', 'border-amber-500 bg-amber-50 text-amber-700 ring-amber-500/20']] as $value => [$label, $activeRing])
+                                    <label class="relative flex cursor-pointer items-center gap-2 rounded-lg border-2 border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 transition-colors has-[:checked]:{{ $activeRing }}">
+                                        <input type="radio" name="type" value="{{ $value }}" @checked(old('type', 'notification') === $value) class="h-4 w-4 cursor-pointer accent-blue-600">
+                                        {{ $label }}
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('type') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Message</label>
+                            <textarea name="body" rows="6" required minlength="5" maxlength="2000" placeholder="Write the message the customer will see in their email and dashboard…" class="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">{{ old('body') }}</textarea>
+                            @error('body') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2 border-t border-zinc-100 bg-zinc-50 px-5 py-3">
+                        <button type="button" @click="warning = false" class="inline-flex items-center rounded-xl px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-100">Cancel</button>
+                        <button type="submit" class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700">Send</button>
+                    </div>
+                </form>
             </div>
 
             @if ($isBanned || $fundsHeld)
@@ -150,12 +195,19 @@
                     </div>
                     <div>
                         <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Gender</label>
-                        <select name="gender" class="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                            <option value="">Not set</option>
-                            @foreach (['male', 'female', 'other'] as $g)
-                                <option value="{{ $g }}" @selected(old('gender', $user->gender) === $g)>{{ ucfirst($g) }}</option>
-                            @endforeach
-                        </select>
+                        {{-- Native <select> kept for accessibility + form submission; the OS arrow
+                             is hidden with appearance-none and replaced by a centred chevron SVG. --}}
+                        <div class="relative mt-1.5">
+                            <select name="gender" class="w-full appearance-none rounded-lg border border-zinc-200 bg-white px-3 py-2 pr-9 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <option value="">Not set</option>
+                                @foreach (['male', 'female', 'other'] as $g)
+                                    <option value="{{ $g }}" @selected(old('gender', $user->gender) === $g)>{{ ucfirst($g) }}</option>
+                                @endforeach
+                            </select>
+                            <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
                         @error('gender') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                     </div>
                 </div>
