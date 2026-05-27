@@ -40,6 +40,14 @@
         }
 
         $redeemHtml = $snap['redeem_instructions'] ?? null;
+
+        // Branded eSIMs Cloud sharing link — surfaces a "Manage your eSIM"
+        // CTA below the QR for eSIM orders, so the customer can monitor data,
+        // re-install, and top up from one branded portal.
+        $esimManagePayload = (array) ($payload['esim'] ?? []);
+        $esimManageLink = is_scalar($payload['sharing_link'] ?? null)
+            ? (string) $payload['sharing_link']
+            : (is_scalar($esimManagePayload['sharingLink'] ?? null) ? (string) $esimManagePayload['sharingLink'] : null);
     @endphp
 
     <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">Your gift card is ready, {{ $name }}.</h1>
@@ -115,6 +123,13 @@
         <x-emails.panel title="How to redeem">
             <div style="font-size:14px; line-height:1.6; color:#3f3f46;">{!! $redeemHtml !!}</div>
         </x-emails.panel>
+    @endif
+
+    @if ($esimManageLink)
+        {{-- eSIM customers get a direct shortcut to the RshopRefills-branded
+             eSIMs Cloud portal where they can install, monitor data usage,
+             and top up — primary CTA so it precedes the dashboard fallback. --}}
+        <x-emails.button :url="$esimManageLink" align="center">Manage your eSIM</x-emails.button>
     @endif
 
     <x-emails.button :url="url('/dashboard/orders')" align="center">View &amp; copy your code</x-emails.button>

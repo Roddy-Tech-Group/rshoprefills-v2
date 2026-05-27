@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\UserTransactionController;
 use App\Http\Controllers\Api\UserWalletController;
 use App\Http\Controllers\Api\Wallet\TransactionPinController;
 use App\Http\Controllers\Api\Webhooks\NowPaymentsWebhookController;
+use App\Http\Controllers\Webhooks\AiraloWebhookController;
 use App\Http\Controllers\Webhooks\FlutterwaveWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,10 @@ use Illuminate\Support\Facades\Route;
 // Webhooks (No auth required)
 Route::post('webhooks/flutterwave', [FlutterwaveWebhookController::class, 'handle'])->name('api.webhooks.flutterwave');
 Route::post('webhooks/nowpayments', [NowPaymentsWebhookController::class, 'handle'])->name('api.webhooks.nowpayments');
+// Airalo low-data + expiry notifications. Auth is HMAC inside the controller
+// (X-Airalo-Signature), not Laravel middleware — the partner can't carry our
+// CSRF token. Returns 200 even on no-match so Airalo doesn't keep retrying.
+Route::post('webhooks/airalo', AiraloWebhookController::class)->name('api.webhooks.airalo');
 
 // Storefront Catalog APIs (Public)
 Route::prefix('storefront')->name('api.storefront.')->group(function () {

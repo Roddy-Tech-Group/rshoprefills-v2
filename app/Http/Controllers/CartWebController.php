@@ -51,6 +51,15 @@ class CartWebController extends Controller
             'product_variant_id' => ['required', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1'],
             'requested_value' => ['nullable', 'numeric', 'min:0.01'],
+            'metadata' => ['nullable', 'array'],
+            // Top-up recipient phone. Stored on cart_items.metadata_snapshot
+            // and copied onto order_items.metadata at checkout so the Zendit
+            // top-up fulfilment provider can read it.
+            'metadata.recipient_phone' => ['nullable', 'string', 'regex:/^\+?[0-9 \-]{6,20}$/'],
+            'metadata.delivery_email' => ['nullable', 'email'],
+            // Bill payment account / meter ID. Alphanumeric + common separators,
+            // 4-30 chars (covers electricity meters, DSTV smartcards, etc.).
+            'metadata.account_id' => ['nullable', 'string', 'regex:/^[A-Za-z0-9 \-]{4,30}$/'],
         ]);
 
         [$cart, $token] = $this->resolve($request);
@@ -60,7 +69,8 @@ class CartWebController extends Controller
             $cart,
             $variant,
             (int) $data['quantity'],
-            isset($data['requested_value']) ? (float) $data['requested_value'] : null
+            isset($data['requested_value']) ? (float) $data['requested_value'] : null,
+            $data['metadata'] ?? null,
         );
 
         return $this->respond($cart, $token, $request->query('currency'));
@@ -117,7 +127,7 @@ class CartWebController extends Controller
      */
     private function respond(Cart $cart, ?string $guestToken, ?string $currencyCode)
     {
-        $cart->load('items.product', 'items.variant');
+        $cart->load('items.product.category', 'items.variant');
         $totals = $this->pricing->calculateCartTotals($cart->items);
 
         $rate = CurrencyRate::resolve($currencyCode);
@@ -143,6 +153,10 @@ class CartWebController extends Controller
                 'unit_price' => round($rate->convert($unitUsd), 2),
                 'line_total_usd' => round($lineUsd, 2),
                 'line_total' => round($rate->convert($lineUsd), 2),
+                // Category drives per-item copy on the cart + checkout pages
+                // (gift-card region notice, top-up phone hint, eSIM QR hint).
+                'category_slug' => $product?->category?->slug,
+                'recipient_phone' => $item->metadata_snapshot['recipient_phone'] ?? null,
             ];
         })->values();
 

@@ -96,6 +96,17 @@
                                     <p class="mt-0.5 text-xs text-zinc-600">
                                         <span x-show="item.face_label" x-text="item.face_label + ' card'"></span>
                                     </p>
+                                    {{-- Top-up: show the recipient phone the buyer entered. --}}
+                                    <p
+                                        x-show="item.category_slug === 'mobile-airtime' && item.recipient_phone"
+                                        x-cloak
+                                        class="mt-0.5 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700"
+                                    >
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/>
+                                        </svg>
+                                        <span x-text="item.recipient_phone"></span>
+                                    </p>
                                     <p class="mt-1 inline-flex items-center gap-1 text-xs text-zinc-600">
                                         <span x-text="item.quantity"></span> x
                                         <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-3.5 w-3.5 object-contain">
@@ -127,8 +138,15 @@
                         </template>
                     </ul>
 
-                    {{-- Region notice --}}
-                    <div class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5">
+                    {{-- Region notice — only meaningful when the cart contains
+                         gift cards (top-ups + eSIMs aren't region-locked the
+                         same way). Hidden as soon as the cart is pure top-up /
+                         eSIM so the buyer doesn't see misleading copy. --}}
+                    <div
+                        x-show="$store.cart.items.some((i) => ! ['mobile-airtime', 'esims', 'bill-payments'].includes(i.category_slug))"
+                        x-cloak
+                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5"
+                    >
                         <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
                         </svg>
@@ -445,9 +463,6 @@
                             <template x-if="!submitting">
                                 <span class="flex items-center gap-2">
                                     Continue to payment
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                                    </svg>
                                 </span>
                             </template>
                             <template x-if="submitting">

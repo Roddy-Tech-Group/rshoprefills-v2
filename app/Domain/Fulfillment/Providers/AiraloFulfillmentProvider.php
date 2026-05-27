@@ -45,23 +45,88 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
         });
     }
 
+    /**
+     * Available top-up packages for an existing eSIM (by ICCID). Airalo
+     * scopes the catalog to whatever country / operator the original eSIM is
+     * provisioned on, so the caller doesn't have to filter. Each row is the
+     * raw Airalo package dict; the customer-facing page picks the fields it
+     * needs (id, data, day, price, net_price, voice, text).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listTopupsForIccid(string $iccid): array
+    {
+        $iccid = trim($iccid);
+        if ($iccid === '') {
+            return [];
+        }
+
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(12)
+                ->withToken($this->getAccessToken())
+                ->acceptJson()
+                ->get("{$this->baseUrl}/sims/{$iccid}/topups");
+
+            if ($response->failed()) {
+                Log::warning('Airalo listTopups failed', [
+                    'iccid' => $iccid,
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                ]);
+
+                return [];
+            }
+
+            // Airalo wraps lists in `data` (collection). Some endpoints use
+            // `data.packages`; handle both shapes so we don't break if the
+            // partner-API response evolves.
+            $body = $response->json() ?? [];
+            $list = $body['data']['packages']
+                ?? $body['data']
+                ?? $body['packages']
+                ?? [];
+
+            return is_array($list) ? array_values($list) : [];
+        } catch (\Exception $e) {
+            Log::error('Airalo listTopups exception: '.$e->getMessage(), ['iccid' => $iccid]);
+
+            return [];
+        }
+    }
+
     public function fulfill(OrderItem $item): array
     {
         // provider_offer_id was saved as "airalo_{id}" by the normalizer, so strip prefix
         $packageId = str_replace('airalo_', '', $item->provider_offer_id);
 
-        $requestPayload = [
-            'quantity' => $item->quantity,
-            'package_id' => $packageId,
-            'description' => "Order {$item->order->order_number} - Item {$item->id}",
-        ];
+        // Top-up branch: item metadata carries the parent ICCID we're refilling.
+        // We route to /orders/topups with the parent ICCID + the chosen package;
+        // Airalo credits the existing eSIM and we keep the same fulfilment shape
+        // for everything downstream (poll job, normalizer, orders dashboard).
+        $parentIccid = (string) ($item->metadata['parent_iccid'] ?? '');
+        $isTopup = $parentIccid !== '';
+
+        $endpoint = $isTopup ? '/orders/topups' : '/orders';
+        $requestPayload = $isTopup
+            ? [
+                'quantity' => $item->quantity,
+                'package_id' => $packageId,
+                'iccid' => $parentIccid,
+                'description' => "Top-up for ICCID {$parentIccid} (order {$item->order->order_number})",
+            ]
+            : [
+                'quantity' => $item->quantity,
+                'package_id' => $packageId,
+                'description' => "Order {$item->order->order_number} - Item {$item->id}",
+            ];
 
         try {
             $response = Http::withoutVerifying()
                 ->timeout(15)
                 ->withToken($this->getAccessToken())
                 ->acceptJson()
-                ->post("{$this->baseUrl}/orders", $requestPayload);
+                ->post("{$this->baseUrl}{$endpoint}", $requestPayload);
 
             $responseBody = $response->json() ?? [];
 
@@ -161,6 +226,19 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
         // directly on iPhone, no QR scan needed.
         $directInstallUrl = $firstSim['direct_apple_installation_url'] ?? null;
 
+        // Branded eSIMs Cloud sharing link — Airalo's white-labelled portal
+        // where the customer manages the eSIM (install, monitor usage, top up).
+        // Comes back under `sharing.link` once the partner has uploaded a brand
+        // in the Airalo Partners dashboard; on partners without branding it is
+        // still returned but un-branded. Access code lets the customer re-claim
+        // the eSIM on another device.
+        $sharingLink = $firstSim['sharing']['link']
+            ?? $firstSim['sharing_link']
+            ?? null;
+        $sharingAccessCode = $firstSim['sharing']['access_code']
+            ?? $firstSim['sharing_access_code']
+            ?? null;
+
         // Compile manual text if applicable
         $manualText = null;
         if ($lpa && $manualActivationCode) {
@@ -180,6 +258,8 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
             'provider_reference' => $data['id'] ?? null,
             'network' => $data['operator'] ?? null,
             'direct_install_url' => $directInstallUrl,
+            'sharing_link' => $sharingLink,
+            'sharing_access_code' => $sharingAccessCode,
             'raw_response' => $rawPayload,
 
             // Format to generic pins/esim array for UI backwards compatibility
@@ -189,6 +269,8 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
                 'lpaUrl' => $lpa,
                 'manualActivationCode' => $manualActivationCode,
                 'directInstallUrl' => $directInstallUrl,
+                'sharingLink' => $sharingLink,
+                'sharingAccessCode' => $sharingAccessCode,
             ],
         ];
     }

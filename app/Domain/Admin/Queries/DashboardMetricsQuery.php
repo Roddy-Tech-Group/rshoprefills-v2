@@ -142,6 +142,102 @@ class DashboardMetricsQuery
      * monthly. The int path lets the dashboard's 1-30 day picker drive the
      * chart at full granularity without each day mapping to a coarser bucket.
      */
+    /**
+     * Daily sales + cost timeseries for the Trends chart. Sales is what the
+     * customer paid (order_items.subtotal_amount); cost is the per-unit
+     * cost we paid the supplier (variant_snapshot.cost_price × quantity),
+     * cast safely out of the JSON snapshot. Items missing a cost snapshot
+     * contribute zero to cost — no synthetic fallback, only real data.
+     * Returns one row per day in the window, gaps filled with zeros.
+     *
+     * @return array<int, array{date: string, sales: float, cost: float}>
+     */
+    public function getSalesCostTimeseries(int $days = 30): array
+    {
+        $days = max(1, min(365, $days));
+        $startDate = now()->subDays($days - 1)->startOfDay();
+
+        $rows = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.order_status', OrderStatus::Completed->value)
+            ->where('orders.completed_at', '>=', $startDate)
+            ->select(
+                DB::raw("DATE_FORMAT(orders.completed_at, '%Y-%m-%d') as date"),
+                DB::raw('SUM(order_items.subtotal_amount) as sales'),
+                // JSON_UNQUOTE strips the surrounding quotes from a JSON string
+                // value, then CAST converts the resulting text to DECIMAL so it
+                // multiplies cleanly. Items without a cost_price contribute NULL
+                // here, which SUM skips — yielding honest, source-of-truth cost.
+                DB::raw('SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(order_items.variant_snapshot, \'$.cost_price\')) AS DECIMAL(12,4)) * order_items.quantity) as cost'),
+            )
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        // Fill every day in the window so the chart line is continuous even
+        // when there were no sales that day.
+        $series = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = now()->subDays($days - 1 - $i)->format('Y-m-d');
+            $row = $rows[$date] ?? null;
+            $series[] = [
+                'date' => $date,
+                'sales' => $row ? round((float) $row->sales, 2) : 0.0,
+                'cost' => $row ? round((float) $row->cost, 2) : 0.0,
+            ];
+        }
+
+        return $series;
+    }
+
+    /**
+     * Best-selling countries for the world-map widget. Aggregates completed
+     * order revenue per ISO country code, optionally narrowed to a product
+     * category (gift_cards / esim / topup) and to a rolling-N-days window.
+     * Returns a `[ISO2 => total_sales_usd]` map ready to feed jsvectormap.
+     *
+     * Country code is sourced from the order item's product snapshot (the
+     * historical country at sale time) so renames or relocations of the
+     * underlying product don't rewrite history.
+     *
+     * @return array<string, float>
+     */
+    public function getBestSellingCountries(int $days = 7, ?string $category = null): array
+    {
+        $days = max(1, min(365, $days));
+        $startDate = now()->subDays($days - 1)->startOfDay();
+
+        $query = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.order_status', OrderStatus::Completed->value)
+            ->where('orders.completed_at', '>=', $startDate)
+            ->select(
+                DB::raw('UPPER(JSON_UNQUOTE(JSON_EXTRACT(order_items.product_snapshot, \'$.country_code\'))) as cc'),
+                DB::raw('SUM(order_items.subtotal_amount) as total'),
+            )
+            ->groupBy('cc');
+
+        if ($category !== null && $category !== 'all') {
+            $query->join('categories', 'order_items.category_id', '=', 'categories.id')
+                ->where('categories.slug', 'like', '%'.$category.'%');
+        }
+
+        $rows = $query->get();
+
+        $byCountry = [];
+        foreach ($rows as $row) {
+            $cc = (string) ($row->cc ?? '');
+            // Skip rows with no country or a non-country marker (WW = global eSIM).
+            if ($cc === '' || strlen($cc) !== 2 || $cc === 'WW') {
+                continue;
+            }
+            $byCountry[$cc] = round((float) $row->total, 2);
+        }
+
+        return $byCountry;
+    }
+
     public function getRevenueChartData(string|int $range = '7d'): array
     {
         if (is_int($range) || ctype_digit((string) $range)) {
