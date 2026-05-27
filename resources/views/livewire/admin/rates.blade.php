@@ -138,17 +138,17 @@ class extends Component {
         <div class="flex items-center gap-3">
             <div class="flex flex-1 flex-wrap justify-center gap-x-5 gap-y-2 text-sm">
                 <span class="flex items-center gap-2">
-                    <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span class="inline-block h-2 w-2 rounded-[10px] bg-emerald-500"></span>
                     <span class="font-semibold text-zinc-900">{{ $this->rates->where('type', 'fiat')->count() }}</span>
                     <span class="text-zinc-600">fiat</span>
                 </span>
                 <span class="flex items-center gap-2">
-                    <span class="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
+                    <span class="inline-block h-2 w-2 rounded-[10px] bg-amber-500"></span>
                     <span class="font-semibold text-zinc-900">{{ $this->rates->where('type', 'crypto')->count() }}</span>
                     <span class="text-zinc-600">crypto</span>
                 </span>
                 <span class="flex items-center gap-2">
-                    <span class="inline-block h-2 w-2 rounded-full bg-zinc-400"></span>
+                    <span class="inline-block h-2 w-2 rounded-[10px] bg-zinc-400"></span>
                     <span class="font-semibold text-zinc-900">{{ $this->rates->where('is_active', false)->count() }}</span>
                     <span class="text-zinc-600">inactive</span>
                 </span>
@@ -157,7 +157,7 @@ class extends Component {
             <button
                 type="button"
                 wire:click="startCreate"
-                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                class="inline-flex shrink-0 items-center gap-1.5 rounded-[10px] bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
             >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
@@ -188,35 +188,35 @@ class extends Component {
                         @if ($creating)
                             <tr class="bg-blue-50/30">
                                 <td class="px-3 py-3.5 sm:px-5">
-                                    <input wire:model="icon_path" type="text" placeholder="BTC.svg" class="w-24 rounded-md border border-zinc-200 px-2 py-1 text-xs">
+                                    <input wire:model="icon_path" type="text" placeholder="BTC.svg" class="w-24 rounded-[10px] border border-zinc-200 px-2 py-1 text-xs">
                                 </td>
                                 <td class="px-3 py-3.5 sm:px-5">
-                                    <input wire:model="code" type="text" placeholder="USD" class="w-20 rounded-md border border-zinc-200 px-2 py-1 text-sm font-bold uppercase">
+                                    <input wire:model="code" type="text" placeholder="USD" class="w-20 rounded-[10px] border border-zinc-200 px-2 py-1 text-sm font-bold uppercase">
                                     @error('code') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                                 </td>
                                 <td class="hidden px-3 py-3.5 sm:px-5 lg:table-cell">
-                                    <input wire:model="name" type="text" placeholder="Currency name" class="w-44 rounded-md border border-zinc-200 px-2 py-1 text-sm">
+                                    <input wire:model="name" type="text" placeholder="Currency name" class="w-44 rounded-[10px] border border-zinc-200 px-2 py-1 text-sm">
                                 </td>
                                 <td class="hidden px-3 py-3.5 sm:px-5 md:table-cell">
-                                    <select wire:model="type" class="rounded-md border border-zinc-200 px-2 py-1 text-sm">
+                                    <select wire:model="type" class="rounded-[10px] border border-zinc-200 px-2 py-1 text-sm">
                                         <option value="fiat">fiat</option>
                                         <option value="crypto">crypto</option>
                                     </select>
                                 </td>
                                 <td class="px-3 py-3.5 sm:px-5">
-                                    <input wire:model="rate_per_usd" type="number" step="0.00000001" min="0" placeholder="0.00" class="w-32 rounded-md border border-zinc-200 px-2 py-1 text-sm tabular-nums sm:w-40">
+                                    <input wire:model="rate_per_usd" type="number" step="0.00000001" min="0" placeholder="0.00" class="w-32 rounded-[10px] border border-zinc-200 px-2 py-1 text-sm tabular-nums sm:w-40">
                                     @error('rate_per_usd') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                                 </td>
                                 <td class="px-3 py-3.5 sm:px-5">
                                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                                        <input wire:model="is_active" type="checkbox" class="rounded">
+                                        <input wire:model="is_active" type="checkbox" class="rounded-[10px]">
                                         <span class="text-xs text-zinc-600">Yes</span>
                                     </label>
                                 </td>
                                 <td class="px-3 py-3.5 text-right sm:px-5">
                                     <div class="flex justify-end gap-1.5">
-                                        <button wire:click="save" class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700">Save</button>
-                                        <button wire:click="cancelEdit" class="inline-flex items-center gap-1 rounded-md bg-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-300">Cancel</button>
+                                        <button wire:click="save" class="inline-flex items-center gap-1 rounded-[10px] bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700">Save</button>
+                                        <button wire:click="cancelEdit" class="inline-flex items-center gap-1 rounded-[10px] bg-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-300">Cancel</button>
                                     </div>
                                 </td>
                             </tr>
@@ -227,35 +227,35 @@ class extends Component {
                                 {{-- Edit row --}}
                                 <tr class="bg-blue-50/30">
                                     <td class="px-3 py-3.5 sm:px-5">
-                                        <input wire:model="icon_path" type="text" placeholder="BTC.svg" class="w-24 rounded-md border border-zinc-200 px-2 py-1 text-xs">
+                                        <input wire:model="icon_path" type="text" placeholder="BTC.svg" class="w-24 rounded-[10px] border border-zinc-200 px-2 py-1 text-xs">
                                     </td>
                                     <td class="px-3 py-3.5 sm:px-5">
-                                        <input wire:model="code" type="text" class="w-20 rounded-md border border-zinc-200 px-2 py-1 text-sm font-bold uppercase">
+                                        <input wire:model="code" type="text" class="w-20 rounded-[10px] border border-zinc-200 px-2 py-1 text-sm font-bold uppercase">
                                         @error('code') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                                     </td>
                                     <td class="hidden px-3 py-3.5 sm:px-5 lg:table-cell">
-                                        <input wire:model="name" type="text" class="w-44 rounded-md border border-zinc-200 px-2 py-1 text-sm">
+                                        <input wire:model="name" type="text" class="w-44 rounded-[10px] border border-zinc-200 px-2 py-1 text-sm">
                                     </td>
                                     <td class="hidden px-3 py-3.5 sm:px-5 md:table-cell">
-                                        <select wire:model="type" class="rounded-md border border-zinc-200 px-2 py-1 text-sm">
+                                        <select wire:model="type" class="rounded-[10px] border border-zinc-200 px-2 py-1 text-sm">
                                             <option value="fiat">fiat</option>
                                             <option value="crypto">crypto</option>
                                         </select>
                                     </td>
                                     <td class="px-3 py-3.5 sm:px-5">
-                                        <input wire:model="rate_per_usd" type="number" step="0.00000001" min="0" class="w-32 rounded-md border border-zinc-200 px-2 py-1 text-sm tabular-nums sm:w-40">
+                                        <input wire:model="rate_per_usd" type="number" step="0.00000001" min="0" class="w-32 rounded-[10px] border border-zinc-200 px-2 py-1 text-sm tabular-nums sm:w-40">
                                         @error('rate_per_usd') <p class="mt-1 text-[10px] text-red-600">{{ $message }}</p> @enderror
                                     </td>
                                     <td class="px-3 py-3.5 sm:px-5">
                                         <label class="inline-flex items-center gap-2 cursor-pointer">
-                                            <input wire:model="is_active" type="checkbox" class="rounded">
+                                            <input wire:model="is_active" type="checkbox" class="rounded-[10px]">
                                             <span class="text-xs text-zinc-600">Yes</span>
                                         </label>
                                     </td>
                                     <td class="px-3 py-3.5 text-right sm:px-5">
                                         <div class="flex justify-end gap-1.5">
-                                            <button wire:click="save" class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700">Save</button>
-                                            <button wire:click="cancelEdit" class="inline-flex items-center gap-1 rounded-md bg-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-300">Cancel</button>
+                                            <button wire:click="save" class="inline-flex items-center gap-1 rounded-[10px] bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700">Save</button>
+                                            <button wire:click="cancelEdit" class="inline-flex items-center gap-1 rounded-[10px] bg-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-300">Cancel</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -264,11 +264,11 @@ class extends Component {
                                 <tr class="transition-colors duration-150 hover:bg-blue-50/40">
                                     <td class="px-3 py-3.5 sm:px-5">
                                         @if ($rate->icon_path)
-                                            <img src="{{ asset('assets/' . $rate->icon_path) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-full object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
+                                            <img src="{{ asset('assets/' . $rate->icon_path) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
                                         @elseif ($rate->type === 'fiat' && $this->flagUrl($rate->code))
-                                            <img src="{{ $this->flagUrl($rate->code) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-full object-cover bg-white ring-1 ring-zinc-100" loading="lazy">
+                                            <img src="{{ $this->flagUrl($rate->code) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-[10px] object-cover bg-white ring-1 ring-zinc-100" loading="lazy">
                                         @else
-                                            <span class="flex h-9 w-9 items-center justify-center rounded-full {{ $rate->type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500' }} text-xs font-bold text-white">
+                                            <span class="flex h-9 w-9 items-center justify-center rounded-[10px] {{ $rate->type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500' }} text-xs font-bold text-white">
                                                 {{ substr($rate->code, 0, 1) }}
                                             </span>
                                         @endif
@@ -286,7 +286,7 @@ class extends Component {
                                     </td>
                                     <td class="whitespace-nowrap px-3 py-3.5 tabular-nums text-zinc-900 sm:px-5">{{ rtrim(rtrim(number_format((float) $rate->rate_per_usd, 8), '0'), '.') }}</td>
                                     <td class="px-3 py-3.5 sm:px-5">
-                                        <button wire:click="toggleActive({{ $rate->id }})" type="button" class="inline-flex items-center rounded-full {{ $rate->is_active ? 'bg-emerald-500 text-white' : 'bg-zinc-300 text-zinc-700' }} px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors">
+                                        <button wire:click="toggleActive({{ $rate->id }})" type="button" class="inline-flex items-center rounded-[10px] {{ $rate->is_active ? 'bg-emerald-500 text-white' : 'bg-zinc-300 text-zinc-700' }} px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors">
                                             {{ $rate->is_active ? 'Active' : 'Inactive' }}
                                         </button>
                                     </td>

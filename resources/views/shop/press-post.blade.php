@@ -16,7 +16,7 @@
         <h1 class="mt-2 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">{{ $post->title }}</h1>
         <p class="mt-3 text-sm text-zinc-500">{{ $post->published_at->format('M j, Y') }}</p>
 
-        <div class="mt-8 flex items-center justify-center overflow-hidden rounded-2xl bg-blue-50 p-8 ring-1 ring-zinc-100" style="height: 18rem;">
+        <div class="mt-8 flex items-center justify-center overflow-hidden rounded-[10px] bg-blue-50 p-8 ring-1 ring-zinc-100" style="height: 18rem;">
             <img src="{{ $img($post->image) }}" alt="" class="max-h-full w-auto object-contain" loading="lazy">
         </div>
 
@@ -26,7 +26,7 @@
             @endforeach
         </div>
 
-        <div class="mt-10 rounded-2xl bg-zinc-50 p-6 ring-1 ring-zinc-100">
+        <div class="mt-10 rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100">
             <p class="text-sm leading-relaxed text-zinc-600">
                 Media enquiry about this announcement? Email
                 <a href="mailto:{{ $pressEmail }}" class="font-medium text-blue-600 hover:underline">{{ $pressEmail }}</a>
@@ -42,7 +42,7 @@
                 <div class="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-3">
                     @foreach ($related as $item)
                         <a href="{{ route('shop.press.show', $item->slug) }}" wire:navigate class="group block">
-                            <div class="flex items-center justify-center overflow-hidden rounded-2xl bg-white p-6 ring-1 ring-zinc-100" style="height: 10rem;">
+                            <div class="flex items-center justify-center overflow-hidden rounded-[10px] bg-white p-6 ring-1 ring-zinc-100" style="height: 10rem;">
                                 <img src="{{ $img($item->image) }}" alt="" class="max-h-full w-auto object-contain" loading="lazy">
                             </div>
                             <p class="mt-3 text-xs font-bold uppercase tracking-wider text-blue-600">{{ $item->category }}</p>

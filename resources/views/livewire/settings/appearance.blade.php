@@ -15,7 +15,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     </div>
 
     {{-- Theme picker --}}
-    <div class="rounded-2xl bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+    <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
         <div class="mb-5">
             <h2 class="text-base font-semibold text-black">Theme</h2>
             <p class="mt-0.5 text-xs text-zinc-600">Switch between light and dark mode, or follow your system.</p>

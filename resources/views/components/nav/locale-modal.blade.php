@@ -154,7 +154,7 @@
         x-transition:leave="transition duration-200 ease-in"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-8 scale-[0.98]"
-        class="pointer-events-auto relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] will-change-transform"
+        class="pointer-events-auto relative w-full max-w-2xl rounded-[10px] bg-white shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] will-change-transform"
     >
         {{-- Close button (positioned outside the card's top-right corner) --}}
         <x-close-button @click="localeModalOpen = false" class="absolute -top-3 -right-3 z-10 shadow-lg shadow-zinc-900/20" />
@@ -179,7 +179,7 @@
                     :aria-expanded="open.toString()"
                     aria-haspopup="listbox"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
+                    class="flex w-full items-center gap-2 rounded-[10px] border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
                 >
                     <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                     <span class="flex-1 text-left" x-text="country">United States</span>
@@ -197,7 +197,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
+                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
                     role="listbox"
                 >
                     {{-- Search --}}
@@ -212,7 +212,7 @@
                                 type="text"
                                 placeholder="Search countries"
                                 aria-label="Search countries"
-                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                class="w-full rounded-[10px] border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                             />
                         </div>
                     </div>
@@ -226,7 +226,7 @@
                                 :aria-selected="country === name ? 'true' : 'false'"
                                 @click="country = name; countryFlag = flag; countryCode = codes[name] || ''; currency = (currencyByCode[(codes[name] || '').toUpperCase()] || 'USD'); currencySymbol = (symbolByCurrency[currency] || currency); open = false; search = ''"
                                 :class="country === name ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
-                                class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-base font-medium transition-colors"
+                                class="flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left text-base font-medium transition-colors"
                             >
                                 <img :src="'https://flagcdn.com/w40/' + (codes[name] || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                                 <span class="flex-1" x-text="name"></span>
@@ -262,7 +262,7 @@
                     :aria-expanded="open.toString()"
                     aria-haspopup="listbox"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
+                    class="flex w-full items-center gap-2 rounded-[10px] border bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors"
                 >
                     <span class="flex-1 text-left" x-text="language">English</span>
                     <svg class="h-4 w-4 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -279,7 +279,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
+                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
                     role="listbox"
                 >
                     {{-- Search --}}
@@ -294,7 +294,7 @@
                                 type="text"
                                 placeholder="Search languages"
                                 aria-label="Search languages"
-                                class="w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                class="w-full rounded-[10px] border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                             />
                         </div>
                     </div>
@@ -308,7 +308,7 @@
                                 :aria-selected="language === lang ? 'true' : 'false'"
                                 @click="language = lang; open = false; search = ''"
                                 :class="language === lang ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
-                                class="flex w-full items-center rounded-md px-3 py-2 text-left text-base font-medium transition-colors"
+                                class="flex w-full items-center rounded-[10px] px-3 py-2 text-left text-base font-medium transition-colors"
                             >
                                 <span class="flex-1" x-text="lang"></span>
                                 <svg x-show="language === lang" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -332,7 +332,7 @@
         <button
             type="button"
             @click="localeModalOpen = false"
-            class="mt-7 w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-semibold text-white transition-colors duration-150 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+            class="mt-7 w-full rounded-[10px] bg-blue-600 px-4 py-3 text-base font-semibold text-white transition-colors duration-150 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
         >
             Save
         </button>

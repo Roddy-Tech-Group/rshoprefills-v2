@@ -322,6 +322,31 @@ document.addEventListener('livewire:navigated', bootAll);
  * (/cart, /cart/items) which wrap the backend CartManager. The nav cart popup
  * and the product page both read/drive this single store.
  */
+/**
+ * Global popup auto-close on page scroll.
+ *
+ * Most dropdowns in the project already listen to `keydown.escape.window` to
+ * close — by dispatching a synthetic Escape on window scroll, we close every
+ * dropdown / search panel / form select that uses the standard pattern with a
+ * single 8-line snippet, no per-component changes needed. Only fires for
+ * window scroll (page-level) — element-level scrolls inside dropdowns don't
+ * bubble to window, so users can still scroll long result lists freely.
+ *
+ * Also dispatches a custom `app-page-scroll` event for components that don't
+ * use the Escape pattern but still want to react.
+ */
+(function autoCloseOnScroll() {
+    let t;
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    window.addEventListener('scroll', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+            window.dispatchEvent(escape);
+            window.dispatchEvent(new CustomEvent('app-page-scroll'));
+        }, 60);
+    }, { passive: true });
+})();
+
 document.addEventListener('alpine:init', () => {
     // Active wallet index — shared so the desktop wallet card and the mobile
     // wallet carousel always show the same wallet (synced live, no page reload).
@@ -346,6 +371,27 @@ document.addEventListener('alpine:init', () => {
         },
     });
     window.Alpine.store('adminSidebar').init();
+
+    // Customer dashboard sidebar collapse — mirrors the adminSidebar store
+    // so both shells get the same UX (glass toggle, icon-only rail, hover
+    // popups). Separate localStorage key so the two layouts remember
+    // independently. CSS rules live in resources/views/components/layouts/dashboard.blade.php.
+    window.Alpine.store('dashboardSidebar', {
+        collapsed: false,
+        init() {
+            try { this.collapsed = localStorage.getItem('dashboard.sidebar.collapsed') === '1'; } catch (e) {}
+            this._sync();
+        },
+        toggle() {
+            this.collapsed = ! this.collapsed;
+            try { localStorage.setItem('dashboard.sidebar.collapsed', this.collapsed ? '1' : '0'); } catch (e) {}
+            this._sync();
+        },
+        _sync() {
+            document.documentElement.classList.toggle('dashboard-sidebar-collapsed', this.collapsed);
+        },
+    });
+    window.Alpine.store('dashboardSidebar').init();
 
     /**
      * Customer-dashboard preferences. Persisted in localStorage so each customer's
@@ -1100,6 +1146,7 @@ window.bestSellingCountriesMap = function (payload) {
     return {
         map: null,
         view: 'country',  // 'country' | 'region'
+        continent: 'all', // 'all' | 'Africa' | 'Asia' | 'Europe' | 'North America' | 'South America' | 'Oceania'
 
         async init() {
             // jsvectormap's map data files are side-effect scripts that call
@@ -1138,13 +1185,18 @@ window.bestSellingCountriesMap = function (payload) {
                 draggable: true,
                 regionStyle: {
                     initial: { fill: bg, fillOpacity: 1, stroke, strokeWidth: 0.5 },
-                    hover:   { fillOpacity: 0.85 },
+                    // Light-green hover highlight (Tailwind green-300) so the
+                    // pointer-tracked country reads clearly against the blue
+                    // shading of buyer regions and the grey of non-buyers.
+                    hover:   { fill: '#86efac', fillOpacity: 1, cursor: 'pointer' },
                 },
                 series: {
                     regions: [{
                         scale: this._scale(),
                         values: this._values(),
-                        normalizeFunction: 'polynomial',
+                        // Linear normalisation — polynomial breaks on small
+                        // datasets (single-buyer = NaN = black fill).
+                        normalizeFunction: 'linear',
                         attribute: 'fill',
                     }],
                 },
@@ -1158,6 +1210,7 @@ window.bestSellingCountriesMap = function (payload) {
             });
 
             this.$watch('view', () => this._refresh());
+            this.$watch('continent', () => this._refresh());
         },
 
         destroy() {
@@ -1166,20 +1219,38 @@ window.bestSellingCountriesMap = function (payload) {
         },
 
         setView(v) { this.view = v; },
+        setContinent(c) { this.continent = c; },
+
+        // True when the country code belongs to the currently-selected
+        // continent scope. Global ('all') passes everything.
+        _inScope(code) {
+            if (this.continent === 'all') { return true; }
+            return CODE_TO_CONTINENT[code] === this.continent;
+        },
 
         _scale() {
-            // Brand-blue ramp: pale → saturated. The ApexCharts data points use
-            // matching emerald + blue, but this widget stays single-hue so the
-            // intensity reads clearly without needing a legend.
-            return ['#dbeafe', '#0044FF'];
+            // Two near-identical brand blues — jsvectormap collapses to black
+            // when both ends of the scale are exactly equal, so we use a
+            // hairline gradient (#1d4ed8 → #0044FF) that reads as uniform blue
+            // but keeps the interpolator happy.
+            return ['#1d4ed8', '#0044FF'];
         },
 
         _values() {
-            if (this.view === 'country') { return { ...COUNTRIES }; }
+            // Country mode: shade per-country, filtered by continent scope.
+            if (this.view === 'country') {
+                const out = {};
+                Object.keys(COUNTRIES).forEach((cc) => {
+                    if (this._inScope(cc)) { out[cc] = COUNTRIES[cc]; }
+                });
+                return out;
+            }
             // Region mode: every country in the same continent gets the
-            // continent's aggregate value, so the map paints by region.
+            // continent's aggregate value. When scoped to one continent,
+            // only paint countries within it.
             const out = {};
             Object.keys(CODE_TO_CONTINENT).forEach((cc) => {
+                if (!this._inScope(cc)) { return; }
                 const region = CODE_TO_CONTINENT[cc];
                 if (REGIONS[region] !== undefined) { out[cc] = REGIONS[region]; }
             });
@@ -1187,6 +1258,7 @@ window.bestSellingCountriesMap = function (payload) {
         },
 
         _tooltipValue(code) {
+            if (!this._inScope(code)) { return null; }
             if (this.view === 'country') { return COUNTRIES[code] ?? null; }
             const region = CODE_TO_CONTINENT[code];
             return region ? (REGIONS[region] ?? null) : null;

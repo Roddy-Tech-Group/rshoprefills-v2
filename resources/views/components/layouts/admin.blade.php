@@ -14,6 +14,13 @@
             html.admin-sidebar-collapsed [data-flux-sidebar] {
                 width: 72px !important;
             }
+            /* Nav itself stays scrollable when expanded (long lists need it),
+               but in collapsed mode we force overflow visible — otherwise the
+               flyout submenu popups get clipped at the nav's right edge.
+               Icon-only rail never needs to scroll the labels anyway. */
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav {
+                overflow: visible !important;
+            }
             html.admin-sidebar-collapsed [data-flux-sidebar] nav a,
             html.admin-sidebar-collapsed [data-flux-sidebar] nav button {
                 font-size: 0 !important;
@@ -146,7 +153,15 @@
                 padding: 0.625rem 0.875rem !important;
                 justify-content: flex-start !important;
                 text-align: left !important;
+                gap: 0.75rem !important;
                 border-radius: 10px !important;
+            }
+            /* Parent rail rule auto-margins every nav img/svg to centre them
+               in the icon-only column; that leaks into the submenu and pushes
+               the label to the opposite side. Pin it back to 0 here. */
+            html.admin-sidebar-collapsed [data-flux-sidebar] .nav-submenu img,
+            html.admin-sidebar-collapsed [data-flux-sidebar] .nav-submenu svg {
+                margin: 0 !important;
             }
             /* Dark mode: muted white labels, hover lifts subtly. */
             html.dark.admin-sidebar-collapsed [data-flux-sidebar] .nav-submenu a,
@@ -156,8 +171,9 @@
             }
             html.dark.admin-sidebar-collapsed [data-flux-sidebar] .nav-submenu a:hover,
             html.dark.admin-sidebar-collapsed [data-flux-sidebar] .nav-submenu button:hover {
-                background: rgba(255, 255, 255, 0.06) !important;
-                color: #ffffff !important;
+                background: #070f1c !important;
+                color: #60a5fa !important; /* blue-400 */
+                font-weight: 600 !important;
             }
             /* Active sub-item: rose accent matches the project's secondary accent.
                Matches whatever class chain the sub-item used for "active" in light mode. */
@@ -169,7 +185,13 @@
             }
             html.admin-sidebar-collapsed [data-flux-sidebar] .nav-group:hover .nav-submenu,
             html.admin-sidebar-collapsed [data-flux-sidebar] .nav-group:focus-within .nav-submenu {
+                /* Override Alpine x-collapse's inline height: 0 + overflow: hidden
+                   so the popup can render at its natural size. Without these
+                   resets the hover rule only flips `display` but leaves the
+                   group height at 0, so nothing visibly appears. */
                 display: flex !important;
+                height: auto !important;
+                overflow: visible !important;
             }
 
             /* Soften the resize so the rail glides rather than snaps. */
@@ -184,9 +206,9 @@
             }
         }
     </style>
-    <body class="min-h-screen bg-[#eff6ff] text-zinc-900">
+    <body class="min-h-screen bg-[#eff6ff] text-zinc-900 dark:bg-[#0c1a36] dark:text-white">
 
-        <flux:sidebar sticky stashable class="relative bg-white">
+        <flux:sidebar sticky stashable class="relative bg-white dark:bg-[#0c1a36]">
 
             {{-- Collapse toggle attached to the right edge of the sidebar.
                  Was previously in the header — moved here so the toggle lives
@@ -199,7 +221,7 @@
                 @click="$store.adminSidebar.toggle()"
                 :aria-label="$store.adminSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.adminSidebar.collapsed.toString()"
-                class="absolute right-0 top-[88px] z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-full bg-zinc-500/30 text-blue-600 ring-1 ring-zinc-400/40 backdrop-blur-xl backdrop-saturate-150 transition-all hover:bg-zinc-500/40 hover:text-blue-700 active:scale-95 lg:flex dark:bg-white/10 dark:text-blue-300 dark:ring-white/15 dark:hover:bg-white/15 dark:hover:text-blue-200"
+                class="absolute right-0 top-[88px] z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-[10px] bg-zinc-500/30 text-blue-600 ring-1 ring-zinc-400/40 backdrop-blur-xl backdrop-saturate-150 transition-all hover:bg-zinc-500/40 hover:text-blue-700 active:scale-95 lg:flex dark:bg-white/10 dark:text-blue-300 dark:ring-white/15 dark:hover:bg-white/15 dark:hover:text-blue-200"
                 style="box-shadow: 0 6px 18px -6px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);"
             >
                 <svg
@@ -215,7 +237,7 @@
             {{-- Brand. Two stacked marks: the full wordmark when expanded,
                  the square favicon when collapsed (swap is CSS-driven via the
                  admin-sidebar-collapsed class on <html>). --}}
-            <a href="{{ route('admin.dashboard') }}" class="mr-5 -ml-1 flex flex-col rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+            <a href="{{ route('admin.dashboard') }}" class="mr-5 -ml-1 flex flex-col rounded-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                 <span class="brand-full flex h-10 items-center">
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.png') }}"
@@ -227,7 +249,7 @@
                     <img
                         src="{{ asset('assets/favicon.ico') }}"
                         alt="RshopRefills"
-                        class="h-12 w-12 rounded-full object-contain"
+                        class="h-12 w-12 rounded-[10px] object-contain"
                     />
                 </span>
                 <span class="brand-full mt-0.5 pl-1 text-[10px] font-medium italic leading-none text-zinc-600">Est. 2024</span>
@@ -247,8 +269,8 @@
             @php
                 $isCurrent = fn (...$patterns) => request()->routeIs(...$patterns);
                 $navItemClass = fn (bool $active) => $active
-                    ? 'group flex items-center gap-3 rounded-[10px] bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 dark:bg-blue-600/15 dark:text-blue-300'
-                    : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/5 dark:hover:text-white';
+                    ? 'group flex items-center gap-3 rounded-[10px] bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                    : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-[#070f1c] dark:hover:text-blue-400 dark:hover:font-semibold';
                 $iconClass = fn (bool $active) => $active
                     ? 'h-5 w-5 shrink-0 text-blue-700 dark:text-blue-300'
                     : 'h-5 w-5 shrink-0 text-zinc-600 transition-colors';
@@ -258,7 +280,7 @@
                 $imgIconClass = fn (bool $active) => 'h-5 w-5 shrink-0 transition';
             @endphp
 
-            <nav class="mt-4 flex flex-col gap-1" aria-label="Admin">
+            <nav class="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto pb-4 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-white/10" aria-label="Admin">
                 {{-- Overview --}}
                 @php $active = $isCurrent('admin.dashboard'); @endphp
                 <a href="{{ route('admin.dashboard') }}" data-tip="Overview" class="{{ $navItemClass($active) }}">
@@ -273,12 +295,13 @@
                     $productPatterns = ['admin.products*', 'admin.gift-cards*', 'admin.esims*', 'admin.mobile-topups*', 'admin.bill-payments*', 'admin.flights*', 'admin.stays*'];
                     $productActive = $isCurrent(...$productPatterns);
                     $subItemClass = fn (bool $active) => $active
-                        ? 'flex items-center rounded-[10px] bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 dark:bg-blue-600/15 dark:text-blue-300'
-                        : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white';
+                        ? 'flex items-center rounded-[10px] bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                        : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#070f1c] dark:hover:text-blue-400 dark:hover:font-semibold';
                 @endphp
                 <div
                     x-data="{ expanded: {{ $productActive ? 'true' : 'false' }} }"
-                    @click.outside="expanded = false"
+                    x-effect="if ($store.adminSidebar?.collapsed) { expanded = true }"
+                    @click.outside="if (! $store.adminSidebar?.collapsed) { expanded = false }"
                     class="nav-group flex flex-col gap-1"
                 >
                     <button
@@ -291,7 +314,7 @@
                             <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="{{ $imgIconClass($productActive) }}" loading="lazy">
                             Products
                         </span>
-                        <svg :class="expanded && 'rotate-180'" class="h-4 w-4 shrink-0 transition-transform {{ $productActive ? 'text-white' : 'text-zinc-600 group-hover:text-white' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <svg :class="expanded && 'rotate-180'" class="h-4 w-4 shrink-0 transition-transform {{ $productActive ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-600 dark:text-zinc-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
@@ -353,7 +376,11 @@
                      Sub-items expand inline so the rail stays scannable when collapsed
                      they hide behind the parent label. --}}
                 @php $contentActive = $isCurrent('admin.content.*'); @endphp
-                <div x-data="{ open: {{ $contentActive ? 'true' : 'false' }} }" class="nav-group flex flex-col">
+                <div
+                    x-data="{ open: {{ $contentActive ? 'true' : 'false' }} }"
+                    x-effect="if ($store.adminSidebar?.collapsed) { open = true }"
+                    class="nav-group flex flex-col"
+                >
                     <button
                         type="button"
                         @click="open = ! open"
@@ -375,8 +402,8 @@
                     <div x-show="open" x-collapse class="nav-submenu mt-1 ml-3 flex flex-col gap-0.5 border-l border-zinc-200 pl-3">
                         @php
                             $subItem = fn (bool $active) => $active
-                                ? 'block rounded-[10px] bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:bg-blue-600/15 dark:text-blue-300'
-                                : 'block rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white';
+                                ? 'block rounded-[10px] bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                                : 'block rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#070f1c] dark:hover:text-blue-400 dark:hover:font-semibold';
                         @endphp
                         <a href="{{ route('admin.content.blog') }}" class="{{ $subItem($isCurrent('admin.content.blog')) }}">Blog Posts</a>
                         <a href="{{ route('admin.content.press') }}" class="{{ $subItem($isCurrent('admin.content.press')) }}">Press Articles</a>
@@ -425,7 +452,7 @@
              the body grid settles (wire:navigate morph, slow paint) it captures the header's
              block-flow position below the sidebar (~478px) and the bar floats mid-page.
              The `sticky top-0` classes below are pure CSS — no race. --}}
-        <flux:header class="sticky top-0 z-40 min-h-[60px] items-center gap-2 !border-b-0 bg-white px-3 py-2 sm:gap-3 sm:px-6">
+        <flux:header class="sticky top-0 z-40 min-h-[60px] items-center gap-2 !border-b-0 bg-[#eff6ff] dark:bg-[#0c1a36] px-3 py-2 sm:gap-3 sm:px-6">
             {{-- Plain button toggle. Bypasses <flux:sidebar.toggle>, which is a self-closing wrapper
                  around <flux:button square /> and doesn't render slot children. Dispatching
                  'flux-sidebar-toggle' is exactly what Flux's own toggle does internally. --}}
@@ -434,7 +461,7 @@
                 x-data
                 x-on:click="$dispatch('open-mobile-menu')"
                 aria-label="Open menu"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-zinc-100 active:scale-95 lg:hidden"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-zinc-100 active:scale-95 lg:hidden"
             >
                 <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-6 w-6" style="filter: brightness(0) saturate(100%);" loading="lazy">
             </button>
@@ -445,6 +472,157 @@
 
             {{-- Page heading is rendered inside the content area (see <flux:main> below),
                  not in this top bar — so every admin page title sits within the page. --}}
+            <flux:spacer />
+
+            {{-- Spacer pair flanks the command bar so it sits true-centre in
+                 the header without pushing the right-side icons further right. --}}
+
+            {{-- Admin command bar. Mirrors the storefront nav search exactly:
+                 live-search dropdown against admin.products.search-suggest with a
+                 Ctrl+K hint chip that swaps to a clear button while typing.
+                 Hidden on small screens — the mobile menu carries its own search. --}}
+            <div
+                x-data="adminCommandBar()"
+                @click.outside="open = false"
+                @keydown.escape.window="open = false"
+                @keydown.window.ctrl.k.prevent="$refs.search.focus()"
+                @keydown.window.meta.k.prevent="$refs.search.focus()"
+                class="relative hidden md:block w-[360px] lg:w-[420px]"
+            >
+                <form
+                    role="search"
+                    method="GET"
+                    action="{{ route('admin.products') }}"
+                    @click="$refs.search.focus()"
+                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400 dark:border-white/10'"
+                    class="group flex items-center gap-3 cursor-text rounded-[10px] border bg-white px-3.5 py-2 transition-all duration-200 dark:bg-[#162a4a]"
+                >
+                    <svg class="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input
+                        x-ref="search"
+                        x-model="query"
+                        @input="suggest()"
+                        @focus="if (results.length > 0) open = true"
+                        name="q"
+                        type="search"
+                        placeholder="Search products, orders, customers…"
+                        aria-label="Search admin"
+                        autocomplete="off"
+                        spellcheck="false"
+                        class="flex-1 min-w-0 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-500 outline-none dark:text-white dark:placeholder:text-zinc-400"
+                    />
+                    {{-- Ctrl+K hint chip — shown while empty, swaps to a clear
+                         button once the user starts typing. Dark-mode aware so
+                         the kbd reads as a deep navy chip on the dark header. --}}
+                    <kbd x-show="query.length === 0" class="pointer-events-none inline-flex shrink-0 items-center rounded-[5px] border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-zinc-500 dark:border-white/10 dark:bg-[#0c1a36] dark:text-zinc-400" aria-hidden="true">CTRL + K</kbd>
+                    <button type="button" x-show="query.length > 0" @click="clear()" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/15" aria-label="Clear">
+                        <svg class="h-3 w-3 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </form>
+
+                {{-- Results dropdown — feeds off the existing admin product
+                     search-suggest endpoint. --}}
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 -translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    style="display:none;"
+                    class="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-[10px] bg-white/65 ring-1 ring-white/60 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70 dark:ring-white/15"
+                    style="box-shadow: 0 24px 50px -12px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
+                >
+                    <div x-show="loading" class="flex items-center gap-2 px-4 py-3 text-[12px] text-zinc-500 dark:text-zinc-400">
+                        <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.25" stroke-width="3"/>
+                            <path d="M22 12a10 10 0 01-10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                        Searching…
+                    </div>
+
+                    <ul x-show="! loading && results.length > 0" class="max-h-80 overflow-y-auto p-1.5">
+                        <template x-for="row in results" :key="row.id">
+                            <li>
+                                <a
+                                    :href="'{{ route('admin.products') }}?q=' + encodeURIComponent(row.name || row.sku)"
+                                    wire:navigate
+                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                                >
+                                    <template x-if="row.logo">
+                                        <img :src="row.logo" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
+                                    </template>
+                                    <template x-if="! row.logo">
+                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-[11px] font-bold uppercase text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20" x-text="(row.brand || row.name || row.sku || '').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase() || '—'"></span>
+                                    </template>
+                                    <span class="min-w-0 flex-1 leading-tight">
+                                        <span class="block truncate text-[13px] font-semibold text-zinc-900 dark:text-white" x-text="row.brand || row.name || row.sku"></span>
+                                        <span class="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                                            <span x-show="row.category" x-text="row.category"></span>
+                                            <span x-show="row.country"> · <span x-text="row.country"></span></span>
+                                            <span x-show="row.sku"> · <span class="font-mono" x-text="row.sku"></span></span>
+                                        </span>
+                                    </span>
+                                    <span class="shrink-0 text-right text-[11px] tabular-nums">
+                                        <span class="block text-zinc-500 dark:text-zinc-400">Cost</span>
+                                        <span class="block font-semibold text-zinc-900 dark:text-white" x-text="'USD ' + Number(row.cost).toFixed(2)"></span>
+                                    </span>
+                                </a>
+                            </li>
+                        </template>
+                    </ul>
+
+                    <div x-show="! loading && results.length === 0 && query.length >= 2" class="px-4 py-6 text-center text-[12px] text-zinc-500 dark:text-zinc-400">
+                        No matches for "<span class="font-semibold text-zinc-900 dark:text-white" x-text="query"></span>"
+                    </div>
+
+                    <div x-show="results.length > 0" class="border-t border-zinc-200/60 px-4 py-2 text-[11px] text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+                        Press <kbd class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:bg-white/10 dark:text-zinc-200">Enter</kbd> to see all matches
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // Admin command-bar factory — shared shape with the storefront's
+                // navBrandSearch but pointed at the admin product search-suggest
+                // endpoint. Race-safe via an incrementing requestId.
+                window.adminCommandBar = function () {
+                    return {
+                        query: '',
+                        results: [],
+                        loading: false,
+                        open: false,
+                        _seq: 0,
+                        async suggest() {
+                            const q = (this.query || '').trim();
+                            if (q.length < 2) { this.results = []; this.loading = false; this.open = false; return; }
+                            const mySeq = ++this._seq;
+                            this.loading = true;
+                            this.open = true;
+                            try {
+                                const res = await fetch('{{ route('admin.products.search-suggest') }}?q=' + encodeURIComponent(q), {
+                                    headers: { 'Accept': 'application/json' },
+                                });
+                                if (mySeq !== this._seq) { return; }
+                                this.results = await res.json();
+                            } catch (e) {
+                                this.results = [];
+                            } finally {
+                                if (mySeq === this._seq) { this.loading = false; }
+                            }
+                        },
+                        clear() {
+                            this.query = '';
+                            this.results = [];
+                            this.open = false;
+                            this.$refs.search?.focus();
+                        },
+                    };
+                };
+            </script>
+
             <flux:spacer />
 
             {{-- Language dropdown (Alpine-driven). Hover opens; click locks open. --}}
@@ -460,9 +638,9 @@
                     type="button"
                     @click="locked = !locked; open = locked"
                     :aria-expanded="open.toString()"
-                    class="inline-flex items-center gap-1.5 rounded-[10px] border border-zinc-200 bg-white px-2 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                    class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4" style="filter: brightness(0) saturate(100%);" loading="lazy">
+                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-5 w-5" style="filter: brightness(0) saturate(100%);" loading="lazy">
                     <span x-text="selected">English</span>
                 </button>
 
@@ -475,7 +653,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[200px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                    class="absolute right-0 top-full z-50 mt-2 w-[200px] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
                     role="menu"
                 >
                     <div class="p-1.5">
@@ -484,7 +662,7 @@
                                 type="button"
                                 @click="selected = opt; open = false"
                                 :class="selected === opt ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                                class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+                                class="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors"
                             >
                                 <span x-text="opt"></span>
                                 <svg x-show="selected === opt" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -498,7 +676,7 @@
 
             {{-- Theme toggle — admin's own light/dark/system control, saved per
                  admin account and kept separate from the customer side. --}}
-            <x-theme-toggle class="h-10 w-10 rounded-xl text-zinc-600 hover:bg-blue-100" />
+            <x-theme-toggle class="h-11 w-11 rounded-[10px] text-zinc-600 hover:bg-blue-100" />
 
             {{-- Admin notifications bell — real AdminNotification feed (KYC, orders, etc.). --}}
             <livewire:admin.notifications-menu />
@@ -526,7 +704,7 @@
                     @click="locked = !locked; open = locked"
                     :aria-expanded="open.toString()"
                     aria-label="{{ $admin?->name ?? 'Admin' }}"
-                    class="ml-1 relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                    class="ml-1 relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img src="{{ $admin?->avatar_url ?: $adminDefaultAvatar }}" alt="{{ $admin?->name ?? 'Admin' }}" class="h-full w-full object-cover" loading="lazy">
                 </button>
@@ -540,7 +718,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
                     role="menu"
                 >
                     {{-- Admin info card --}}
@@ -551,15 +729,15 @@
 
                     @php $iconBlack = 'filter: brightness(0) saturate(100%);'; @endphp
                     <div class="p-1.5">
-                        <a href="{{ route('admin.account') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('admin.account') }}" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('user.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Account information
                         </a>
-                        <a href="#" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="#" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('account avtivities 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Account activity
                         </a>
-                        <a href="{{ route('admin.notifications') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('admin.notifications') }}" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Notifications Log
                         </a>
@@ -568,7 +746,7 @@
                     <div class="border-t border-zinc-100 p-1.5">
                         <form method="POST" action="{{ route('admin.logout') }}" class="w-full">
                             @csrf
-                            <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700">
+                            <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700">
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
                                 </svg>
@@ -580,13 +758,13 @@
             </div>
         </flux:header>
 
-        {{-- Content area with rounded top-left corner. Padding is provided here so pages just provide their content.
+        {{-- Content area with rounded-[10px] top-left corner. Padding is provided here so pages just provide their content.
              Inner uses flex-column + min-h-full so the footer always pins to the bottom of the viewport, even on
              short pages — same footer renders on every admin page since it lives in this layout.
-             The page bg lives on `<flux:main>` itself so the rounded curve never "straightens" on scroll — the
+             The page bg lives on `<flux:main>` itself so the rounded-[10px] curve never "straightens" on scroll — the
              curve is a real edge between two same-colour panels, not an outline that can be clipped. --}}
         <flux:main class="!p-0 bg-[#eff6ff]">
-            <div class="flex min-h-full flex-col rounded-tl-[15px] rounded-tr-[15px] bg-[#eff6ff] p-4 pb-2 sm:p-6 sm:pb-2 lg:rounded-tr-none lg:p-6 lg:pb-2">
+            <div class="flex min-h-full flex-col rounded-tl-[15px] rounded-tr-[15px] bg-[#eff6ff] p-3 pb-2 sm:p-4 sm:pb-2 lg:rounded-tr-none lg:p-6 lg:pb-2 dark:bg-[#0c1a36]">
                 <div class="w-full flex-1">
                     {{-- Page heading — moved out of the top nav bar into the page itself. --}}
                     {{-- Page heading. Subtext only renders when a page explicitly
@@ -604,7 +782,7 @@
                      the layout level (after the flex-1 content) so flexbox
                      pins it to the viewport bottom on short pages and below
                      the scroll on long ones. Renders on every admin page. --}}
-                <footer class="mt-auto pt-12 flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[13px] font-semibold text-zinc-600 dark:text-zinc-300">
+                <footer class="mt-auto pt-12 flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
                     <a href="{{ route('shop.privacy') }}" class="hover:text-zinc-900 dark:hover:text-white">Privacy Policy</a>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
                     <span>version 2.0.0</span>
@@ -673,7 +851,7 @@
                 aria-labelledby="admin-mobile-menu-title"
             >
                 <div class="flex justify-center pt-3">
-                    <span class="h-1.5 w-10 rounded-full bg-zinc-300"></span>
+                    <span class="h-1.5 w-10 rounded-[10px] bg-zinc-300"></span>
                 </div>
 
                 <div class="px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4">
@@ -688,9 +866,9 @@
                                 @if ($item['href'] !== '#') wire:navigate @endif
                                 @click="menuOpen = false"
                                 style="--i: {{ $i }}"
-                                class="group flex flex-col items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-2 py-3 text-center transition-transform duration-200 active:scale-95"
+                                class="group flex flex-col items-center justify-center gap-2 rounded-[10px] bg-zinc-100 px-2 py-3 text-center transition-transform duration-200 active:scale-95"
                             >
-                                <span class="flex h-12 w-12 items-center justify-center rounded-full {{ $item['tone'] }} shadow-sm transition-transform duration-200 group-hover:scale-105">
+                                <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $item['tone'] }} shadow-sm transition-transform duration-200 group-hover:scale-105">
                                     <img src="{{ asset('assets/' . rawurlencode($item['icon'])) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                                 </span>
                                 <span class="text-[11px] font-semibold leading-tight text-zinc-900">{{ $item['label'] }}</span>
@@ -702,7 +880,7 @@
                         @csrf
                         <button
                             type="submit"
-                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
+                            class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
                         >
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>

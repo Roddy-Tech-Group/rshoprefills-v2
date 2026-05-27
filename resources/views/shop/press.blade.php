@@ -24,7 +24,7 @@
             <div class="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($posts as $post)
                     <a href="{{ route('shop.press.show', $post->slug) }}" wire:navigate class="group block">
-                        <div class="flex items-center justify-center overflow-hidden rounded-2xl bg-blue-50 p-6 ring-1 ring-zinc-100" style="height: 12rem;">
+                        <div class="flex items-center justify-center overflow-hidden rounded-[10px] bg-blue-50 p-6 ring-1 ring-zinc-100" style="height: 12rem;">
                             <img src="{{ $img($post->image) }}" alt="" class="max-h-full w-auto object-contain" loading="lazy">
                         </div>
                         <p class="mt-4 text-xs font-bold uppercase tracking-wider text-blue-600">{{ $post->category }}</p>
@@ -44,24 +44,24 @@
         <div class="mx-auto w-full max-w-[1140px] px-4 py-12 sm:px-6 sm:py-16">
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 {{-- Media enquiries --}}
-                <div class="rounded-2xl bg-white p-6 ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-white p-6 ring-1 ring-zinc-100">
                     <h3 class="text-base font-bold text-zinc-900">Media enquiries</h3>
                     <p class="mt-2 text-sm leading-relaxed text-zinc-600">For interviews, data or media requests, email us with your outlet and deadline.</p>
                     <a href="mailto:{{ $pressEmail }}" class="mt-3 inline-block text-sm font-semibold text-blue-600 hover:underline">{{ $pressEmail }}</a>
                 </div>
 
                 {{-- Brand assets --}}
-                <div class="rounded-2xl bg-white p-6 ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-white p-6 ring-1 ring-zinc-100">
                     <h3 class="text-base font-bold text-zinc-900">Brand assets</h3>
                     <p class="mt-2 text-sm leading-relaxed text-zinc-600">Use our official logo without altering or recolouring it.</p>
-                    <a href="{{ $img('Rshoprefillslogo.png') }}" download class="mt-3 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                    <a href="{{ $img('Rshoprefillslogo.png') }}" download class="mt-3 inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                         Download logo
                     </a>
                 </div>
 
                 {{-- Boilerplate --}}
-                <div class="rounded-2xl bg-white p-6 ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-white p-6 ring-1 ring-zinc-100">
                     <h3 class="text-base font-bold text-zinc-900">About RshopRefills</h3>
                     <p class="mt-2 text-sm leading-relaxed text-zinc-600">A global digital marketplace for gift cards, eSIMs, top-ups, bills and travel, with an in-app wallet and crypto support. Founded in 2024, a wholly-owned product of Roddy Technologies LTD.</p>
                 </div>

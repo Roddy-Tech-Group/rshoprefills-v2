@@ -24,7 +24,7 @@
      navigation is identical everywhere. Sticky as one unit; the inner panel
      scrolls if the subcategory list outgrows the viewport. --}}
 <aside class="hidden self-start lg:sticky lg:top-[156px] lg:block">
-    <div class="max-h-[calc(100vh-180px)] overflow-y-auto rounded-2xl bg-white/80 backdrop-blur-xl p-3 ring-1 ring-zinc-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div class="max-h-[calc(100vh-180px)] overflow-y-auto rounded-[10px] bg-white/80 backdrop-blur-xl p-3 ring-1 ring-zinc-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
         {{-- Categories — switches the storefront entirely --}}
         <p class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">Categories</p>
@@ -35,7 +35,7 @@
                         href="{{ $cat['url'] }}"
                         wire:navigate
                         @class([
-                            'flex items-center justify-between rounded-lg px-3 py-2 transition-colors',
+                            'flex items-center justify-between rounded-[10px] px-3 py-2 transition-colors',
                             'bg-blue-100 font-bold text-blue-700' => $active === $cat['slug'],
                             'text-zinc-700 hover:bg-blue-100 hover:text-zinc-900' => $active !== $cat['slug'],
                         ])
@@ -44,7 +44,7 @@
                         <span>{{ $cat['label'] }}</span>
                     </a>
                 @else
-                    <span class="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-2 text-zinc-400">
+                    <span class="flex cursor-not-allowed items-center justify-between rounded-[10px] px-3 py-2 text-zinc-400">
                         <span>{{ $cat['label'] }}</span>
                         <span class="text-[9px] font-bold uppercase tracking-wide text-zinc-300">Soon</span>
                     </span>
@@ -61,7 +61,7 @@
                         href="{{ $item['url'] }}"
                         wire:navigate
                         @class([
-                            'block rounded-lg px-3 py-2 transition-colors',
+                            'block rounded-[10px] px-3 py-2 transition-colors',
                             'bg-blue-100 font-bold text-blue-700' => $item['active'] ?? false,
                             'text-zinc-700 hover:bg-blue-100 hover:text-zinc-900' => ! ($item['active'] ?? false),
                         ])

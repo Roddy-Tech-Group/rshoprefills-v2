@@ -157,16 +157,18 @@ new #[Lazy] class extends Component
 }; ?>
 
 @php
-    // order_status value -> [label, badge classes]. Solid saturated bg + white text + rounded-[5px].
-    // Shared between mobile and desktop Recent Orders cards.
+    // Unified status badge tones — same recipe as the admin list pages and the
+    // customer orders / transactions pages so every status in the app reads
+    // identically. Light tint bg + bold text + 1px ring; dark-mode variants
+    // included. Pairs with the rounded-[5px] wrapper at render time.
     $orderStatusUi = [
-        'completed'           => ['Completed',  'bg-emerald-500 text-white'],
-        'partially_completed' => ['Partial',    'bg-blue-500 text-white'],
-        'processing'          => ['Processing', 'bg-amber-500 text-white'],
-        'pending'             => ['Pending',    'bg-amber-500 text-white'],
-        'failed'              => ['Failed',     'bg-red-500 text-white'],
-        'cancelled'           => ['Cancelled',  'bg-zinc-500 text-white'],
-        'requires_attention'  => ['Review',     'bg-red-500 text-white'],
+        'completed'           => ['Completed',  'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'],
+        'partially_completed' => ['Partial',    'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
+        'processing'          => ['Processing', 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
+        'pending'             => ['Pending',    'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
+        'failed'              => ['Failed',     'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
+        'cancelled'           => ['Cancelled',  'bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-zinc-700/60'],
+        'requires_attention'  => ['Review',     'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
     ];
 @endphp
 
@@ -179,7 +181,7 @@ new #[Lazy] class extends Component
     <div class="flex flex-col gap-5 lg:hidden">
 
         {{-- Quick Actions (mirrors the desktop card so customers can jump straight into a category). --}}
-        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <h3 class="text-base font-bold text-zinc-900">Quick Actions</h3>
             <div class="mt-4 grid grid-cols-3 gap-3">
                 @foreach ([
@@ -191,7 +193,7 @@ new #[Lazy] class extends Component
                     ['Stays',      'stay 2.svg',     'bg-orange-500',  route('shop.stays'),      true],
                 ] as [$label, $icon, $bg, $href, $live])
                     <a href="{{ $href }}" @if ($live) wire:navigate @endif class="group flex flex-col items-center gap-1.5 text-center">
-                        <span class="flex h-12 w-12 items-center justify-center rounded-full {{ $bg }} shadow-sm transition-transform group-hover:scale-105 group-active:scale-95">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} shadow-sm transition-transform group-hover:scale-105 group-active:scale-95">
                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                         </span>
                         <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
@@ -201,9 +203,9 @@ new #[Lazy] class extends Component
         </div>
 
         {{-- Rcoin card — placeholder state (no Rcoin ledger yet). Mirrors desktop right-rail card. --}}
-        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-start gap-3">
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-blue-100">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100">
                     <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
                 </span>
                 <div class="min-w-0 flex-1">
@@ -215,14 +217,14 @@ new #[Lazy] class extends Component
                 </div>
             </div>
             <p class="mt-4 text-xs text-zinc-600">Earn Rcoin on every order and referral, then spend it on gift cards.</p>
-            <a href="{{ route('dashboard.rewards') }}" wire:navigate class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+            <a href="{{ route('dashboard.rewards') }}" wire:navigate class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                 <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain" style="filter: brightness(0) invert(1);">
                 View coins
             </a>
         </div>
 
         {{-- Recent Orders — mobile parity with desktop. --}}
-        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Orders</h3>
                 <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
@@ -240,7 +242,7 @@ new #[Lazy] class extends Component
                         $itemName = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Order');
                         $extraVariants = max(0, $groupedItems->count() - 1);
                         $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
-                        [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-500 text-white'];
+                        [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
                     @endphp
                     <li>
                         <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -256,7 +258,7 @@ new #[Lazy] class extends Component
                                     <p class="truncate text-sm font-semibold text-zinc-900">
                                         @if ($firstItemQty > 1){{ $firstItemQty }}x @endif{{ $itemName }}@if ($extraVariants > 0) <span class="font-normal text-zinc-500">+{{ $extraVariants }}</span>@endif
                                     </p>
-                                    <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusTone }}">{{ $statusLabel }}</span>
+                                    <span class="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $statusTone }}">{{ $statusLabel }}</span>
                                 </div>
                                 <div class="mt-0.5 flex items-center justify-between gap-2">
                                     <p class="truncate text-xs text-zinc-600">@moneyCode((float) $order->total_amount, $order->settlement_currency)</p>
@@ -275,7 +277,7 @@ new #[Lazy] class extends Component
         </div>
 
         {{-- Shop by Category — mobile parity. 4-col grid (2 rows of 4). --}}
-        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Shop by Category</h3>
                 <a href="{{ route('shop.gift-cards') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
@@ -292,7 +294,7 @@ new #[Lazy] class extends Component
                     ['More',       'More.svg',         'bg-blue-500',    route('shop.gift-cards')],
                 ] as [$label, $icon, $bg, $href])
                     <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
-                        <span class="flex h-12 w-12 items-center justify-center rounded-full {{ $bg }} transition-transform group-hover:scale-105 group-active:scale-95">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105 group-active:scale-95">
                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                         </span>
                         <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
@@ -303,7 +305,7 @@ new #[Lazy] class extends Component
 
         {{-- Popular Gift Cards — same curated source as desktop. brand-row auto-scrolls on mobile. --}}
         @if ($popularProducts->isNotEmpty())
-            <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <x-home.brand-row
                     title="Popular Gift Cards"
                     subtitle="Top-rated in your region"
@@ -335,11 +337,11 @@ new #[Lazy] class extends Component
         @endif
 
         {{-- Give the Perfect Gift promo — placed here on mobile (desktop keeps its own copy in the right rail). --}}
-        <div class="relative overflow-hidden rounded-2xl bg-blue-950 p-5 text-white">
+        <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
             <div class="relative z-10 max-w-[64%]">
                 <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
                 <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
+                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
                     Shop Now
                     <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 no-dark-invert" loading="lazy">
                 </a>
@@ -347,7 +349,7 @@ new #[Lazy] class extends Component
             <img
                 src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
                 alt=""
-                class="pointer-events-none absolute -right-5 -bottom-3 h-28 w-auto select-none object-contain drop-shadow-2xl"
+                class="pointer-events-none absolute -right-4 bottom-2 h-40 w-auto select-none object-contain drop-shadow-2xl"
                 loading="lazy"
             >
         </div>
@@ -356,7 +358,7 @@ new #[Lazy] class extends Component
              Shows top-ups (credits) and purchases (debits) interleaved since both
              write to wallet_transactions. Capped at 8 here, full history is on
              /dashboard/transactions via the View all link. --}}
-        <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
                 <a href="{{ route('dashboard.transactions') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
@@ -369,7 +371,7 @@ new #[Lazy] class extends Component
                         $sym = $txn->currency?->symbol() ?? '';
                     @endphp
                     <li class="flex items-center gap-3">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 @if ($isCredit)
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
@@ -389,7 +391,7 @@ new #[Lazy] class extends Component
                     </li>
                 @empty
                     <li class="flex flex-col items-center justify-center py-10 text-center">
-                        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/>
                             </svg>
@@ -402,7 +404,7 @@ new #[Lazy] class extends Component
 
             @if ($recentTransactions->isNotEmpty())
                 <a href="{{ route('dashboard.transactions') }}" wire:navigate
-                    class="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
+                    class="mt-4 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
                     View more
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
@@ -462,7 +464,7 @@ new #[Lazy] class extends Component
                             type="button"
                             @click="open = ! open"
                             :aria-expanded="open.toString()"
-                            class="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                            class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
                         >
                             {{-- Theme indicator — swaps sun / moon / monitor with a quick
                                  cross-fade so the button itself signals the current mode. --}}
@@ -525,7 +527,7 @@ new #[Lazy] class extends Component
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-1"
-                            class="absolute right-0 top-full z-30 mt-1.5 w-64 overflow-hidden rounded-xl bg-white p-1 shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
+                            class="absolute right-0 top-full z-30 mt-1.5 w-64 overflow-hidden rounded-[10px] bg-white p-1 shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
                             role="menu"
                         >
                             <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Appearance</p>
@@ -538,7 +540,7 @@ new #[Lazy] class extends Component
                                     type="button"
                                     @click="choose('{{ $opt['value'] }}')"
                                     :class="theme === '{{ $opt['value'] }}' ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100'"
-                                    class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+                                    class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors"
                                     role="menuitem"
                                 >
                                     <span class="inline-flex items-center gap-2.5">
@@ -563,7 +565,7 @@ new #[Lazy] class extends Component
                             <button
                                 type="button"
                                 @click="$store.dashPrefs.setHideBalance(! $store.dashPrefs.hideBalance)"
-                                class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                                class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
                                 role="menuitemcheckbox"
                                 :aria-checked="$store.dashPrefs.hideBalance.toString()"
                             >
@@ -575,11 +577,11 @@ new #[Lazy] class extends Component
                                 </span>
                                 <span
                                     :class="$store.dashPrefs.hideBalance ? 'bg-blue-600' : 'bg-zinc-200'"
-                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors"
+                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[10px] transition-colors"
                                 >
                                     <span
                                         :class="$store.dashPrefs.hideBalance ? 'translate-x-4' : 'translate-x-0.5'"
-                                        class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                                        class="inline-block h-4 w-4 transform rounded-[10px] bg-white shadow transition-transform"
                                     ></span>
                                 </span>
                             </button>
@@ -589,7 +591,7 @@ new #[Lazy] class extends Component
                             <button
                                 type="button"
                                 @click="$store.dashPrefs.setCompactMode(! $store.dashPrefs.compactMode)"
-                                class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                                class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
                                 role="menuitemcheckbox"
                                 :aria-checked="$store.dashPrefs.compactMode.toString()"
                             >
@@ -601,11 +603,11 @@ new #[Lazy] class extends Component
                                 </span>
                                 <span
                                     :class="$store.dashPrefs.compactMode ? 'bg-blue-600' : 'bg-zinc-200'"
-                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors"
+                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[10px] transition-colors"
                                 >
                                     <span
                                         :class="$store.dashPrefs.compactMode ? 'translate-x-4' : 'translate-x-0.5'"
-                                        class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                                        class="inline-block h-4 w-4 transform rounded-[10px] bg-white shadow transition-transform"
                                     ></span>
                                 </span>
                             </button>
@@ -617,7 +619,7 @@ new #[Lazy] class extends Component
                                 href="{{ route('dashboard.appearance') }}"
                                 wire:navigate
                                 @click="open = false"
-                                class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                                class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
                                 role="menuitem"
                             >
                                 All settings
@@ -641,7 +643,7 @@ new #[Lazy] class extends Component
                             get current() { return this.wallets[this.$store.wallet.active] ?? { code: 'USD', symbol: '$', label: 'US Dollar', formatted: '$0.00', type: 'fiat', color: 'bg-blue-800', icon: null }; }
                         }"
                         :class="current.color"
-                        class="flex flex-col justify-center gap-4 rounded-2xl {{ $initialWalletColor }} p-5 text-left text-white shadow-sm shadow-black/10 transition-colors duration-300"
+                        class="flex flex-col justify-center gap-4 rounded-[10px] {{ $initialWalletColor }} p-5 text-left text-white shadow-sm shadow-black/10 transition-colors duration-300"
                     >
                         <div class="flex items-start justify-between">
                             <div class="min-w-0">
@@ -650,7 +652,7 @@ new #[Lazy] class extends Component
                                     {{-- Effective visibility = local eye toggle AND the global "Hide all
                                          balances" master from the Customize menu. Either one false → mask. --}}
                                     <p class="truncate text-3xl font-bold tracking-tight" x-text="(visible && ! $store.dashPrefs.hideBalance) ? current.formatted : (current.symbol + ' ••••')">{{ $walletSymbol }}{{ number_format($walletBalance, 2) }}</p>
-                                    <button type="button" @click="visible = !visible" class="shrink-0 rounded-md p-1 text-blue-200 transition-colors hover:bg-white/10 hover:text-white" :aria-label="visible ? 'Hide balance' : 'Show balance'">
+                                    <button type="button" @click="visible = !visible" class="shrink-0 rounded-[10px] p-1 text-blue-200 transition-colors hover:bg-white/10 hover:text-white" :aria-label="visible ? 'Hide balance' : 'Show balance'">
                                         <svg x-show="visible" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.244 7.244L19.5 19.5m-2.876-2.876L13.875 13.875M9.878 9.878a3 3 0 105.249 5.249"/>
                                         </svg>
@@ -663,7 +665,7 @@ new #[Lazy] class extends Component
                                 <p class="mt-0.5 text-xs text-blue-100"><span x-text="current.code">{{ $walletCurrencyCode }}</span> · <span x-text="current.label">{{ $walletCurrencyCase?->label() ?? 'Wallet' }}</span></p>
                             </div>
 
-                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15">
+                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white/15">
                                 {{-- Show active wallet's specific icon when available, otherwise the generic wallet glyph --}}
                                 <template x-if="current.icon">
                                     <img :src="current.icon" alt="" class="h-7 w-7 object-contain" loading="lazy">
@@ -689,7 +691,7 @@ new #[Lazy] class extends Component
                                     type="button"
                                     @click="walletOpen = ! walletOpen"
                                     :aria-expanded="walletOpen.toString()"
-                                    class="flex w-full items-center justify-between gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-left text-white transition-colors hover:bg-white/15"
+                                    class="flex w-full items-center justify-between gap-2 rounded-[10px] bg-white/10 px-3 py-2.5 text-left text-white transition-colors hover:bg-white/15"
                                 >
                                     <span class="inline-flex min-w-0 items-center gap-2">
                                         <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-100">Switch wallet</span>
@@ -714,7 +716,7 @@ new #[Lazy] class extends Component
                                     x-transition:leave="transition ease-in duration-100"
                                     x-transition:leave-start="opacity-100 translate-y-0"
                                     x-transition:leave-end="opacity-0 -translate-y-1"
-                                    class="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-xl bg-white p-1 shadow-xl shadow-zinc-900/25 ring-1 ring-zinc-200"
+                                    class="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-[10px] bg-white p-1 shadow-xl shadow-zinc-900/25 ring-1 ring-zinc-200"
                                     role="listbox"
                                 >
                                     <template x-for="(w, i) in wallets" :key="w.code">
@@ -722,7 +724,7 @@ new #[Lazy] class extends Component
                                             type="button"
                                             @click="$store.wallet.active = i; walletOpen = false"
                                             :class="$store.wallet.active === i ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100'"
-                                            class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
+                                            class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-medium transition-colors"
                                             role="option"
                                         >
                                             <span class="flex min-w-0 items-center gap-2">
@@ -744,7 +746,7 @@ new #[Lazy] class extends Component
                     </div>
 
                     {{-- Quick Actions card (mirrors the Shop by Category buckets so customers can jump straight in) --}}
-                    <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                    <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                         <h3 class="text-base font-semibold text-zinc-900">Quick Actions</h3>
                         <div class="mt-4 grid grid-cols-3 gap-3">
                             @foreach ([
@@ -756,7 +758,7 @@ new #[Lazy] class extends Component
                                 ['Stays',      'stay 2.svg',     'bg-orange-500',  'stay.svg',         route('shop.stays')],
                             ] as [$label, $icon, $bg, $hoverIcon, $href])
                                 <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-1.5 text-center">
-                                    <span class="flex h-12 w-12 items-center justify-center rounded-2xl {{ $bg }} transition-transform group-hover:scale-105">
+                                    <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105">
                                         @if ($hoverIcon)
                                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
                                             <img src="{{ asset('assets/' . rawurlencode($hoverIcon)) }}" alt="" class="hidden h-6 w-6 brightness-0 invert group-hover:block" loading="lazy">
@@ -771,7 +773,7 @@ new #[Lazy] class extends Component
                     </div>
 
                     {{-- Recent Order card --}}
-                    <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                    <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
                             <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
@@ -789,7 +791,7 @@ new #[Lazy] class extends Component
                                     $itemName = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Order');
                                     $extraVariants = max(0, $groupedItems->count() - 1);
                                     $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
-                                    [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-500 text-white'];
+                                    [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
                                 @endphp
                                 <li>
                                     <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -805,7 +807,7 @@ new #[Lazy] class extends Component
                                                 <p class="truncate text-sm font-semibold text-zinc-900">
                                                     @if ($firstItemQty > 1){{ $firstItemQty }}x @endif{{ $itemName }}@if ($extraVariants > 0) <span class="font-normal text-zinc-500">+{{ $extraVariants }}</span>@endif
                                                 </p>
-                                                <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusTone }}">{{ $statusLabel }}</span>
+                                                <span class="inline-flex w-fit shrink-0 items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $statusTone }}">{{ $statusLabel }}</span>
                                             </div>
                                             <div class="mt-0.5 flex items-center justify-between gap-2">
                                                 <p class="truncate text-xs text-zinc-600">@moneyCode((float) $order->total_amount, $order->settlement_currency)</p>
@@ -827,8 +829,8 @@ new #[Lazy] class extends Component
                 {{-- Trust strip — serious glass pill. The frost + highlights
                      + dark/light variants live on .trust-glow in resources/css/app.css
                      so the Tailwind utilities here stay structural only. --}}
-                <div class="trust-glow flex items-center gap-4 rounded-full py-3 pl-3 pr-6 ring-1 ring-white/40 dark:ring-white/10">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                <div class="trust-glow flex items-center gap-4 rounded-[10px] py-3 pl-3 pr-6 ring-1 ring-white/40 dark:ring-white/10">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-blue-100">
                         <img src="{{ asset('assets/secure payments.svg') }}" alt="" class="h-6 w-6" loading="lazy">
                     </span>
                     <div class="min-w-0 flex-1">
@@ -838,7 +840,7 @@ new #[Lazy] class extends Component
                 </div>
 
                 {{-- Shop by Category + Recommended for you (combined card with divider) --}}
-                <div class="rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
 
                     {{-- Shop by Category section --}}
                     <div class="p-5 sm:p-6">
@@ -859,7 +861,7 @@ new #[Lazy] class extends Component
                                 ['More',       'More.svg',         'bg-blue-500',     'more two.svg',   route('shop.gift-cards')],
                             ] as [$label, $icon, $bg, $hoverIcon, $href])
                                 <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
-                                    <span class="flex h-14 w-14 items-center justify-center rounded-full {{ $bg }} transition-transform group-hover:scale-105">
+                                    <span class="flex h-14 w-14 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105">
                                         @if ($hoverIcon)
                                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
                                             <img src="{{ asset('assets/' . rawurlencode($hoverIcon)) }}" alt="" class="hidden h-6 w-6 brightness-0 invert group-hover:block" loading="lazy">
@@ -908,7 +910,7 @@ new #[Lazy] class extends Component
                                 @endforeach
                             </x-home.brand-row>
                         @else
-                            <div class="rounded-2xl bg-blue-50 px-4 py-8 text-center">
+                            <div class="rounded-[10px] bg-blue-50 px-4 py-8 text-center">
                                 <p class="text-sm font-semibold text-zinc-900">No gift cards in your region yet</p>
                                 <p class="mt-1 text-xs text-zinc-600">Check back soon as the catalogue grows.</p>
                             </div>
@@ -923,9 +925,9 @@ new #[Lazy] class extends Component
                 {{-- RShop Rcoin card. No Rcoin ledger backend exists yet, so this shows
                 a neutral intro state rather than fabricated balance/tier numbers.
                 The rewards page carries the full (placeholder) breakdown. --}}
-                <div class="rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-start gap-3">
-                        <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-blue-100">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100">
                             <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
                         </span>
                         <div class="min-w-0 flex-1">
@@ -938,7 +940,7 @@ new #[Lazy] class extends Component
                     </div>
                     <p class="mt-4 text-xs text-zinc-600">Earn Rcoin on every order and referral, then spend it on gift cards.</p>
 
-                    <a href="{{ route('dashboard.rewards') }}" wire:navigate class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                    <a href="{{ route('dashboard.rewards') }}" wire:navigate class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                         {{-- Favicon is blue; force it white so it shows on the blue button. --}}
                         <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain" style="filter: brightness(0) invert(1);">
                         View coins
@@ -946,13 +948,13 @@ new #[Lazy] class extends Component
                 </div>
 
                 {{-- Give the Perfect Gift promo --}}
-                <div class="relative overflow-hidden rounded-2xl bg-blue-950 p-5 text-white">
+                <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
                     <div class="relative z-10 max-w-[60%]">
                         <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
                         <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
                         {{-- Literal-hex bg + no-dark-invert icon so this light button stays
                              light on the always-dark promo card in both themes. --}}
-                        <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
+                        <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
                             Shop Now
                             <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 no-dark-invert" loading="lazy">
                         </a>
@@ -961,13 +963,13 @@ new #[Lazy] class extends Component
                     <img
                         src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
                         alt=""
-                        class="pointer-events-none absolute -right-5 -bottom-3 h-36 w-auto select-none object-contain drop-shadow-2xl"
+                        class="pointer-events-none absolute -right-4 bottom-2 h-48 w-auto select-none object-contain drop-shadow-2xl"
                         loading="lazy"
                     >
                 </div>
 
                 {{-- Recent Transactions (stretches to match left column height) --}}
-                <div class="flex flex-1 flex-col rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                <div class="flex flex-1 flex-col rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-center justify-between">
                         <h3 class="text-base font-semibold text-zinc-900">Recent Transactions</h3>
                         <a href="{{ route('dashboard.transactions') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
@@ -980,7 +982,7 @@ new #[Lazy] class extends Component
                                 $sym = $txn->currency?->symbol() ?? '';
                             @endphp
                             <li class="flex items-center gap-3">
-                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
+                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         @if ($isCredit)
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
@@ -1000,7 +1002,7 @@ new #[Lazy] class extends Component
                             </li>
                         @empty
                             <li class="flex flex-1 flex-col items-center justify-center py-10 text-center">
-                                <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                                <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/>
                                     </svg>

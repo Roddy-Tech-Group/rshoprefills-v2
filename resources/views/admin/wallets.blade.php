@@ -54,7 +54,7 @@
                                                 default       => 'New male account avatar.png',
                                             }));
                                         @endphp
-                                        <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-blue-100">
+                                        <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100">
                                         <div class="leading-tight">
                                             <p class="text-[11px] font-semibold text-zinc-900">{{ $wallet->user?->name ?? '—' }}</p>
                                             <p class="text-[10px] text-zinc-600">{{ $wallet->user?->email ?? '—' }}</p>
@@ -68,7 +68,7 @@
                                     @if ($wallet->is_active)
                                         <span class="inline-flex items-center rounded-[5px] bg-emerald-400 px-2.5 py-0.5 text-xs font-semibold text-white">Active</span>
                                     @else
-                                        <span class="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-700">Inactive</span>
+                                        <span class="inline-flex items-center rounded-[10px] bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-700">Inactive</span>
                                     @endif
                                 </td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $wallet->created_at->format('M j, Y') }}</td>

@@ -8,7 +8,7 @@
 --}}
 <div {{ $attributes->class('flex items-center gap-3 px-4 py-3.5') }} aria-hidden="true">
     {{-- Leading icon tile. --}}
-    <x-skeleton class="h-10 w-10 shrink-0" rounded="rounded-[8px]" />
+    <x-skeleton class="h-10 w-10 shrink-0" rounded-[10px]="rounded-[8px]" />
 
     {{-- Description + meta. --}}
     <div class="min-w-0 flex-1">

@@ -36,7 +36,7 @@
         }
     }
 
-    $fieldClass = 'mt-1.5 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
+    $fieldClass = 'mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
 @endphp
 
 <x-layouts.app.header :title="'Checkout | RshopRefills'">
@@ -45,7 +45,7 @@
     <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
 
         @if (session('checkout_status'))
-            <div class="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200">
+            <div class="mt-4 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200">
                 {{ session('checkout_status') }}
             </div>
         @endif
@@ -65,7 +65,7 @@
                 <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                     Browse gift cards
                 </a>
             </div>
@@ -117,15 +117,15 @@
                                 <div class="flex shrink-0 flex-col items-end gap-2">
                                     {{-- Quantity dropdown --}}
                                     <div x-data="{ qtyOpen: false }" @click.outside="qtyOpen = false" class="relative">
-                                        <button type="button" @click="qtyOpen = !qtyOpen" class="flex h-9 w-16 items-center justify-between rounded-lg border border-zinc-200 bg-white px-2.5 text-sm font-bold text-zinc-900 transition-colors hover:border-zinc-400">
+                                        <button type="button" @click="qtyOpen = !qtyOpen" class="flex h-9 w-16 items-center justify-between rounded-[10px] border border-zinc-200 bg-white px-2.5 text-sm font-bold text-zinc-900 transition-colors hover:border-zinc-400">
                                             <span x-text="item.quantity"></span>
                                             <svg class="h-4 w-4 text-zinc-500" :class="qtyOpen && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                                         </button>
-                                        <div x-show="qtyOpen" x-cloak x-transition.opacity class="absolute right-0 z-20 mt-1 max-h-52 w-16 overflow-y-auto rounded-lg bg-white/90 p-1 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                        <div x-show="qtyOpen" x-cloak x-transition.opacity class="absolute right-0 z-20 mt-1 max-h-52 w-16 overflow-y-auto rounded-[10px] bg-white/90 p-1 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                             <template x-for="n in 10" :key="n">
                                                 <button type="button" @click="$store.cart.setQty(item.id, n); qtyOpen = false"
                                                     :class="n === item.quantity ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100'"
-                                                    class="flex w-full items-center justify-center rounded-md px-2 py-1.5 text-sm font-medium tabular-nums transition-colors"
+                                                    class="flex w-full items-center justify-center rounded-[10px] px-2 py-1.5 text-sm font-medium tabular-nums transition-colors"
                                                     x-text="n"></button>
                                             </template>
                                         </div>
@@ -189,7 +189,7 @@
                             <button
                                 type="button"
                                 @click="ccyOpen = !ccyOpen"
-                                class="flex w-full items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:outline-none"
+                                class="flex w-full items-center justify-between gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:outline-none"
                             >
                                 <span class="flex items-center gap-2">
                                     <span class="font-bold" x-text="$store.cart.currency"></span>
@@ -210,7 +210,7 @@
                                 x-transition:leave="transition ease-in duration-100"
                                 x-transition:leave-start="opacity-100 translate-y-0"
                                 x-transition:leave-end="opacity-0 -translate-y-1"
-                                class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-zinc-200 bg-white/80 p-1 shadow-xl shadow-zinc-900/10 backdrop-blur-xl"
+                                class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-[10px] border border-zinc-200 bg-white/80 p-1 shadow-xl shadow-zinc-900/10 backdrop-blur-xl"
                                 role="listbox"
                             >
                                 @foreach (\App\Domain\Shared\Enums\Currency::cases() as $c)
@@ -221,7 +221,7 @@
                                             window.dispatchEvent(new Event('currency-changed'));
                                             ccyOpen = false;
                                         "
-                                        class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
+                                        class="flex w-full items-center justify-between gap-2 rounded-[10px] px-3 py-2.5 text-left text-sm font-medium transition-colors"
                                         :class="$store.cart.currency === '{{ $c->value }}' ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100'"
                                     >
                                         <span>{{ $c->value }} &middot; {{ $c->label() }}</span>
@@ -251,8 +251,8 @@
                         <template x-for="m in getFilteredMethods()" :key="m.key">
                             <button type="button" @click="method = m.key"
                                 :class="method === m.key ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500/20' : 'border-zinc-200 hover:border-zinc-300'"
-                                class="flex items-start gap-2.5 rounded-xl border bg-white px-3 py-2.5 text-left transition duration-150 active:scale-[0.98]">
-                                <span class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+                                class="flex items-start gap-2.5 rounded-[10px] border bg-white px-3 py-2.5 text-left transition duration-150 active:scale-[0.98]">
+                                <span class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200">
                                     <template x-if="m.icon">
                                         <img :src="m.icon" alt="" class="h-5 w-5 object-contain" loading="lazy">
                                     </template>
@@ -286,7 +286,7 @@
                                     class="{{ $fieldClass }} pr-16 tabular-nums"
                                 >
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none mt-1.5">
-                                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
+                                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
                                           x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
                                           :class="{
                                               'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
@@ -348,7 +348,7 @@
                                     type="button"
                                     @click="open = !open"
                                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
-                                    class="flex w-full items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2.5 text-base text-zinc-900 transition-colors"
+                                    class="flex w-full items-center justify-between gap-2 rounded-[10px] border bg-white px-3 py-2.5 text-base text-zinc-900 transition-colors"
                                 >
                                     <span x-text="value"></span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -363,7 +363,7 @@
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     x-transition:leave="transition ease-in duration-100"
                                     x-transition:leave-end="opacity-0"
-                                    class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-zinc-200 bg-white/80 p-1 shadow-xl shadow-zinc-900/10 backdrop-blur-xl"
+                                    class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-[10px] border border-zinc-200 bg-white/80 p-1 shadow-xl shadow-zinc-900/10 backdrop-blur-xl"
                                     role="listbox"
                                 >
                                     @foreach ($momoNetworks as $net)
@@ -371,7 +371,7 @@
                                             type="button"
                                             @click="value = @js($net); open = false"
                                             :class="value === @js($net) ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
-                                            class="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-base font-medium transition-colors"
+                                            class="flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-left text-base font-medium transition-colors"
                                         >
                                             {{ $net }}
                                             <svg x-show="value === @js($net)" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -395,11 +395,11 @@
                             @forelse ($cryptoCoins as $coin)
                                 <button type="button" @click="crypto = '{{ $coin->code }}'"
                                     :class="crypto === '{{ $coin->code }}' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500/20' : 'border-zinc-200 hover:border-zinc-300'"
-                                    class="flex flex-col items-center gap-1 rounded-xl border bg-white px-2 py-2.5 transition-colors">
+                                    class="flex flex-col items-center gap-1 rounded-[10px] border bg-white px-2 py-2.5 transition-colors">
                                     @if ($coin->icon_path)
-                                        <img src="{{ asset('assets/' . $coin->icon_path) }}" alt="" class="h-6 w-6 rounded-full">
+                                        <img src="{{ asset('assets/' . $coin->icon_path) }}" alt="" class="h-6 w-6 rounded-[10px]">
                                     @else
-                                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-white">{{ substr($coin->code, 0, 1) }}</span>
+                                        <span class="flex h-6 w-6 items-center justify-center rounded-[10px] bg-amber-500 text-[10px] font-black text-white">{{ substr($coin->code, 0, 1) }}</span>
                                     @endif
                                     <span class="text-xs font-bold text-zinc-900">{{ $coin->code }}</span>
                                 </button>
@@ -414,7 +414,7 @@
 
                     {{-- Wallet --}}
                     <div x-show="method === 'wallet'" x-collapse x-cloak class="mt-5 space-y-3">
-                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                        <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4">
                             <div class="flex justify-between items-center">
                                 <span class="text-sm font-medium text-zinc-600">Available Balance</span>
                                 <span class="text-base font-bold text-zinc-900" x-text="$store.cart.pay(walletBalances[$store.cart.currency] || 0)"></span>
@@ -444,7 +444,7 @@
                     </div>
 
                     {{-- Crypto safety warning --}}
-                    <div x-show="method === 'crypto'" x-cloak class="mt-3 flex items-start gap-2 rounded-xl bg-red-50 px-3.5 py-3">
+                    <div x-show="method === 'crypto'" x-cloak class="mt-3 flex items-start gap-2 rounded-[10px] bg-red-50 px-3.5 py-3">
                         <svg class="mt-0.5 h-4 w-4 shrink-0 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
                         </svg>
@@ -459,7 +459,7 @@
                     {{-- Continue --}}
                     @auth
                         <button type="submit" :disabled="!canContinue() || submitting"
-                            class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600">
+                            class="mt-4 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600">
                             <template x-if="!submitting">
                                 <span class="flex items-center gap-2">
                                     Continue to payment
@@ -476,7 +476,7 @@
                             </template>
                         </button>
                     @else
-                        <a href="{{ route('login') }}" wire:navigate class="mt-4 flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700">
+                        <a href="{{ route('login') }}" wire:navigate class="mt-4 flex w-full items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700">
                             Sign in to pay
                         </a>
                         <p class="mt-2 text-center text-xs text-zinc-600">You need an account to complete a purchase.</p>
@@ -534,7 +534,7 @@
                     <div x-show="session" class="mt-2">
                         <!-- Countdown timer banner -->
                         <div x-show="['awaiting_transfer', 'awaiting_confirmation', 'action_pin', 'action_otp', 'action_3ds'].includes(paymentState)" 
-                             class="mb-5 flex items-center justify-between rounded-xl bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                             class="mb-5 flex items-center justify-between rounded-[10px] bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
                             <span class="flex items-center gap-1.5">
                                 <svg class="h-4 w-4 animate-pulse text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -549,8 +549,8 @@
                             <h3 class="text-sm font-bold text-zinc-900 mb-2">Card PIN Required</h3>
                             <p class="text-xs text-zinc-600 mb-4">Enter your card 4-digit security PIN to authorize payment.</p>
                             <div class="space-y-4">
-                                <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                                <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                                <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                                     Confirm PIN
                                 </button>
                             </div>
@@ -563,10 +563,10 @@
                             <div class="space-y-4">
                                 <input type="password" inputmode="numeric" x-model="walletPin" maxlength="4" placeholder="••••"
                                     @keydown.enter.prevent="authorizeWalletPayment()"
-                                    class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                    class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
                                 <p x-show="errorMessage" x-cloak class="text-center text-xs text-red-600" x-text="errorMessage"></p>
                                 <button type="button" @click="authorizeWalletPayment()" :disabled="authorizingWallet"
-                                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                                    class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                                     <svg x-show="authorizingWallet" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -582,8 +582,8 @@
                             <h3 class="text-sm font-bold text-zinc-900 mb-2">OTP Verification</h3>
                             <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
                             <div class="space-y-4">
-                                <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                                <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                                <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                                     Verify OTP
                                 </button>
                             </div>
@@ -594,11 +594,11 @@
                             <h3 class="text-sm font-bold text-zinc-900 mb-2">Secure Verification</h3>
                             <p class="text-xs text-zinc-600 mb-4">Please complete the secure authentication inside the window below.</p>
 
-                            <div class="w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 h-[55vh] min-h-[400px] max-h-[520px]">
+                            <div class="w-full overflow-hidden rounded-[10px] border border-zinc-200 bg-zinc-50 h-[55vh] min-h-[400px] max-h-[520px]">
                                 <iframe :src="session?.payment_payload?.redirect_url" class="h-full w-full border-0" allow="payment"></iframe>
                             </div>
 
-                            <button type="button" @click="verifyPayment()" :disabled="verifying" class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                            <button type="button" @click="verifyPayment()" :disabled="verifying" class="mt-4 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                                 <svg x-show="verifying" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -616,7 +616,7 @@
                                     <h3 class="text-sm font-bold text-zinc-900 mb-2">Virtual Bank Transfer</h3>
                                     <p class="text-xs text-zinc-600 mb-4">Please make a transfer to the temporary virtual account below:</p>
 
-                                    <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3 shadow-inner">
+                                    <div class="bg-zinc-50 border border-zinc-200 rounded-[10px] p-4 space-y-3 shadow-inner">
                                         <div class="flex justify-between items-center text-xs">
                                             <span class="text-zinc-500 font-medium">Bank Name</span>
                                             <span class="font-bold text-zinc-900" x-text="bankDetails?.bank_name"></span>
@@ -624,8 +624,8 @@
                                         <div class="flex justify-between items-center text-xs">
                                             <span class="text-zinc-500 font-medium">Account Number</span>
                                             <div class="flex items-center gap-2">
-                                                <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded border border-zinc-150" x-text="bankDetails?.account_number"></span>
-                                                <button type="button" @click="copyToClipboard(bankDetails?.account_number, 'account')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded transition-all">
+                                                <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded-[10px] border border-zinc-150" x-text="bankDetails?.account_number"></span>
+                                                <button type="button" @click="copyToClipboard(bankDetails?.account_number, 'account')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded-[10px] transition-all">
                                                     <span x-show="!copiedStates['account']">Copy</span>
                                                     <span x-show="copiedStates['account']" class="text-emerald-600 font-bold">Copied!</span>
                                                 </button>
@@ -649,9 +649,9 @@
                                     <h3 class="text-sm font-bold text-zinc-900 text-center mb-2">Crypto Payment Details</h3>
                                     <p class="text-xs text-zinc-600 text-center mb-4">Send the exact amount of cryptocurrency shown to the address below:</p>
 
-                                    <div class="flex flex-col items-center gap-4 bg-zinc-50 p-4 border border-zinc-200 rounded-xl shadow-inner">
+                                    <div class="flex flex-col items-center gap-4 bg-zinc-50 p-4 border border-zinc-200 rounded-[10px] shadow-inner">
                                         <!-- QR Code -->
-                                        <div class="flex shrink-0 flex-col items-center rounded-xl bg-white p-3 border border-zinc-150 shadow-sm">
+                                        <div class="flex shrink-0 flex-col items-center rounded-[10px] bg-white p-3 border border-zinc-150 shadow-sm">
                                             <img 
                                                 :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(session?.payment_payload?.qr_payload || '')" 
                                                 alt="Payment QR Code" 
@@ -665,16 +665,16 @@
                                             <div>
                                                 <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Cryptocurrency / Network</span>
                                                 <div class="flex items-center gap-1.5">
-                                                    <span class="rounded bg-blue-50 px-2 py-0.5 font-bold text-blue-700 uppercase" x-text="session?.payment_payload?.pay_currency || 'btc'"></span>
+                                                    <span class="rounded-[10px] bg-blue-50 px-2 py-0.5 font-bold text-blue-700 uppercase" x-text="session?.payment_payload?.pay_currency || 'btc'"></span>
                                                     <span class="text-[10px] font-medium text-zinc-500 uppercase" x-text="'Network: ' + (session?.payment_payload?.network || 'bitcoin')"></span>
                                                 </div>
                                             </div>
                                             <div>
                                                 <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Amount to Send</span>
                                                 <div class="flex items-center gap-2">
-                                                    <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded border border-zinc-150" x-text="session?.payment_payload?.pay_amount"></span>
+                                                    <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded-[10px] border border-zinc-150" x-text="session?.payment_payload?.pay_amount"></span>
                                                     <span class="font-bold text-zinc-600 uppercase" x-text="session?.payment_payload?.pay_currency"></span>
-                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_amount, 'amount_crypto')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded transition-all">
+                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_amount, 'amount_crypto')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded-[10px] transition-all">
                                                         <span x-show="!copiedStates['amount_crypto']">Copy</span>
                                                         <span x-show="copiedStates['amount_crypto']" class="text-emerald-600 font-bold">Copied!</span>
                                                     </button>
@@ -683,8 +683,8 @@
                                             <div>
                                                 <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Deposit Address</span>
                                                 <div class="mt-1 flex items-center gap-1.5">
-                                                    <input type="text" readonly :value="session?.payment_payload?.pay_address" class="w-full bg-white px-2.5 py-1.5 rounded border border-zinc-200 text-[10px] text-zinc-800 font-mono select-all outline-none">
-                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_address, 'address')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold shrink-0 bg-blue-50 px-2.5 py-1.5 rounded transition-all border border-blue-100">
+                                                    <input type="text" readonly :value="session?.payment_payload?.pay_address" class="w-full bg-white px-2.5 py-1.5 rounded-[10px] border border-zinc-200 text-[10px] text-zinc-800 font-mono select-all outline-none">
+                                                    <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_address, 'address')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold shrink-0 bg-blue-50 px-2.5 py-1.5 rounded-[10px] transition-all border border-blue-100">
                                                         <span x-show="!copiedStates['address']">Copy</span>
                                                         <span x-show="copiedStates['address']" class="text-emerald-600 font-bold">Copied!</span>
                                                     </button>
@@ -711,7 +711,7 @@
                             <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
 
                             <div class="flex flex-col items-center py-6 text-center">
-                                <span class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 ring-8 ring-blue-100/50 mb-5">
+                                <span class="flex h-16 w-16 items-center justify-center rounded-[10px] bg-blue-50 ring-8 ring-blue-100/50 mb-5">
                                     <svg class="h-8 w-8 text-blue-600 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                                     </svg>
@@ -736,7 +736,7 @@
 
                         <!-- Success state -->
                         <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-100">
+                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
                                 <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
                                 </svg>
@@ -747,7 +747,7 @@
 
                         <!-- Error state -->
                         <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 ring-8 ring-red-100">
+                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
                                 <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -755,7 +755,7 @@
                             <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
                             <p class="mt-1.5 text-xs text-red-600 px-4" x-text="errorMessage"></p>
                             
-                            <button type="button" @click="closeModal()" class="mt-6 rounded-xl bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
+                            <button type="button" @click="closeModal()" class="mt-6 rounded-[10px] bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
                                 Close &amp; Modify Details
                             </button>
                         </div>

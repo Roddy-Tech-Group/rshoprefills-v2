@@ -81,7 +81,7 @@ class extends Component {
                         <div class="flex items-center gap-2">
                             <p class="truncate text-sm font-bold text-zinc-900">{{ $note->title }}</p>
                             @unless ($note->read_at)
-                                <span class="h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread"></span>
+                                <span class="h-2 w-2 shrink-0 rounded-[10px] bg-blue-600" aria-label="Unread"></span>
                             @endunless
                         </div>
                         <p class="mt-0.5 text-xs leading-relaxed text-zinc-600">{{ $note->message }}</p>
@@ -96,8 +96,8 @@ class extends Component {
         @endif
     @else
         {{-- Empty state --}}
-        <div class="rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
-            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+        <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50">
                 <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-7 w-7" style="filter: brightness(0) saturate(100%) invert(40%) sepia(95%) saturate(1500%) hue-rotate(205deg);" loading="lazy">
             </span>
             <p class="mt-4 text-base font-semibold text-zinc-900">You're all caught up</p>

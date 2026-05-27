@@ -23,7 +23,7 @@
             <div class="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($posts as $post)
                     <a href="{{ route('shop.blog.show', $post->slug) }}" wire:navigate class="group block">
-                        <div class="flex items-center justify-center overflow-hidden rounded-2xl bg-blue-50 p-6 ring-1 ring-zinc-100" style="height: 12rem;">
+                        <div class="flex items-center justify-center overflow-hidden rounded-[10px] bg-blue-50 p-6 ring-1 ring-zinc-100" style="height: 12rem;">
                             <img src="{{ $img($post->image) }}" alt="" class="max-h-full w-auto object-contain" loading="lazy">
                         </div>
                         <p class="mt-4 text-xs font-bold uppercase tracking-wider text-blue-600">{{ $post->category }}</p>

@@ -40,13 +40,13 @@
     <body class="min-h-screen bg-zinc-100 text-zinc-900 antialiased">
 
         <div class="flex min-h-screen items-start p-4 sm:items-stretch sm:p-6 lg:p-[60px]">
-            <div class="auth-slide-up my-auto grid w-full overflow-hidden rounded-2xl shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-900/5 sm:my-0 lg:grid-cols-2 lg:shadow-2xl lg:shadow-zinc-900/15">
+            <div class="auth-slide-up my-auto grid w-full overflow-hidden rounded-[10px] shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-900/5 sm:my-0 lg:grid-cols-2 lg:shadow-2xl lg:shadow-zinc-900/15">
 
             {{-- Left panel: marketing / phone mockup --}}
             <aside class="relative hidden flex-col overflow-hidden bg-blue-950 p-10 text-white lg:flex">
 
                 {{-- Brand --}}
-                <a href="{{ route('home') }}" wire:navigate class="relative z-10 flex flex-col rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/40">
+                <a href="{{ route('home') }}" wire:navigate class="relative z-10 flex flex-col rounded-[10px] group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/40">
                     <span class="flex h-12 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"
@@ -78,7 +78,7 @@
                                 ['24/7 Support',     'We\'re here to help anytime, anywhere',     'support.svg'],
                             ] as [$title, $desc, $icon])
                                 <li class="flex items-center gap-3">
-                                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white/10 ring-1 ring-white/15">
                                         <img
                                             src="{{ asset('assets/' . rawurlencode($icon)) }}"
                                             alt=""
@@ -95,10 +95,10 @@
                         </ul>
 
                         {{-- Trust pill --}}
-                        <div class="mt-8 inline-flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5">
+                        <div class="mt-8 inline-flex items-center gap-3 rounded-[10px] border border-white/10 bg-white/5 px-4 py-2.5">
                             <div class="flex -space-x-2">
                                 @foreach(['bg-amber-400','bg-pink-400','bg-emerald-400'] as $c)
-                                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-blue-950 {{ $c }}"></span>
+                                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-[10px] border-2 border-blue-950 {{ $c }}"></span>
                                 @endforeach
                             </div>
                             <div class="leading-tight">
@@ -135,7 +135,7 @@
             {{-- Right panel: auth form --}}
             <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10 lg:px-16">
                 {{-- Mobile brand (inside the card) --}}
-                <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-md group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
+                <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-[10px] group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
                     <span class="flex h-10 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.png') }}"

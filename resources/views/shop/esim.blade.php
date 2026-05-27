@@ -266,7 +266,7 @@
         {{-- z-20: backdrop-blur creates a stacking context — without lifting it
              above the plan selector (also a blur context, later in DOM), the
              region picker dropdown gets clipped behind the plans card. --}}
-        <div class="relative z-20 mx-auto mt-4 w-full max-w-[800px] rounded-3xl bg-white/60 p-6 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl sm:p-8 dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
+        <div class="relative z-20 mx-auto mt-4 w-full max-w-[800px] rounded-[10px] bg-white/60 p-6 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl sm:p-8 dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
             <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div class="min-w-0">
                     <div class="flex items-center gap-3">
@@ -304,7 +304,7 @@
 
                     {{-- Check compatibility --}}
                     <div class="mt-4">
-                        <button type="button" @click="showCompat = true" class="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+                        <button type="button" @click="showCompat = true" class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"/>
                             </svg>
@@ -335,7 +335,7 @@
                             type="button"
                             @click="open = ! open; if (open) $nextTick(() => $refs.regionSearch?.focus())"
                             :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-600'"
-                            class="flex h-[46px] w-full items-center gap-2 rounded-xl border bg-white px-3 text-sm font-medium text-zinc-900 outline-none transition-colors dark:bg-[#26416b] dark:text-white"
+                            class="flex h-[46px] w-full items-center gap-2 rounded-[10px] border bg-white px-3 text-sm font-medium text-zinc-900 outline-none transition-colors dark:bg-[#26416b] dark:text-white"
                         >
                             @if ($flag)
                                 <img src="{{ $flag }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200 dark:ring-zinc-700">
@@ -347,11 +347,11 @@
                             x-show="open"
                             x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                             style="display:none;"
-                            class="absolute right-0 left-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10 dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40"
+                            class="absolute right-0 left-0 top-full z-50 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10 dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40"
                             role="listbox"
                         >
                             <div class="border-b border-zinc-100 p-2 dark:border-zinc-700">
-                                <input x-ref="regionSearch" x-model="search" type="text" placeholder="Search a country or region" aria-label="Search a country or region" class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-500 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:bg-[#26416b] dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900">
+                                <input x-ref="regionSearch" x-model="search" type="text" placeholder="Search a country or region" aria-label="Search a country or region" class="w-full rounded-[10px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-500 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:bg-[#26416b] dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900">
                             </div>
                             <div class="max-h-72 overflow-y-auto p-1">
                                 @foreach ($esimRegions as $r)
@@ -361,7 +361,7 @@
                                         data-name="{{ Str::lower($r['name']) }}"
                                         x-show="search === '' || $el.dataset.name.includes(search.toLowerCase())"
                                         @class([
-                                            'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
+                                            'flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors',
                                             'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' => $r['key'] === $currentKey,
                                             'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800' => $r['key'] !== $currentKey,
                                         ])
@@ -383,7 +383,7 @@
 
         @if ($hasPlans)
             {{-- ── Plan selector (glass card, 900px centered; rows stay white) ──── --}}
-            <div id="esim-packages" class="mx-auto mt-6 w-full max-w-[800px] scroll-mt-24 overflow-hidden rounded-3xl bg-white/60 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
+            <div id="esim-packages" class="mx-auto mt-6 w-full max-w-[800px] scroll-mt-24 overflow-hidden rounded-[10px] bg-white/60 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
                 {{-- Tabs: Data / Data·Calls·Texts --}}
                 <div class="grid grid-cols-2 border-b border-zinc-200 dark:border-zinc-700/60">
                     <button
@@ -491,7 +491,7 @@
             </div>
 
             {{-- ── Why choose us (1000px centered) ───────────────────────────── --}}
-            <section class="mx-auto mt-8 w-full max-w-[1000px] rounded-3xl bg-blue-100 p-6 sm:p-10 dark:bg-[#1d3252]">
+            <section class="mx-auto mt-8 w-full max-w-[1000px] rounded-[10px] bg-blue-100 p-6 sm:p-10 dark:bg-[#1d3252]">
                 <h2 class="text-center text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Why travelers choose RshopRefills eSIMs</h2>
                 <div class="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
                     @foreach ([
@@ -501,7 +501,7 @@
                         ['t' => 'Easy install and set up to get connected in minutes', 'd' => 'M3.75 4.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75v3a.75.75 0 01-.75.75h-3a.75.75 0 01-.75-.75v-3zm12 0a.75.75 0 01.75-.75h3a.75.75 0 01.75.75v3a.75.75 0 01-.75.75h-3a.75.75 0 01-.75-.75v-3zm-12 12a.75.75 0 01.75-.75h3a.75.75 0 01.75.75v3a.75.75 0 01-.75.75h-3a.75.75 0 01-.75-.75v-3zM15 15.75h.008v.008H15v-.008zm0 3h.008v.008H15v-.008zm3-3h.008v.008H18v-.008zm0 3h.008v.008H18v-.008zm3-3h.008v.008H21v-.008zm0 3h.008v.008H21v-.008z'],
                     ] as $feature)
                         <div class="flex flex-col items-center text-center">
-                            <span class="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm dark:bg-[#26416b]">
+                            <span class="flex h-16 w-16 items-center justify-center rounded-[10px] bg-white shadow-sm dark:bg-[#26416b]">
                                 @if (! empty($feature['image']))
                                     <img src="{{ asset('assets/'.rawurlencode($feature['image'])) }}" alt="" class="h-7 w-7 object-contain dark:invert" aria-hidden="true">
                                 @else
@@ -515,10 +515,10 @@
             </section>
 
             {{-- ── FAQ (glass card, 800px centered) ─────────────────────────── --}}
-            <section class="mx-auto mt-8 w-full max-w-[800px] rounded-3xl bg-white/60 p-6 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl sm:p-8 dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
+            <section class="mx-auto mt-8 w-full max-w-[800px] rounded-[10px] bg-white/60 p-6 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl sm:p-8 dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Frequently asked questions</h2>
-                    <a href="{{ route('shop.help') }}" wire:navigate class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">Go to help center</a>
+                    <a href="{{ route('shop.help') }}" wire:navigate class="inline-flex items-center gap-1.5 rounded-[10px] px-4 py-2 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">Go to help center</a>
                 </div>
                 <div class="mt-5 space-y-2.5">
                     @foreach ([
@@ -541,7 +541,7 @@
                         <p class="text-sm font-bold text-zinc-900 dark:text-white">Support</p>
                         <p class="text-sm text-zinc-600 dark:text-zinc-400">Need help? We offer 24/7, multi-language support.</p>
                     </div>
-                    <a href="{{ route('shop.contact') }}" wire:navigate class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">Contact support</a>
+                    <a href="{{ route('shop.contact') }}" wire:navigate class="inline-flex items-center gap-1.5 rounded-[10px] px-4 py-2 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">Contact support</a>
                 </div>
             </section>
 
@@ -588,7 +588,7 @@
                                 class="aspect-[3/4] w-full object-contain [image-rendering:high-quality] [image-rendering:-webkit-optimize-contrast]"
                             >
                             <div class="mt-4 flex items-center gap-3">
-                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">{{ $i + 1 }}</span>
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-blue-600 text-xs font-bold text-white">{{ $i + 1 }}</span>
                                 <p class="text-base font-bold text-zinc-900 dark:text-white">{!! $step['title'] !!}</p>
                             </div>
                             <p class="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{{ $step['body'] }}</p>
@@ -597,7 +597,7 @@
                 </ol>
 
                 <div class="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                    <a href="#esim-packages" class="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                    <a href="#esim-packages" class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                         Choose your package
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
                     </a>
@@ -609,7 +609,7 @@
             {{-- ── Anonymous eSIM with crypto (no KYC) ──────────────────────── --}}
             <section class="mx-auto mt-12 grid w-full max-w-[1450px] grid-cols-1 items-start gap-10 lg:grid-cols-2 lg:gap-16">
                 <div>
-                    <span class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900/40">
+                    <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-blue-50 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900/40">
                         <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>
                     </span>
                     <h2 class="mt-4 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Anonymous eSIM with MOMO, Cards, Crypto and more. No KYC required.</h2>
@@ -684,31 +684,31 @@
                     type="button"
                     @click="selectedId = null"
                     aria-label="Deselect plan"
-                    class="absolute left-1/2 top-0 z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-md transition-colors hover:bg-zinc-50 hover:text-zinc-900 dark:bg-[#26416b] dark:text-white dark:ring-zinc-700/60 dark:hover:bg-[#34507a]"
+                    class="absolute left-1/2 top-0 z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[10px] bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-md transition-colors hover:bg-zinc-50 hover:text-zinc-900 dark:bg-[#26416b] dark:text-white dark:ring-zinc-700/60 dark:hover:bg-[#34507a]"
                 >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
 
                 <div class="mx-auto flex w-full max-w-[800px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-                    <button type="button" @click="showDetails = true" class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">
+                    <button type="button" @click="showDetails = true" class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                         Package details
                     </button>
 
                     {{-- Currency selector --}}
                     <div x-data="{ open: false }" @click.outside="open = false" class="relative">
-                        <button type="button" @click="open = ! open" class="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">
-                            <template x-if="cryptos[selectedCrypto]?.icon"><img :src="cryptos[selectedCrypto].icon" :alt="selectedCrypto" class="h-4 w-4 rounded-full"></template>
-                            <template x-if="!cryptos[selectedCrypto]?.icon && cryptos[selectedCrypto]?.flag"><img :src="cryptos[selectedCrypto].flag" :alt="selectedCrypto" class="h-4 w-4 rounded-full object-cover"></template>
+                        <button type="button" @click="open = ! open" class="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">
+                            <template x-if="cryptos[selectedCrypto]?.icon"><img :src="cryptos[selectedCrypto].icon" :alt="selectedCrypto" class="h-4 w-4 rounded-[10px]"></template>
+                            <template x-if="!cryptos[selectedCrypto]?.icon && cryptos[selectedCrypto]?.flag"><img :src="cryptos[selectedCrypto].flag" :alt="selectedCrypto" class="h-4 w-4 rounded-[10px] object-cover"></template>
                             <span x-text="selectedCrypto"></span>
                             <svg class="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div x-show="open" x-transition style="display:none;" class="absolute bottom-full left-0 z-20 mb-2 max-h-72 w-56 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40" role="listbox">
+                        <div x-show="open" x-transition style="display:none;" class="absolute bottom-full left-0 z-20 mb-2 max-h-72 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40" role="listbox">
                             <template x-for="(meta, code) in cryptos" :key="code">
-                                <button type="button" @click="selectedCrypto = code; open = false" :class="selectedCrypto === code ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'text-zinc-800 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]'" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors">
-                                    <template x-if="meta.icon"><img :src="meta.icon" :alt="code" class="h-5 w-5 shrink-0 rounded-full"></template>
-                                    <template x-if="!meta.icon && meta.flag"><img :src="meta.flag" :alt="code" class="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-zinc-200"></template>
-                                    <template x-if="!meta.icon && !meta.flag"><span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black text-white" :class="meta.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="code.charAt(0)"></span></template>
+                                <button type="button" @click="selectedCrypto = code; open = false" :class="selectedCrypto === code ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'text-zinc-800 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]'" class="flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors">
+                                    <template x-if="meta.icon"><img :src="meta.icon" :alt="code" class="h-5 w-5 shrink-0 rounded-[10px]"></template>
+                                    <template x-if="!meta.icon && meta.flag"><img :src="meta.flag" :alt="code" class="h-5 w-5 shrink-0 rounded-[10px] object-cover ring-1 ring-zinc-200"></template>
+                                    <template x-if="!meta.icon && !meta.flag"><span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-black text-white" :class="meta.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="code.charAt(0)"></span></template>
                                     <span class="flex-1 truncate" x-text="code"></span>
                                     <svg x-show="selectedCrypto === code" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                                 </button>
@@ -730,7 +730,7 @@
                             @click="addToCart()"
                             :disabled="! selectedId"
                             :class="cartState === 'success' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-blue-600 bg-white text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-[#1d3252] dark:text-blue-300 dark:hover:text-white'"
-                            class="hidden h-11 items-center justify-center rounded-full border-2 px-5 text-sm font-semibold transition-colors disabled:opacity-50 sm:flex"
+                            class="hidden h-11 items-center justify-center rounded-[10px] border-2 px-5 text-sm font-semibold transition-colors disabled:opacity-50 sm:flex"
                         >
                             <span x-show="cartState !== 'success'">Add to cart</span>
                             <span x-show="cartState === 'success'" style="display:none;">Added</span>
@@ -739,7 +739,7 @@
                             type="button"
                             @click="buyNow()"
                             :disabled="! selectedId || $store.cart.loading"
-                            class="flex h-11 items-center justify-center rounded-full bg-blue-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-50 disabled:hover:bg-blue-600"
+                            class="flex h-11 items-center justify-center rounded-[10px] bg-blue-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-50 disabled:hover:bg-blue-600"
                         >
                             Buy now
                         </button>
@@ -747,7 +747,7 @@
                 </div>
             </div>
         @else
-            <div class="mt-8 rounded-2xl bg-zinc-50 px-4 py-10 text-center ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+            <div class="mt-8 rounded-[10px] bg-zinc-50 px-4 py-10 text-center ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">No data plans available</p>
                 <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">This region has no plans in stock right now. Check back later.</p>
                 <a href="{{ route('shop.esims') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">Browse other regions</a>
@@ -759,10 +759,10 @@
         {{-- Networks modal --}}
         <div x-show="showNetworks" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="networks-title">
             <div x-show="showNetworks" @click="showNetworks = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showNetworks" x-transition class="relative w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showNetworks" x-transition class="relative w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="networks-title" class="text-lg font-bold text-zinc-900 dark:text-white">{{ $coverageCount > 1 ? 'Countries & Networks' : 'Networks' }}</h2>
-                    <button type="button" @click="showNetworks = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    <button type="button" @click="showNetworks = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                 </div>
                 @if ($coverageCount > 1)
                     <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">This eSIM works across {{ $coverageCount }} countries and connects to a local network automatically in each.</p>
@@ -795,10 +795,10 @@
         {{-- Check compatibility modal --}}
         <div x-show="showCompat" style="display:none;" class="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="compat-title">
             <div x-show="showCompat" @click="showCompat = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showCompat" x-transition class="relative flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showCompat" x-transition class="relative flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-[10px] bg-white shadow-2xl dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
                 <div class="flex items-start justify-between gap-4 p-5 pb-3">
                     <h2 id="compat-title" class="text-lg font-bold text-zinc-900 dark:text-white">Check compatibility</h2>
-                    <button type="button" @click="showCompat = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    <button type="button" @click="showCompat = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                 </div>
                 <div class="px-6 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
                     <p>To use an eSIM, a device must meet the following conditions:</p>
@@ -853,7 +853,7 @@
         {{-- Package details modal --}}
         <div x-show="showDetails" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="details-title">
             <div x-show="showDetails" @click="showDetails = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showDetails" x-transition class="relative w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showDetails" x-transition class="relative w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="details-title" class="flex items-center gap-2.5 text-lg font-bold text-zinc-900 dark:text-white">
                         @if ($flag)
@@ -861,7 +861,7 @@
                         @endif
                         {{ $regionLabel }}
                     </h2>
-                    <button type="button" @click="showDetails = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    <button type="button" @click="showDetails = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                 </div>
                 <div class="mt-5">
                     <p class="text-sm font-bold text-zinc-900 dark:text-white">Package</p>

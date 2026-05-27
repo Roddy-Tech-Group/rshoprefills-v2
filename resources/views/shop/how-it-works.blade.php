@@ -44,14 +44,13 @@
         @media (prefers-reduced-motion: reduce) { .hiw-marquee { animation: none; } }
     </style>
 
-    {{-- ── Banner ────────────────────────────────────────────── --}}
-    <section class="bg-blue-600">
-        <div class="mx-auto w-full max-w-[1140px] px-4 py-16 text-center sm:px-6 sm:py-20">
-            <span class="inline-flex items-center gap-2 rounded-[5px] bg-white/15 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
-                How it works
-            </span>
-            <h1 class="mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">Shopping made simple</h1>
-            <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-blue-100 sm:text-base">
+    {{-- ── Hero (matches About / FAQ / Help pattern: soft blue-50 bg,
+         blue-600 headline, blue-100 eyebrow chip) ─────────────────── --}}
+    <section class="border-b border-zinc-100 bg-blue-50">
+        <div class="mx-auto w-full max-w-[1140px] px-4 py-14 text-center sm:px-6 sm:py-20">
+            <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">How it works</span>
+            <h1 class="mt-5 text-3xl font-bold tracking-tight text-blue-600 sm:text-4xl lg:text-5xl">Shopping made simple</h1>
+            <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base">
                 From gift cards to eSIMs, buying digital products on RshopRefills takes just a few taps. Here is how it all comes together.
             </p>
         </div>
@@ -97,8 +96,8 @@
             </div>
             <div class="mt-9 grid grid-cols-1 gap-5 sm:grid-cols-3">
                 @foreach ($features as $feature)
-                    <div class="rounded-2xl bg-white p-6 text-center ring-1 ring-zinc-100">
-                        <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+                    <div class="rounded-[10px] bg-white p-6 text-center ring-1 ring-zinc-100">
+                        <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50">
                             <img src="{{ $img($feature['icon']) }}" alt="" class="h-7 w-7 object-contain" loading="lazy">
                         </span>
                         <h3 class="mt-4 text-base font-bold text-zinc-900">{{ $feature['title'] }}</h3>
@@ -133,7 +132,7 @@
                             x-transition:leave="transition ease-in duration-300"
                             x-transition:leave-start="opacity-100"
                             x-transition:leave-end="opacity-0"
-                            class="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl bg-[#f5f5f7] p-6 shadow-lg shadow-zinc-900/15 ring-1 ring-black/5"
+                            class="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-[10px] bg-[#f5f5f7] p-6 shadow-lg shadow-zinc-900/15 ring-1 ring-black/5"
                         >
                             <img :src="card.src" :alt="card.name" class="h-20 max-w-[65%] object-contain sm:h-24">
                             <p class="text-center text-lg font-bold text-[#18181b] sm:text-xl" x-text="card.tagline"></p>
@@ -143,7 +142,7 @@
                 </div>
             </div>
             <div class="order-2 text-center lg:text-left">
-                <span class="inline-flex h-9 items-center rounded-full bg-blue-600 px-4 text-sm font-bold text-white">Step 1</span>
+                <span class="inline-flex h-9 items-center rounded-[10px] bg-blue-600 px-4 text-sm font-bold text-white">Step 1</span>
                 <h3 class="mt-4 text-xl font-bold text-zinc-900 sm:text-2xl">Pick your product</h3>
                 <p class="mt-2 max-w-md text-sm leading-relaxed text-zinc-600 lg:mx-0 mx-auto">
                     Browse hundreds of brands across gift cards, eSIMs, mobile top-ups and bill payments. Find what you need in your region in seconds.
@@ -154,7 +153,7 @@
         {{-- Step 2: text (left) + price/Rcoin example card (right) --}}
         <div class="mt-16 grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
             <div class="order-2 text-center lg:order-1 lg:text-left">
-                <span class="inline-flex h-9 items-center rounded-full bg-blue-600 px-4 text-sm font-bold text-white">Step 2</span>
+                <span class="inline-flex h-9 items-center rounded-[10px] bg-blue-600 px-4 text-sm font-bold text-white">Step 2</span>
                 <h3 class="mt-4 text-xl font-bold text-zinc-900 sm:text-2xl">Choose an amount and earn</h3>
                 <p class="mt-2 max-w-md text-sm leading-relaxed text-zinc-600 lg:mx-0 mx-auto">
                     Select a value and see your estimated price up front, in your own currency. Every order earns you Rcoin you can redeem later.
@@ -163,7 +162,7 @@
             <div class="order-1 lg:order-2">
                 <div class="mx-auto w-full max-w-sm rounded-[24px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-center gap-3">
-                        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-50 ring-1 ring-zinc-100">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-zinc-50 ring-1 ring-zinc-100">
                             <img src="{{ $img('amazon.png') }}" alt="" class="h-7 w-7 object-contain" loading="lazy">
                         </span>
                         <div>
@@ -180,7 +179,7 @@
                             <span class="text-zinc-600">Estimated price</span>
                             <span class="font-semibold text-zinc-900">$51.00</span>
                         </div>
-                        <div class="flex items-center justify-between rounded-xl bg-blue-50 px-3 py-2.5">
+                        <div class="flex items-center justify-between rounded-[10px] bg-blue-50 px-3 py-2.5">
                             <span class="font-medium text-blue-700">Rcoin earned</span>
                             <span class="font-bold text-blue-700">+25 Rcoin</span>
                         </div>
@@ -197,7 +196,7 @@
             <div class="relative mt-6 overflow-hidden">
                 <div class="hiw-marquee flex w-max items-center gap-4">
                     @foreach (array_merge($payments, $payments) as $pay)
-                        <div class="flex shrink-0 items-center gap-2.5 rounded-xl bg-white px-4 py-3 ring-1 ring-zinc-100">
+                        <div class="flex shrink-0 items-center gap-2.5 rounded-[10px] bg-white px-4 py-3 ring-1 ring-zinc-100">
                             <img src="{{ $img($pay['src']) }}" alt="" @class(['h-6 w-6 object-contain', 'brightness-0 dark:invert' => ! empty($pay['mono'])]) loading="lazy">
                             <span class="whitespace-nowrap text-sm font-semibold text-zinc-800">{{ $pay['name'] }}</span>
                         </div>
@@ -216,7 +215,7 @@
                 <div class="rounded-[24px] bg-blue-50 p-7 ring-1 ring-zinc-100">
                     <div class="grid grid-cols-2 gap-3">
                         @foreach (array_slice($payments, 0, 6) as $pay)
-                            <div class="flex items-center gap-2.5 rounded-xl bg-white px-3 py-3 ring-1 ring-zinc-100">
+                            <div class="flex items-center gap-2.5 rounded-[10px] bg-white px-3 py-3 ring-1 ring-zinc-100">
                                 <img src="{{ $img($pay['src']) }}" alt="" @class(['h-6 w-6 shrink-0 object-contain', 'brightness-0 dark:invert' => ! empty($pay['mono'])]) loading="lazy">
                                 <span class="truncate text-xs font-semibold text-zinc-800">{{ $pay['name'] }}</span>
                             </div>
@@ -225,7 +224,7 @@
                 </div>
             </div>
             <div class="order-2 text-center lg:text-left">
-                <span class="inline-flex h-9 items-center rounded-full bg-blue-600 px-4 text-sm font-bold text-white">Step 3</span>
+                <span class="inline-flex h-9 items-center rounded-[10px] bg-blue-600 px-4 text-sm font-bold text-white">Step 3</span>
                 <h3 class="mt-4 text-xl font-bold text-zinc-900 sm:text-2xl">Pay your way</h3>
                 <p class="mt-2 max-w-md text-sm leading-relaxed text-zinc-600 lg:mx-0 mx-auto">
                     Settle with your wallet balance, card, bank transfer, mobile money or crypto. Pick whatever is easiest, the choice is always yours.
@@ -236,7 +235,7 @@
         {{-- Step 4: text (left) + enjoy image (right) --}}
         <div class="mt-16 grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
             <div class="order-2 text-center lg:order-1 lg:text-left">
-                <span class="inline-flex h-9 items-center rounded-full bg-blue-600 px-4 text-sm font-bold text-white">Step 4</span>
+                <span class="inline-flex h-9 items-center rounded-[10px] bg-blue-600 px-4 text-sm font-bold text-white">Step 4</span>
                 <h3 class="mt-4 text-xl font-bold text-zinc-900 sm:text-2xl">Enjoy your product or service</h3>
                 <p class="mt-2 max-w-md text-sm leading-relaxed text-zinc-600 lg:mx-0 mx-auto">
                     Your codes, PINs and activation details land in your dashboard and email the moment your payment clears. Redeem and enjoy right away.

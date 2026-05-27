@@ -43,7 +43,7 @@
         @if ($loading)
             <ul class="skeleton-stagger-fast flex w-max gap-4 sm:grid sm:w-full sm:grid-cols-3 sm:gap-5 {{ $gridCols }}">
                 @for ($i = 0; $i < (int) $cols; $i++)
-                    <li class="rounded-2xl bg-white p-3 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: {{ $i }}">
+                    <li class="rounded-[10px] bg-white p-3 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: {{ $i }}">
                         <x-skeleton class="aspect-[16/10] w-full rounded-[15px]" />
                         <x-skeleton class="mt-3 h-4 w-3/4" />
                     </li>
@@ -58,7 +58,7 @@
         {{-- Skeleton overlay during page navigation --}}
         <ul x-show="navigating" x-cloak class="skeleton-stagger-fast pointer-events-none absolute inset-0 z-10 mt-12 flex w-max gap-4 bg-transparent sm:grid sm:w-full sm:grid-cols-3 sm:gap-5 {{ $gridCols }}" aria-hidden="true">
             @for ($i = 0; $i < (int) $cols; $i++)
-                <li class="rounded-2xl bg-white p-3 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: {{ $i }}">
+                <li class="rounded-[10px] bg-white p-3 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: {{ $i }}">
                     <x-skeleton class="aspect-[16/10] w-full rounded-[15px]" />
                     <x-skeleton class="mt-3 h-4 w-3/4" />
                 </li>
