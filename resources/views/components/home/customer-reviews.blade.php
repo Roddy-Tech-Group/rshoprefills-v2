@@ -29,7 +29,7 @@
                 type="button"
                 @click="next()"
                 aria-label="Show more reviews"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-sm transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-sm transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M9 6l6 6-6 6"/>
@@ -52,7 +52,7 @@
             <div class="flex w-max gap-4 sm:gap-5">
 
                 {{-- Aggregate score card (Trustpilot / Google / etc., CMS-driven label) --}}
-                <article class="flex w-72 shrink-0 flex-col rounded-2xl bg-white p-5 ring-1 ring-zinc-200 shadow-sm">
+                <article class="flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm">
 
                     <div class="flex items-start justify-between gap-2">
                         <div class="flex items-center gap-1.5">
@@ -87,12 +87,12 @@
 
                 {{-- Individual review cards (CMS-managed via the reviews table) --}}
                 @foreach ($reviews as $review)
-                    <article class="flex w-72 shrink-0 flex-col rounded-2xl bg-white p-5 ring-1 ring-zinc-200 shadow-sm">
+                    <article class="flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm">
 
                         {{-- Top row: avatar + name + source mini-logo --}}
                         <div class="flex items-start justify-between gap-3">
                             <div class="flex min-w-0 items-start gap-3">
-                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">{{ $review->initials }}</span>
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-100 text-sm font-bold text-zinc-600">{{ $review->initials }}</span>
                                 <div class="min-w-0 leading-tight">
                                     <p class="truncate text-sm font-semibold text-zinc-900">{{ $review->author_name }}</p>
                                     <p class="text-xs text-zinc-600">{{ $review->reviewed_at->format('M j, Y') }}</p>
@@ -134,9 +134,9 @@
             class="skeleton-stagger-fast pointer-events-none absolute inset-0 z-10 flex gap-4 overflow-hidden bg-zinc-100 px-4 py-2 sm:gap-5 sm:px-6 lg:px-8"
         >
             @for ($i = 0; $i < 6; $i++)
-                <div class="flex w-72 shrink-0 flex-col rounded-2xl bg-white p-5 ring-1 ring-zinc-200 shadow-sm" style="--i: {{ $i }}">
+                <div class="flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm" style="--i: {{ $i }}">
                     <div class="flex items-center gap-3">
-                        <x-skeleton class="h-11 w-11 rounded-full" />
+                        <x-skeleton class="h-11 w-11 rounded-[10px]" />
                         <div class="min-w-0 flex-1 space-y-2">
                             <x-skeleton class="h-4 w-2/3" />
                             <x-skeleton class="h-3 w-1/3" />

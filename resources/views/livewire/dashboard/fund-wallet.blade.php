@@ -377,7 +377,7 @@ new class extends Component
         <button
             type="button"
             @click="open = true"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors active:bg-blue-100"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-[10px] bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors active:bg-blue-100"
         >
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
@@ -388,7 +388,7 @@ new class extends Component
         <button
             type="button"
             @click="open = true"
-            class="w-full rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+            class="w-full rounded-[10px] bg-white px-3 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100"
         >
             Fund Wallet
         </button>
@@ -414,7 +414,7 @@ new class extends Component
         <div
             x-transition
             :class="paymentState === 'action_3ds' ? 'max-w-lg' : 'max-w-md'"
-            class="relative w-full rounded-2xl bg-white p-6 text-left shadow-2xl shadow-zinc-900/25 transition-all duration-300"
+            class="relative w-full rounded-[10px] bg-white p-6 text-left shadow-2xl shadow-zinc-900/25 transition-all duration-300"
             role="dialog"
             aria-modal="true"
         >
@@ -435,7 +435,7 @@ new class extends Component
                         type="button"
                         @click="ccyOpen = ! ccyOpen"
                         :aria-expanded="ccyOpen.toString()"
-                        class="flex w-full items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/15"
+                        class="flex w-full items-center justify-between gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/15"
                     >
                         <span>{{ $currency }} &middot; {{ \App\Domain\Shared\Enums\Currency::tryFrom($currency)?->label() }}</span>
                         <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-150" :class="ccyOpen && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -452,7 +452,7 @@ new class extends Component
                         x-transition:leave="transition ease-in duration-100"
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 -translate-y-1"
-                        class="absolute left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10"
+                        class="absolute left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10"
                         role="listbox"
                     >
                         @foreach (\App\Domain\Shared\Enums\Currency::cases() as $c)
@@ -462,7 +462,7 @@ new class extends Component
                                 @click="ccyOpen = false"
                                 role="option"
                                 aria-selected="{{ $currency === $c->value ? 'true' : 'false' }}"
-                                class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors {{ $currency === $c->value ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100' }}"
+                                class="flex w-full items-center justify-between gap-2 rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors {{ $currency === $c->value ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100' }}"
                             >
                                 <span>{{ $c->value }} &middot; {{ $c->label() }}</span>
                                 @if ($currency === $c->value)
@@ -477,7 +477,7 @@ new class extends Component
 
                 {{-- Amount --}}
                 <label class="mt-4 block text-xs font-semibold text-zinc-700">Amount</label>
-                <div class="mt-1.5 flex items-stretch overflow-hidden rounded-xl border border-zinc-200 bg-white transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15">
+                <div class="mt-1.5 flex items-stretch overflow-hidden rounded-[10px] border border-zinc-200 bg-white transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15">
                     <span class="flex shrink-0 items-center border-r border-zinc-200 bg-zinc-50 px-3 text-sm font-semibold text-zinc-600">{{ $this->symbol() }}</span>
                     <input
                         type="number"
@@ -522,9 +522,9 @@ new class extends Component
                             <button
                                 type="button"
                                 @click="selectPaymentMethod(method)"
-                                class="flex items-center gap-3 w-full p-4 border border-zinc-200 rounded-xl hover:border-blue-500 hover:bg-blue-50/30 text-left transition duration-150"
+                                class="flex items-center gap-3 w-full p-4 border border-zinc-200 rounded-[10px] hover:border-blue-500 hover:bg-blue-50/30 text-left transition duration-150"
                             >
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200">
                                     {{-- Icon by method.type. Falls back to first 2 letters when no icon. --}}
                                     <template x-if="methodIcon(method.type)">
                                         <img :src="methodIcon(method.type)" alt="" class="h-6 w-6 object-contain" loading="lazy">
@@ -557,29 +557,29 @@ new class extends Component
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-semibold text-zinc-700">Cardholder Name</label>
-                            <input type="text" x-model="cardDetails.card_holder" placeholder="e.g. John Doe" class="w-full mt-1.5 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
+                            <input type="text" x-model="cardDetails.card_holder" placeholder="e.g. John Doe" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-zinc-700">Card Number</label>
-                            <input type="text" @input="formatCardNumber" x-model="cardDetails.card_number" maxlength="19" placeholder="0000 0000 0000 0000" class="w-full mt-1.5 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
+                            <input type="text" @input="formatCardNumber" x-model="cardDetails.card_number" maxlength="19" placeholder="0000 0000 0000 0000" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
                         </div>
 
                         <div class="grid grid-cols-3 gap-3">
                             <div class="col-span-2">
                                 <label class="block text-xs font-semibold text-zinc-700">Expiry (MM/YY)</label>
                                 <div class="flex gap-2">
-                                    <input type="text" x-model="cardDetails.expiry_month" placeholder="MM" maxlength="2" class="w-full mt-1.5 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
-                                    <input type="text" x-model="cardDetails.expiry_year" placeholder="YY" maxlength="2" class="w-full mt-1.5 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
+                                    <input type="text" x-model="cardDetails.expiry_month" placeholder="MM" maxlength="2" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
+                                    <input type="text" x-model="cardDetails.expiry_year" placeholder="YY" maxlength="2" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-zinc-700 text-center">CVV</label>
-                                <input type="password" x-model="cardDetails.cvv" placeholder="123" maxlength="4" class="w-full mt-1.5 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
+                                <input type="password" x-model="cardDetails.cvv" placeholder="123" maxlength="4" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
                             </div>
                         </div>
 
-                        <button @click="paySession('card', cardDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-2">
+                        <button @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-2">
                             Pay <span x-text="session?.display_currency + ' ' + Number(session?.amount).toFixed(2)"></span>
                         </button>
                     </div>
@@ -590,8 +590,8 @@ new class extends Component
                     <h3 class="text-sm font-bold text-zinc-900 mb-2">Card PIN Required</h3>
                     <p class="text-xs text-zinc-600 mb-4">Enter your card 4-digit security PIN to authorize payment.</p>
                     <div class="space-y-4">
-                        <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900">
-                        <button @click="paySession('card', cardDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                        <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900">
+                        <button @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                             Confirm PIN
                         </button>
                     </div>
@@ -602,8 +602,8 @@ new class extends Component
                     <h3 class="text-sm font-bold text-zinc-900 mb-2">OTP Verification</h3>
                     <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
                     <div class="space-y-4">
-                        <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-xl border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900">
-                        <button @click="paySession('card', cardDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                        <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900">
+                        <button @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                             Verify OTP
                         </button>
                     </div>
@@ -614,11 +614,11 @@ new class extends Component
                     <h3 class="text-sm font-bold text-zinc-900 mb-2">Secure Verification</h3>
                     <p class="text-xs text-zinc-600 mb-4">Please complete the secure authentication inside the window below.</p>
 
-                    <div class="w-full overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 h-[55vh] min-h-[400px] max-h-[520px]">
+                    <div class="w-full overflow-hidden rounded-[10px] border border-zinc-200 bg-zinc-50 h-[55vh] min-h-[400px] max-h-[520px]">
                         <iframe :src="session?.payment_payload?.redirect_url" class="h-full w-full border-0" allow="payment"></iframe>
                     </div>
 
-                    <button @click="verifyPayment()" :disabled="verifying" class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                    <button @click="verifyPayment()" :disabled="verifying" class="mt-4 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
                         <svg x-show="verifying" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -639,19 +639,19 @@ new class extends Component
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-semibold text-zinc-700">Phone Number</label>
-                            <input type="text" x-model="momoDetails.phone_number" placeholder="e.g. 237670000000" class="w-full mt-1.5 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
+                            <input type="text" x-model="momoDetails.phone_number" placeholder="e.g. 237670000000" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-zinc-700">Network Network</label>
-                            <select x-model="momoDetails.network" class="w-full mt-1.5 rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 bg-white">
+                            <select x-model="momoDetails.network" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 bg-white">
                                 <template x-for="net in selectedMethod?.supported_networks" :key="net">
                                     <option :value="net" x-text="net"></option>
                                 </template>
                             </select>
                         </div>
 
-                        <button @click="paySession('mobile_money', momoDetails)" class="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                        <button @click="paySession('mobile_money', momoDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                             Pay <span x-text="session?.display_currency + ' ' + Number(session?.amount).toFixed(2)"></span>
                         </button>
                     </div>
@@ -662,7 +662,7 @@ new class extends Component
                     <h3 class="text-sm font-bold text-zinc-900 mb-2">Virtual Bank Transfer</h3>
                     <p class="text-xs text-zinc-600 mb-4">Please make a transfer to the temporary virtual account below:</p>
 
-                    <div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3">
+                    <div class="bg-zinc-50 border border-zinc-200 rounded-[10px] p-4 space-y-3">
                         <div class="flex justify-between items-center text-xs">
                             <span class="text-zinc-500">Bank Name</span>
                             <span class="font-bold text-zinc-900" x-text="bankDetails?.bank_name"></span>
@@ -700,7 +700,7 @@ new class extends Component
                     <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
 
                     <div class="flex flex-col items-center py-6 text-center">
-                        <span class="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 ring-8 ring-blue-100/50 mb-4">
+                        <span class="flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 ring-8 ring-blue-100/50 mb-4">
                             <svg class="h-7 w-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                             </svg>
@@ -725,7 +725,7 @@ new class extends Component
 
                 <!-- Success state -->
                 <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-100">
+                    <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
                         <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
                         </svg>
@@ -736,7 +736,7 @@ new class extends Component
 
                 <!-- Error state -->
                 <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 ring-8 ring-red-100">
+                    <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
                         <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -744,7 +744,7 @@ new class extends Component
                     <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
                     <p class="mt-1.5 text-xs text-red-600 px-4" x-text="errorMessage"></p>
 
-                    <button type="button" @click="paymentState = 'select_method'" class="mt-6 rounded-xl bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
+                    <button type="button" @click="paymentState = 'select_method'" class="mt-6 rounded-[10px] bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
                         Try Another Method
                     </button>
                 </div>

@@ -122,13 +122,13 @@ class extends Component {
         </div>
 
         {{-- Filter pills --}}
-        <div class="inline-flex w-max items-center rounded-xl bg-zinc-100 p-1" role="tablist" aria-label="Filter notifications">
+        <div class="inline-flex w-max items-center rounded-[10px] bg-zinc-100 p-1" role="tablist" aria-label="Filter notifications">
             @foreach (['all' => 'All', 'pending' => 'Pending', 'sent' => 'Sent', 'failed' => 'Failed'] as $value => $label)
                 <button
                     type="button"
                     wire:click="setFilter('{{ $value }}')"
                     @class([
-                        'inline-flex items-center justify-center rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all',
+                        'inline-flex items-center justify-center rounded-[10px] px-3.5 py-1.5 text-xs font-semibold transition-all',
                         'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' => $filter === $value,
                         'text-zinc-600 hover:text-zinc-900' => $filter !== $value,
                     ])
@@ -179,7 +179,7 @@ class extends Component {
                                             wire:click="retry('{{ $n->id }}')"
                                             wire:loading.attr="disabled"
                                             wire:target="retry('{{ $n->id }}')"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                                            class="inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                                         >
                                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>

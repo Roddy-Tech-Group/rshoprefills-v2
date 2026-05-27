@@ -24,7 +24,7 @@
             <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mx-auto h-44 w-auto object-contain animate-float" loading="lazy">
             <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
             <p class="mt-1 text-sm text-zinc-600">Browse the catalog and add a gift card to get started.</p>
-            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                 Browse gift cards
             </a>
         </div>
@@ -44,7 +44,7 @@
                         <template x-for="item in $store.cart.items" :key="item.id">
                             <li class="flex items-start gap-4 px-5 py-4 sm:px-6">
                                 {{-- Logo --}}
-                                <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-200">
+                                <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-200">
                                     <template x-if="item.logo">
                                         <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                     </template>
@@ -68,11 +68,11 @@
                                     {{-- Quantity stepper + remove --}}
                                     <div class="mt-2.5 flex items-center gap-3">
                                         <span class="inline-flex items-center gap-1.5">
-                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Decrease quantity">
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-[10px] text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Decrease quantity">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M5 12h14"/></svg>
                                             </button>
                                             <span class="w-6 text-center text-sm font-bold tabular-nums text-zinc-900" x-text="item.quantity"></span>
-                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity + 1)" class="flex h-7 w-7 items-center justify-center rounded-full text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Increase quantity">
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity + 1)" class="flex h-7 w-7 items-center justify-center rounded-[10px] text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Increase quantity">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
                                             </button>
                                         </span>
@@ -125,7 +125,7 @@
                     <a
                         :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')"
                         wire:navigate
-                        class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700"
+                        class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700"
                     >
                         Proceed to checkout
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">

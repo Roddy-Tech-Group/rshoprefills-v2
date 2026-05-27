@@ -5,7 +5,7 @@
     <ul class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">
 
         {{-- Best Prices --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
             <img src="{{ asset('assets/' . rawurlencode('best prices.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900">Best Prices</p>
@@ -14,7 +14,7 @@
         </li>
 
         {{-- Wide Selection --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
             <img src="{{ asset('assets/' . rawurlencode('wide selection.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900">Wide Selection</p>
@@ -23,7 +23,7 @@
         </li>
 
         {{-- Trusted by Thousands --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
             <img src="{{ asset('assets/' . rawurlencode('trusted by millions.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900">Trusted by Thousands</p>
@@ -32,7 +32,7 @@
         </li>
 
         {{-- Easy & Fast --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
             <img src="{{ asset('assets/fast.png') }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900">Easy & Fast</p>

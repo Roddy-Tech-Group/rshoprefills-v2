@@ -29,7 +29,7 @@
             }"
             @mouseenter="paused = true"
             @mouseleave="paused = false"
-            class="group relative aspect-[16/10] overflow-hidden rounded-2xl ring-1 ring-zinc-200 shadow-sm"
+            class="group relative aspect-[16/10] overflow-hidden rounded-[10px] ring-1 ring-zinc-200 shadow-sm"
         >
             <template x-for="(src, i) in images" :key="src">
                 <img
@@ -66,7 +66,7 @@
             }"
             @mouseenter="paused = true"
             @mouseleave="paused = false"
-            class="group relative aspect-[16/10] overflow-hidden rounded-2xl ring-1 ring-zinc-200 shadow-sm"
+            class="group relative aspect-[16/10] overflow-hidden rounded-[10px] ring-1 ring-zinc-200 shadow-sm"
         >
             <template x-for="(src, i) in images" :key="src">
                 <img
@@ -102,7 +102,7 @@
             }"
             @mouseenter="paused = true"
             @mouseleave="paused = false"
-            class="group relative aspect-[16/10] overflow-hidden rounded-2xl ring-1 ring-zinc-200 shadow-sm"
+            class="group relative aspect-[16/10] overflow-hidden rounded-[10px] ring-1 ring-zinc-200 shadow-sm"
         >
             <template x-for="(src, i) in images" :key="src">
                 <img

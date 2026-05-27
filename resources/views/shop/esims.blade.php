@@ -37,7 +37,7 @@
     >
 
         {{-- ── Hero ─────────────────────────────────────────────────────────── --}}
-        <section class="overflow-hidden rounded-3xl bg-blue-100 px-6 py-8 sm:px-10 sm:py-12">
+        <section class="overflow-hidden rounded-[10px] bg-blue-100 px-6 py-8 sm:px-10 sm:py-12">
             <div class="flex flex-col items-center gap-6 lg:flex-row lg:justify-between lg:gap-8">
                 {{-- Desktop: both illustrations sit either side of the heading. --}}
                 <img src="{{ asset('assets/'.rawurlencode('Esim stay connectd.png')) }}" alt="" class="hidden w-64 shrink-0 object-contain lg:block xl:w-80" loading="eager">
@@ -100,7 +100,7 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="mt-6 rounded-3xl bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+                    <div class="mt-6 rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
                         <p class="text-base font-semibold text-zinc-900">No eSIMs available yet</p>
                         <p class="mt-1 text-sm text-zinc-600">We're adding coverage. Check back shortly.</p>
                     </div>

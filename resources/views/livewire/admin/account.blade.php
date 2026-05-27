@@ -119,7 +119,7 @@ class extends Component {
 }; ?>
 
 @php
-    $field = 'w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
+    $field = 'w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
     $defaultAvatar = asset('assets/'.rawurlencode('New male account avatar.png'));
 @endphp
 
@@ -130,7 +130,7 @@ class extends Component {
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
 
         {{-- Profile --}}
-        <div class="rounded-2xl bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <h2 class="text-base font-semibold text-zinc-900">Profile</h2>
             <p class="mt-0.5 text-xs text-zinc-600">Your name, photo and the email you sign in with.</p>
 
@@ -139,11 +139,11 @@ class extends Component {
                 <img
                     src="{{ $avatar ? $avatar->temporaryUrl() : ($this->admin->avatar_url ?: $defaultAvatar) }}"
                     alt="{{ $this->admin->name }}"
-                    class="h-20 w-20 shrink-0 rounded-full object-cover ring-1 ring-zinc-200"
+                    class="h-20 w-20 shrink-0 rounded-[10px] object-cover ring-1 ring-zinc-200"
                 >
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-100">
+                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-100">
                             <input type="file" class="hidden" wire:model="avatar" accept="image/*">
                             <span>Change photo</span>
                         </label>
@@ -153,7 +153,7 @@ class extends Component {
                                 wire:click="updateAvatar"
                                 wire:loading.attr="disabled"
                                 wire:target="updateAvatar"
-                                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                                class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
                             >
                                 <span wire:loading.remove wire:target="updateAvatar">Save photo</span>
                                 <span wire:loading wire:target="updateAvatar">Saving...</span>
@@ -182,7 +182,7 @@ class extends Component {
                     @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="flex items-center gap-3 pt-1">
-                    <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                         Save changes
                     </button>
                     <x-action-message on="profile-updated" class="text-sm font-medium text-emerald-600">Saved.</x-action-message>
@@ -191,7 +191,7 @@ class extends Component {
         </div>
 
         {{-- Account details (read-only) --}}
-        <div class="rounded-2xl bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <h2 class="text-base font-semibold text-zinc-900">Account details</h2>
             <p class="mt-0.5 text-xs text-zinc-600">Role and status are managed by a super admin.</p>
 
@@ -224,7 +224,7 @@ class extends Component {
         </div>
 
         {{-- Security --}}
-        <div class="rounded-2xl bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <h2 class="text-base font-semibold text-zinc-900">Security</h2>
             <p class="mt-0.5 text-xs text-zinc-600">Use a long, random password to keep the admin panel secure.</p>
 
@@ -308,7 +308,7 @@ class extends Component {
                 </div>
 
                 <div class="flex items-center gap-3 pt-1">
-                    <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+                    <button type="submit" class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                         Update password
                     </button>
                     <x-action-message on="password-updated" class="text-sm font-medium text-emerald-600">Saved.</x-action-message>

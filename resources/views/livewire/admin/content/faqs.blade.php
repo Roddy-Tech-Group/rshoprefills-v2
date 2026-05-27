@@ -27,7 +27,7 @@ class extends Component {
     </header>
 
     @forelse ($this->faqs as $topic => $items)
-        <section class="mb-6 overflow-hidden rounded-2xl bg-white ring-1 ring-zinc-100 shadow-sm">
+        <section class="mb-6 overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100 shadow-sm">
             <div class="border-b border-zinc-100 bg-zinc-50 px-5 py-3">
                 <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-700">{{ $topic }}</h2>
             </div>
@@ -44,8 +44,8 @@ class extends Component {
             </ul>
         </section>
     @empty
-        <div class="rounded-2xl bg-white p-8 text-center ring-1 ring-zinc-100 shadow-sm">
-            <p class="text-sm text-zinc-600">No FAQs yet. Run <code class="rounded bg-zinc-100 px-1.5 py-0.5">php artisan db:seed --class=FaqSeeder</code>.</p>
+        <div class="rounded-[10px] bg-white p-8 text-center ring-1 ring-zinc-100 shadow-sm">
+            <p class="text-sm text-zinc-600">No FAQs yet. Run <code class="rounded-[10px] bg-zinc-100 px-1.5 py-0.5">php artisan db:seed --class=FaqSeeder</code>.</p>
         </div>
     @endforelse
 </div>

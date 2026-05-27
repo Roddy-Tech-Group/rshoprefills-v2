@@ -38,25 +38,25 @@ class extends Component {
 
     {{-- Aggregate stats card --}}
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div class="rounded-2xl bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
+        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Rating</p>
             <p class="mt-2 text-2xl font-bold text-zinc-900">{{ number_format($this->aggregate['rating'], 1) }} / 5</p>
         </div>
-        <div class="rounded-2xl bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
+        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Review count</p>
             <p class="mt-2 text-2xl font-bold text-zinc-900">{{ number_format($this->aggregate['count']) }}+</p>
         </div>
-        <div class="rounded-2xl bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
+        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Since</p>
             <p class="mt-2 text-2xl font-bold text-zinc-900">{{ $this->aggregate['since'] }}</p>
         </div>
-        <div class="rounded-2xl bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
+        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Source</p>
             <p class="mt-2 text-2xl font-bold text-zinc-900">{{ $this->aggregate['source'] }}</p>
         </div>
     </div>
 
-    <div class="overflow-hidden rounded-2xl bg-white ring-1 ring-zinc-100 shadow-sm">
+    <div class="overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100 shadow-sm">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600">
@@ -79,7 +79,7 @@ class extends Component {
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-5 py-12 text-center text-sm text-zinc-600">No reviews yet. Run <code class="rounded bg-zinc-100 px-1.5 py-0.5">php artisan db:seed --class=ReviewSeeder</code>.</td>
+                            <td colspan="5" class="px-5 py-12 text-center text-sm text-zinc-600">No reviews yet. Run <code class="rounded-[10px] bg-zinc-100 px-1.5 py-0.5">php artisan db:seed --class=ReviewSeeder</code>.</td>
                         </tr>
                     @endforelse
                 </tbody>

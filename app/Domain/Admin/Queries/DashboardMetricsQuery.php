@@ -74,6 +74,49 @@ class DashboardMetricsQuery
         // Wallet balance total stays all-time — current value, not a transaction.
         $walletBalanceTotal = Wallet::sum('balance');
 
+        // ── Per-card donut breakdowns ───────────────────────────────────
+        // Each KPI card gets a mini donut chart that visualises a meaningful
+        // ratio for that metric. All five are bounded 0–100 so the donut can
+        // render them as a single percent arc.
+        //
+        // Users:        active (neither banned nor suspended) / total
+        // Orders:       completed / total
+        // Revenue:      markup share (sales − supplier cost) / sales
+        // Transactions: successful payments / (payments + wallet txns)
+        // Success Rate: identical to the headline KPI — reinforces the figure
+        $activeUsers = (clone $usersQuery)
+            ->whereNull('banned_at')
+            ->whereNull('suspended_at')
+            ->count();
+        $activeUsersPct = $totalUsers > 0
+            ? round(($activeUsers / $totalUsers) * 100, 2)
+            : 0.0;
+
+        $completedOrders = (clone $ordersQuery)
+            ->where('order_status', OrderStatus::Completed->value)
+            ->count();
+        $completedOrdersPct = $totalOrders > 0
+            ? round(($completedOrders / $totalOrders) * 100, 2)
+            : 0.0;
+
+        // Markup share: how much of completed-order revenue is our profit vs
+        // what we paid the supplier. order_items.provider_cost_usd × quantity
+        // is the source-of-truth supplier cost — items without a cost snapshot
+        // contribute zero (no synthetic estimate), so the figure stays honest.
+        $supplierCost = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.order_status', OrderStatus::Completed->value)
+            ->when($startDate, fn ($q) => $q->where('orders.created_at', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->where('orders.created_at', '<=', $endDate))
+            ->sum(DB::raw('order_items.provider_cost_usd * order_items.quantity'));
+        $markupSharePct = $totalRevenue > 0
+            ? round((((float) $totalRevenue - (float) $supplierCost) / (float) $totalRevenue) * 100, 2)
+            : 0.0;
+
+        $transactionsSuccessPct = $transactionsCount > 0
+            ? round((($successfulPayments + $walletTxCount) / $transactionsCount) * 100, 2)
+            : 0.0;
+
         return [
             'total_users' => $totalUsers,
             'total_orders' => $totalOrders,
@@ -81,6 +124,14 @@ class DashboardMetricsQuery
             'transactions_count' => $transactionsCount,
             'success_rate' => $successRate,
             'wallet_balance_total' => (float) $walletBalanceTotal,
+            // Donut percentages — each bounded 0–100, ready to render.
+            'donuts' => [
+                'active_users_pct' => $activeUsersPct,
+                'completed_orders_pct' => $completedOrdersPct,
+                'markup_share_pct' => max(0.0, min(100.0, $markupSharePct)),
+                'transactions_success_pct' => $transactionsSuccessPct,
+                'success_rate_pct' => $successRate,
+            ],
         ];
     }
 

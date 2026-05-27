@@ -66,11 +66,12 @@ class extends Component {
 }; ?>
 
 @php
-    // Status pill colours for the in-flight / failed deposits section.
+    // Unified status pill tones — same recipe as the admin list pages (and the
+    // customer orders page) so every status badge in the app reads the same.
     $depositStatusUi = [
-        'pending' => ['Pending', 'bg-amber-100 text-amber-700'],
-        'processing' => ['Processing', 'bg-blue-100 text-blue-700'],
-        'failed' => ['Failed', 'bg-red-100 text-red-700'],
+        'pending'    => ['Pending',    'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
+        'processing' => ['Processing', 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
+        'failed'     => ['Failed',     'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
     ];
 @endphp
 
@@ -118,7 +119,7 @@ class extends Component {
             <p class="text-sm font-bold text-zinc-900">Recent deposits</p>
             <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
                 @foreach ($recentDeposits as $deposit)
-                    @php [$depLabel, $depClass] = $depositStatusUi[$deposit->status->value] ?? ['Pending', 'bg-amber-100 text-amber-700']; @endphp
+                    @php [$depLabel, $depClass] = $depositStatusUi[$deposit->status->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30']; @endphp
                     <div class="flex items-center gap-3 px-4 py-3" wire:key="dep-{{ $deposit->id }}">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-blue-50 text-blue-600">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -131,7 +132,7 @@ class extends Component {
                         </div>
                         <div class="flex shrink-0 flex-col items-end gap-1">
                             <p class="text-sm font-bold text-zinc-900">{{ $deposit->currency?->symbol() }}{{ number_format((float) $deposit->amount, 2) }}</p>
-                            <span class="rounded-[5px] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $depClass }}">{{ $depLabel }}</span>
+                            <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $depClass }}">{{ $depLabel }}</span>
                         </div>
                     </div>
                 @endforeach
@@ -190,8 +191,8 @@ class extends Component {
         </div>
     @else
         {{-- Empty state --}}
-        <div class="rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
-            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+        <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/>
                 </svg>

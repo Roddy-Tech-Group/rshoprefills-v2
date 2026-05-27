@@ -18,6 +18,7 @@
     $totalTransactions = (int)   $metrics['transactions_count'];
     $successRate       = (float) $metrics['success_rate'];
     $walletBalanceTotal = (float) $metrics['wallet_balance_total'];
+    $donuts            = (array) ($metrics['donuts'] ?? []);
 
     // ── Tables ─────────────────────────────────────────────────────────
     $latestUsers        = $dashboardQuery->getLatestUsers(5)->items();
@@ -91,196 +92,42 @@
     <style>
         html.dark .kpi-card .kpi-label { color: #f4f4f5 !important; }
         html.dark .kpi-card .kpi-sub   { color: #d4d4d8 !important; }
+
+        /* Inset table dividers — the horizontal hairline between rows stops
+           1.25rem short of the card's left and right edges instead of
+           running corner-to-corner. Painted as a background gradient on the
+           top of every non-first row so it's reliable across all browsers
+           where pseudo-elements on <tr>/<td> behave inconsistently. */
+        .inset-divide tbody > tr + tr > td {
+            background-image: linear-gradient(
+                to right,
+                transparent 0,
+                transparent 1.25rem,
+                #f4f4f5 1.25rem,
+                #f4f4f5 calc(100% - 1.25rem),
+                transparent calc(100% - 1.25rem),
+                transparent 100%
+            );
+            background-size: 100% 1px;
+            background-position: top left;
+            background-repeat: no-repeat;
+        }
+        html.dark .inset-divide tbody > tr + tr > td {
+            background-image: linear-gradient(
+                to right,
+                transparent 0,
+                transparent 1.25rem,
+                rgba(255, 255, 255, 0.08) 1.25rem,
+                rgba(255, 255, 255, 0.08) calc(100% - 1.25rem),
+                transparent calc(100% - 1.25rem),
+                transparent 100%
+            );
+        }
     </style>
 
     {{-- Page content (top bar lives in components/layouts/app/sidebar.blade.php so all admin pages share it).
          Padding is provided by the parent layout wrapper. --}}
-    <div class="flex flex-1 flex-col gap-6">
-
-        {{-- Heading moved to the top header. Just the date range picker stays here on the right.
-             Range presets are Alpine-driven UI for now; backend wires them with wire:click when period filtering ships. --}}
-        {{-- Date range selector (Alpine-driven). Custom range opens an inline date input pair. --}}
-        {{-- Range picker — drives KPI cards via the URL: ?range=KEY for presets
-             or ?range=custom plus ?start= and ?end= for the custom variant.
-             Each preset SPA-navigates so the top PHP block re-runs and the
-             cards re-aggregate against the new window. Initial selection is
-             derived from the current URL so the dropdown reflects what the
-             server actually applied. --}}
-        <div
-            x-data="{
-                open: false,
-                view: 'presets',
-                ranges: [
-                    { label: 'Today',        key: 'today', days: 0 },
-                    { label: 'Last 7 days',  key: '7d',    days: 7 },
-                    { label: 'Last 30 days', key: '30d',   days: 30 },
-                    { label: 'Last 90 days', key: '90d',   days: 90 },
-                    { label: 'This year',    key: 'year',  days: 365 },
-                ],
-                selected: {{ in_array($rangePreset, ['today','7d','30d','90d','year'], true) ? collect(['today','7d','30d','90d','year'])->search($rangePreset) : -1 }},
-                isCustom: {{ $rangePreset === 'custom' ? 'true' : 'false' }},
-                customStart: @js($rangeStart ?? ''),
-                customEnd: @js($rangeEnd ?? ''),
-                customLabel: '',
-                fmt(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); },
-                isoToday() { const d = new Date(); return d.toISOString().slice(0, 10); },
-                isoDaysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); },
-                go(url) { window.Livewire ? window.Livewire.navigate(url) : window.location.assign(url); },
-                pick(i) {
-                    this.selected = i;
-                    this.isCustom = false;
-                    this.open = false;
-                    this.go('?range=' + this.ranges[i].key);
-                },
-                openCustom() {
-                    this.view = 'custom';
-                    if (!this.customStart) this.customStart = this.isoDaysAgo(30);
-                    if (!this.customEnd)   this.customEnd   = this.isoToday();
-                },
-                applyCustom() {
-                    if (!this.customStart || !this.customEnd) return;
-                    const s = new Date(this.customStart);
-                    const e = new Date(this.customEnd);
-                    if (e < s) return;
-                    this.go('?range=custom&start=' + this.customStart + '&end=' + this.customEnd);
-                },
-                clearRange() {
-                    this.go(window.location.pathname);
-                },
-                get rangeLabel() {
-                    if (this.isCustom && this.customStart && this.customEnd) {
-                        return this.fmt(new Date(this.customStart)) + ' - ' + this.fmt(new Date(this.customEnd));
-                    }
-                    if (this.selected < 0) return 'All time';
-                    const end = new Date();
-                    const start = new Date();
-                    start.setDate(end.getDate() - this.ranges[this.selected].days);
-                    return this.ranges[this.selected].days === 0
-                        ? this.fmt(end)
-                        : `${this.fmt(start)} - ${this.fmt(end)}`;
-                }
-            }"
-            @click.outside="open = false; view = 'presets'"
-            @keydown.escape.window="open = false; view = 'presets'"
-            class="relative flex justify-center lg:justify-end"
-        >
-            <button
-                type="button"
-                @click="open = !open"
-                :aria-expanded="open.toString()"
-                class="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 shadow-sm shadow-zinc-900/5 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-            >
-                <img src="{{ asset('assets/' . rawurlencode('calender.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
-                <span x-text="rangeLabel">{{ now()->subDays(30)->format('M j, Y') }} - {{ now()->format('M j, Y') }}</span>
-                <svg class="h-3.5 w-3.5 text-zinc-600 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-
-            <div
-                x-show="open"
-                x-transition:enter="transition ease-out duration-150"
-                x-transition:enter-start="opacity-0 -translate-y-1"
-                x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition ease-in duration-100"
-                x-transition:leave-start="opacity-100 translate-y-0"
-                x-transition:leave-end="opacity-0 -translate-y-1"
-                style="display:none;"
-                class="absolute right-0 top-full z-30 mt-2 w-[280px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
-                role="menu"
-            >
-                {{-- Presets view --}}
-                <div x-show="view === 'presets'" class="p-1.5">
-                    <button
-                        type="button"
-                        @click="clearRange()"
-                        :class="selected < 0 && !isCustom ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
-                    >
-                        <span>All time</span>
-                        <svg x-show="selected < 0 && !isCustom" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                    </button>
-                    <template x-for="(r, i) in ranges" :key="r.label">
-                        <button
-                            type="button"
-                            @click="pick(i)"
-                            :class="selected === i && !isCustom ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                            class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
-                        >
-                            <span x-text="r.label"></span>
-                            <svg x-show="selected === i && !isCustom" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                            </svg>
-                        </button>
-                    </template>
-                </div>
-
-                <div x-show="view === 'presets'" class="border-t border-zinc-100 p-1.5">
-                    <button
-                        type="button"
-                        @click="openCustom()"
-                        :class="isCustom ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                        class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
-                    >
-                        <span class="flex items-center gap-2">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            Custom range
-                        </span>
-                        <svg x-show="isCustom" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                    </button>
-                </div>
-
-                {{-- Custom range view --}}
-                <div x-show="view === 'custom'" class="p-3">
-                    <div class="mb-3 flex items-center justify-between">
-                        <button type="button" @click="view = 'presets'" class="inline-flex items-center gap-1 text-xs font-medium text-zinc-600 hover:text-zinc-900">
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                            </svg>
-                            Back
-                        </button>
-                        <p class="text-sm font-semibold text-zinc-900">Custom range</p>
-                        <span class="w-10"></span>
-                    </div>
-
-                    <label class="block">
-                        <span class="mb-1 block text-xs font-medium text-zinc-600">From</span>
-                        <input
-                            type="date"
-                            x-model="customStart"
-                            :max="customEnd || isoToday()"
-                            class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-                        />
-                    </label>
-
-                    <label class="mt-2 block">
-                        <span class="mb-1 block text-xs font-medium text-zinc-600">To</span>
-                        <input
-                            type="date"
-                            x-model="customEnd"
-                            :min="customStart"
-                            :max="isoToday()"
-                            class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-                        />
-                    </label>
-
-                    <button
-                        type="button"
-                        @click="applyCustom()"
-                        :disabled="!customStart || !customEnd"
-                        class="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Apply range
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div class="flex flex-1 flex-col gap-4 sm:gap-6">
 
         {{-- ─── KPI cards (real data) ────────────────────────────────── --}}
         <div>
@@ -292,25 +139,68 @@
         {{-- KPI grid. 2-col on mobile (tighter, denser), 5-col on desktop.
              The 5th card (Success Rate) spans both columns on mobile so the trailing card
              doesn't sit alone in a half-row. --}}
-        <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
 
             @php
+                // Each card carries: its headline data + a `donut` block.
+                // The donut percent comes from $donuts (DashboardMetricsQuery),
+                // colour matches the card's pastel tone so the ring reads as
+                // an intensified version of the card's accent.
                 $kpiCards = [
-                    ['label' => 'Total Users',         'value' => number_format($totalUsers),       'sub' => 'All-time registered',     'tone' => 'bg-blue-200',    'icon' => 'trusted by millions.svg', 'span' => false],
-                    ['label' => 'Total Orders',        'value' => number_format($totalOrders),      'sub' => 'Across all time',          'tone' => 'bg-orange-200',  'icon' => 'total orders.svg',         'span' => false],
-                    ['label' => 'Total Revenue',       'value' => '$' . number_format($totalRevenue, 2),       'sub' => 'Completed orders only',    'tone' => 'bg-emerald-200', 'icon' => 'total revenue.svg',         'span' => false],
-                    ['label' => 'Total Transactions',  'value' => number_format($totalTransactions),'sub' => 'Payments + wallet activity','tone' => 'bg-amber-200',   'icon' => 'total transactions.svg',    'span' => false],
-                    ['label' => 'Success Rate',        'value' => number_format($successRate, 2) . '%','sub' => 'Completed / total payments','tone' => 'bg-pink-200',    'icon' => 'Success rate.svg',          'span' => true],
+                    [
+                        'label' => 'Total Users',
+                        'value' => number_format($totalUsers),
+                        'sub' => 'All-time registered',
+                        'tone' => 'bg-blue-200',
+                        'icon' => 'trusted by millions.svg',
+                        'span' => false,
+                        // Progress toward 1,000-user milestone. Capped at 100%
+                        // so once we cross the target the ring stays full.
+                        'donut' => ['pct' => min(100.0, ($totalUsers / 1000) * 100), 'color' => '#0044FF', 'caption' => 'of 1,000'],
+                    ],
+                    [
+                        'label' => 'Total Orders',
+                        'value' => number_format($totalOrders),
+                        'sub' => 'Across all time',
+                        'tone' => 'bg-orange-200',
+                        'icon' => 'total orders.svg',
+                        'span' => false,
+                        'donut' => ['pct' => (float) ($donuts['completed_orders_pct'] ?? 0), 'color' => '#f97316', 'caption' => 'Completed'],
+                    ],
+                    [
+                        'label' => 'Total Revenue',
+                        'value' => '$' . number_format($totalRevenue, 2),
+                        'sub' => 'Completed orders only',
+                        'tone' => 'bg-emerald-200',
+                        'icon' => 'total revenue.svg',
+                        'span' => false,
+                        'donut' => ['pct' => (float) ($donuts['markup_share_pct'] ?? 0), 'color' => '#10b981', 'caption' => 'Markup'],
+                    ],
+                    [
+                        'label' => 'Total Transactions',
+                        'value' => number_format($totalTransactions),
+                        'sub' => 'Payments + wallet activity',
+                        'tone' => 'bg-amber-200',
+                        'icon' => 'total transactions.svg',
+                        'span' => false,
+                        'donut' => ['pct' => (float) ($donuts['transactions_success_pct'] ?? 0), 'color' => '#f59e0b', 'caption' => 'Success'],
+                    ],
+                    [
+                        'label' => 'Success Rate',
+                        'value' => number_format($successRate, 2) . '%',
+                        'sub' => 'Completed / total payments',
+                        'tone' => 'bg-pink-200',
+                        'icon' => 'Success rate.svg',
+                        'span' => true,
+                        'donut' => ['pct' => (float) ($donuts['success_rate_pct'] ?? 0), 'color' => '#ec4899', 'caption' => 'Rate'],
+                    ],
                 ];
             @endphp
 
             @foreach ($kpiCards as $kpi)
-                @php
-                    $isSuccessRate = $kpi['label'] === 'Success Rate';
-                @endphp
-                <div class="kpi-card relative flex flex-col overflow-hidden rounded-[20px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-5 {{ $kpi['span'] ? 'col-span-2 lg:col-span-1' : '' }}">
-                    {{-- Decorative illustration on the Success Rate card (right side).
-                         Gently floats via .animate-float (defined in app.css). Hidden from screen readers. --}}
+                @php $isSuccessRate = $kpi['label'] === 'Success Rate'; @endphp
+                <div class="kpi-card relative flex flex-col overflow-hidden rounded-[20px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-5 {{ $kpi['span'] ? 'sm:col-span-2 md:col-span-3 lg:col-span-1' : '' }}">
+                    {{-- Success Rate keeps its floating illustration (no donut). --}}
                     @if ($isSuccessRate)
                         <img
                             src="{{ asset('assets/' . rawurlencode('success rates admin.svg')) }}"
@@ -322,19 +212,35 @@
                     @endif
 
                     <div class="relative z-10 flex flex-1 flex-col {{ $isSuccessRate ? 'pr-24 sm:pr-32' : '' }}">
-                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $kpi['tone'] }} sm:h-11 sm:w-11">
-                            {{-- no-dark-invert keeps the small emoji-style icon in its original
-                                 dark artwork (against the pastel tile) instead of being flipped
-                                 white by the blanket dark-mode SVG invert in app.css. --}}
-                            <img src="{{ asset('assets/' . rawurlencode($kpi['icon'])) }}" alt="" class="no-dark-invert h-5 w-5 sm:h-6 sm:w-6" loading="lazy">
-                        </span>
+                        {{-- Top row: tile icon (left) + animated mini-donut (right).
+                             Donut is suppressed on Success Rate — that card keeps
+                             its decorative illustration instead. --}}
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] {{ $kpi['tone'] }} sm:h-11 sm:w-11">
+                                {{-- no-dark-invert keeps the small emoji-style icon in its
+                                     original dark artwork (against the pastel tile) instead
+                                     of being flipped white by the blanket dark-mode SVG
+                                     invert in app.css. --}}
+                                <img src="{{ asset('assets/' . rawurlencode($kpi['icon'])) }}" alt="" class="no-dark-invert h-5 w-5 sm:h-6 sm:w-6" loading="lazy">
+                            </span>
+                            @unless ($isSuccessRate)
+                                <x-mini-donut
+                                    :percent="$kpi['donut']['pct']"
+                                    :color="$kpi['donut']['color']"
+                                    :size="48"
+                                    :stroke="6"
+                                />
+                            @endunless
+                        </div>
                         {{-- `.kpi-label` / `.kpi-sub` get their dark-mode colour from the
                              inline <style> block at the top of this view — bypasses the
                              Tailwind dark variant which couldn't beat app.css's broader
                              `.dark .text-zinc-600` remap. --}}
                         <p class="kpi-label mt-3 text-xs font-medium text-zinc-600 sm:text-sm">{{ $kpi['label'] }}</p>
                         <p class="mt-0.5 text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{{ $kpi['value'] }}</p>
-                        <p class="kpi-sub mt-auto pt-3 text-[11px] text-zinc-600 sm:text-xs">{{ $kpi['sub'] }}</p>
+                        <p class="kpi-sub mt-auto pt-3 text-[11px] text-zinc-600 sm:text-xs">
+                            {{ $kpi['sub'] }}@unless ($isSuccessRate) · <span class="font-semibold">{{ number_format($kpi['donut']['pct'], 1) }}% {{ $kpi['donut']['caption'] }}</span>@endunless
+                        </p>
                     </div>
                 </div>
             @endforeach
@@ -343,7 +249,7 @@
         </div> {{-- /skeleton-wrap KPIs --}}
 
         {{-- ─── Charts row (placeholder UI — no aggregation endpoints yet) ─ --}}
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
             {{-- Best Selling Countries — jsvectormap world map shaded by sales.
                  Footer carries the Period + Product filters (SPA-navigate the
@@ -355,28 +261,68 @@
                     regions: @js($salesByRegion),
                     codeToContinent: @js($codeToContinent),
                 })"
-                class="flex flex-col rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                class="flex min-w-0 flex-col overflow-hidden rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60"
             >
-                {{-- Header: title (left), Global label (right). Mirrors the
-                     reference — "Global" is purely a scope hint, not a control. --}}
+                {{-- Header: title (left), continent scope dropdown (right).
+                     Picking a continent filters which countries get shaded on
+                     the map — client-side via the Alpine factory's setContinent(). --}}
                 <div class="flex items-start justify-between gap-3">
                     <h2 class="text-base font-semibold text-zinc-900 dark:text-white">Best Selling Countries</h2>
-                    <span class="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-300">
-                        Global
-                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </span>
+                    <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative">
+                        <button
+                            type="button"
+                            @click="open = ! open"
+                            :aria-expanded="open.toString()"
+                            class="flex items-center gap-1.5 rounded-[10px] border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                        >
+                            <span x-text="continent === 'all' ? 'Global' : continent"></span>
+                            <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div
+                            x-show="open"
+                            x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                            style="display:none;"
+                            class="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[10px] bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                            role="menu"
+                        >
+                            @php
+                                $continentOptions = [
+                                    ['key' => 'all',           'label' => 'Global'],
+                                    ['key' => 'Africa',        'label' => 'Africa'],
+                                    ['key' => 'Asia',          'label' => 'Asia'],
+                                    ['key' => 'Europe',        'label' => 'Europe'],
+                                    ['key' => 'North America', 'label' => 'North America'],
+                                    ['key' => 'South America', 'label' => 'South America'],
+                                    ['key' => 'Oceania',       'label' => 'Oceania'],
+                                ];
+                            @endphp
+                            @foreach ($continentOptions as $opt)
+                                <button
+                                    type="button"
+                                    @click="setContinent(@js($opt['key'])); open = false"
+                                    :class="continent === @js($opt['key']) ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]'"
+                                    class="flex w-full items-center justify-between rounded-[10px] px-3 py-1.5 text-left text-xs font-medium transition-colors"
+                                >
+                                    <span>{{ $opt['label'] }}</span>
+                                    <svg x-show="continent === @js($opt['key'])" class="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                    </svg>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
 
                 {{-- Map canvas. jsvectormap renders into x-ref="map" once init()
                      resolves; it lazy-imports the lib + world-merc data. --}}
                 @if (empty($countriesByCode))
-                    <div class="mt-6 flex flex-1 items-center justify-center rounded-xl bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400" style="min-height: 320px;">
+                    <div class="mt-6 flex flex-1 items-center justify-center rounded-[10px] bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400" style="min-height: 320px;">
                         No completed orders in the last {{ $countryDays }} {{ $countryDays === 1 ? 'day' : 'days' }}{{ $countryCategory !== 'all' ? ' for '.$currentCountryCategory : '' }} yet.
                     </div>
                 @else
-                    <div x-ref="map" class="mt-2 flex-1" style="min-height: 320px;"></div>
+                    <div x-ref="map" class="mt-2 w-full max-w-full flex-1 overflow-hidden" style="min-height: 320px;"></div>
                 @endif
 
                 {{-- Footer: Period dropdown + Product dropdown (server-side),
@@ -389,7 +335,7 @@
                                 type="button"
                                 @click="open = ! open"
                                 :aria-expanded="open.toString()"
-                                class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                                class="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
                             >
                                 <span>{{ $currentCountryPeriod }}</span>
                                 <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -400,7 +346,7 @@
                                 x-show="open"
                                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                                 style="display:none;"
-                                class="absolute left-0 bottom-full z-30 mb-2 w-40 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                                class="absolute left-0 bottom-full z-30 mb-2 w-40 overflow-hidden rounded-[10px] bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
                                 role="menu"
                             >
                                 @foreach ($countryPeriods as $p)
@@ -408,7 +354,7 @@
                                         href="?country_days={{ $p['days'] }}&country_cat={{ $countryCategory }}"
                                         wire:navigate
                                         @class([
-                                            'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors',
+                                            'flex w-full items-center justify-between rounded-[10px] px-3 py-1.5 text-left text-xs font-medium transition-colors',
                                             'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' => $currentCountryPeriod === $p['label'],
                                             'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]' => $currentCountryPeriod !== $p['label'],
                                         ])
@@ -430,7 +376,7 @@
                                 type="button"
                                 @click="open = ! open"
                                 :aria-expanded="open.toString()"
-                                class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                                class="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
                             >
                                 <span>{{ $currentCountryCategory }}</span>
                                 <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -441,7 +387,7 @@
                                 x-show="open"
                                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                                 style="display:none;"
-                                class="absolute left-0 bottom-full z-30 mb-2 w-44 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                                class="absolute left-0 bottom-full z-30 mb-2 w-44 overflow-hidden rounded-[10px] bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
                                 role="menu"
                             >
                                 @foreach ($countryCategories as $cat)
@@ -449,7 +395,7 @@
                                         href="?country_days={{ $countryDays }}&country_cat={{ $cat['key'] }}"
                                         wire:navigate
                                         @class([
-                                            'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors',
+                                            'flex w-full items-center justify-between rounded-[10px] px-3 py-1.5 text-left text-xs font-medium transition-colors',
                                             'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' => $currentCountryCategory === $cat['label'],
                                             'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]' => $currentCountryCategory !== $cat['label'],
                                         ])
@@ -467,9 +413,9 @@
                     </div>
 
                     {{-- Country / Region toggle — client-side, repaints the map. --}}
-                    <div class="flex items-center gap-1 rounded-full bg-zinc-100 p-1 dark:bg-[#26416b]">
-                        <button type="button" @click="setView('country')" :class="view === 'country' ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-200'" class="rounded-full px-3 py-1 text-xs font-semibold transition-colors">Country</button>
-                        <button type="button" @click="setView('region')"  :class="view === 'region'  ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-200'" class="rounded-full px-3 py-1 text-xs font-semibold transition-colors">Region</button>
+                    <div class="flex items-center gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#26416b]">
+                        <button type="button" @click="setView('country')" :class="view === 'country' ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-200'" class="rounded-[10px] px-3 py-1 text-xs font-semibold transition-colors">Country</button>
+                        <button type="button" @click="setView('region')"  :class="view === 'region'  ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-200'" class="rounded-[10px] px-3 py-1 text-xs font-semibold transition-colors">Region</button>
                     </div>
                 </div>
             </div>
@@ -482,7 +428,7 @@
                  the chart. --}}
             <div
                 x-data="salesCostChart(@js($salesCostSeries))"
-                class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                class="min-w-0 overflow-hidden rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60"
             >
                 {{-- Header: title + squiggle legend (left), Sales/Cost dropdown (right) --}}
                 <div class="flex items-start justify-between gap-3">
@@ -511,7 +457,7 @@
                             type="button"
                             @click="open = ! open"
                             :aria-expanded="open.toString()"
-                            class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white dark:hover:bg-[#34507a]"
+                            class="flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white dark:hover:bg-[#34507a]"
                         >
                             <span x-text="modeLabel()">Sales / Cost</span>
                             <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -524,7 +470,7 @@
                             x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                             x-transition:leave="transition ease-in duration-100"   x-transition:leave-start="opacity-100 translate-y-0"  x-transition:leave-end="opacity-0 -translate-y-1"
                             style="display:none;"
-                            class="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                            class="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-[10px] bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
                             role="menu"
                         >
                             @foreach ([['both', 'Sales / Cost'], ['sales', 'Sales'], ['cost', 'Cost']] as [$key, $label])
@@ -532,7 +478,7 @@
                                     type="button"
                                     @click="setMode('{{ $key }}'); open = false"
                                     :class="mode === '{{ $key }}' ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]'"
-                                    class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors"
+                                    class="flex w-full items-center justify-between rounded-[10px] px-3 py-1.5 text-left text-xs font-medium transition-colors"
                                 >
                                     {{ $label }}
                                     <svg x-show="mode === '{{ $key }}'" class="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -547,7 +493,7 @@
                 {{-- Empty / chart canvas. ApexCharts renders into x-ref="canvas"
                      once init() resolves; it lazy-imports the lib on demand. --}}
                 @if ($pointCount === 0)
-                    <div class="mt-6 flex h-72 items-center justify-center rounded-xl bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400">
+                    <div class="mt-6 flex h-72 items-center justify-center rounded-[10px] bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400">
                         No completed orders in the last {{ $revenueDays }} {{ $revenueDays === 1 ? 'day' : 'days' }} yet.
                     </div>
                 @else
@@ -563,7 +509,7 @@
                             type="button"
                             @click="open = ! open"
                             :aria-expanded="open.toString()"
-                            class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                            class="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
                         >
                             <span>{{ $currentTrendsLabel }}</span>
                             <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -576,7 +522,7 @@
                             x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                             x-transition:leave="transition ease-in duration-100"   x-transition:leave-start="opacity-100 translate-y-0"  x-transition:leave-end="opacity-0 -translate-y-1"
                             style="display:none;"
-                            class="absolute left-0 bottom-full z-30 mb-2 w-40 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                            class="absolute left-0 bottom-full z-30 mb-2 w-40 overflow-hidden rounded-[10px] bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
                             role="menu"
                         >
                             @foreach ($trendsPeriods as $p)
@@ -584,7 +530,7 @@
                                     href="?revenue_days={{ $p['days'] }}"
                                     wire:navigate
                                     @class([
-                                        'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors',
+                                        'flex w-full items-center justify-between rounded-[10px] px-3 py-1.5 text-left text-xs font-medium transition-colors',
                                         'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' => $currentTrendsLabel === $p['label'],
                                         'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]' => $currentTrendsLabel !== $p['label'],
                                     ])
@@ -608,20 +554,20 @@
         <div>
             {{-- Skeleton overlay removed — same reason as the KPI overlay above.
                  The tables render with the page; no transitional placeholder needed. --}}
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
             {{-- Latest Users --}}
-            <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="min-w-0 overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <div class="flex items-center justify-between border-b border-zinc-200 p-5">
                     <div class="flex items-center gap-2">
                         <img src="{{ asset('assets/' . rawurlencode('user.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
                         <h2 class="text-base font-semibold text-zinc-900">Latest Users</h2>
                     </div>
-                    <a href="{{ route('admin.customers') }}" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
+                    <a href="{{ route('admin.customers') }}" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-[11px]">
+                    <table class="inset-divide w-full text-left text-[11px]">
                         <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-600">
                             <tr>
                                 <th class="px-5 py-3 font-semibold">User</th>
@@ -630,7 +576,7 @@
                                 <th class="px-5 py-3 text-right font-semibold">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-100">
+                        <tbody>
                             @forelse ($latestUsers as $user)
                                 <tr>
                                     <td class="px-5 py-3">
@@ -641,7 +587,7 @@
                                                     default       => 'New male account avatar.png',
                                                 }));
                                             @endphp
-                                            <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-blue-100">
+                                            <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100">
                                             <div class="leading-tight">
                                                 <p class="text-[11px] font-semibold text-zinc-900">{{ $user->name }}</p>
                                                 <p class="text-[10px] text-zinc-600">{{ $user->email }}</p>
@@ -649,15 +595,23 @@
                                         </div>
                                     </td>
                                     <td class="px-5 py-3">
-                                        @if ($user->email_verified_at)
-                                            <span class="inline-flex items-center rounded-[5px] bg-emerald-400 px-2.5 py-0.5 text-xs font-semibold text-white">Active</span>
-                                        @else
-                                            <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Pending</span>
-                                        @endif
+                                        @php
+                                            // Same badge logic as the Customers list page so the dashboard
+                                            // and list view never disagree on a user's status.
+                                            $userStatus = match (true) {
+                                                $user->banned_at !== null => ['label' => 'Banned', 'class' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
+                                                $user->suspended_at !== null => ['label' => 'Suspended', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
+                                                $user->email_verified_at === null => ['label' => 'Pending', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
+                                                default => ['label' => 'Active', 'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'],
+                                            };
+                                        @endphp
+                                        <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $userStatus['class'] }}">
+                                            {{ $userStatus['label'] }}
+                                        </span>
                                     </td>
                                     <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $user->created_at->format('M j, Y') }}</td>
                                     <td class="px-5 py-3 text-right">
-                                        <a href="{{ route('admin.customers') }}" class="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View</a>
+                                        <a href="{{ route('admin.customers') }}" class="inline-flex items-center rounded-[10px] border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View</a>
                                     </td>
                                 </tr>
                             @empty
@@ -671,17 +625,17 @@
             </div>
 
             {{-- Latest Transactions --}}
-            <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-center justify-between border-b border-zinc-200 p-5">
+            <div class="min-w-0 overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <div class="flex items-center justify-between border-b border-zinc-200 p-5 dark:border-zinc-700/60">
                     <div class="flex items-center gap-2">
-                        <img src="{{ asset('assets/' . rawurlencode('Latest transactions.png')) }}" alt="" class="h-5 w-5" loading="lazy">
-                        <h2 class="text-base font-semibold text-zinc-900">Latest Transactions</h2>
+                        <img src="{{ asset('assets/' . rawurlencode('Latest transactions.png')) }}" alt="" class="h-5 w-5 dark:invert dark:brightness-200" loading="lazy">
+                        <h2 class="text-base font-semibold text-zinc-900 dark:text-white">Latest Transactions</h2>
                     </div>
-                    <a href="{{ route('admin.transactions') }}" class="rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50">View All</a>
+                    <a href="{{ route('admin.transactions') }}" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]">View All</a>
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-[11px]">
+                    <table class="inset-divide w-full text-left text-[11px]">
                         <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-600">
                             <tr>
                                 <th class="px-5 py-3 font-semibold">Reference</th>
@@ -692,29 +646,43 @@
                                 <th class="px-5 py-3 font-semibold">Date</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-100">
+                        <tbody>
                             @forelse ($latestTransactions as $tx)
                                 @php
+                                    // Same badge palette as the Transactions list page so the
+                                    // dashboard preview matches the full table 1:1.
                                     $statusValue = $tx->status ?? 'pending';
-                                    $statusClasses = match ($statusValue) {
-                                        'completed' => 'bg-emerald-100 text-emerald-700',
-                                        'failed', 'cancelled' => 'bg-red-100 text-red-700',
-                                        'refunded' => 'bg-zinc-200 text-zinc-700',
-                                        default => 'bg-amber-100 text-amber-700',
+                                    $txStatus = match ($statusValue) {
+                                        'paid', 'completed' => ['label' => 'Paid', 'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'],
+                                        'failed', 'expired', 'cancelled' => ['label' => 'Failed', 'class' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
+                                        'refunded', 'partially_refunded' => ['label' => 'Refunded', 'class' => 'bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-zinc-700/60'],
+                                        'processing', 'reserved' => ['label' => 'Processing', 'class' => 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
+                                        default => ['label' => 'Pending', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
                                     };
-                                    $typeLabel = $tx->source === 'wallet_transaction'
+                                    // Type badge — same ring style as status, with a category
+                                    // tone (blue for payment, purple for wallet) so the two
+                                    // pill columns don't fight visually.
+                                    $isWalletTx = $tx->source === 'wallet_transaction';
+                                    $typeLabel = $isWalletTx
                                         ? 'Wallet · ' . ucfirst(str_replace('_', ' ', (string) $tx->type))
                                         : 'Payment · ' . ucfirst((string) ($tx->gateway ?? 'gateway'));
+                                    $typePillClass = $isWalletTx
+                                        ? 'bg-purple-50 text-purple-700 ring-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:ring-purple-500/30'
+                                        : 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30';
                                     $reference = $tx->reference ?: '#' . $tx->id;
                                 @endphp
                                 <tr>
                                     <td class="px-5 py-3 text-[11px] font-mono text-zinc-600">{{ $reference }}</td>
                                     <td class="px-5 py-3 text-[11px] font-medium text-zinc-900">{{ $tx->customer_name ?? '—' }}</td>
-                                    <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $typeLabel }}</td>
+                                    <td class="px-5 py-3">
+                                        <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $typePillClass }}">
+                                            {{ $typeLabel }}
+                                        </span>
+                                    </td>
                                     <td class="px-5 py-3 text-[11px] font-semibold text-zinc-900">{{ \App\Models\Product::currencySymbol($tx->currency ?? 'USD') }}{{ number_format((float) $tx->amount, 2) }}</td>
                                     <td class="px-5 py-3">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusClasses }}">
-                                            {{ ucfirst((string) $statusValue) }}
+                                        <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $txStatus['class'] }}">
+                                            {{ $txStatus['label'] }}
                                         </span>
                                     </td>
                                     <td class="px-5 py-3 text-[11px] text-zinc-600">{{ \Illuminate\Support\Carbon::parse($tx->date)->format('M j, Y') }}</td>

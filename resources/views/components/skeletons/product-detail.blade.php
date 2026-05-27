@@ -7,7 +7,7 @@
 <div {{ $attributes->class('grid grid-cols-1 gap-8 lg:grid-cols-2') }} aria-hidden="true">
 
     {{-- Hero plate. --}}
-    <x-skeleton class="aspect-[16/10] w-full ring-1 ring-zinc-200" rounded="rounded-[20px]" />
+    <x-skeleton class="aspect-[16/10] w-full ring-1 ring-zinc-200" rounded-[10px]="rounded-[20px]" />
 
     {{-- Buy panel. --}}
     <div class="flex flex-col gap-4">
@@ -24,12 +24,12 @@
         {{-- Denomination chips. --}}
         <div class="mt-1 flex flex-wrap gap-2.5">
             @for ($i = 0; $i < 4; $i++)
-                <x-skeleton class="h-10 w-20" rounded="rounded-[8px]" />
+                <x-skeleton class="h-10 w-20" rounded-[10px]="rounded-[8px]" />
             @endfor
         </div>
 
         {{-- Buy CTA. --}}
-        <x-skeleton class="mt-2 h-[52px] w-full" rounded="rounded-[10px]" />
+        <x-skeleton class="mt-2 h-[52px] w-full" rounded-[10px]="rounded-[10px]" />
 
         {{-- Trust row. --}}
         <div class="flex flex-wrap gap-x-6 gap-y-2">

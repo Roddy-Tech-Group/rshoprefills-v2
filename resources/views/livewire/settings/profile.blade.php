@@ -239,7 +239,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         {{-- Skeleton overlay shown during wire:navigate page transitions — cascading reveal --}}
         <div x-show="navigating" x-cloak class="skeleton-stagger absolute inset-0 z-10 bg-[#eff6ff]" aria-hidden="true">
             <x-skeleton class="h-6 w-44" style="--i: 0" />
-            <div class="mt-2.5 overflow-hidden rounded-3xl bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: 1">
+            <div class="mt-2.5 overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: 1">
                 <div class="flex items-center gap-4 p-6">
                     <x-skeleton shape="circle" class="h-20 w-20" />
                     <div class="flex-1 space-y-2.5">
@@ -265,7 +265,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             <h2 class="text-base font-bold text-zinc-900">Personal Information</h2>
         </div>
 
-        <div class="overflow-hidden rounded-3xl bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+        <div class="overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
             {{-- Hero strip: avatar + name/email + edit toggle --}}
             <div class="relative px-5 pt-6 pb-5 sm:px-6">
                 <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-5">
@@ -277,7 +277,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         x-data="avatarCropper()"
                         @keydown.escape.window="cropperOpen && closeCropper()"
                     >
-                        <span class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-50 ring-4 ring-white shadow-sm shadow-blue-600/10">
+                        <span class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-50 ring-4 ring-white shadow-sm shadow-blue-600/10">
                             <img src="{{ $hasAvatar ? $authUser->avatar_url : $defaultAvatar }}" alt="{{ $authUser?->name ?? 'Account' }}" class="h-full w-full object-cover">
 
                             <span x-show="uploading || saving" x-cloak class="absolute inset-0 flex items-center justify-center bg-white/75 backdrop-blur-sm">
@@ -287,7 +287,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             </span>
                         </span>
 
-                        <button type="button" @click="$refs.fileInput.click()" class="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-2 ring-white transition-transform hover:scale-105 active:scale-95" aria-label="Upload profile photo">
+                        <button type="button" @click="$refs.fileInput.click()" class="absolute -bottom-1 -right-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-[10px] bg-blue-600 text-white shadow-sm shadow-blue-600/30 ring-2 ring-white transition-transform hover:scale-105 active:scale-95" aria-label="Upload profile photo">
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
                             </svg>
@@ -299,7 +299,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         <template x-if="cropperOpen">
                             <div class="fixed inset-0 z-[80] flex items-center justify-center p-4">
                                 <div class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm" @click="!saving && closeCropper()" aria-hidden="true"></div>
-                                <div class="relative w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl shadow-zinc-900/25" role="dialog" aria-modal="true">
+                                <div class="relative w-full max-w-lg rounded-[10px] bg-white p-5 shadow-2xl shadow-zinc-900/25" role="dialog" aria-modal="true">
                                     <div class="flex items-start justify-between gap-3">
                                         <div>
                                             <h3 class="text-base font-bold text-zinc-900">Crop your photo</h3>
@@ -308,14 +308,14 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                                         <x-close-button @click="closeCropper()" :disabled="false" />
                                     </div>
 
-                                    <div class="mt-4 overflow-hidden rounded-xl bg-zinc-100" style="max-height: 60vh;">
+                                    <div class="mt-4 overflow-hidden rounded-[10px] bg-zinc-100" style="max-height: 60vh;">
                                         {{-- Cropper.js mutates this <img>; it must be inside a sized container. --}}
                                         <img x-ref="cropperImage" :src="imageSrc" alt="" class="block max-w-full" style="max-height: 60vh;">
                                     </div>
 
                                     <div class="mt-4 flex flex-wrap items-center gap-2">
-                                        <button type="button" @click="closeCropper()" :disabled="saving" class="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60">Cancel</button>
-                                        <button type="button" @click="saveCrop()" :disabled="saving" class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60">
+                                        <button type="button" @click="closeCropper()" :disabled="saving" class="flex-1 rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60">Cancel</button>
+                                        <button type="button" @click="saveCrop()" :disabled="saving" class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60">
                                             <svg x-show="saving" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -349,7 +349,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         <p class="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-zinc-600">
                             <span class="truncate">{{ $authUser?->email ?? '—' }}</span>
                             @if ($emailVerified)
-                                <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white" title="Email verified">
+                                <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[10px] bg-emerald-500 text-white" title="Email verified">
                                     <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
                                     </svg>
@@ -368,7 +368,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     <button
                         type="button"
                         @click="editingProfile = !editingProfile"
-                        class="hidden shrink-0 items-center gap-1.5 self-start rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 shadow-sm transition-all hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700 active:scale-95 sm:inline-flex"
+                        class="hidden shrink-0 items-center gap-1.5 self-start rounded-[10px] border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 shadow-sm transition-all hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700 active:scale-95 sm:inline-flex"
                         :class="editingProfile && 'border-blue-600 bg-blue-50 text-blue-700'"
                     >
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -388,7 +388,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-600">Full name</p>
                         <p class="mt-0.5 truncate text-sm font-medium text-black">{{ $authUser?->name ?? '—' }}</p>
                     </div>
-                    <button type="button" @click="editingProfile = true" class="rounded-lg p-1.5 text-zinc-600 transition-colors hover:bg-blue-50 hover:text-blue-600" aria-label="Edit full name">
+                    <button type="button" @click="editingProfile = true" class="rounded-[10px] p-1.5 text-zinc-600 transition-colors hover:bg-blue-50 hover:text-blue-600" aria-label="Edit full name">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
                         </svg>
@@ -418,7 +418,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             <p class="mt-0.5 text-[13px] font-medium text-zinc-600 italic">Not set</p>
                         @endif
                     </div>
-                    <span class="rounded-lg p-1.5 text-zinc-600" aria-label="Edit phone">
+                    <span class="rounded-[10px] p-1.5 text-zinc-600" aria-label="Edit phone">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
                         </svg>
@@ -435,7 +435,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             <p class="mt-0.5 text-[13px] font-medium text-zinc-600 italic">Not set</p>
                         @endif
                     </div>
-                    <span class="rounded-lg p-1.5 text-zinc-600" aria-label="Edit gender">
+                    <span class="rounded-[10px] p-1.5 text-zinc-600" aria-label="Edit gender">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/>
                         </svg>
@@ -451,7 +451,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             <span x-text="country">Cameroon</span>
                         </p>
                     </div>
-                    <span class="rounded-lg p-1.5 text-zinc-600" aria-label="Change country">
+                    <span class="rounded-[10px] p-1.5 text-zinc-600" aria-label="Change country">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
                         </svg>
@@ -464,7 +464,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                 <button
                     type="button"
                     @click="editingProfile = !editingProfile"
-                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-[0.98]"
+                    class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-[0.98]"
                     :class="editingProfile && '!bg-blue-700'"
                 >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -489,7 +489,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             id="profile-name"
                             type="text"
                             required
-                            class="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                             placeholder="Your full name"
                         />
                         @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -502,7 +502,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             id="profile-email"
                             type="email"
                             required
-                            class="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                             placeholder="you@example.com"
                         />
                         @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -516,7 +516,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             type="tel"
                             inputmode="tel"
                             autocomplete="tel"
-                            class="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                             placeholder="+237 6XX XXX XXX"
                         />
                         @error('phone') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -533,7 +533,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                                 <button
                                     type="button"
                                     wire:click="$set('gender', '{{ $opt['value'] }}')"
-                                    class="flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-semibold transition-all active:scale-95 {{ $gender === $opt['value'] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400' }}"
+                                    class="flex flex-col items-center gap-1 rounded-[10px] border px-2 py-2.5 text-xs font-semibold transition-all active:scale-95 {{ $gender === $opt['value'] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400' }}"
                                     aria-pressed="{{ $gender === $opt['value'] ? 'true' : 'false' }}"
                                 >
                                     <img src="{{ asset('assets/' . $opt['icon']) }}" alt="" class="h-5 w-5" loading="lazy">
@@ -545,7 +545,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     </div>
 
                     <div class="flex items-center gap-2 pt-1">
-                        <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-[0.98]">
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/25 transition-all hover:bg-blue-700 active:scale-[0.98]">
                             <span wire:loading.remove wire:target="updateProfileInformation">Save changes</span>
                             <span wire:loading wire:target="updateProfileInformation" class="inline-flex items-center gap-2">
                                 <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -554,7 +554,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                                 Saving
                             </span>
                         </button>
-                        <button type="button" @click="editingProfile = false" class="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">Cancel</button>
+                        <button type="button" @click="editingProfile = false" class="rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -567,8 +567,8 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
 
         <div class="flex flex-col gap-3">
             {{-- Change password card --}}
-            <a href="{{ route('dashboard.password') }}" wire:navigate class="relative flex items-center gap-4 overflow-hidden rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-800 text-white">
+            <a href="{{ route('dashboard.password') }}" wire:navigate class="relative flex items-center gap-4 overflow-hidden rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
                     </svg>
@@ -583,8 +583,8 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             </a>
 
             {{-- Google connection card --}}
-            <div class="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white ring-1 ring-zinc-200">
+            <div class="flex items-center gap-4 rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-white ring-1 ring-zinc-200">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0012 23z"/>
@@ -610,7 +610,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         Connected
                     </span>
                 @else
-                    <a href="{{ route('auth.google.redirect') }}" class="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">Connect</a>
+                    <a href="{{ route('auth.google.redirect') }}" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">Connect</a>
                 @endif
             </div>
 
@@ -628,9 +628,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     <section>
         <h2 class="mb-2.5 text-base font-bold text-zinc-900">Appearance</h2>
 
-        <div class="rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
+        <div class="rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
             <div class="mb-4 flex items-start gap-3">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.61-1.611l-5.815 3.875a15.994 15.994 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42"/>
                     </svg>
@@ -650,13 +650,13 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                 ];
             @endphp
 
-            <div x-data="{ theme: localStorage.getItem('theme') || 'system' }" x-init="$watch('theme', v => window.setTheme(v))" class="grid grid-cols-3 gap-2 rounded-2xl bg-zinc-100 p-1">
+            <div x-data="{ theme: localStorage.getItem('theme') || 'system' }" x-init="$watch('theme', v => window.setTheme(v))" class="grid grid-cols-3 gap-2 rounded-[10px] bg-zinc-100 p-1">
                 @foreach ($themeOptions as $opt)
                     <button
                         type="button"
                         @click="theme = '{{ $opt['value'] }}'"
                         :class="theme === '{{ $opt['value'] }}' ? 'bg-white text-black shadow-sm ring-1 ring-zinc-200' : 'text-zinc-600 hover:bg-white/70 hover:text-black hover:shadow-sm'"
-                        class="flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-95"
+                        class="flex flex-col items-center gap-1.5 rounded-[10px] px-2 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-95"
                         :aria-pressed="theme === '{{ $opt['value'] }}'"
                     >
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -673,7 +673,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     <section>
         <h2 class="mb-2.5 text-base font-bold text-zinc-900">Notifications</h2>
 
-        <div class="divide-y divide-zinc-100 overflow-hidden rounded-2xl bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+        <div class="divide-y divide-zinc-100 overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
             @php
                 // [key, current value, label, description, heroicon path]
                 $notifyRows = [
@@ -687,7 +687,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             @foreach ($notifyRows as [$key, $on, $label, $desc, $iconPath])
                 <div class="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
                     <span class="flex items-center gap-3">
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-white">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}"/>
                             </svg>
@@ -703,9 +703,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         aria-checked="{{ $on ? 'true' : 'false' }}"
                         aria-label="{{ $label }}"
                         wire:click="toggleNotification('{{ $key }}')"
-                        class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $on ? 'bg-blue-600' : 'bg-zinc-200' }}"
+                        class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-[10px] transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $on ? 'bg-blue-600' : 'bg-zinc-200' }}"
                     >
-                        <span class="pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-300 {{ $on ? 'translate-x-5' : 'translate-x-0.5' }}"></span>
+                        <span class="pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-[10px] bg-white shadow ring-0 transition-transform duration-300 {{ $on ? 'translate-x-5' : 'translate-x-0.5' }}"></span>
                     </button>
                 </div>
             @endforeach
@@ -721,7 +721,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     <section class="mt-2">
         <h2 class="mb-2.5 text-base font-bold text-red-600">Danger zone</h2>
 
-        <div class="overflow-hidden rounded-2xl bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+        <div class="overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
             {{-- Logout --}}
             <form method="POST" action="{{ route('logout') }}" class="border-b border-zinc-100">
                 @csrf
@@ -730,7 +730,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left sm:px-6"
                 >
                     <span class="flex items-center gap-3">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-zinc-800 text-white">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
                             </svg>

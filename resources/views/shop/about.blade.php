@@ -90,7 +90,7 @@
 
                         <p>Today, RShopRefill connects users to digital products and essential services across multiple countries and regions. From gift cards purchased directly from global brands, to instant eSIM activation that keeps travelers connected anywhere in the world, to airtime and utility top-ups that remove dependence on physical stores, the platform is designed around convenience, accessibility, and speed. Beyond digital products, RShopRefill continues expanding its ecosystem to include flights, global stays, and modern financial accessibility tools that help users move, shop, travel, and live without borders. By supporting crypto and multiple payment methods, the platform empowers users to spend value in the way most convenient to them, whether paying bills, sending gifts, purchasing services, or managing everyday digital needs. RShopRefill is more than a marketplace. It is infrastructure for a connected generation. The company's mission is to eliminate the stress of failed payments, region limitations, and fragmented digital services by creating one unified platform where technology, commerce, travel, and connectivity work seamlessly together.</p>
 
-                        <div class="rounded-xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                             <p class="text-base font-bold text-blue-700">Built for speed.</p>
                             <p class="text-base font-bold text-blue-700">Designed for convenience.</p>
                             <p class="text-base font-bold text-blue-700">Powered by innovation.</p>

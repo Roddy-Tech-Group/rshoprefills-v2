@@ -53,15 +53,17 @@ class extends Component {
 @php
     $countryNames = array_flip(config('countries.codes', [])); // ISO -> name
 
-    // Status word + colour for the order summary line.
+    // Unified status badge tones — same recipe as the admin list pages so the
+    // customer's view of an order matches what the admin sees. Each entry is
+    // [label, pillClass] where pillClass slots into the shared badge wrapper.
     $statusUi = [
-        'completed'           => ['Succeeded', 'text-emerald-600'],
-        'partially_completed' => ['Partially complete', 'text-amber-600'],
-        'processing'          => ['Processing', 'text-blue-600'],
-        'pending'             => ['Pending', 'text-amber-600'],
-        'failed'              => ['Failed', 'text-red-600'],
-        'cancelled'           => ['Cancelled', 'text-zinc-500'],
-        'requires_attention'  => ['Needs review', 'text-amber-600'],
+        'completed'           => ['Succeeded',          'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'],
+        'partially_completed' => ['Partially complete', 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
+        'processing'          => ['Processing',         'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
+        'pending'             => ['Pending',            'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
+        'failed'              => ['Failed',             'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
+        'cancelled'           => ['Cancelled',          'bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-zinc-700/60'],
+        'requires_attention'  => ['Needs review',       'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
     ];
 
     // Generic payment label — the gateway/provider name is never shown.
@@ -109,8 +111,8 @@ class extends Component {
                     </svg>
                 </div>
             </div>
-            <label class="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-xl px-1 py-2">
-                <input type="checkbox" wire:model.live="expired" class="h-5 w-5 rounded-md border-2 border-zinc-300 text-blue-600 focus:ring-2 focus:ring-blue-500/30">
+            <label class="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-[10px] px-1 py-2">
+                <input type="checkbox" wire:model.live="expired" class="h-5 w-5 rounded-[10px] border-2 border-zinc-300 text-blue-600 focus:ring-2 focus:ring-blue-500/30">
                 <span class="text-sm font-semibold text-zinc-700">Expired orders</span>
             </label>
         </div>
@@ -121,7 +123,7 @@ class extends Component {
         <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
             @foreach ($orders as $order)
                 @php
-                    [$statusLabel, $statusColor] = $statusUi[$order->order_status->value] ?? ['Placed', 'text-amber-600'];
+                    [$statusLabel, $statusPillClass] = $statusUi[$order->order_status->value] ?? ['Placed', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
                     $points = (int) floor((float) $order->total_amount * 0.5);
                 @endphp
                 <div x-data="{ open: false }" wire:key="order-{{ $order->id }}">
@@ -139,7 +141,9 @@ class extends Component {
 
                     {{-- Summary (always visible) --}}
                     <div class="px-5 pb-4 pt-2.5">
-                        <p class="text-sm font-semibold {{ $statusColor }}">{{ $statusLabel }}</p>
+                        <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $statusPillClass }}">
+                            {{ $statusLabel }}
+                        </span>
                         @php
                             // Group exploded OrderItem rows by variant so "2× Apple $5"
                             // shows as a single summary line instead of two "1× Apple $5".
@@ -400,7 +404,7 @@ class extends Component {
                                         {{-- Mobile top-up — no code to copy; airtime lands on the
                                              recipient phone. Tile confirms the number that was credited. --}}
                                         <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3">
-                                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+                                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
                                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
                                                 </svg>
@@ -511,8 +515,8 @@ class extends Component {
         </div>
     @else
         {{-- Empty state --}}
-        <div class="rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
-            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+        <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/>
                 </svg>

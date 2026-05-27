@@ -11,7 +11,7 @@
         <div class="flex w-max gap-4 sm:grid sm:w-full sm:grid-cols-3 sm:gap-5">
 
         {{-- Step 1 — Pick a product --}}
-        <article class="w-72 shrink-0 overflow-hidden rounded-2xl bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
+        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
                     src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
@@ -29,7 +29,7 @@
         </article>
 
         {{-- Step 2 — Pay with crypto --}}
-        <article class="w-72 shrink-0 overflow-hidden rounded-2xl bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
+        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
                     src="{{ asset('assets/' . rawurlencode('pay with crypto momo +.png')) }}"
@@ -47,7 +47,7 @@
         </article>
 
         {{-- Step 3 — Receive instantly --}}
-        <article class="w-72 shrink-0 overflow-hidden rounded-2xl bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
+        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
                     src="{{ asset('assets/' . rawurlencode('step 3.png')) }}"

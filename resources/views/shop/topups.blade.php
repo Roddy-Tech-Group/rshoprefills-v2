@@ -178,7 +178,7 @@
                         >
                             <div
                                 :class="open ? 'border-zinc-900 ring-1 ring-zinc-900/10' : 'border-zinc-200 hover:border-zinc-400'"
-                                class="flex w-full items-center gap-1 rounded-xl border bg-white py-2.5 pl-3.5 pr-2.5 text-sm text-zinc-900 transition-colors"
+                                class="flex w-full items-center gap-1 rounded-[10px] border bg-white py-2.5 pl-3.5 pr-2.5 text-sm text-zinc-900 transition-colors"
                             >
                                 <button
                                     type="button"
@@ -198,7 +198,7 @@
                                         href="{{ $filterUrl(['country' => 'US']) }}"
                                         wire:navigate
                                         aria-label="Clear country filter"
-                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 transition-colors hover:bg-zinc-300"
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300"
                                     >
                                         <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                                     </a>
@@ -222,7 +222,7 @@
                                 x-transition:enter="transition ease-out duration-150"
                                 x-transition:enter-start="opacity-0 -translate-y-1"
                                 x-transition:enter-end="opacity-100 translate-y-0"
-                                class="absolute left-0 right-0 z-30 mt-1 overflow-hidden rounded-xl bg-white/80 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 backdrop-blur-xl"
+                                class="absolute left-0 right-0 z-30 mt-1 overflow-hidden rounded-[10px] bg-white/80 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 backdrop-blur-xl"
                             >
                                 <div class="border-b border-zinc-100 p-2">
                                     <input
@@ -230,7 +230,7 @@
                                         x-model="q"
                                         type="text"
                                         placeholder="Search countries"
-                                        class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10"
+                                        class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10"
                                     >
                                 </div>
                                 <div class="max-h-72 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -239,7 +239,7 @@
                                             href="{{ $filterUrl(['country' => $opt['code']]) }}"
                                             wire:navigate
                                             x-show="q === '' || '{{ strtolower(addslashes($opt['name'])) }}'.includes(q.toLowerCase())"
-                                            class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $country === $opt['code'] ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100' }}"
+                                            class="flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors {{ $country === $opt['code'] ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100' }}"
                                         >
                                             @if (Product::flagUrl($opt['code']))
                                                 <img src="{{ Product::flagUrl($opt['code']) }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
@@ -252,7 +252,7 @@
                         </div>
 
                         {{-- Modern segmented sort selector. URL-driven so the choice survives reloads. --}}
-                        <div class="inline-flex shrink-0 items-center rounded-xl bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort networks">
+                        <div class="inline-flex shrink-0 items-center rounded-[10px] bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort networks">
                             @foreach ([
                                 ['value' => 'popular',   'label' => 'Popularity'],
                                 ['value' => 'name-asc',  'label' => 'A → Z'],
@@ -263,7 +263,7 @@
                                     wire:navigate
                                     role="tab"
                                     aria-selected="{{ $sort === $opt['value'] ? 'true' : 'false' }}"
-                                    class="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold transition-all {{ $sort === $opt['value'] ? 'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' : 'text-zinc-600 hover:bg-white/70 hover:text-zinc-900' }}"
+                                    class="inline-flex items-center justify-center rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-all {{ $sort === $opt['value'] ? 'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' : 'text-zinc-600 hover:bg-white/70 hover:text-zinc-900' }}"
                                 >
                                     {{ $opt['label'] }}
                                 </a>
@@ -278,7 +278,7 @@
                                 <a
                                     href="{{ $filterUrl(['subcategory' => null]) }}"
                                     wire:navigate
-                                    class="inline-flex shrink-0 items-center rounded-full px-4 py-1.5 text-xs font-semibold transition-colors {{ $sub === '' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200' }}"
+                                    class="inline-flex shrink-0 items-center rounded-[10px] px-4 py-1.5 text-xs font-semibold transition-colors {{ $sub === '' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200' }}"
                                 >
                                     All networks
                                 </a>
@@ -286,7 +286,7 @@
                                     <a
                                         href="{{ $filterUrl(['subcategory' => $s->slug]) }}"
                                         wire:navigate
-                                        class="inline-flex shrink-0 items-center rounded-full px-4 py-1.5 text-xs font-semibold transition-colors {{ $sub === $s->slug ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200' }}"
+                                        class="inline-flex shrink-0 items-center rounded-[10px] px-4 py-1.5 text-xs font-semibold transition-colors {{ $sub === $s->slug ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200' }}"
                                     >
                                         {{ $s->name }}
                                     </a>
@@ -331,7 +331,7 @@
                                                 @endif
 
                                                 @if ($isOut)
-                                                    <span class="absolute bottom-2 right-2 inline-flex items-center rounded-md bg-zinc-900/85 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+                                                    <span class="absolute bottom-2 right-2 inline-flex items-center rounded-[10px] bg-zinc-900/85 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
                                                         Out of stock
                                                     </span>
                                                 @elseif ($product->is_popular)
@@ -359,7 +359,7 @@
                             </ul>
 
                         @else
-                            <div class="rounded-3xl bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
+                            <div class="rounded-[10px] bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
                                 <img src="{{ asset('assets/' . rawurlencode('Empty state.png')) }}" alt="" class="mx-auto block h-44 w-auto object-contain" loading="lazy">
                                 @if ($search !== '' || $countryFiltered || $sub !== '')
                                     <p class="mt-4 text-base font-semibold text-zinc-900">No networks match these filters</p>

@@ -91,6 +91,32 @@ body {
     scrollbar-width: thin;
     scrollbar-color: #c4cad6 transparent;
 }
+
+/* Active sidebar item in dark mode — black tile with white icons.
+   The class lives on every active <a>/<button> in admin + customer sidebars
+   (see navItem/navItemClass closures in the layout views). In light mode the
+   active state is the soft blue tint shipped by Tailwind utilities; in dark
+   mode the dark:bg-zinc-900 utility wins. This rule whitens the icon — both
+   <img>-loaded SVGs (filter invert) and inline <svg> with stroke=currentColor
+   (text color cascades). Works in both expanded and collapsed sidebar. */
+html.dark .nav-item-active img {
+    filter: brightness(0) invert(1) !important;
+}
+html.dark .nav-item-active svg {
+    color: #ffffff;
+}
+/* Mobile-only horizontal-overflow lock. Stops dropdowns / off-canvas panels
+   / decorative gradients from pushing the viewport wider than the screen.
+   Disabled at lg+ because the collapsed-sidebar flyout popups deliberately
+   render past the sidebar's right edge into the page area — clipping the
+   body there would hide them. `overflow-x: clip` doesn't create a new
+   scroll container, so sticky positioning keeps working on mobile. */
+@media (max-width: 1023px) {
+    html,
+    body {
+        overflow-x: clip;
+    }
+}
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
     display: block;
@@ -352,14 +378,15 @@ select:focus[data-flux-control] {
 }
 
 /* Surfaces — light backgrounds resolve to the navy dark ramp. */
-/* Cards — navy. Also <flux:main> (it carries `bg-white`): it frames the content
-   panel, sitting one step lighter than the panel's #070f1c so the rounded-tl
-   corner reads as a clean curve, the way white frames the pale panel in light mode. */
-.dark .bg-white          { background-color: #0c1a2e; }
-.dark .bg-zinc-50        { background-color: #101f33; }
-.dark .bg-zinc-100       { background-color: #070f1c; }   /* page background */
-.dark .bg-zinc-200       { background-color: #1a2b42; }   /* chips, hover, x-button */
-.dark .bg-\[\#eff6ff\]   { background-color: #070f1c; }   /* admin / customer page bg */
+/* Deep Charcoal Blue palette. One base (#0c1a36) for chrome + page, one step
+   up (#162a4a) for cards/panels, a touch lighter again (#1d3252) for elevated
+   surfaces, and a dim grey-blue (#26416b) for chips / hovers. Sub-base (#070f1c)
+   is reserved for the deepest seam (sidebar hover, recessed inputs). */
+.dark .bg-white          { background-color: #162a4a; }   /* cards / panels */
+.dark .bg-zinc-50        { background-color: #1d3252; }   /* slightly elevated */
+.dark .bg-zinc-100       { background-color: #0c1a36; }   /* page-level surface */
+.dark .bg-zinc-200       { background-color: #26416b; }   /* chips, hover */
+.dark .bg-\[\#eff6ff\]   { background-color: #0c1a36; }   /* admin / customer page bg */
 /* The customer dashboard puts `flux:main` at `lg:bg-white` so the curve element
    on top of it has something to round against. `bg-white` becomes `#0c1a2e` in
    dark mode (the sidebar colour), which made the curved corner reveal a wedge
