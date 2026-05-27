@@ -197,9 +197,9 @@ return [
     */
 
     'defaults' => [
-        'supervisor-1' => [
+        'supervisor-webhooks' => [
             'connection' => 'redis',
-            'queue' => ['critical', 'webhooks', 'payments', 'fulfillment', 'airalo', 'zendit', 'notifications', 'default'],
+            'queue' => ['critical', 'webhooks'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,
@@ -207,23 +207,65 @@ return [
             'maxJobs' => 0,
             'memory' => 128,
             'tries' => 3,
-            'timeout' => 90, // Increased timeout to accommodate Zendit API HTTP waits
+            'timeout' => 90,
+            'nice' => 0,
+        ],
+        'supervisor-fulfillment' => [
+            'connection' => 'redis',
+            'queue' => ['zendit', 'airalo', 'fulfillment'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 90,
+            'nice' => 0,
+        ],
+        'supervisor-default' => [
+            'connection' => 'redis',
+            'queue' => ['payments', 'notifications', 'default', 'rewards'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 90,
             'nice' => 0,
         ],
     ],
 
     'environments' => [
         'production' => [
-            'supervisor-1' => [
-                'maxProcesses' => 20,
+            'supervisor-webhooks' => [
+                'maxProcesses' => 10,
                 'balanceMaxShift' => 2,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-fulfillment' => [
+                'maxProcesses' => 15,
+                'balanceMaxShift' => 2,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-default' => [
+                'maxProcesses' => 5,
+                'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
         ],
 
         'local' => [
-            'supervisor-1' => [
-                'maxProcesses' => 5,
+            'supervisor-webhooks' => [
+                'maxProcesses' => 3,
+            ],
+            'supervisor-fulfillment' => [
+                'maxProcesses' => 3,
+            ],
+            'supervisor-default' => [
+                'maxProcesses' => 3,
             ],
         ],
     ],

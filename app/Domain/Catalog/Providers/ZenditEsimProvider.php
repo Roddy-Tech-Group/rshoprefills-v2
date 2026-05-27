@@ -13,9 +13,9 @@ class ZenditEsimProvider implements ProviderInterface
 
     public function __construct()
     {
-        $this->apiKey = config('services.zendit.api_key', env('ZENDIT_API_KEY', ''));
+        $this->apiKey = config('services.zendit.api_key', '');
 
-        $explicitUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL');
+        $explicitUrl = config('services.zendit.base_url');
         if ($explicitUrl) {
             $this->baseUrl = $explicitUrl;
         } elseif (str_starts_with($this->apiKey, 'sand_')) {

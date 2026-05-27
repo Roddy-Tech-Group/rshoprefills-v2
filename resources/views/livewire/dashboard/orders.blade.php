@@ -124,7 +124,7 @@ class extends Component {
             @foreach ($orders as $order)
                 @php
                     [$statusLabel, $statusPillClass] = $statusUi[$order->order_status->value] ?? ['Placed', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
-                    $points = (int) floor((float) $order->total_amount * 0.5);
+                    $points = app(\App\Domain\Rewards\Services\RewardEngine::class)->usdToRcoin((float) $order->total_amount * ((float) \App\Models\Setting::get('cashback_percentage', 1.0) / 100));
                 @endphp
                 <div x-data="{ open: false }" wire:key="order-{{ $order->id }}">
                     {{-- Header (always visible) --}}

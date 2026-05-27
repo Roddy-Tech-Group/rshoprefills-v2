@@ -17,8 +17,8 @@ class CheckZenditBalanceCommand extends Command
     public function handle()
     {
         $threshold = (float) $this->option('threshold');
-        $apiKey = config('services.zendit.api_key') ?: env('ZENDIT_API_KEY');
-        $baseUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL', 'https://api.zendit.io/v1');
+        $apiKey = config('services.zendit.api_key');
+        $baseUrl = config('services.zendit.base_url', 'https://api.zendit.io/v1');
 
         if (empty($apiKey) || str_contains($apiKey, 'MOCK')) {
             $this->info('Zendit API Key is missing or in MOCK mode. Skipping balance check.');
@@ -51,8 +51,8 @@ class CheckZenditBalanceCommand extends Command
                 Log::critical($msg);
 
                 // Alert Admin via CriticalSystemAlert
-                // Retrieve the admin email from config/env, fallback to a default if not set
-                $adminEmail = env('ADMIN_ALERT_EMAIL', 'admin@roddytechgroup.com');
+                // Retrieve the admin email from config, fallback to a default if not set
+                $adminEmail = config('mail.admin_address', 'admin@roddytechgroup.com');
 
                 Notification::route('mail', $adminEmail)
                     ->notify(new CriticalSystemAlert(

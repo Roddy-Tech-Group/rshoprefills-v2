@@ -1,11 +1,8 @@
 <?php
 
-use App\Providers\AppServiceProvider;
-use App\Providers\FolioServiceProvider;
-use App\Providers\VoltServiceProvider;
-
 return [
-    AppServiceProvider::class,
-    FolioServiceProvider::class,
-    VoltServiceProvider::class,
+    App\Providers\AppServiceProvider::class,
+    App\Providers\FolioServiceProvider::class,
+    App\Providers\HorizonServiceProvider::class,
+    App\Providers\VoltServiceProvider::class,
 ];

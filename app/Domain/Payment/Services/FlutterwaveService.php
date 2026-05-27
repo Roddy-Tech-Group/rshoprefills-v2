@@ -19,8 +19,8 @@ class FlutterwaveService
 
     public function __construct()
     {
-        $this->secretKey = config('services.flutterwave.secret_key', env('FLW_SECRET_KEY', ''));
-        $this->webhookHash = config('services.flutterwave.webhook_hash', env('FLW_WEBHOOK_HASH', ''));
+        $this->secretKey = config('services.flutterwave.secret_key', '');
+        $this->webhookHash = config('services.flutterwave.webhook_hash', '');
         $this->baseUrl = 'https://api.flutterwave.com/v3';
     }
 

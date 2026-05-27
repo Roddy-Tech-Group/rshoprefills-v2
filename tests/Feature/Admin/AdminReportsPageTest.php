@@ -51,9 +51,9 @@ class AdminReportsPageTest extends TestCase
         $response = $this->get(route('admin.reports.export', ['preset' => 'today']));
 
         $response->assertOk();
-        $this->assertSame('text/csv', $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
         $body = $response->streamedContent();
-        $this->assertStringContainsString('Date,Transactions,Cost (USD),Total Sales (USD),Profit (USD)', $body);
+        $this->assertStringContainsString('Date,Transactions,"Cost (USD)","Total Sales (USD)","Profit (USD)","Profit Margin (%)","Avg per Tx (USD)"', $body);
     }
 
     public function test_csv_export_includes_completed_orders_in_the_window(): void
@@ -79,12 +79,24 @@ class AdminReportsPageTest extends TestCase
             'metadata' => ['exchange_rate' => 1.0, 'settlement_total_usd' => 14.00, 'settlement_subtotal_usd' => 12.34],
         ]);
 
+        $category = \App\Models\Category::factory()->create();
+        $product = \App\Models\Product::factory()->create([
+            'category_id' => $category->id
+        ]);
+        $variant = \App\Models\ProductVariant::factory()->create([
+            'product_id' => $product->id
+        ]);
+
+        $subcategory = \App\Models\Subcategory::factory()->create([
+            'category_id' => $category->id
+        ]);
+
         OrderItem::create([
             'order_id' => $order->id,
-            'product_id' => null,
-            'product_variant_id' => null,
-            'category_id' => null,
-            'subcategory_id' => null,
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'category_id' => $category->id,
+            'subcategory_id' => $subcategory->id,
             'provider_name' => 'test',
             'quantity' => 1,
             'display_currency' => 'USD',

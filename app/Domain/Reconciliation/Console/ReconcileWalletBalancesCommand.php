@@ -60,7 +60,7 @@ class ReconcileWalletBalancesCommand extends Command
         if (count($anomalies) > 0) {
             $this->error('Reconciliation finished with '.count($anomalies).' anomalies.');
 
-            $adminEmail = env('ADMIN_ALERT_EMAIL', 'admin@roddytechgroup.com');
+            $adminEmail = config('mail.admin_address', 'admin@roddytechgroup.com');
             Notification::route('mail', $adminEmail)
                 ->notify(new CriticalSystemAlert(
                     title: 'Financial Ledger Anomaly Detected',

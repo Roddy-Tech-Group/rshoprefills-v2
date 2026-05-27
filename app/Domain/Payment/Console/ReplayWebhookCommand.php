@@ -25,7 +25,15 @@ class ReplayWebhookCommand extends Command
             return;
         }
 
-        $session = $order->paymentAttempts()->latest()->first()?->paymentSession;
+        $attempt = $order->paymentAttempts()->latest()->first();
+
+        if (! $attempt) {
+            $this->error("No payment attempt found for Order {$orderNumber}.");
+
+            return;
+        }
+
+        $session = $attempt->paymentSession;
 
         if (! $session) {
             $this->error("No payment session found for Order {$orderNumber}.");
@@ -33,8 +41,8 @@ class ReplayWebhookCommand extends Command
             return;
         }
 
-        if ($session->status !== 'paid') {
-            $this->warn("Payment session is not marked as paid. Status: {$session->status}");
+        if ($session->status !== 'confirmed') {
+            $this->warn("Payment session is not marked as confirmed. Status: {$session->status}");
             if (! $this->confirm('Do you want to proceed anyway?')) {
                 return;
             }
@@ -43,13 +51,7 @@ class ReplayWebhookCommand extends Command
         $this->info("Replaying webhook for Order {$orderNumber} (Provider: {$provider})...");
 
         // The job simulates a successful verification, driving fulfillment
-        VerifyPaymentJob::dispatch(
-            $order->id,
-            $session->reference,
-            $session->amount,
-            $session->currency,
-            $provider
-        );
+        VerifyPaymentJob::dispatch($attempt);
 
         $this->info('VerifyPaymentJob dispatched. Fulfillment should begin shortly.');
     }
