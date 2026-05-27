@@ -141,8 +141,12 @@ new #[Lazy] class extends Component
             ];
         })->values();
 
+        $rcoinWallet = $user->wallets()->where('currency', 'RCOIN')->first();
+        $rcoinBalance = (int) ($rcoinWallet?->balance ?? 0);
+
         return [
             'user' => $user,
+            'rcoinBalance' => $rcoinBalance,
             'walletBalance' => $walletBalance,
             'walletCurrencyCode' => $walletCurrencyCode,
             'walletCurrencyCase' => $walletCurrencyCase,
@@ -211,8 +215,8 @@ new #[Lazy] class extends Component
                 <div class="min-w-0 flex-1">
                     <p class="text-sm font-semibold text-zinc-900">RShop Rcoin</p>
                     <div class="mt-1 flex items-center gap-2">
-                        <span class="text-2xl font-bold tracking-tight text-zinc-900">0</span>
-                        <span class="rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">New Member</span>
+                        <span class="text-2xl font-bold tracking-tight text-zinc-900">{{ number_format($rcoinBalance) }}</span>
+                        <span class="rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Member</span>
                     </div>
                 </div>
             </div>
@@ -933,8 +937,8 @@ new #[Lazy] class extends Component
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-zinc-900">RShop Rcoin</p>
                             <div class="mt-1 flex items-center gap-2">
-                                <span class="text-2xl font-bold tracking-tight text-zinc-900">0</span>
-                                <span class="rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">New Member</span>
+                                <span class="text-2xl font-bold tracking-tight text-zinc-900">{{ number_format($rcoinBalance) }}</span>
+                                <span class="rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Member</span>
                             </div>
                         </div>
                     </div>

@@ -37,6 +37,11 @@
     }
 
     $fieldClass = 'mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
+
+    $rcoinConfig = [
+        'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
+        'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+    ];
 @endphp
 
 <x-layouts.app.header :title="'Checkout | RshopRefills'">
@@ -50,7 +55,7 @@
             </div>
         @endif
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
             <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white py-24 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -110,7 +115,7 @@
                                     <p class="mt-1 inline-flex items-center gap-1 text-xs text-zinc-600">
                                         <span x-text="item.quantity"></span> x
                                         <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-3.5 w-3.5 object-contain">
-                                        <span class="font-semibold text-zinc-900" x-text="Math.floor((item.line_total_usd || 0) * 0.5)"></span> Points
+                                        <span class="font-semibold text-zinc-900" x-text="Math.floor(((item.line_total_usd || 0) * (rcoinConfig.cashback_percentage / 100)) / rcoinConfig.usd_rate)"></span> Points
                                     </p>
                                 </div>
 
@@ -769,7 +774,7 @@
     </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn) {
+        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig) {
             return {
                 method: 'card',
                 crypto: '',
@@ -849,6 +854,7 @@
                 applePayAvailable: false,
 
                 init() {
+                    this.rcoinConfig = rcoinConfig;
                     this.resetCardDetails();
                     try {
                         this.applePayAvailable = !! (
@@ -978,7 +984,7 @@
                 },
 
                 points() {
-                    return Math.floor(Number(this.$store.cart.subtotalUsd || 0) * 0.5);
+                    return this.$store.cart.estimated_rcoin_reward || 0;
                 },
 
                 hasSufficientWalletBalance() {

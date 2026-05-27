@@ -100,6 +100,7 @@ class CheckoutController extends Controller
                 paymentMethod: $paymentMethod,
                 displayCurrency: $displayCurrency,
                 deliveryEmail: $data['delivery_email'],
+                applyRcoin: $request->boolean('apply_rcoin')
             );
 
             $fraudService->recordCheckout($user, $request->ip());

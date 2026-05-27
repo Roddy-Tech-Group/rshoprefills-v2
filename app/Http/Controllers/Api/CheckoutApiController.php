@@ -36,7 +36,8 @@ class CheckoutApiController extends Controller
                 cart: $cart,
                 paymentMethod: $validated['payment_method'],
                 displayCurrency: strtoupper($validated['preferred_currency']),
-                deliveryEmail: $validated['delivery_email'] ?? null
+                deliveryEmail: $validated['delivery_email'] ?? null,
+                applyRcoin: $request->boolean('apply_rcoin')
             );
 
             $order->load(['items', 'paymentAttempts', 'paymentAttempts.paymentSession']);

@@ -246,6 +246,10 @@
             plans: @js($plans),
             cryptos: @js($cryptoRatesForJs),
             defaultCrypto: @js($defaultCrypto),
+            rcoinConfig: @js([
+                'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
+                'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+            ]),
             checkoutUrl: '{{ route('shop.checkout') }}',
         })"
         x-init="init()"
@@ -894,11 +898,12 @@
     </div>
 
     <script>
-        window.esimStore = function ({ plans, cryptos, defaultCrypto, checkoutUrl }) {
+        window.esimStore = function ({ plans, cryptos, defaultCrypto, checkoutUrl, rcoinConfig }) {
             const cryptoMap = {};
             (cryptos || []).forEach((c) => { cryptoMap[c.code] = c; });
 
             return {
+                rcoinConfig,
                 plans: plans || [],
                 checkoutUrl,
                 cryptos: cryptoMap,
@@ -963,7 +968,11 @@
                 plan() { return this.plans.find((p) => p.id === this.selectedId) || null; },
                 unitPriceUsd() { return this.plan()?.price || 0; },
                 totalUsd() { return this.unitPriceUsd(); },
-                pointsEarned() { return Math.floor(this.totalUsd() * 0.5); },
+                // Calculated from backend settings.
+                pointsEarned() {
+                    const cashbackUsd = this.totalUsd() * (this.rcoinConfig.cashback_percentage / 100);
+                    return Math.floor(cashbackUsd / this.rcoinConfig.usd_rate);
+                },
 
                 money(usd) {
                     const meta = this.cryptos[this.selectedCrypto];

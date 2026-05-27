@@ -86,8 +86,9 @@
     // Render against settlement_currency so the symbol and number agree.
     $sym   = Product::currencySymbol($order->settlement_currency ?: 'USD');
     $money = fn ($v) => $sym . number_format((float) $v, 2);
-
-    $points    = (int) floor((float) $order->total_amount * 0.5);
+    $engine = app(\App\Domain\Rewards\Services\RewardEngine::class);
+    $cashbackPercentage = (float) \App\Models\Setting::get('cashback_percentage', 1.0);
+    $points = $engine->usdToRcoin((float) $order->total_amount * ($cashbackPercentage / 100));
     $isPending = in_array($status->value, ['pending', 'processing'], true);
 
     $latestAttempt = $order->paymentAttempts->sortByDesc('created_at')->first();
@@ -710,7 +711,14 @@
                                 </div>
                             @endif
                         @endforeach
-                        @if ($variantItems->every(fn ($i) => empty($i->fulfillment_payload)))
+                        @if ($variantItems->some(fn ($i) => $i->fulfillment_status?->value === 'failed'))
+                            <p class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-red-600">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                Fulfillment failed
+                            </p>
+                        @elseif ($variantItems->every(fn ($i) => empty($i->fulfillment_payload)))
                             <p class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-zinc-500">
                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>

@@ -12,6 +12,7 @@ enum Currency: string
     case GBP = 'GBP';
     case GHS = 'GHS';
     case XAF = 'XAF';
+    case RCOIN = 'RCOIN';
 
     public function symbol(): string
     {
@@ -21,6 +22,7 @@ enum Currency: string
             self::GBP => '£',
             self::GHS => '₵',
             self::XAF => 'FCFA',
+            self::RCOIN => 'R',
         };
     }
 
@@ -32,6 +34,7 @@ enum Currency: string
             self::GBP => 'British Pound',
             self::GHS => 'Ghanaian Cedi',
             self::XAF => 'Central African CFA Franc',
+            self::RCOIN => 'RShop Coin',
         };
     }
 
@@ -43,6 +46,7 @@ enum Currency: string
             self::GBP => 5.00,
             self::GHS => 20.00,
             self::XAF => 3000.00,
+            self::RCOIN => 0.00,
         };
     }
 
@@ -61,6 +65,7 @@ enum Currency: string
             self::GBP => 4_000.00,
             self::GHS => 75_000.00,
             self::XAF => 3_000_000.00,
+            self::RCOIN => 1_000_000.00,
         };
     }
 
@@ -68,6 +73,10 @@ enum Currency: string
     {
         // For rendering, all standard fiat here use 2 decimal places.
         // XAF is technically 0 decimals for coins, but 2 is safe for accounting.
-        return 2;
+        // RCOIN is strictly 0 decimal places (whole coins only).
+        return match ($this) {
+            self::RCOIN => 0,
+            default => 2,
+        };
     }
 }
