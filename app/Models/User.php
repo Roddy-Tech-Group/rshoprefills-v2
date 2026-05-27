@@ -66,6 +66,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'avatar',
         'theme',
         'display_currency',
+        'rcoin_multiplier',
         'kyc_status',
         'banned_at',
         'suspended_at',
@@ -94,6 +95,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'rcoin_multiplier' => 'decimal:2',
             'banned_at' => 'datetime',
             'suspended_at' => 'datetime',
             'suspension_review_requested_at' => 'datetime',

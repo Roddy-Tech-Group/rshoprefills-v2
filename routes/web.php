@@ -11,6 +11,8 @@ use App\Http\Controllers\EsimStoreController;
 use App\Http\Controllers\EsimTopupController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
+use App\Http\Controllers\RcoinConvertController;
+use App\Http\Controllers\RcoinWithdrawalController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
 use App\Models\CurrencyRate;
@@ -26,7 +28,7 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-// Storefront catalog — accessible to guests AND authed users.
+// Storefront catalog - accessible to guests AND authed users.
 // The dashboard sidebar/menu links to these same URLs (no duplicate dashboard.gift-cards page).
 Route::view('gift-cards', 'shop.gift-cards')->name('shop.gift-cards');
 
@@ -64,7 +66,7 @@ Route::get('api/search/brands', function (Request $request) {
 
 // Brand-level detail page. The URL slug is a kebab-cased brand_key
 // ("apple" → brand_key "Apple", "mobile-legends" → "MobileLegends"). The page is
-// locked to ONE country — whichever the user selected in the locale modal, passed
+// locked to ONE country - whichever the user selected in the locale modal, passed
 // through as `?country=XX`. If the brand isn't sold in that country the page 404s
 // (the listing already only links to countries that have stock).
 Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
@@ -116,7 +118,7 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.brand');
 
-// eSIM storefront — a single store page per country. Each Product in the `esims`
+// eSIM storefront - a single store page per country. Each Product in the `esims`
 // category is one supplier's coverage for a region; the controller MERGES all
 // suppliers' plans for a country so data + voice show together. The `esims` entry
 // point resolves a default country; the slug route opens a specific region.
@@ -124,7 +126,7 @@ Route::get('esims', [EsimStoreController::class, 'index'])->name('shop.esims');
 Route::get('esims/country/{code}', [EsimStoreController::class, 'country'])->name('shop.esim.country');
 Route::get('esims/{slug}', [EsimStoreController::class, 'show'])->name('shop.esim');
 
-// Mobile top-up — mirrors the gift-card flow exactly: a brand listing + a
+// Mobile top-up - mirrors the gift-card flow exactly: a brand listing + a
 // brand-level detail page. Operators are the Products in the `mobile-airtime`
 // category; their variants are the airtime amounts. The detail page reuses the
 // shared `shop.product` view.
@@ -169,7 +171,7 @@ Route::get('topups/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.topup');
 
-// Bill payments — prepaid utilities (electricity, water, etc.). These ride
+// Bill payments - prepaid utilities (electricity, water, etc.). These ride
 // Zendit's /vouchers/offers feed and are split into the `bill-payments`
 // category by ZenditNormalizer. Mirrors the gift-card flow: a brand listing +
 // a brand-level detail page reusing the shared `shop.product` view.
@@ -212,18 +214,18 @@ Route::get('bills/{brandSlug}', function (string $brandSlug) {
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
 })->name('shop.bill');
 
-// Flights & Stays — branded "coming soon" pages until the booking catalog ships.
+// Flights & Stays - branded "coming soon" pages until the booking catalog ships.
 // One shared view, the `service` data flag drives the per-service copy + art.
 Route::view('flights', 'shop.coming-soon', ['service' => 'flights'])->name('shop.flights');
 Route::view('stays', 'shop.coming-soon', ['service' => 'stays'])->name('shop.stays');
 
-// Help Center — static FAQ, topic filters and support contact details.
+// Help Center - static FAQ, topic filters and support contact details.
 Route::view('help', 'shop.help')->name('shop.help');
 
-// How It Works — marketing walkthrough of the buying flow.
+// How It Works - marketing walkthrough of the buying flow.
 Route::view('how-it-works', 'shop.how-it-works')->name('shop.how-it-works');
 
-// Contact — storefront contact page + message submission (stored + admin-notified).
+// Contact - storefront contact page + message submission (stored + admin-notified).
 Route::get('contact', [ContactController::class, 'index'])->name('shop.contact');
 Route::post('contact', [ContactController::class, 'store'])->name('contact.send');
 
@@ -242,20 +244,20 @@ Route::view('compliance', 'shop.compliance')->name('shop.compliance');
 // About.
 Route::view('about', 'shop.about')->name('shop.about');
 
-// Mobile app — "in development" landing page.
+// Mobile app - "in development" landing page.
 Route::view('mobile-app', 'shop.mobile-app')->name('shop.mobile-app');
 
-// Earn Points — Rcoin rewards programme.
+// Earn Points - Rcoin rewards programme.
 Route::view('earn-points', 'shop.earn-points')->name('shop.earn-points');
 
-// FAQ — comprehensive frequently asked questions.
+// FAQ - comprehensive frequently asked questions.
 Route::view('faq', 'shop.faq')->name('shop.faq');
 
-// Press and Media — newsroom grid + single post view.
+// Press and Media - newsroom grid + single post view.
 Route::get('press', [PressController::class, 'index'])->name('shop.press');
 Route::get('press/{slug}', [PressController::class, 'show'])->name('shop.press.show');
 
-// Blog — articles grid + single post view.
+// Blog - articles grid + single post view.
 Route::get('blog', [BlogController::class, 'index'])->name('shop.blog');
 Route::get('blog/{slug}', [BlogController::class, 'show'])->name('shop.blog.show');
 
@@ -265,7 +267,7 @@ Route::view('terms', 'shop.terms')->name('shop.terms');
 // Accessibility statement.
 Route::view('accessibility', 'shop.accessibility')->name('shop.accessibility');
 
-// HTML sitemap — a human-friendly index of every section.
+// HTML sitemap - a human-friendly index of every section.
 Route::view('sitemap', 'shop.sitemap')->name('shop.sitemap');
 
 // XML sitemap for search engines (lists public pages only).
@@ -287,10 +289,10 @@ Route::get('sitemap.xml', function () {
     return response($xml, 200, ['Content-Type' => 'application/xml']);
 })->name('sitemap.xml');
 
-// Cart page (HTML). Store-driven — it hydrates from the /cart/data JSON endpoint.
+// Cart page (HTML). Store-driven - it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 
-// Storefront cart — web routes (session-authenticated) wrapping the backend CartManager.
+// Storefront cart - web routes (session-authenticated) wrapping the backend CartManager.
 // Returns compact JSON the Alpine cart store consumes. See CartWebController.
 Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('data', [CartWebController::class, 'show'])->name('data');
@@ -300,7 +302,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
     Route::delete('items/{item}', [CartWebController::class, 'remove'])->middleware('not-suspended')->name('items.remove');
 });
 
-// Checkout. Resolves the active cart (CartManager — same path the global CartComposer uses)
+// Checkout. Resolves the active cart (CartManager - same path the global CartComposer uses)
 // and renders the checkout page. Order creation + payment-gateway initiation are backend
 // territory; the POST below is a validation-only stub the backend replaces with a
 // CheckoutController that builds the Order/OrderItem rows and kicks off the gateway.
@@ -329,7 +331,7 @@ Route::get('checkout', function (CartManager $cartManager, CartPricingService $p
     return view('shop.checkout', ['cart' => $cart, 'totals' => $totals, 'rate' => $rate]);
 })->name('shop.checkout');
 
-// Checkout submission — creates the Order + OrderItems + a pending Payment from the
+// Checkout submission - creates the Order + OrderItems + a pending Payment from the
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
 // the controller. Requires auth: an Order needs a user_id.
 Route::post('checkout', [CheckoutController::class, 'process'])
@@ -341,8 +343,8 @@ Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])
     ->middleware('auth')
     ->name('shop.order');
 
-// Customer dashboard — gated by web guard. Admin operators have their own area at /admin/* via routes/admin.php.
-// NOTE: 'verified' middleware intentionally NOT applied — verification stays a SOFT requirement so users
+// Customer dashboard - gated by web guard. Admin operators have their own area at /admin/* via routes/admin.php.
+// NOTE: 'verified' middleware intentionally NOT applied - verification stays a SOFT requirement so users
 // can use the app immediately after registration. The profile page surfaces the verification status badge
 // and the sidebar has a Verify Identity entry, so users have multiple paths to verify when they choose.
 // Re-add 'verified' here only if/when CTO wants to hard-gate the dashboard behind a confirmed email.
@@ -351,11 +353,19 @@ Route::middleware(['auth'])->group(function () {
 
     Route::view('dashboard/rewards', 'dashboard.rewards')->name('dashboard.rewards');
 
+    // Rcoin withdrawal request - posts from the form on the rewards page.
+    // Admins review at /admin/content/rewards-withdrawals.
+    Route::post('dashboard/rewards/withdraw', [RcoinWithdrawalController::class, 'store'])->name('dashboard.rewards.withdraw');
+
+    // Instant Rcoin → wallet (USD) conversion. No admin approval. Capped by
+    // wallet_conversion_min_usd setting (default $2.00).
+    Route::post('dashboard/rewards/convert-to-wallet', [RcoinConvertController::class, 'toWallet'])->name('dashboard.rewards.convert-to-wallet');
+
     Route::view('dashboard/kyc', 'dashboard.kyc')->name('dashboard.kyc');
 
     Volt::route('dashboard/orders', 'dashboard.orders')->name('dashboard.orders');
 
-    // Native eSIM top-up — refill an existing Airalo eSIM from the dashboard
+    // Native eSIM top-up - refill an existing Airalo eSIM from the dashboard
     // without leaving the site. The controller hits Airalo's /sims/{iccid}/topups
     // for the available packages, debits the wallet on purchase, and dispatches
     // the standard fulfilment job which routes to /orders/topups via the
@@ -381,7 +391,7 @@ Route::middleware(['auth'])->group(function () {
     // KYC identity-verification submission (documents stored on the private disk).
     Route::post('dashboard/kyc', [KycController::class, 'store'])->name('kyc.submit');
 
-    // Suspension review request — submitted from the banner the customer
+    // Suspension review request - submitted from the banner the customer
     // sees on their dashboard when their account is suspended. Lands in the
     // shared admin notification feed.
     Route::post('dashboard/suspension/request-review', [SuspensionController::class, 'requestReview'])
@@ -396,7 +406,7 @@ Route::middleware(['auth'])->group(function () {
     Route::redirect('settings/appearance', 'dashboard/appearance');
 });
 
-// Local-only email template previews — design the transactional emails in the
+// Local-only email template previews - design the transactional emails in the
 // browser (no events fired, no mail sent). Never registered outside local.
 if (app()->environment('local')) {
     Route::get('dev/emails', [EmailPreviewController::class, 'index'])->name('dev.emails.index');

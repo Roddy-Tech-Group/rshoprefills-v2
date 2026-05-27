@@ -1,7 +1,10 @@
 @php
-    // How It Works — marketing page. Customer-facing, so copy stays generic (no
+    // How It Works - marketing page. Customer-facing, so copy stays generic (no
     // payment-provider names). Brand assets are reused from public/assets.
     $img = fn (string $file) => asset('assets/'.rawurlencode($file));
+    // Master Rcoin switch - when off, the Rcoin example card and earn copy
+    // disappear from the Step 2 panel so we don't promise rewards we don't pay.
+    $rcoinEnabled = (bool) \App\Models\Setting::get('rcoin_enabled', true);
 
     $features = [
         ['icon' => 'fast.png',            'title' => 'Effortless and quick',      'desc' => 'Pick, pay and receive in seconds. No queues, no waiting, no friction.'],
@@ -154,9 +157,9 @@
         <div class="mt-16 grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
             <div class="order-2 text-center lg:order-1 lg:text-left">
                 <span class="inline-flex h-9 items-center rounded-[10px] bg-blue-600 px-4 text-sm font-bold text-white">Step 2</span>
-                <h3 class="mt-4 text-xl font-bold text-zinc-900 sm:text-2xl">Choose an amount and earn</h3>
+                <h3 class="mt-4 text-xl font-bold text-zinc-900 sm:text-2xl">{{ $rcoinEnabled ? 'Choose an amount and earn' : 'Choose an amount' }}</h3>
                 <p class="mt-2 max-w-md text-sm leading-relaxed text-zinc-600 lg:mx-0 mx-auto">
-                    Select a value and see your estimated price up front, in your own currency. Every order earns you Rcoin you can redeem later.
+                    Select a value and see your estimated price up front, in your own currency.{{ $rcoinEnabled ? ' Every order earns you Rcoin you can redeem later.' : '' }}
                 </p>
             </div>
             <div class="order-1 lg:order-2">
@@ -179,10 +182,12 @@
                             <span class="text-zinc-600">Estimated price</span>
                             <span class="font-semibold text-zinc-900">$51.00</span>
                         </div>
-                        <div class="flex items-center justify-between rounded-[10px] bg-blue-50 px-3 py-2.5">
-                            <span class="font-medium text-blue-700">Rcoin earned</span>
-                            <span class="font-bold text-blue-700">+25 Rcoin</span>
-                        </div>
+                        @if ($rcoinEnabled)
+                            <div class="flex items-center justify-between rounded-[10px] bg-blue-50 px-3 py-2.5">
+                                <span class="font-medium text-blue-700">Rcoin earned</span>
+                                <span class="font-bold text-blue-700">+25 Rcoin</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>

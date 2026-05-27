@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Middleware\CaptureReferralCookie;
+use App\Models\Referral;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
@@ -10,8 +13,11 @@ use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.auth')] class extends Component {
     public string $name = '';
+
     public string $email = '';
+
     public string $password = '';
+
     public string $password_confirmation = '';
 
     /**
@@ -28,6 +34,38 @@ new #[Layout('components.layouts.auth')] class extends Component {
         $validated['password'] = Hash::make($validated['password']);
 
         event(new Registered(($user = User::create($validated))));
+
+        // ── Referral attribution ────────────────────────────────────────
+        // CaptureReferralCookie stashes `?ref=CODE` into a 90-day cookie on
+        // the storefront. On signup we look that code up against
+        // users.referral_code and, if it matches a DIFFERENT real user,
+        // create the Referral row that the RewardEngine reads when this
+        // user's first order completes. Silently skips when there's no
+        // cookie / no match / self-referral.
+        $referralCode = trim((string) request()->cookie(CaptureReferralCookie::COOKIE_NAME, ''));
+        if ($referralCode !== '') {
+            $referrer = User::query()
+                ->where('referral_code', $referralCode)
+                ->where('id', '!=', $user->id)
+                ->first();
+
+            if ($referrer) {
+                Referral::firstOrCreate(
+                    ['referred_user_id' => $user->id],
+                    [
+                        'referrer_id' => $referrer->id,
+                        'status' => 'active',
+                        'total_rewards_generated' => 0,
+                        'total_orders_completed' => 0,
+                    ],
+                );
+            }
+
+            // Clear the cookie - it's done its job and a future signup on
+            // the same browser shouldn't accidentally attribute to the
+            // same referrer.
+            Cookie::queue(Cookie::forget(CaptureReferralCookie::COOKIE_NAME));
+        }
 
         Auth::login($user);
 

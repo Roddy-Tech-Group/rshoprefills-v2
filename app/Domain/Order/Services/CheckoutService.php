@@ -9,12 +9,16 @@ use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Providers\WalletPaymentProvider;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Domain\Payment\Services\PaymentSessionService;
+use App\Domain\Rewards\Services\RewardEngine;
+use App\Domain\Shared\Enums\Currency;
+use App\Domain\Wallet\Services\WalletService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Models\Cart;
 use App\Models\CurrencyRate;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentAttempt;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -34,7 +38,7 @@ class CheckoutService
      *
      * @throws \Exception
      */
-    public function placeOrder(User $user, Cart $cart, string $paymentMethod, string $displayCurrency, ?string $deliveryEmail = null, bool $applyRcoin = false): Order
+    public function placeOrder(User $user, Cart $cart, string $paymentMethod, string $displayCurrency, ?string $deliveryEmail = null, bool|string $applyRcoin = false): Order
     {
         // 1. Recalculate and validate cart items/prices (in raw USD)
         $validatedTotals = $this->orderValidationService->validateForCheckout($cart);
@@ -56,7 +60,7 @@ class CheckoutService
             ->update(['order_status' => OrderStatus::Cancelled]);
 
         // 3. Atomically build Order + snapshot items. The cart is read-locked here
-        //    but intentionally NOT deleted yet — see step 7. If the gateway init
+        //    but intentionally NOT deleted yet - see step 7. If the gateway init
         //    in step 5 throws (encryption key, bad currency, network), we want
         //    the cart to stay intact so the customer can retry without losing
         //    their items. Cart deletion now lives at the end, after init succeeds.
@@ -69,22 +73,34 @@ class CheckoutService
             $rcoinApplied = 0;
             $rcoinDiscountUsd = 0.0;
 
-            if ($applyRcoin && \App\Models\Setting::get('redemption_enabled', true)) {
-                $rewardEngine = app(\App\Domain\Rewards\Services\RewardEngine::class);
-                $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
-                
-                $wallet = $walletService->getOrCreateWallet($user, \App\Domain\Shared\Enums\Currency::RCOIN);
+            if ($applyRcoin && Setting::get('redemption_enabled', true)) {
+                $rewardEngine = app(RewardEngine::class);
+                $walletService = app(WalletService::class);
+
+                $wallet = $walletService->getOrCreateWallet($user, Currency::RCOIN);
                 $availableBalance = (int) $wallet->balance;
-                $minRedemption = (int) \App\Models\Setting::get('redemption_min_rcoin', 2000);
+                $minRedemption = (int) Setting::get('redemption_min_rcoin', 2000);
 
                 if ($availableBalance > 0 && $availableBalance >= $minRedemption) {
-                    $maxPct = (float) \App\Models\Setting::get('redemption_max_percentage', 30.0);
-                    $maxUsdAllowed = $validatedTotals['total'] * ($maxPct / 100);
-                    $maxRcoinAllowed = $rewardEngine->usdToRcoin($maxUsdAllowed);
-                    
+                    // "full" mode (passed by the rewards page convert flow) lifts
+                    // the redemption_max_percentage cap and lets the customer
+                    // settle the entire order with Rcoin if they have enough.
+                    // The standard truthy toggle stays capped at the configured max.
+                    $isFullMode = $applyRcoin === 'full';
+
+                    if ($isFullMode) {
+                        // Cap at the order total - never debit more Rcoin than
+                        // the bill, even if the user has a huge balance.
+                        $maxRcoinAllowed = $rewardEngine->usdToRcoin($validatedTotals['total']);
+                    } else {
+                        $maxPct = (float) Setting::get('redemption_max_percentage', 30.0);
+                        $maxUsdAllowed = $validatedTotals['total'] * ($maxPct / 100);
+                        $maxRcoinAllowed = $rewardEngine->usdToRcoin($maxUsdAllowed);
+                    }
+
                     $rcoinApplied = min($availableBalance, $maxRcoinAllowed);
                     $rcoinDiscountUsd = $rewardEngine->rcoinToUsd($rcoinApplied);
-                    
+
                     // If applied, deduct it from validated totals
                     $validatedTotals['total'] = max(0, $validatedTotals['total'] - $rcoinDiscountUsd);
                 }
@@ -124,7 +140,7 @@ class CheckoutService
             // Save order items with absolute snapshots.
             // Explode each cart item into N separate OrderItem rows (one per unit)
             // so every unit gets its own independent fulfillment job and provider
-            // API call. Providers like Zendit have no quantity parameter — each
+            // API call. Providers like Zendit have no quantity parameter - each
             // API call purchases exactly 1 unit.
             foreach ($lockedCart->items as $item) {
                 // display_amount and subtotal_snapshot are already totals (unit × qty),
@@ -142,7 +158,7 @@ class CheckoutService
                         'provider_name' => $item->variant->metadata['provider'] ?? $item->product->provider_name,
                         'provider_offer_id' => $item->variant->provider_offer_id,
                         'product_snapshot' => array_merge($item->product->toArray(), [
-                            // toArray() doesn't include eager relations — but fulfilment
+                            // toArray() doesn't include eager relations - but fulfilment
                             // providers and order views need the category slug to branch
                             // (esim vs. mobile-airtime vs. gift card). Add it explicitly.
                             'category' => $item->product->category
@@ -168,8 +184,8 @@ class CheckoutService
             // NOTE: Cart deletion intentionally deferred to step 7 (post-init).
 
             if ($rcoinApplied > 0) {
-                $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
-                $wallet = $walletService->getOrCreateWallet($user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                $walletService = app(WalletService::class);
+                $wallet = $walletService->getOrCreateWallet($user, Currency::RCOIN);
                 $walletService->lockFunds($wallet, $rcoinApplied);
             }
 
@@ -192,7 +208,7 @@ class CheckoutService
 
         // 5. Initialize payment attempt via the selected gateway. If this throws
         //    (encryption key invalid, currency unsupported, network down, etc.)
-        //    the order goes to Failed and the exception re-raises — but the
+        //    the order goes to Failed and the exception re-raises - but the
         //    customer's cart is preserved (see step 3 comment) so they can fix
         //    the .env / pick another method and try again without re-adding items.
         try {
@@ -210,8 +226,8 @@ class CheckoutService
 
             $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
             if ($rcoinApplied > 0) {
-                $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
-                $wallet = $walletService->getOrCreateWallet($user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                $walletService = app(WalletService::class);
+                $wallet = $walletService->getOrCreateWallet($user, Currency::RCOIN);
                 $walletService->unlockFunds($wallet, $rcoinApplied);
             }
 
@@ -227,7 +243,7 @@ class CheckoutService
 
         // 7. Handle the internal wallet flow. When the wallet provider deferred for
         //    transaction-PIN authorization (status "awaiting_customer_action"), we do
-        //    NOT touch funds here — the customer verifies their PIN on the frontend,
+        //    NOT touch funds here - the customer verifies their PIN on the frontend,
         //    which calls the pay endpoint to authorize, debit, and dispatch fulfillment.
         //    Only the no-PIN path settles synchronously below.
         if ($paymentMethod === 'wallet' && ($initResult['status'] ?? null) !== 'awaiting_customer_action') {
@@ -249,7 +265,7 @@ class CheckoutService
                 $order->save();
             });
 
-            // Dispatch fulfillment — funds are now fully debited.
+            // Dispatch fulfillment - funds are now fully debited.
             foreach ($order->items as $item) {
                 FulfillOrderItemJob::dispatch($item);
             }

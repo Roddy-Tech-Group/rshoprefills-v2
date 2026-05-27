@@ -1,5 +1,5 @@
 @php
-    // Admin customer detail — a full picture of one user: profile, wallet(s),
+    // Admin customer detail - a full picture of one user: profile, wallet(s),
     // lifetime stats, and recent commerce activity (orders + wallet movements).
     // Read-only; mirrors the admin order detail page's layout conventions.
 
@@ -121,7 +121,7 @@
                         Notify
                     </button>
 
-                    {{-- Verify email — toggles email_verified_at on/off. Confirm only on removal. --}}
+                    {{-- Verify email - toggles email_verified_at on/off. Confirm only on removal. --}}
                     <form method="POST" action="{{ route('admin.customer.verify-email', $user) }}"
                           @if ($emailVerified)
                               data-confirm="Remove email verification for this customer? They may be re-prompted to verify."
@@ -136,7 +136,7 @@
                         </button>
                     </form>
 
-                    {{-- KYC status dropdown — admin can flip between Under review,
+                    {{-- KYC status dropdown - admin can flip between Under review,
                          Verified, and Rejected. Each option goes through the global
                          confirm modal so a mis-click never lands a status change. --}}
                     <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative">
@@ -239,7 +239,7 @@
                 </div>
             </div>
 
-            {{-- Suspend modal — captures an optional reason shown to the customer. --}}
+            {{-- Suspend modal - captures an optional reason shown to the customer. --}}
             <div x-show="suspending" x-cloak @keydown.escape.window="suspending = false" class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
                 <div x-show="suspending" @click="suspending = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-zinc-950/70"></div>
                 <form x-show="suspending" x-transition method="POST" action="{{ route('admin.customer.suspend', $user) }}" class="relative w-full max-w-lg overflow-hidden rounded-[10px] bg-white shadow-2xl dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
@@ -327,7 +327,7 @@
                 // is computed up top alongside the other status flags. Falls
                 // back to a neutral "Not started" so an unknown value still
                 // renders sensibly rather than leaking the raw enum to the admin.
-                // NOTE: avoid `$kyc` — the controller passes in a KycSubmission
+                // NOTE: avoid `$kyc` - the controller passes in a KycSubmission
                 // model on that name (used further down for the documents grid).
                 $kycMap = [
                     'verified' => ['label' => 'KYC verified',    'tone' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'],
@@ -413,6 +413,246 @@
             </form>
         </div>
 
+        {{-- Rcoin earnings multiplier + balance + manual adjust - all
+             admin power tools for one user's Rcoin economy in one card. --}}
+        @php
+            $currentMultiplier = (float) ($user->rcoin_multiplier ?? 1.00);
+            $multiplierTone = match (true) {
+                $currentMultiplier > 1.0 => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+                $currentMultiplier < 1.0 => 'bg-amber-50 text-amber-700 ring-amber-200',
+                default => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+            };
+            // Resolve the live Rcoin balance + lifetime earnings (sum of all
+            // cashback + referral credits ever awarded to this customer).
+            $rcoinWallet = $user->wallets->firstWhere('currency', \App\Domain\Shared\Enums\Currency::RCOIN);
+            $rcoinBalance = (int) ($rcoinWallet?->balance ?? 0);
+            $rcoinLifetimeEarned = (int) $user->walletTransactions()
+                ->where('currency', \App\Domain\Shared\Enums\Currency::RCOIN->value)
+                ->whereIn('transaction_category', [
+                    \App\Domain\Shared\Enums\TransactionCategory::RewardCashback->value,
+                    \App\Domain\Shared\Enums\TransactionCategory::RewardReferral->value,
+                ])
+                ->sum('amount');
+            $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.0001);
+        @endphp
+
+        {{-- Wallet balances + manual credit/debit. Admin can pick any of
+             the customer's wallets (Rcoin / USD / NGN / etc.) and adjust
+             with a mandatory reason. Used for refunds the finance team is
+             processing out-of-band, goodwill credits, contest prizes,
+             fraud reversals. Every adjustment hits wallet_transactions
+             with category=Adjustment + admin_id for full audit trail. --}}
+        @php
+            $allWallets = $user->wallets;
+            $rcoinWalletBalance = (int) ($allWallets->firstWhere('currency', \App\Domain\Shared\Enums\Currency::RCOIN)?->balance ?? 0);
+        @endphp
+        <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
+                <div>
+                    <h3 class="text-sm font-bold text-zinc-900">Wallet balances</h3>
+                    <p class="mt-0.5 text-[11px] text-zinc-500">Credit or debit any wallet - Rcoin, USD, NGN, etc. Every adjustment is audit-logged.</p>
+                </div>
+                <span class="text-[11px] text-zinc-500">Rcoin lifetime earned: <span class="font-semibold text-zinc-700">{{ number_format($rcoinLifetimeEarned) }}</span></span>
+            </div>
+
+            {{-- Live balance grid - one chip per active wallet so the admin
+                 sees what they're about to adjust next to the current state. --}}
+            @if ($allWallets->isNotEmpty())
+                <div class="grid grid-cols-2 gap-2 px-5 pt-4 sm:grid-cols-3 lg:grid-cols-4">
+                    @foreach ($allWallets as $w)
+                        @php
+                            $code = $w->currency?->value ?? 'USD';
+                            $isRcoin = $code === 'RCOIN';
+                            $tone = $isRcoin ? 'bg-blue-50 text-blue-700 ring-blue-200' : 'bg-zinc-50 text-zinc-700 ring-zinc-200';
+                        @endphp
+                        <div class="rounded-[10px] p-2.5 ring-1 {{ $tone }}">
+                            <p class="text-[10px] font-bold uppercase tracking-wider opacity-70">{{ $code }}</p>
+                            <p class="mt-0.5 text-base font-black tabular-nums">{{ number_format((float) $w->balance, $isRcoin ? 0 : 2) }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            @php
+                // Build the wallet options once so both the dropdown panel and
+                // the trigger label can reach them. Each option carries the
+                // code, the friendly label, and the live balance (when the
+                // customer already holds a wallet for that currency).
+                $walletOptions = collect(\App\Domain\Shared\Enums\Currency::cases())
+                    ->map(fn ($c) => [
+                        'code' => $c->value,
+                        'label' => $c->label(),
+                        'balance' => $allWallets->firstWhere('currency', $c)?->balance,
+                    ])
+                    ->values()
+                    ->all();
+                $walletLabels = collect($walletOptions)->mapWithKeys(fn ($o) => [$o['code'] => $o['label']])->all();
+            @endphp
+
+            <div
+                x-data="{
+                    open: false,
+                    currency: 'RCOIN',
+                    labels: @js($walletLabels),
+                    get currencyLabel() { return this.labels[this.currency] ?? this.currency; },
+                }"
+                class="px-5 py-4"
+            >
+
+                {{-- Wallet selector - admin picks which currency to act on.
+                     Defaults to RCOIN since that's the most common adjustment.
+                     Custom Alpine dropdown so we can show the friendly label
+                     plus the live wallet balance inline (a native <select>
+                     can't render the two-line option layout we want). --}}
+                <div class="relative" @click.outside="open = false" @keydown.escape.window="open = false">
+                    <span class="block text-[11px] font-bold uppercase tracking-wider text-zinc-700">Target wallet</span>
+                    <button
+                        type="button"
+                        @click="open = ! open"
+                        :aria-expanded="open.toString()"
+                        aria-haspopup="listbox"
+                        class="mt-1 flex w-full items-center justify-between gap-3 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-left text-sm text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                    >
+                        <span class="flex min-w-0 items-center gap-2">
+                            <span class="inline-flex items-center rounded-[6px] bg-blue-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-blue-700 ring-1 ring-blue-200" x-text="currency"></span>
+                            <span class="truncate text-zinc-700" x-text="currencyLabel"></span>
+                        </span>
+                        <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <div
+                        x-show="open"
+                        x-transition.origin.top
+                        style="display:none;"
+                        class="absolute left-0 right-0 z-30 mt-1.5 max-h-72 overflow-y-auto rounded-[10px] bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                        role="listbox"
+                    >
+                        @foreach ($walletOptions as $opt)
+                            @php
+                                $code = $opt['code'];
+                                $hasBalance = $opt['balance'] !== null;
+                                $isRcoinOpt = $code === 'RCOIN';
+                                $balanceDisplay = $hasBalance
+                                    ? number_format((float) $opt['balance'], $isRcoinOpt ? 0 : 2)
+                                    : null;
+                            @endphp
+                            <button
+                                type="button"
+                                @click="currency = '{{ $code }}'; open = false"
+                                :class="currency === '{{ $code }}' ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'text-zinc-700 hover:bg-zinc-50'"
+                                class="flex w-full items-center justify-between gap-3 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium transition-colors"
+                                role="option"
+                                :aria-selected="(currency === '{{ $code }}').toString()"
+                            >
+                                <span class="flex min-w-0 items-center gap-2">
+                                    <span class="inline-flex w-14 shrink-0 items-center justify-center rounded-[6px] bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-zinc-700" :class="currency === '{{ $code }}' && 'bg-blue-100 text-blue-700'">{{ $code }}</span>
+                                    <span class="truncate">{{ $opt['label'] }}</span>
+                                </span>
+                                @if ($hasBalance)
+                                    <span class="shrink-0 text-[10px] font-semibold tabular-nums text-zinc-500" :class="currency === '{{ $code }}' && 'text-blue-600'">{{ $balanceDisplay }}</span>
+                                @else
+                                    <span class="shrink-0 text-[10px] font-medium uppercase tracking-wider text-zinc-400">no wallet</span>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    {{-- Credit form --}}
+                    <form method="POST" action="{{ route('admin.customer.wallet-adjust', $user) }}" class="rounded-[10px] border border-zinc-100 p-3">
+                        @csrf
+                        <input type="hidden" name="direction" value="credit">
+                        <input type="hidden" name="currency" :value="currency">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Credit</p>
+                        <div class="mt-2 flex overflow-hidden rounded-[10px] border border-zinc-200">
+                            <input type="number" name="amount" min="0.0001" step="0.01" placeholder="100" class="flex-1 border-0 bg-white px-3 py-2 text-sm tabular-nums text-zinc-900 outline-none focus:ring-0">
+                            <span class="flex shrink-0 items-center bg-zinc-50 px-3 text-[11px] font-semibold text-zinc-600" x-text="currency"></span>
+                        </div>
+                        <textarea name="reason" rows="2" required placeholder="Reason (audit log) - e.g. 'Refund for order RSR-… per finance ticket #1234'" class="mt-2 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500"></textarea>
+                        <button type="submit" class="mt-2 w-full rounded-[10px] bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Credit wallet</button>
+                    </form>
+
+                    {{-- Debit form --}}
+                    <form method="POST" action="{{ route('admin.customer.wallet-adjust', $user) }}" class="rounded-[10px] border border-zinc-100 p-3" data-confirm="Debit from {{ $user->name }}'s wallet? This is final." data-confirm-tone="danger" data-confirm-text="Debit">
+                        @csrf
+                        <input type="hidden" name="direction" value="debit">
+                        <input type="hidden" name="currency" :value="currency">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-red-700">Debit</p>
+                        <div class="mt-2 flex overflow-hidden rounded-[10px] border border-zinc-200">
+                            <input type="number" name="amount" min="0.0001" step="0.01" placeholder="100" class="flex-1 border-0 bg-white px-3 py-2 text-sm tabular-nums text-zinc-900 outline-none focus:ring-0">
+                            <span class="flex shrink-0 items-center bg-zinc-50 px-3 text-[11px] font-semibold text-zinc-600" x-text="currency"></span>
+                        </div>
+                        <textarea name="reason" rows="2" required placeholder="Reason (audit log)" class="mt-2 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500"></textarea>
+                        <button type="submit" class="mt-2 w-full rounded-[10px] bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">Debit wallet</button>
+                    </form>
+                </div>
+                @error('amount')<p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>@enderror
+                @error('currency')<p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>@enderror
+                @error('reason')<p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>@enderror
+            </div>
+        </div>
+        <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
+                <div>
+                    <h3 class="text-sm font-bold text-zinc-900">Rcoin earnings multiplier</h3>
+                    <p class="mt-0.5 text-[11px] text-zinc-500">Reward power users who advertise the product. Applied to cashback AND referral bonuses.</p>
+                </div>
+                <span class="inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 {{ $multiplierTone }}">{{ number_format($currentMultiplier, 2) }}×</span>
+            </div>
+            <div class="px-5 py-4">
+                <form method="POST" action="{{ route('admin.customer.rcoin-multiplier', $user) }}" class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    <label class="flex-1 min-w-[160px]">
+                        <span class="block text-[11px] font-semibold uppercase tracking-wider text-zinc-700">New multiplier</span>
+                        <div class="mt-1 flex overflow-hidden rounded-[10px] border border-zinc-200">
+                            <input
+                                type="number"
+                                name="rcoin_multiplier"
+                                step="0.05"
+                                min="0"
+                                max="10"
+                                value="{{ number_format($currentMultiplier, 2, '.', '') }}"
+                                class="flex-1 border-0 bg-white px-3 py-2 text-sm tabular-nums text-zinc-900 outline-none focus:ring-0"
+                            >
+                            <span class="flex shrink-0 items-center bg-zinc-50 px-3 text-xs font-semibold text-zinc-600">×</span>
+                        </div>
+                        @error('rcoin_multiplier') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                    </label>
+                    <button type="submit" class="inline-flex items-center rounded-[10px] bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Apply</button>
+                </form>
+
+                {{-- Quick presets for common dial settings. Each is a small form
+                     that auto-submits the chosen value, so admins don't have to
+                     type 2.00 every time they bump someone to VIP. --}}
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Presets:</span>
+                    @foreach ([
+                        '0.50' => ['Half', 'Watchlist - flagged or low-trust account'],
+                        '1.00' => ['Standard', 'Default rate for every new customer'],
+                        '1.50' => ['1.5× engaged', 'Engaged customer - frequent buyer'],
+                        '2.00' => ['2× influencer', 'Influencer / referral partner'],
+                        '3.00' => ['3× ambassador', 'Brand ambassador - top promoter'],
+                    ] as $value => [$label, $help])
+                        <form method="POST" action="{{ route('admin.customer.rcoin-multiplier', $user) }}" data-confirm="Set {{ $user->name }}'s Rcoin multiplier to {{ $value }}×?" data-confirm-text="Set {{ $value }}×" data-confirm-title="{{ $label }}">
+                            @csrf
+                            <input type="hidden" name="rcoin_multiplier" value="{{ $value }}">
+                            <button type="submit"
+                                title="{{ $help }}"
+                                @class([
+                                    'rounded-[10px] px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                                    'bg-blue-600 text-white' => abs($currentMultiplier - (float) $value) < 0.01,
+                                    'bg-zinc-50 text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-100' => abs($currentMultiplier - (float) $value) >= 0.01,
+                                ])
+                            >{{ $value }}×</button>
+                        </form>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
         {{-- Identity verification (KYC) --}}
         @php
             $kycTone = match ($user->kyc_status) {
@@ -457,7 +697,7 @@
                         </div>
                     </dl>
 
-                    {{-- Documents — streamed from the private disk, admin-only. --}}
+                    {{-- Documents - streamed from the private disk, admin-only. --}}
                     <p class="mt-5 text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Documents</p>
                     <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
                         @foreach (['front' => 'Document front', 'back' => 'Document back', 'selfie' => 'Selfie'] as $docType => $docLabel)
@@ -515,7 +755,7 @@
         {{-- Lifetime stats. Both currency-denominated stats are pre-converted to
              USD per row so we never sum across currencies (the original
              "$X USD" total just added NGN + USD + GHS values as if they were
-             the same unit — bogus accounting). --}}
+             the same unit - bogus accounting). --}}
         @php
             $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
 
