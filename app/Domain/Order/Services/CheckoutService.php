@@ -95,26 +95,37 @@ class CheckoutService
                 ],
             ]);
 
-            // Save order items with absolute snapshots
+            // Save order items with absolute snapshots.
+            // Explode each cart item into N separate OrderItem rows (one per unit)
+            // so every unit gets its own independent fulfillment job and provider
+            // API call. Providers like Zendit have no quantity parameter — each
+            // API call purchases exactly 1 unit.
             foreach ($lockedCart->items as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'product_variant_id' => $item->product_variant_id,
-                    'category_id' => $item->product->category_id,
-                    'subcategory_id' => $item->product->subcategory_id,
-                    'provider_name' => $item->variant->metadata['provider'] ?? $item->product->provider_name,
-                    'provider_offer_id' => $item->variant->provider_offer_id,
-                    'product_snapshot' => $item->product->toArray(),
-                    'variant_snapshot' => $item->variant->toArray(),
-                    'quantity' => $item->quantity,
-                    'display_currency' => $displayCurrency,
-                    'display_amount' => round($item->display_amount * $exchangeRate, 4),
-                    'provider_cost_usd' => $item->provider_cost_usd,
-                    'markup_amount' => $item->markup_amount,
-                    'subtotal_amount' => round($item->subtotal_snapshot * $exchangeRate, 4),
-                    'fulfillment_status' => FulfillmentStatus::NotStarted,
-                ]);
+                // display_amount and subtotal_snapshot are already totals (unit × qty),
+                // so divide back to get the per-unit figure before applying exchange rate.
+                $unitDisplayAmount = round(($item->display_amount / $item->quantity) * $exchangeRate, 4);
+                $unitSubtotal = round(($item->subtotal_snapshot / $item->quantity) * $exchangeRate, 4);
+
+                for ($i = 0; $i < $item->quantity; $i++) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $item->product_id,
+                        'product_variant_id' => $item->product_variant_id,
+                        'category_id' => $item->product->category_id,
+                        'subcategory_id' => $item->product->subcategory_id,
+                        'provider_name' => $item->variant->metadata['provider'] ?? $item->product->provider_name,
+                        'provider_offer_id' => $item->variant->provider_offer_id,
+                        'product_snapshot' => $item->product->toArray(),
+                        'variant_snapshot' => $item->variant->toArray(),
+                        'quantity' => 1,
+                        'display_currency' => $displayCurrency,
+                        'display_amount' => $unitDisplayAmount,
+                        'provider_cost_usd' => $item->provider_cost_usd,
+                        'markup_amount' => $item->markup_amount,
+                        'subtotal_amount' => $unitSubtotal,
+                        'fulfillment_status' => FulfillmentStatus::NotStarted,
+                    ]);
+                }
             }
 
             // NOTE: Cart deletion intentionally deferred to step 7 (post-init).

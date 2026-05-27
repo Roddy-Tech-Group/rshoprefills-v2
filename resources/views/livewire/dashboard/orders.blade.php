@@ -140,8 +140,15 @@ class extends Component {
                     {{-- Summary (always visible) --}}
                     <div class="px-5 pb-4 pt-2.5">
                         <p class="text-sm font-semibold {{ $statusColor }}">{{ $statusLabel }}</p>
-                        @foreach ($order->items as $item)
+                        @php
+                            // Group exploded OrderItem rows by variant so "2× Apple $5"
+                            // shows as a single summary line instead of two "1× Apple $5".
+                            $grouped = $order->items->groupBy('product_variant_id');
+                        @endphp
+                        @foreach ($grouped as $variantId => $variantItems)
                             @php
+                                $item     = $variantItems->first();
+                                $qty      = $variantItems->count();
                                 $snap     = $item->product_snapshot ?? [];
                                 $vsnap    = $item->variant_snapshot ?? [];
                                 $brandKey = $snap['brand_key'] ?? null;
@@ -154,7 +161,7 @@ class extends Component {
                                 $country  = $countryNames[strtoupper((string) ($snap['country_code'] ?? ''))] ?? ($snap['country_code'] ?? null);
                             @endphp
                             <p class="mt-1 text-sm text-zinc-900">
-                                <span class="font-bold">{{ $item->quantity }}</span>
+                                <span class="font-bold">{{ $qty }}</span>
                                 <span class="px-1 text-zinc-400">x</span>
                                 <span class="font-medium">{{ $name }}</span>
                                 @if ($faceTxt)
