@@ -2,11 +2,13 @@
 
 namespace App\Domain\Order\Services;
 
-use App\Models\Order;
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Payment\Enums\PaymentStatus;
-use App\Domain\Fulfillment\Enums\FulfillmentStatus;
 use App\Domain\Payment\Providers\WalletPaymentProvider;
+use App\Jobs\ProcessOrderRewardsJob;
+use App\Models\Order;
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -18,7 +20,7 @@ class OrderService
     {
         DB::transaction(function () use ($order, $newStatus, $payload) {
             $order = Order::where('id', $order->id)->lockForUpdate()->firstOrFail();
-            
+
             $order->payment_status = $newStatus;
 
             if ($newStatus === PaymentStatus::Paid) {
@@ -46,7 +48,7 @@ class OrderService
     {
         DB::transaction(function () use ($order, $newStatus) {
             $order = Order::where('id', $order->id)->lockForUpdate()->firstOrFail();
-            
+
             $order->fulfillment_status = $newStatus;
 
             if (in_array($newStatus, [FulfillmentStatus::Fulfilled, FulfillmentStatus::PartiallyFulfilled])) {
@@ -63,7 +65,7 @@ class OrderService
                     $walletProvider = app(WalletPaymentProvider::class);
                     $walletProvider->finalizeDebit($walletPayment);
                     $order->payment_status = PaymentStatus::Paid;
-                    
+
                     if ($newStatus === FulfillmentStatus::PartiallyFulfilled) {
                         $failedTotal = $order->items->where('fulfillment_status', FulfillmentStatus::Failed)->sum('subtotal_amount');
                         if ($failedTotal > 0) {
@@ -78,9 +80,21 @@ class OrderService
 
             $order->save();
 
-            // Dispatch rewards job if the order just transitioned to Completed
+            // Dispatch rewards job if the order just transitioned to Completed.
+            // Fraud hold: when `fraud_hold_enabled` is on, delay the credit by
+            // `fraud_hold_days` so suspicious orders have time to be refunded
+            // before the Rcoin lands in the customer's wallet. The job itself
+            // re-checks order status before crediting, so a refund in the
+            // interim is safe.
             if ($order->wasChanged('order_status') && $order->order_status === OrderStatus::Completed) {
-                \App\Jobs\ProcessOrderRewardsJob::dispatch($order)->onQueue('rewards');
+                $job = ProcessOrderRewardsJob::dispatch($order)->onQueue('rewards');
+
+                if (Setting::get('fraud_hold_enabled', false)) {
+                    $days = max(0, (int) Setting::get('fraud_hold_days', 0));
+                    if ($days > 0) {
+                        $job->delay(now()->addDays($days));
+                    }
+                }
             }
         });
     }

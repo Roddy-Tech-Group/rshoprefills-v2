@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFintechController;
 use App\Http\Controllers\Admin\AdminKycController;
 use App\Http\Controllers\Admin\AdminReportExportController;
+use App\Http\Controllers\Admin\AdminRewardAnalyticsController;
+use App\Http\Controllers\Admin\AdminRewardSettingsController;
 use App\Http\Controllers\Admin\AdminSreController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
@@ -35,7 +37,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // from the customer side (different table + guard).
         Route::post('theme', [ThemeController::class, 'updateAdmin'])->name('theme');
 
-        // Admin content views — read-only Blade pages backed by shipped models.
+        // Admin content views - read-only Blade pages backed by shipped models.
         // Replace with controllers when CRUD/actions ship.
         Route::view('products', 'admin.products')->name('products');
         // Live-search suggestions for the products page. Returns up to 8
@@ -46,7 +48,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 return response()->json([]);
             }
 
-            // Include product_id in the select — without it Eloquent can't
+            // Include product_id in the select - without it Eloquent can't
             // load the `product` relation and every row comes back with null
             // brand / name / country.
             $variants = ProductVariant::query()
@@ -108,7 +110,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ]);
         })->name('customer');
 
-        // KYC review — serve documents from the private disk + approve / reject.
+        // KYC review - serve documents from the private disk + approve / reject.
         Route::get('kyc/{submission}/document/{type}', [AdminKycController::class, 'document'])->name('kyc.document');
         Route::post('kyc/{submission}/approve', [AdminKycController::class, 'approve'])->name('kyc.approve');
         Route::post('kyc/{submission}/reject', [AdminKycController::class, 'reject'])->name('kyc.reject');
@@ -121,6 +123,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('customers/{user}/funds', [AdminCustomerController::class, 'toggleFunds'])->name('customer.funds');
         Route::post('customers/{user}/verify-email', [AdminCustomerController::class, 'toggleEmailVerification'])->name('customer.verify-email');
         Route::post('customers/{user}/kyc-status', [AdminCustomerController::class, 'setKycStatus'])->name('customer.kyc-status');
+        Route::post('customers/{user}/rcoin-multiplier', [AdminCustomerController::class, 'setRcoinMultiplier'])->name('customer.rcoin-multiplier');
+        Route::post('customers/{user}/wallet-adjust', [AdminCustomerController::class, 'adjustWalletBalance'])->name('customer.wallet-adjust');
         Route::post('customers/{user}/message', [AdminCustomerController::class, 'message'])->name('customer.message');
         // Friendly fallback: a GET on the same path (URL bar, back-button, link
         // prefetch) redirects to the customer page instead of 405ing.
@@ -133,13 +137,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Volt::route('reports', 'admin.reports')->name('reports');
         Route::get('reports/export.csv', [AdminReportExportController::class, 'csv'])->name('reports.export');
 
-        // Content (CMS) — stub Volt pages that list what's in the DB today.
+        // Content (CMS) - stub Volt pages that list what's in the DB today.
         // CRUD UI lands in a follow-up; for now editors confirm data is wired.
         Route::prefix('content')->name('content.')->group(function () {
             Volt::route('blog', 'admin.content.blog')->name('blog');
             Volt::route('press', 'admin.content.press')->name('press');
             Volt::route('reviews', 'admin.content.reviews')->name('reviews');
             Volt::route('faqs', 'admin.content.faqs')->name('faqs');
+            Volt::route('rewards', 'admin.content.rewards')->name('rewards');
+            Volt::route('rewards/analytics', 'admin.content.rewards-analytics')->name('rewards.analytics');
+            Volt::route('rewards/withdrawals', 'admin.content.rewards-withdrawals')->name('rewards.withdrawals');
         });
 
         // Admin Dashboard API
@@ -192,7 +199,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('products/{product}/toggle-popular', [AdminCatalogController::class, 'togglePopular']);
 
             // Per-variant sales-price override + coupon management. All keyed
-            // on a ProductVariant — the drawer is variant-level.
+            // on a ProductVariant - the drawer is variant-level.
             Route::patch('variants/{variant}/price', [AdminCatalogController::class, 'setVariantPrice'])->name('variants.price.set');
             Route::delete('variants/{variant}/price', [AdminCatalogController::class, 'clearVariantPrice'])->name('variants.price.clear');
             Route::get('variants/{variant}/coupons', [AdminCatalogController::class, 'listCoupons'])->name('variants.coupons.index');
@@ -209,9 +216,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
         // Admin Rewards API
         Route::prefix('api/rewards')->name('api.rewards.')->group(function () {
-            Route::get('settings', [\App\Http\Controllers\Admin\AdminRewardSettingsController::class, 'index'])->name('settings.index');
-            Route::put('settings', [\App\Http\Controllers\Admin\AdminRewardSettingsController::class, 'update'])->name('settings.update');
-            Route::get('analytics/metrics', [\App\Http\Controllers\Admin\AdminRewardAnalyticsController::class, 'metrics'])->name('analytics.metrics');
+            Route::get('settings', [AdminRewardSettingsController::class, 'index'])->name('settings.index');
+            Route::put('settings', [AdminRewardSettingsController::class, 'update'])->name('settings.update');
+            Route::get('analytics/metrics', [AdminRewardAnalyticsController::class, 'metrics'])->name('analytics.metrics');
         });
     });
 });

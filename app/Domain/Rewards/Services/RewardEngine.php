@@ -5,14 +5,16 @@ namespace App\Domain\Rewards\Services;
 use App\Domain\Fraud\Services\FraudDetectionService;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Domain\Wallet\Services\WalletService;
+use App\Mail\RcoinEarnedMail;
 use App\Models\Order;
 use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 
 class RewardEngine
 {
@@ -72,7 +74,15 @@ class RewardEngine
         }
 
         $user = $order->user;
-        
+
+        // Per-user multiplier - power users / influencers earn proportionally
+        // more for the same activity. Defaults to 1.00 (no change) for the
+        // vast majority of accounts. Admin edits this from the customer page.
+        $multiplier = (float) ($user->rcoin_multiplier ?? 1.00);
+        if ($multiplier > 0 && $multiplier !== 1.0) {
+            $rcoinAmount = (int) floor($rcoinAmount * $multiplier);
+        }
+
         // Enforce daily/monthly max limits
         if (! $this->canEarnRcoin($user, $rcoinAmount)) {
             return; // Or cap the amount, but skipping is safer for now
@@ -93,6 +103,23 @@ class RewardEngine
                 'cashback_percentage' => $percentage,
             ]
         );
+
+        // Notify the buyer their cashback landed. Queued so a slow mailer
+        // never blocks the credit. Best-effort - swallow exceptions so a
+        // mail-server outage doesn't roll back the wallet credit.
+        try {
+            Mail::to($user->email)->queue(
+                new RcoinEarnedMail(
+                    recipient: $user,
+                    rcoinAmount: $rcoinAmount,
+                    newBalance: (int) $wallet->refresh()->balance,
+                    kind: 'cashback',
+                    orderNumber: $order->order_number,
+                )
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**
@@ -146,6 +173,14 @@ class RewardEngine
             return;
         }
 
+        // Per-user multiplier applies to the REFERRER (they're the one
+        // being incentivised). A 2× influencer earns 2× the referral
+        // bonus on every order their referrees place.
+        $multiplier = (float) ($referrer->rcoin_multiplier ?? 1.00);
+        if ($multiplier > 0 && $multiplier !== 1.0) {
+            $rcoinAmount = (int) floor($rcoinAmount * $multiplier);
+        }
+
         // Apply daily/monthly limits for referrer
         if (! $this->canEarnRcoin($referrer, $rcoinAmount, 'referral')) {
             return;
@@ -172,6 +207,24 @@ class RewardEngine
         $referral->total_orders_completed += 1;
         $referral->last_rewarded_at = now();
         $referral->save();
+
+        // Notify the referrer their bonus landed. Includes the referred
+        // user's name for context ("Maria just completed an order").
+        try {
+            $referredUser = User::find($order->user_id);
+            Mail::to($referrer->email)->queue(
+                new RcoinEarnedMail(
+                    recipient: $referrer,
+                    rcoinAmount: $rcoinAmount,
+                    newBalance: (int) $wallet->refresh()->balance,
+                    kind: 'referral',
+                    orderNumber: $order->order_number,
+                    referredName: $referredUser?->name,
+                )
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**
@@ -201,10 +254,10 @@ class RewardEngine
                 }
 
                 $wallet = $tx->wallet;
-                
+
                 // If wallet balance is sufficient, deduct it safely.
                 // Note: The prompt states "MUST NOT allow negative balances improperly".
-                // We will attempt debit. If debit fails due to InsufficientFundsException, 
+                // We will attempt debit. If debit fails due to InsufficientBalanceException,
                 // we might need to handle it. The WalletService::debit throws an exception.
                 try {
                     $this->walletService->debit(
@@ -232,7 +285,7 @@ class RewardEngine
                             }
                         }
                     }
-                } catch (\App\Domain\Wallet\Exceptions\InsufficientFundsException $e) {
+                } catch (InsufficientBalanceException $e) {
                     // Log the failure to reverse because user spent the RCOINs.
                     // Depending on policy, we might create a negative ledger adjustment,
                     // but the directive specifically says "MUST NOT allow negative balances improperly".
@@ -249,7 +302,10 @@ class RewardEngine
     public function usdToRcoin(float $usdAmount): int
     {
         $rate = (float) Setting::get('rcoin_usd_rate', 0.01);
-        if ($rate <= 0) return 0;
+        if ($rate <= 0) {
+            return 0;
+        }
+
         return (int) floor($usdAmount / $rate);
     }
 
@@ -259,6 +315,7 @@ class RewardEngine
     public function rcoinToUsd(int $rcoinAmount): float
     {
         $rate = (float) Setting::get('rcoin_usd_rate', 0.01);
+
         return round($rcoinAmount * $rate, 4);
     }
 
@@ -271,11 +328,11 @@ class RewardEngine
         // We can query wallet_transactions for the sum of rewards today/this month.
         $dailyKey = $type === 'referral' ? 'max_referral_rewards_daily' : 'max_daily_reward_per_user';
         $monthlyKey = $type === 'referral' ? 'max_referral_rewards_monthly' : 'max_monthly_reward_per_user';
-        
+
         $dailyLimit = (int) Setting::get($dailyKey, 5000);
         $monthlyLimit = (int) Setting::get($monthlyKey, 50000);
 
-        $categories = $type === 'referral' 
+        $categories = $type === 'referral'
             ? [TransactionCategory::RewardReferral->value]
             : [TransactionCategory::RewardCashback->value, TransactionCategory::RewardReferral->value];
 
@@ -286,7 +343,7 @@ class RewardEngine
                 ->whereIn('transaction_category', $categories)
                 ->whereDate('created_at', today())
                 ->sum('amount');
-            
+
             if (($earnedToday + $amount) > $dailyLimit) {
                 return false;
             }

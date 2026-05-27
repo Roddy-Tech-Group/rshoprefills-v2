@@ -6,7 +6,7 @@ use Livewire\Attributes\Lazy;
 use Livewire\Volt\Component;
 
 /**
- * Customer dashboard overview — the main content area of /dashboard.
+ * Customer dashboard overview - the main content area of /dashboard.
  *
  * Rendered as a #[Lazy] component: the server returns the skeleton placeholder
  * instantly, then this component boots in a follow-up request, queries its data,
@@ -37,7 +37,7 @@ new #[Lazy] class extends Component
 
         $allWallets = $user->wallets()->where('is_active', true)->get();
 
-        // Recent wallet ledger movements — covers both top-ups (credits) and
+        // Recent wallet ledger movements - covers both top-ups (credits) and
         // purchases (debits) since they both write WalletTransaction rows. Latest 8
         // so the mobile and desktop overview cards have enough content to feel full.
         $recentTransactions = $user->walletTransactions()->latest()->limit(8)->get();
@@ -45,7 +45,7 @@ new #[Lazy] class extends Component
         // Latest 3 orders for the Recent Orders card.
         $recentOrders = $user->orders()->with('items')->latest()->limit(3)->get();
 
-        // Popular gift cards — same source as the storefront's "Popular Gift Cards"
+        // Popular gift cards - same source as the storefront's "Popular Gift Cards"
         // row: the hand-curated config/popular_brands.php list, region-locked to the
         // customer's resolved region (ResolveRegion middleware). One product per
         // brand (MIN id dedupes the per-country rows), ordered by the curated list.
@@ -69,7 +69,7 @@ new #[Lazy] class extends Component
             ->take(5)
             ->values();
 
-        // Fallback so the row never renders empty in a small region — any active
+        // Fallback so the row never renders empty in a small region - any active
         // gift-card brands available there.
         if ($popularProducts->isEmpty()) {
             $fallbackIds = Product::query()
@@ -122,7 +122,7 @@ new #[Lazy] class extends Component
             };
         };
 
-        // Wallet card bg — every wallet uses the same colour as the USD card.
+        // Wallet card bg - every wallet uses the same colour as the USD card.
         $colorFor = fn (string $code): string => 'bg-blue-800';
 
         $walletsPayload = $allWallets->map(function ($w) use ($symbolFor, $isCryptoCode, $iconFor, $colorFor) {
@@ -144,9 +144,28 @@ new #[Lazy] class extends Component
         $rcoinWallet = $user->wallets()->where('currency', 'RCOIN')->first();
         $rcoinBalance = (int) ($rcoinWallet?->balance ?? 0);
 
+        // Loyalty tier - mirrors the ladder in /dashboard/rewards exactly.
+        // Higher tiers carry meaningful perks (badge colour + future
+        // multiplier auto-bumps). Single source of truth so the dashboard
+        // and rewards page can never disagree.
+        $tierLadder = [
+            ['name' => 'Bronze',   'min' => 0,    'color' => 'bg-amber-700'],
+            ['name' => 'Silver',   'min' => 1000, 'color' => 'bg-zinc-500'],
+            ['name' => 'Gold',     'min' => 1500, 'color' => 'bg-amber-500'],
+            ['name' => 'Platinum', 'min' => 3000, 'color' => 'bg-zinc-600'],
+            ['name' => 'Diamond',  'min' => 6000, 'color' => 'bg-cyan-600'],
+        ];
+        $currentTier = $tierLadder[0];
+        foreach ($tierLadder as $tier) {
+            if ($rcoinBalance >= $tier['min']) {
+                $currentTier = $tier;
+            }
+        }
+
         return [
             'user' => $user,
             'rcoinBalance' => $rcoinBalance,
+            'currentTier' => $currentTier,
             'walletBalance' => $walletBalance,
             'walletCurrencyCode' => $walletCurrencyCode,
             'walletCurrencyCase' => $walletCurrencyCase,
@@ -161,7 +180,7 @@ new #[Lazy] class extends Component
 }; ?>
 
 @php
-    // Unified status badge tones — same recipe as the admin list pages and the
+    // Unified status badge tones - same recipe as the admin list pages and the
     // customer orders / transactions pages so every status in the app reads
     // identically. Light tint bg + bold text + 1px ring; dark-mode variants
     // included. Pairs with the rounded-[5px] wrapper at render time.
@@ -206,7 +225,8 @@ new #[Lazy] class extends Component
             </div>
         </div>
 
-        {{-- Rcoin card — placeholder state (no Rcoin ledger yet). Mirrors desktop right-rail card. --}}
+        {{-- Rcoin card (mobile). Live balance + loyalty tier from the wallet
+             ledger. Mirrors desktop right-rail card. --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-start gap-3">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100">
@@ -216,7 +236,7 @@ new #[Lazy] class extends Component
                     <p class="text-sm font-semibold text-zinc-900">RShop Rcoin</p>
                     <div class="mt-1 flex items-center gap-2">
                         <span class="text-2xl font-bold tracking-tight text-zinc-900">{{ number_format($rcoinBalance) }}</span>
-                        <span class="rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Member</span>
+                        <span class="rounded-[5px] {{ $currentTier['color'] }} px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{{ $currentTier['name'] }}</span>
                     </div>
                 </div>
             </div>
@@ -227,7 +247,7 @@ new #[Lazy] class extends Component
             </a>
         </div>
 
-        {{-- Recent Orders — mobile parity with desktop. --}}
+        {{-- Recent Orders - mobile parity with desktop. --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Orders</h3>
@@ -280,7 +300,7 @@ new #[Lazy] class extends Component
             </ul>
         </div>
 
-        {{-- Shop by Category — mobile parity. 4-col grid (2 rows of 4). --}}
+        {{-- Shop by Category - mobile parity. 4-col grid (2 rows of 4). --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Shop by Category</h3>
@@ -307,7 +327,7 @@ new #[Lazy] class extends Component
             </div>
         </div>
 
-        {{-- Popular Gift Cards — same curated source as desktop. brand-row auto-scrolls on mobile. --}}
+        {{-- Popular Gift Cards - same curated source as desktop. brand-row auto-scrolls on mobile. --}}
         @if ($popularProducts->isNotEmpty())
             <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <x-home.brand-row
@@ -340,7 +360,7 @@ new #[Lazy] class extends Component
             </div>
         @endif
 
-        {{-- Give the Perfect Gift promo — placed here on mobile (desktop keeps its own copy in the right rail). --}}
+        {{-- Give the Perfect Gift promo - placed here on mobile (desktop keeps its own copy in the right rail). --}}
         <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
             <div class="relative z-10 max-w-[64%]">
                 <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
@@ -358,7 +378,7 @@ new #[Lazy] class extends Component
             >
         </div>
 
-        {{-- Recent Transactions — mobile only; mirrors the desktop right-rail card.
+        {{-- Recent Transactions - mobile only; mirrors the desktop right-rail card.
              Shows top-ups (credits) and purchases (debits) interleaved since both
              write to wallet_transactions. Capped at 8 here, full history is on
              /dashboard/transactions via the View all link. --}}
@@ -441,7 +461,7 @@ new #[Lazy] class extends Component
                         <p class="mt-1 text-sm text-zinc-600">Here's what's happening with your account today.</p>
                     </div>
 
-                    {{-- Customize button — theme picker dropdown (Light / Dark / System).
+                    {{-- Customize button - theme picker dropdown (Light / Dark / System).
                          Hooks into window.setTheme() from partials/theme-engine.blade.php,
                          which writes localStorage['theme'] and toggles the .dark class on
                          <html> for instant before-first-paint application. The dropdown
@@ -470,7 +490,7 @@ new #[Lazy] class extends Component
                             :aria-expanded="open.toString()"
                             class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
                         >
-                            {{-- Theme indicator — swaps sun / moon / monitor with a quick
+                            {{-- Theme indicator - swaps sun / moon / monitor with a quick
                                  cross-fade so the button itself signals the current mode. --}}
                             <span class="relative inline-flex h-4 w-4 items-center justify-center">
                                 <svg
@@ -521,7 +541,7 @@ new #[Lazy] class extends Component
                             </svg>
                         </button>
 
-                        {{-- Settings panel — theme picker + master toggles + link out. --}}
+                        {{-- Settings panel - theme picker + master toggles + link out. --}}
                         <div
                             x-show="open"
                             x-cloak
@@ -564,7 +584,7 @@ new #[Lazy] class extends Component
 
                             <p class="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Privacy & density</p>
 
-                            {{-- Hide all balances — master switch that overrides every wallet
+                            {{-- Hide all balances - master switch that overrides every wallet
                                  card's eye-toggle so balances are masked dashboard-wide. --}}
                             <button
                                 type="button"
@@ -590,7 +610,7 @@ new #[Lazy] class extends Component
                                 </span>
                             </button>
 
-                            {{-- Compact mode — adds the `.compact` class on <html>; tighter padding
+                            {{-- Compact mode - adds the `.compact` class on <html>; tighter padding
                                  + smaller gaps on dashboard cards (rules in app.css). --}}
                             <button
                                 type="button"
@@ -680,11 +700,11 @@ new #[Lazy] class extends Component
                             </span>
                         </div>
 
-                        {{-- Fund Wallet — embedded Volt component: amount/currency modal that
+                        {{-- Fund Wallet - embedded Volt component: amount/currency modal that
                              calls WalletFundingService and hands off to the payment gateway. --}}
                         <livewire:dashboard.fund-wallet :currency="$walletCurrencyCode" wire:key="fund-desktop" />
 
-                        {{-- Currency switcher — collapsed by default to keep the card clean.
+                        {{-- Currency switcher - collapsed by default to keep the card clean.
                              Click to open a list of all wallets (with balances), pick one,
                              panel closes. The trigger only ever shows the active wallet so
                              other balances don't leak at a glance. --}}
@@ -708,7 +728,7 @@ new #[Lazy] class extends Component
                                     </svg>
                                 </button>
 
-                                {{-- Panel — absolute below the trigger, light bg so it reads against the
+                                {{-- Panel - absolute below the trigger, light bg so it reads against the
                                      blue card behind. z-30 keeps it above the dashboard content but well
                                      below modals (which start at z-[70]). --}}
                                 <div
@@ -830,7 +850,7 @@ new #[Lazy] class extends Component
                     </div>
                 </div>
 
-                {{-- Trust strip — serious glass pill. The frost + highlights
+                {{-- Trust strip - serious glass pill. The frost + highlights
                      + dark/light variants live on .trust-glow in resources/css/app.css
                      so the Tailwind utilities here stay structural only. --}}
                 <div class="trust-glow flex items-center gap-4 rounded-[10px] py-3 pl-3 pr-6 ring-1 ring-white/40 dark:ring-white/10">
@@ -882,7 +902,7 @@ new #[Lazy] class extends Component
                     {{-- Divider --}}
                     <div class="border-t border-zinc-100"></div>
 
-                    {{-- Popular Gift Cards — same curated source (config/popular_brands.php)
+                    {{-- Popular Gift Cards - same curated source (config/popular_brands.php)
                         and card style as the storefront's "Popular Gift Cards" row. --}}
                     <div class="p-5 sm:p-6">
                         @if ($popularProducts->isNotEmpty())
@@ -926,9 +946,9 @@ new #[Lazy] class extends Component
             {{-- RIGHT RAIL: points, gift promo, recent transactions --}}
             <div class="flex flex-col gap-6 lg:col-span-4">
 
-                {{-- RShop Rcoin card. No Rcoin ledger backend exists yet, so this shows
-                a neutral intro state rather than fabricated balance/tier numbers.
-                The rewards page carries the full (placeholder) breakdown. --}}
+                {{-- RShop Rcoin card (desktop). Live balance + tier from the
+                     wallet ledger (RewardEngine credits cashback + referral here,
+                     CheckoutService debits redemptions, etc.). --}}
                 <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-start gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100">
@@ -938,7 +958,7 @@ new #[Lazy] class extends Component
                             <p class="text-sm font-semibold text-zinc-900">RShop Rcoin</p>
                             <div class="mt-1 flex items-center gap-2">
                                 <span class="text-2xl font-bold tracking-tight text-zinc-900">{{ number_format($rcoinBalance) }}</span>
-                                <span class="rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Member</span>
+                                <span class="rounded-[5px] {{ $currentTier['color'] }} px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{{ $currentTier['name'] }}</span>
                             </div>
                         </div>
                     </div>

@@ -100,7 +100,11 @@ class CheckoutController extends Controller
                 paymentMethod: $paymentMethod,
                 displayCurrency: $displayCurrency,
                 deliveryEmail: $data['delivery_email'],
-                applyRcoin: $request->boolean('apply_rcoin')
+                // Three states for Rcoin redemption:
+                //   - 'full' → pay the entire order with Rcoin (rewards-page convert flow)
+                //   - true   → standard partial redemption capped at redemption_max_percentage
+                //   - false  → no Rcoin
+                applyRcoin: $request->input('apply_rcoin') === 'full' ? 'full' : $request->boolean('apply_rcoin')
             );
 
             $fraudService->recordCheckout($user, $request->ip());
