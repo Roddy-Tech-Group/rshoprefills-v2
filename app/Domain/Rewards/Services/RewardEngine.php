@@ -13,7 +13,6 @@ use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\WalletTransaction;
-use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
