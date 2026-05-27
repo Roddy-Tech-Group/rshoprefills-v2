@@ -47,6 +47,13 @@ class WalletFundingService
             throw new \InvalidArgumentException("Minimum funding amount is {$currency->minimumFundingAmount()} {$currency->value}.");
         }
 
+        // Hard upper cap — stops gateway-sandbox accidents and fat-finger UI
+        // bugs (e.g. typing 100000 instead of 1000) before a payment session is
+        // even created. Sized per-currency in Currency::maximumFundingAmount().
+        if ($amount > $currency->maximumFundingAmount()) {
+            throw new \InvalidArgumentException('Maximum funding amount per transaction is '.number_format($currency->maximumFundingAmount(), 2)." {$currency->value}.");
+        }
+
         $displayCurrency = strtoupper(trim($displayCurrency ?: $currency->value));
 
         // 1. Resolve rates snapshot

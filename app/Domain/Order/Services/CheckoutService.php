@@ -115,7 +115,14 @@ class CheckoutService
                         'subcategory_id' => $item->product->subcategory_id,
                         'provider_name' => $item->variant->metadata['provider'] ?? $item->product->provider_name,
                         'provider_offer_id' => $item->variant->provider_offer_id,
-                        'product_snapshot' => $item->product->toArray(),
+                        'product_snapshot' => array_merge($item->product->toArray(), [
+                            // toArray() doesn't include eager relations — but fulfilment
+                            // providers and order views need the category slug to branch
+                            // (esim vs. mobile-airtime vs. gift card). Add it explicitly.
+                            'category' => $item->product->category
+                                ? ['id' => $item->product->category->id, 'slug' => $item->product->category->slug, 'name' => $item->product->category->name]
+                                : null,
+                        ]),
                         'variant_snapshot' => $item->variant->toArray(),
                         'quantity' => 1,
                         'display_currency' => $displayCurrency,
@@ -124,6 +131,10 @@ class CheckoutService
                         'markup_amount' => $item->markup_amount,
                         'subtotal_amount' => $unitSubtotal,
                         'fulfillment_status' => FulfillmentStatus::NotStarted,
+                        // Carry the buyer-supplied context (top-up recipient phone,
+                        // gift-card delivery email, …) forward so the fulfilment
+                        // provider can act on it.
+                        'metadata' => $item->metadata_snapshot ?: null,
                     ]);
                 }
             }

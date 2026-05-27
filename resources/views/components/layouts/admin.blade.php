@@ -3,10 +3,55 @@
     <head>
         @include('partials.head')
     </head>
+    {{-- Desktop sidebar-collapse styling. The 'admin-sidebar-collapsed' class
+         on <html> is toggled by the round chevron in the header — when set,
+         the Flux sidebar shrinks to an icon-only rail and every text label
+         hides. We zero out font-size on the nav items to hide raw text nodes
+         without rewriting the markup; <svg> and <img> have explicit sizes so
+         they keep rendering. Mobile is unaffected (stash already covers it). --}}
+    <style>
+        @media (min-width: 1024px) {
+            html.admin-sidebar-collapsed [data-flux-sidebar] {
+                width: 72px !important;
+            }
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav a,
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav button {
+                font-size: 0 !important;
+                justify-content: center;
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+                gap: 0 !important;
+            }
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav a > svg,
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav button > svg,
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav a > img,
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav button > img,
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav button > span {
+                margin: 0 auto;
+            }
+            /* Expandable groups (Products) — hide chevron + sub-menu in collapsed mode. */
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav button > svg:last-child {
+                display: none !important;
+            }
+            html.admin-sidebar-collapsed [data-flux-sidebar] nav .border-l {
+                display: none !important;
+            }
+            /* Brand: hide the "Est. 2024" subtitle so just the wordmark sits centred. */
+            html.admin-sidebar-collapsed [data-flux-sidebar] > a > span:last-child {
+                display: none !important;
+            }
+            html.admin-sidebar-collapsed [data-flux-sidebar] > a {
+                margin-right: 0 !important;
+            }
+            /* Soften the resize so the rail glides rather than snaps. */
+            [data-flux-sidebar] {
+                transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+            }
+        }
+    </style>
     <body class="min-h-screen bg-[#eff6ff] text-zinc-900">
 
         <flux:sidebar sticky stashable class="bg-white">
-            <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
             {{-- Brand --}}
             <a href="{{ route('admin.dashboard') }}" class="mr-5 -ml-1 flex flex-col rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
@@ -190,6 +235,26 @@
                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-zinc-100 active:scale-95 lg:hidden"
             >
                 <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-6 w-6" style="filter: brightness(0) saturate(100%);" loading="lazy">
+            </button>
+
+            {{-- Desktop sidebar collapse toggle. Rotates 180° when collapsed so
+                 the arrow always points the direction the sidebar will move. --}}
+            <button
+                type="button"
+                x-data
+                @click="$store.adminSidebar.toggle()"
+                :aria-label="$store.adminSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+                :aria-pressed="$store.adminSidebar.collapsed.toString()"
+                class="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-700 transition-all hover:bg-zinc-200 hover:text-zinc-900 active:scale-95 lg:flex"
+            >
+                <svg
+                    class="h-4 w-4 transition-transform duration-200"
+                    :class="$store.adminSidebar.collapsed ? 'rotate-0' : 'rotate-180'"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7-7 7M3 12h18"/>
+                </svg>
             </button>
 
             {{-- Page heading is rendered inside the content area (see <flux:main> below),
@@ -403,10 +468,9 @@
                 </div>
 
                 <div class="px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4">
-                    <div class="mb-5 flex items-center justify-between">
-                        <h2 id="admin-mobile-menu-title" class="text-lg font-bold text-zinc-900">Admin menu</h2>
-                        <x-close-button @click="menuOpen = false" aria-label="Close menu" />
-                    </div>
+                    {{-- No close X here — backdrop tap and the grab handle above
+                         already dismiss the sheet, so the button was redundant. --}}
+                    <h2 id="admin-mobile-menu-title" class="mb-5 text-lg font-bold text-zinc-900">Admin menu</h2>
 
                     <div class="skeleton-stagger-fast grid grid-cols-4 gap-3">
                         @foreach ($adminMenuItems as $i => $item)
