@@ -45,6 +45,17 @@ class VerifyPaymentJob implements ShouldQueue
             $isPaid = $provider->verifyPayment($attempt);
 
             if ($isPaid) {
+                // Check if the order is already Paid by a different attempt
+                $order = Order::where('id', $attempt->order_id)->lockForUpdate()->first();
+                if ($order && $order->payment_status === PaymentStatus::Paid) {
+                    Log::warning("VerifyPaymentJob: Duplicate payment detected. Order {$order->id} is already Paid. Dispatching refund for attempt {$attempt->id}");
+                    $attempt->payment_status = PaymentStatus::Paid;
+                    $attempt->save();
+                    
+                    \App\Jobs\RefundPaymentJob::dispatch($attempt);
+                    return;
+                }
+
                 Log::info("VerifyPaymentJob: payment confirmed for attempt {$attempt->id}");
 
                 // 1. Transition the order's payment status to Paid

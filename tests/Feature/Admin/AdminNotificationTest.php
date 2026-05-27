@@ -24,8 +24,8 @@ class AdminNotificationTest extends TestCase
             'kyc_country' => 'Nigeria',
             'kyc_document_type' => 'passport',
             'kyc_document_number' => 'A1234567',
-            'kyc_document_front' => UploadedFile::fake()->image('front.jpg'),
-            'kyc_selfie' => UploadedFile::fake()->image('selfie.jpg'),
+            'kyc_document_front' => UploadedFile::fake()->create('front.jpg', 100, 'image/jpeg'),
+            'kyc_selfie' => UploadedFile::fake()->create('selfie.jpg', 100, 'image/jpeg'),
         ]);
 
         $this->assertDatabaseHas('admin_notifications', ['type' => 'kyc']);

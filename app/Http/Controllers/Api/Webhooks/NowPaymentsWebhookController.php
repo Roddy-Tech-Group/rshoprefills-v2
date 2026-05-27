@@ -16,7 +16,7 @@ class NowPaymentsWebhookController extends Controller
 
         // Validate crypt signature if configured
         $signature = $request->header('x-nowpayments-sig');
-        $ipnSecret = env('NOWPAYMENTS_IPN_SECRET', 'NOWPAYMENTS_IPN_MOCK');
+        $ipnSecret = config('services.nowpayments.ipn_secret', 'NOWPAYMENTS_IPN_MOCK');
 
         if ($ipnSecret !== 'NOWPAYMENTS_IPN_MOCK' && empty($signature)) {
             Log::warning('NowPayments webhook: missing signature header');

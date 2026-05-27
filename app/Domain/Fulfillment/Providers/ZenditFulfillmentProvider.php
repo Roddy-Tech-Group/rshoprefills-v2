@@ -18,10 +18,10 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
     public function __construct()
     {
-        $this->apiKey = config('services.zendit.api_key') ?: env('ZENDIT_API_KEY') ?: 'ZENDIT_API_KEY_MOCK';
+        $this->apiKey = config('services.zendit.api_key') ?: 'ZENDIT_API_KEY_MOCK';
 
-        // Explicit base URL from config/env always wins.
-        $explicitUrl = config('services.zendit.base_url') ?: env('ZENDIT_BASE_URL');
+        // Explicit base URL from config always wins.
+        $explicitUrl = config('services.zendit.base_url');
         if ($explicitUrl) {
             $this->baseUrl = $explicitUrl;
         } else {

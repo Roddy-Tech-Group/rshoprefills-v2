@@ -15,7 +15,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
 
     public function __construct()
     {
-        $this->apiKey = config('services.nowpayments.api_key') ?: env('NOWPAYMENTS_API_KEY') ?: 'NOWPAYMENTS_KEY_MOCK';
+        $this->apiKey = config('services.nowpayments.api_key') ?: 'NOWPAYMENTS_KEY_MOCK';
         $this->baseUrl = 'https://api.nowpayments.io/v1';
     }
 
@@ -144,7 +144,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'pay_currency' => $payCurrency,
                 'network' => $network,
                 'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
-                'expires_at' => $expiresAt,
+                'expires_at' => now()->addMinutes(30)->toIso8601String(),
             ];
         }
 

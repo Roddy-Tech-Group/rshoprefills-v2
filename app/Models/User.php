@@ -157,7 +157,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $walletCurrency = $this->wallets()->orderBy('id')->value('currency');
 
-        return $walletCurrency ? strtoupper($walletCurrency) : 'USD';
+        // Eloquent returns the Enum instance, so use ->value if it's an Enum, or cast if string
+        $currencyString = $walletCurrency instanceof \App\Domain\Shared\Enums\Currency ? $walletCurrency->value : (string) $walletCurrency;
+
+        return $currencyString ? strtoupper($currencyString) : 'USD';
     }
 
     // ────────────────────────────────────────────────────────────

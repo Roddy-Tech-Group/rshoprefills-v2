@@ -46,7 +46,7 @@ class FraudDetectionService
         }
 
         if ($flagged) {
-            $adminEmail = env('ADMIN_ALERT_EMAIL', 'admin@roddytechgroup.com');
+            $adminEmail = config('mail.admin_address', 'admin@roddytechgroup.com');
             Notification::route('mail', $adminEmail)
                 ->notify(new CriticalSystemAlert(
                     title: 'Fraud Alert: Suspicious Checkout Blocked',

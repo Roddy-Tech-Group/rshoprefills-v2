@@ -11,6 +11,7 @@ use App\Models\Referral;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -39,10 +40,7 @@ class RewardEngine
             }
 
             // Ensure this order hasn't already awarded cashback (idempotency check)
-            $alreadyAwarded = WalletTransaction::where('currency', Currency::RCOIN->value)
-                ->where('transaction_category', TransactionCategory::RewardCashback->value)
-                ->where('metadata->order_id', $order->id)
-                ->exists();
+            $alreadyAwarded = WalletTransaction::where('idempotency_key', "reward-cashback-{$order->id}")->exists();
 
             if ($alreadyAwarded) {
                 return;
@@ -87,6 +85,7 @@ class RewardEngine
             amount: $rcoinAmount,
             category: TransactionCategory::RewardCashback,
             description: $description,
+            idempotencyKey: "reward-cashback-{$order->id}",
             metadata: [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
@@ -160,6 +159,7 @@ class RewardEngine
             amount: $rcoinAmount,
             category: TransactionCategory::RewardReferral,
             description: $description,
+            idempotencyKey: "reward-referral-{$order->id}",
             metadata: [
                 'order_id' => $order->id,
                 'referred_user_id' => $order->user_id,
@@ -232,7 +232,7 @@ class RewardEngine
                             }
                         }
                     }
-                } catch (\App\Domain\Wallet\Exceptions\InsufficientFundsException $e) {
+                } catch (InsufficientBalanceException $e) {
                     // Log the failure to reverse because user spent the RCOINs.
                     // Depending on policy, we might create a negative ledger adjustment,
                     // but the directive specifically says "MUST NOT allow negative balances improperly".

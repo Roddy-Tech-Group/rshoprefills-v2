@@ -17,7 +17,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
     public function __construct()
     {
-        $this->secretKey = config('services.flutterwave.secret_key') ?: env('FLUTTERWAVE_SECRET_KEY') ?: 'FLW_SECRET_KEY_MOCK';
+        $this->secretKey = config('services.flutterwave.secret_key') ?: 'FLW_SECRET_KEY_MOCK';
         $this->baseUrl = 'https://api.flutterwave.com/v3';
     }
 
@@ -34,7 +34,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $description = "Wallet Funding Ref #{$payable->reference}";
         }
 
-        $publicKey = config('services.flutterwave.public_key') ?: env('FLUTTERWAVE_PUBLIC_KEY') ?: 'FLW_PUB_KEY_MOCK';
+        $publicKey = config('services.flutterwave.public_key') ?: 'FLW_PUB_KEY_MOCK';
 
         // Set attempt's gateway reference to tx_ref for tracking before webhook or capture
         $attempt->gateway_reference = $txRef;
@@ -62,7 +62,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
     public function getEncryptionKey(): string
     {
-        $key = config('services.flutterwave.encryption_key') ?: env('FLW_ENCRYPTION_KEY');
+        $key = config('services.flutterwave.encryption_key');
         if ($key) {
             return $key;
         }
