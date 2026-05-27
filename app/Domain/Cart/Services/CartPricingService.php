@@ -68,12 +68,17 @@ class CartPricingService
             $totalProviderCost += ($item->provider_cost_usd * $item->quantity);
         }
 
+        $rewardEngine = app(\App\Domain\Rewards\Services\RewardEngine::class);
+        $cashbackPercentage = (float) \App\Models\Setting::get('cashback_percentage', 1.0);
+        $estimatedRcoinReward = $rewardEngine->usdToRcoin($subtotal * ($cashbackPercentage / 100));
+
         return [
             'currency' => 'USD',
             'subtotal' => $subtotal,
             'total_markup' => $totalMarkup,
             'total_provider_cost' => $totalProviderCost,
             'total' => $subtotal, // No tax/discounts yet
+            'estimated_rcoin_reward' => $estimatedRcoinReward,
         ];
     }
 

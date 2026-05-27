@@ -34,7 +34,7 @@ class CheckoutService
      *
      * @throws \Exception
      */
-    public function placeOrder(User $user, Cart $cart, string $paymentMethod, string $displayCurrency, ?string $deliveryEmail = null): Order
+    public function placeOrder(User $user, Cart $cart, string $paymentMethod, string $displayCurrency, ?string $deliveryEmail = null, bool $applyRcoin = false): Order
     {
         // 1. Recalculate and validate cart items/prices (in raw USD)
         $validatedTotals = $this->orderValidationService->validateForCheckout($cart);
@@ -60,11 +60,35 @@ class CheckoutService
         //    in step 5 throws (encryption key, bad currency, network), we want
         //    the cart to stay intact so the customer can retry without losing
         //    their items. Cart deletion now lives at the end, after init succeeds.
-        $order = DB::transaction(function () use ($user, $cart, $paymentMethod, $displayCurrency, $validatedTotals, $orderNumber, $deliveryEmail, $exchangeRate) {
+        $order = DB::transaction(function () use ($user, $cart, $paymentMethod, $displayCurrency, $validatedTotals, $orderNumber, $deliveryEmail, $exchangeRate, $applyRcoin) {
 
             // Re-lock the cart to avoid race conditions
             $lockedCart = Cart::where('id', $cart->id)->lockForUpdate()->firstOrFail();
             $lockedCart->load('items.product', 'items.variant');
+
+            $rcoinApplied = 0;
+            $rcoinDiscountUsd = 0.0;
+
+            if ($applyRcoin && \App\Models\Setting::get('redemption_enabled', true)) {
+                $rewardEngine = app(\App\Domain\Rewards\Services\RewardEngine::class);
+                $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                
+                $wallet = $walletService->getOrCreateWallet($user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                $availableBalance = (int) $wallet->balance;
+                $minRedemption = (int) \App\Models\Setting::get('redemption_min_rcoin', 2000);
+
+                if ($availableBalance > 0 && $availableBalance >= $minRedemption) {
+                    $maxPct = (float) \App\Models\Setting::get('redemption_max_percentage', 30.0);
+                    $maxUsdAllowed = $validatedTotals['total'] * ($maxPct / 100);
+                    $maxRcoinAllowed = $rewardEngine->usdToRcoin($maxUsdAllowed);
+                    
+                    $rcoinApplied = min($availableBalance, $maxRcoinAllowed);
+                    $rcoinDiscountUsd = $rewardEngine->rcoinToUsd($rcoinApplied);
+                    
+                    // If applied, deduct it from validated totals
+                    $validatedTotals['total'] = max(0, $validatedTotals['total'] - $rcoinDiscountUsd);
+                }
+            }
 
             // Convert settlement USD totals into the display currency.
             $displaySubtotal = round($validatedTotals['subtotal'] * $exchangeRate, 4);
@@ -92,6 +116,8 @@ class CheckoutService
                     'exchange_rate' => $exchangeRate,
                     'settlement_subtotal_usd' => $validatedTotals['subtotal'],
                     'settlement_total_usd' => $validatedTotals['total'],
+                    'rcoin_applied' => $rcoinApplied,
+                    'rcoin_discount_usd' => $rcoinDiscountUsd,
                 ],
             ]);
 
@@ -141,6 +167,12 @@ class CheckoutService
 
             // NOTE: Cart deletion intentionally deferred to step 7 (post-init).
 
+            if ($rcoinApplied > 0) {
+                $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                $wallet = $walletService->getOrCreateWallet($user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                $walletService->lockFunds($wallet, $rcoinApplied);
+            }
+
             return $order;
         });
 
@@ -175,6 +207,14 @@ class CheckoutService
                 'payment_status' => PaymentStatus::Failed,
                 'failed_at' => now(),
             ]);
+
+            $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
+            if ($rcoinApplied > 0) {
+                $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                $wallet = $walletService->getOrCreateWallet($user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                $walletService->unlockFunds($wallet, $rcoinApplied);
+            }
+
             throw $e;
         }
 

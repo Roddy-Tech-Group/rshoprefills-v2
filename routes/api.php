@@ -37,6 +37,7 @@ Route::post('webhooks/airalo', AiraloWebhookController::class)->name('api.webhoo
 
 // Storefront Catalog APIs (Public)
 Route::prefix('storefront')->name('api.storefront.')->group(function () {
+    Route::get('config', [\App\Http\Controllers\Api\Storefront\ConfigController::class, 'index'])->name('config');
     Route::get('categories', [CatalogController::class, 'categories'])->name('categories');
     Route::get('subcategories', [CatalogController::class, 'subcategories'])->name('subcategories');
     Route::get('products', [CatalogController::class, 'products'])->name('products');

@@ -12,25 +12,31 @@
 --}}
 @php
     use App\Models\Product;
-
+    use App\Models\Setting;
+    use App\Domain\Wallet\Services\WalletService;
+    use App\Domain\Rewards\Services\RewardEngine;
+    use App\Domain\Shared\Enums\Currency;
+    
     $user = auth()->user();
-
-    // ── Rcoin balance — there is no Rcoin ledger backend yet, so this is an
-    //    honest zero state (no fabricated balance). Bind to the Rcoin model when
-    //    it ships; the rest of the page computes off these values. ──
-    $rcoinBalance = 0;
-    $rcoinEarned  = 0;
-
-    // Admin-configurable economics (placeholders).
-    $rcoinPerUsd       = 100;    // 100 Rcoin = $1
-    $convertThreshold  = 1000;   // min Rcoin before convert-to-gift-card unlocks
-    $withdrawThreshold = 5000;   // min Rcoin before cash withdrawal unlocks
-
-    $cashValue = $rcoinBalance / $rcoinPerUsd; // USD worth of the current balance
-    $coin      = asset('assets/favicon.ico');  // the Rcoin coin mark
+    
+    $walletService = app(WalletService::class);
+    $rewardEngine = app(RewardEngine::class);
+    
+    $rcoinWallet = $walletService->getOrCreateWallet($user, Currency::RCOIN);
+    $rcoinBalance = (int) $rcoinWallet->balance;
+    $rcoinEarned = (int) $user->walletTransactions()
+        ->where('currency', Currency::RCOIN->value)
+        ->whereIn('type', [\App\Domain\Shared\Enums\WalletTransactionType::Credit->value])
+        ->sum('amount');
+        
+    $rcoinPerUsd = 1 / Setting::get('rcoin_usd_rate', 0.005);
+    $convertThreshold = (int) Setting::get('redemption_min_rcoin', 100);
+    $withdrawThreshold = (int) Setting::get('withdrawal_min_rcoin', 5000);
+    
+    $cashValue = $rewardEngine->rcoinToUsd($rcoinBalance);
+    $coin = asset('assets/favicon.ico');
 
     // ── Loyalty tier ladder ──
-    // Platinum needs email verification, Diamond needs ID (KYC) verification — see /dashboard/kyc.
     $tierLadder = [
         ['name' => 'Bronze',   'min' => 0,    'requires' => null],
         ['name' => 'Silver',   'min' => 1000, 'requires' => null],
@@ -48,17 +54,31 @@
     }
     $rcoinToNext  = $nextTier ? max(0, $nextTier['min'] - $rcoinBalance) : 0;
     $tierProgress = $nextTier
-        ? min(100, round((($rcoinBalance - $currentTier['min']) / ($nextTier['min'] - $currentTier['min'])) * 100, 1))
+        ? min(100, round((($rcoinBalance - $currentTier['min']) / max(1, $nextTier['min'] - $currentTier['min'])) * 100, 1))
         : 100;
 
     // ── Convert / withdraw availability ──
     $canConvert  = $rcoinBalance >= $convertThreshold;
     $canWithdraw = $rcoinBalance >= $withdrawThreshold;
-    $convertProgress  = min(100, round(($rcoinBalance / $convertThreshold) * 100, 1));
-    $withdrawProgress = min(100, round(($rcoinBalance / $withdrawThreshold) * 100, 1));
+    $convertProgress  = min(100, round(($rcoinBalance / max(1, $convertThreshold)) * 100, 1));
+    $withdrawProgress = min(100, round(($rcoinBalance / max(1, $withdrawThreshold)) * 100, 1));
 
-    // ── Rcoin history — empty until the Rcoin ledger backend ships. ──
-    $rcoinHistory = [];
+    // ── Rcoin history ──
+    $transactions = $user->walletTransactions()
+        ->where('currency', Currency::RCOIN->value)
+        ->latest()
+        ->limit(20)
+        ->get();
+        
+    $rcoinHistory = $transactions->map(function ($txn) {
+        $isCredit = $txn->type === \App\Domain\Shared\Enums\WalletTransactionType::Credit;
+        return [
+            'label' => $txn->description ?? 'RCOIN Transaction',
+            'date' => $txn->created_at,
+            'rcoin' => $isCredit ? (int) $txn->amount : -((int) $txn->amount),
+            'isCredit' => $isCredit,
+        ];
+    })->toArray();
 @endphp
 
 <x-layouts.dashboard>

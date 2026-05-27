@@ -147,6 +147,29 @@ class PaymentSessionService
                 }
             }
 
+            // Deduct RCOIN if it was locked during checkout
+            $order = $session->paymentAttempt?->order;
+            if ($order) {
+                $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
+                if ($rcoinApplied > 0) {
+                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    
+                    // Unlock and debit
+                    $walletService->unlockFunds($wallet, $rcoinApplied);
+                    $walletService->debit(
+                        wallet: $wallet,
+                        amount: $rcoinApplied,
+                        category: \App\Domain\Shared\Enums\TransactionCategory::RewardRedemption,
+                        description: "RCOIN redeemed on Order #{$order->order_number}",
+                        metadata: [
+                            'order_id' => $order->id,
+                            'rcoin_discount_usd' => $order->metadata['rcoin_discount_usd'] ?? 0,
+                        ]
+                    );
+                }
+            }
+
             event(new PaymentSessionConfirmed($session));
         });
     }
@@ -186,6 +209,17 @@ class PaymentSessionService
 
             $session->save();
 
+            // Unlock RCOIN if it was locked during checkout
+            $order = $session->paymentAttempt?->order;
+            if ($order) {
+                $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
+                if ($rcoinApplied > 0) {
+                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    $walletService->unlockFunds($wallet, $rcoinApplied);
+                }
+            }
+
             event(new PaymentSessionFailed($session, $reason));
         });
     }
@@ -203,6 +237,18 @@ class PaymentSessionService
             }
 
             $session->transitionTo('expired');
+
+            // Unlock RCOIN if it was locked during checkout
+            $order = $session->paymentAttempt?->order;
+            if ($order) {
+                $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
+                if ($rcoinApplied > 0) {
+                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    $walletService->unlockFunds($wallet, $rcoinApplied);
+                }
+            }
+
             event(new PaymentSessionExpired($session));
         });
     }
