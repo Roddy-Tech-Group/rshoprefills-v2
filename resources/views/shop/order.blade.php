@@ -618,16 +618,20 @@
             </div>
             <div>
                 <dt class="text-xs font-medium text-zinc-500">Items</dt>
-                <dd class="mt-0.5 font-semibold text-zinc-900">{{ $order->items->sum('quantity') }}</dd>
+                <dd class="mt-0.5 font-semibold text-zinc-900">{{ $order->items->count() }}</dd>
             </div>
         </dl>
 
-        {{-- Line items --}}
+        {{-- Line items — grouped by variant so 2× Apple $5 renders as one row --}}
+        @php $groupedItems = $order->items->groupBy('product_variant_id'); @endphp
         <ul class="mt-5 divide-y divide-zinc-100 border-t border-zinc-100">
-            @foreach ($order->items as $item)
+            @foreach ($groupedItems as $variantId => $variantItems)
                 @php
+                    $firstItem = $variantItems->first();
+                    $groupQty  = $variantItems->count();
+                    $groupTotal = $variantItems->sum('subtotal_amount');
                     // product_snapshot is the catalog Product captured at order time.
-                    $snap     = $item->product_snapshot ?? [];
+                    $snap     = $firstItem->product_snapshot ?? [];
                     $brandKey = $snap['brand_key'] ?? null;
                     $name     = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Item');
                     $logo     = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
@@ -645,37 +649,41 @@
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-bold text-zinc-900">{{ $name }}</p>
                         <p class="mt-0.5 text-xs text-zinc-600">
-                            Qty {{ $item->quantity }} &middot; {{ $money($item->display_amount) }} each
+                            Qty {{ $groupQty }} &middot; {{ $money($firstItem->display_amount) }} each
                         </p>
-                        @if (! empty($item->fulfillment_payload))
-                            <div class="mt-2 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200">
-                                <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Redemption details</p>
-                                
-                                @if(!empty($item->fulfillment_payload['phone_number']))
-                                    <div class="mt-2 mb-2 flex items-center gap-2 rounded-md bg-blue-100 px-3 py-2 text-blue-800">
-                                        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                                        </svg>
-                                        <span class="text-sm font-bold tracking-wide">{{ $item->fulfillment_payload['phone_number'] }}</span>
-                                    </div>
-                                @endif
-
-                                @if(!empty($item->fulfillment_payload['qrcode_url']))
-                                    <div class="mt-2 mb-2">
-                                        <img src="{{ $item->fulfillment_payload['qrcode_url'] }}" alt="eSIM QR" class="h-32 w-32 rounded bg-white p-2 ring-1 ring-zinc-200">
-                                    </div>
-                                @endif
-
-                                @foreach ((array) $item->fulfillment_payload as $key => $value)
-                                    @if (is_scalar($value) && !in_array($key, ['raw_response', 'qrcode_url', 'phone_number']))
-                                        <p class="mt-1 text-sm font-bold tabular-nums text-zinc-900 break-all">
-                                            <span class="text-[10px] text-zinc-500 font-normal uppercase">{{ str_replace('_', ' ', $key) }}:</span>
-                                            {{ $value }}
-                                        </p>
+                        {{-- Render redemption details for each individual unit (each has its own unique code) --}}
+                        @foreach ($variantItems as $item)
+                            @if (! empty($item->fulfillment_payload))
+                                <div class="mt-2 rounded-lg bg-zinc-50 px-3 py-2 ring-1 ring-zinc-200">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{{ $groupQty > 1 ? 'Code ' . ($loop->iteration) . ' of ' . $groupQty : 'Redemption details' }}</p>
+                                    
+                                    @if(!empty($item->fulfillment_payload['phone_number']))
+                                        <div class="mt-2 mb-2 flex items-center gap-2 rounded-md bg-blue-100 px-3 py-2 text-blue-800">
+                                            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                            </svg>
+                                            <span class="text-sm font-bold tracking-wide">{{ $item->fulfillment_payload['phone_number'] }}</span>
+                                        </div>
                                     @endif
-                                @endforeach
-                            </div>
-                        @else
+
+                                    @if(!empty($item->fulfillment_payload['qrcode_url']))
+                                        <div class="mt-2 mb-2">
+                                            <img src="{{ $item->fulfillment_payload['qrcode_url'] }}" alt="eSIM QR" class="h-32 w-32 rounded bg-white p-2 ring-1 ring-zinc-200">
+                                        </div>
+                                    @endif
+
+                                    @foreach ((array) $item->fulfillment_payload as $key => $value)
+                                        @if (is_scalar($value) && !in_array($key, ['raw_response', 'qrcode_url', 'phone_number']))
+                                            <p class="mt-1 text-sm font-bold tabular-nums text-zinc-900 break-all">
+                                                <span class="text-[10px] text-zinc-500 font-normal uppercase">{{ str_replace('_', ' ', $key) }}:</span>
+                                                {{ $value }}
+                                            </p>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
+                        @endforeach
+                        @if ($variantItems->every(fn ($i) => empty($i->fulfillment_payload)))
                             <p class="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-zinc-500">
                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -685,7 +693,7 @@
                         @endif
                     </div>
 
-                    <span class="shrink-0 text-sm font-bold tabular-nums text-zinc-900">{{ $money($item->subtotal_amount) }}</span>
+                    <span class="shrink-0 text-sm font-bold tabular-nums text-zinc-900">{{ $money($groupTotal) }}</span>
                 </li>
             @endforeach
         </ul>
