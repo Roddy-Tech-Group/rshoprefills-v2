@@ -87,6 +87,7 @@
     $sym   = Product::currencySymbol($order->settlement_currency ?: 'USD');
     $money = fn ($v) => $sym . number_format((float) $v, 2);
     $engine = app(\App\Domain\Rewards\Services\RewardEngine::class);
+    $rcoinEnabled = (bool) \App\Models\Setting::get('rcoin_enabled', true);
     $cashbackPercentage = (float) \App\Models\Setting::get('cashback_percentage', 1.0);
     $points = $engine->usdToRcoin((float) $order->total_amount * ($cashbackPercentage / 100));
     $isPending = in_array($status->value, ['pending', 'processing'], true);
@@ -739,13 +740,15 @@
                 <span>Total paid</span>
                 <span class="tabular-nums">{{ $money($order->total_amount) }}</span>
             </div>
-            <div class="flex items-center justify-between pt-1 text-zinc-600">
-                <span class="inline-flex items-center gap-1.5">
-                    Points earned
-                    <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain">
-                </span>
-                <span class="font-bold tabular-nums text-zinc-900">{{ number_format($points) }}</span>
-            </div>
+            @if ($rcoinEnabled)
+                <div class="flex items-center justify-between pt-1 text-zinc-600">
+                    <span class="inline-flex items-center gap-1.5">
+                        Points earned
+                        <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain">
+                    </span>
+                    <span class="font-bold tabular-nums text-zinc-900">{{ number_format($points) }}</span>
+                </div>
+            @endif
         </div>
     </section>
 

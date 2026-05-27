@@ -1,6 +1,7 @@
 @php
-    // FAQ — comprehensive, grouped accordion. Dark-mode safe (bg-white -> navy,
+    // FAQ - comprehensive, grouped accordion. Dark-mode safe (bg-white -> navy,
     // text-zinc-* remapped). Two-column: sticky title left, questions right.
+    $rcoinEnabled = (bool) \App\Models\Setting::get('rcoin_enabled', true);
     $groups = [
         'General' => [
             ['What is RshopRefills?', 'RshopRefills is a global digital marketplace. You can buy gift cards, eSIMs, mobile top-ups, bill payments and travel, and manage everything from one in-app wallet. Most products are delivered instantly.'],
@@ -39,10 +40,16 @@
             ['I forgot my transaction PIN. What do I do?', 'You can change it from the Security page. For your safety, the PIN locks after several wrong attempts and unlocks automatically after a short cooldown.'],
             ['How do I keep my account safe?', 'Use a strong password, set a transaction PIN, and never share your codes, password or PIN. We will never ask you for them.'],
         ],
-        'Rewards' => [
+    ];
+
+    if ($rcoinEnabled) {
+        $groups['Rewards'] = [
             ['How do I earn points?', 'You earn Rcoin, our rewards currency, on every completed order. See the Earn points page for the details.'],
             ['How do I redeem my Rcoin?', 'You can turn your Rcoin into wallet credit and spend it on any service we offer. Your balance and history are on your Rewards page.'],
-        ],
+        ];
+    }
+
+    $groups += [
         'Refunds' => [
             ['Can I get a refund?', 'Digital items that have been delivered and revealed are generally final sale. If an item failed to deliver or is faulty, contact support and we will make it right. Full details are in our Refund and Cancellation Policy.'],
             ['How long does a refund take?', 'Approved refunds are issued instantly as wallet credit, which you can spend right away. Reversals back to your original payment method are rare, at our discretion, and may take longer and carry processing fees.'],

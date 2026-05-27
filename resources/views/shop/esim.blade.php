@@ -247,6 +247,7 @@
             cryptos: @js($cryptoRatesForJs),
             defaultCrypto: @js($defaultCrypto),
             rcoinConfig: @js([
+                'enabled' => (bool) \App\Models\Setting::get('rcoin_enabled', true),
                 'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
                 'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
             ]),
@@ -725,7 +726,7 @@
                             <p class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Total</p>
                             <p class="text-lg font-extrabold tabular-nums text-zinc-900 dark:text-white" x-text="totalLabel()">0.00</p>
                         </div>
-                        <span class="hidden items-center gap-1 text-xs font-semibold text-zinc-600 sm:flex dark:text-zinc-400">
+                        <span x-show="rcoinConfig.enabled" class="hidden items-center gap-1 text-xs font-semibold text-zinc-600 sm:flex dark:text-zinc-400">
                             <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-5 w-5 object-contain">
                             <span x-text="pointsEarned()">0</span>
                         </span>
