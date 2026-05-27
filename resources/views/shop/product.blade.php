@@ -238,6 +238,10 @@
             requiresRecipientPhone: @js($isTopup),
             defaultDialCode: @js($dialCode),
             requiresAccountId: @js($isBill),
+            rcoinConfig: @js([
+                'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
+                'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+            ]),
         })"
         x-init="init()"
         style="--brand: {{ $brandColor }};"
@@ -654,7 +658,7 @@
                         </div>
                     @endif
 
-                    {{-- Points you earn — 0.5 coins per $1 spent, floored. The coin icon is the site favicon. --}}
+                    {{-- Points you earn — calculated via backend rates (USD spent × cashback % ÷ Rcoin USD rate). The coin icon is the site favicon. --}}
                     <p class="flex items-center gap-1.5 text-sm font-semibold text-zinc-700">
                         Points you earn
                         <img src="{{ asset('assets/favicon.ico') }}" alt="coins" class="h-6 w-6 object-contain" loading="lazy">
@@ -876,13 +880,14 @@
     </div>
 
     <script>
-        window.brandDetail = function ({ variants, rangeText, cryptos, defaultCrypto, markup, customRate, customMin, customMax, requiresRecipientPhone, defaultDialCode, requiresAccountId }) {
+        window.brandDetail = function ({ variants, rangeText, cryptos, defaultCrypto, markup, customRate, customMin, customMax, requiresRecipientPhone, defaultDialCode, requiresAccountId, rcoinConfig }) {
             // `cryptos` is an array of {code, name, type, perUsd, decimals, icon} from the
             // admin currency_rates table. Reshape into a code-keyed object.
             const cryptoMap = {};
             (cryptos || []).forEach((c) => { cryptoMap[c.code] = c; });
 
             return {
+                rcoinConfig,
                 variants,
                 rangeText,
                 markup,               // { type, value, min_margin_percent } from CartPricingService
@@ -1044,9 +1049,10 @@
                     return this.unitPriceUsd() * (this.quantity || 1);
                 },
 
-                // 0.5 coins per $1 (USD) of the payable total, floored.
+                // Calculated from backend settings.
                 pointsEarned() {
-                    return Math.floor(this.totalUsd() * 0.5);
+                    const cashbackUsd = this.totalUsd() * (this.rcoinConfig.cashback_percentage / 100);
+                    return Math.floor(cashbackUsd / this.rcoinConfig.usd_rate);
                 },
 
                 // Estimated equivalent in the currently selected currency (fiat or crypto).

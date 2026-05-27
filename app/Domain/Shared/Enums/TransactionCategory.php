@@ -14,6 +14,13 @@ enum TransactionCategory: string
     case Withdrawal = 'withdrawal';
     case Reversal = 'reversal';
     case Transfer = 'transfer';
+    
+    // Reward Engine specific categories
+    case RewardCashback = 'reward_cashback';
+    case RewardReferral = 'reward_referral';
+    case RewardRedemption = 'reward_redemption';
+    case RewardWithdrawal = 'reward_withdrawal';
+    case RewardReversal = 'reward_reversal';
 
     public function label(): string
     {
@@ -25,6 +32,11 @@ enum TransactionCategory: string
             self::Withdrawal => 'Withdrawal',
             self::Reversal => 'Reversal',
             self::Transfer => 'Transfer',
+            self::RewardCashback => 'Cashback Reward',
+            self::RewardReferral => 'Referral Reward',
+            self::RewardRedemption => 'Reward Redemption',
+            self::RewardWithdrawal => 'Reward Withdrawal',
+            self::RewardReversal => 'Reward Reversal',
         };
     }
 }

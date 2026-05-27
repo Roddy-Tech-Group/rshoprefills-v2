@@ -432,7 +432,10 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
 
     private function getMockResponse(OrderItem $item, string $customIdentifier): array
     {
-        $isEsim = isset($item->product_snapshot['category']['slug']) && $item->product_snapshot['category']['slug'] === 'esims';
+        $title = strtolower($item->product_snapshot['name'] ?? '');
+        $categorySlug = (string) ($item->product_snapshot['category']['slug'] ?? $item->category?->slug ?? '');
+        $isEsim = $categorySlug === 'esims' || strpos($title, 'esim') !== false;
+        $isTopup = $categorySlug === 'mobile-airtime' || $categorySlug === 'topups' || strpos($title, 'top up') !== false;
 
         $response = [
             'transactionId' => 'ZND-MOCK-'.uniqid(),
@@ -448,6 +451,17 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
                 'lpaUrl' => 'rsp.zendit.io',
                 'qrCodeUrl' => 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=LPA:1$rsp.zendit.io$MOCK-ACTIVATION-CODE',
                 'manualActivationCode' => 'LPA:1$rsp.zendit.io$MOCK-ACTIVATION-CODE',
+            ];
+        } elseif ($isTopup) {
+            $recipientPhone = (string) ($item->metadata['recipient_phone'] ?? '+15551234567');
+            $operator = $item->variant_snapshot['metadata']['provider'] ?? $item->product_snapshot['provider_name'] ?? 'Mock Telecom';
+            $response['receipt'] = [
+                'topupId' => 'MOCK-TOPUP-'.uniqid(),
+                'recipientPhone' => $recipientPhone,
+                'operator' => $operator,
+                'valueRequested' => (float) $item->display_amount,
+                'valueDelivered' => (float) $item->display_amount,
+                'currency' => $item->display_currency,
             ];
         } else {
             $response['vouchers'] = [
