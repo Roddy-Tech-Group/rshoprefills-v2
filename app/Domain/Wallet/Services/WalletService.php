@@ -11,6 +11,7 @@ use App\Domain\Wallet\Events\WalletCredited;
 use App\Domain\Wallet\Events\WalletDebited;
 use App\Domain\Wallet\Exceptions\CurrencyMismatchException;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
@@ -149,8 +150,10 @@ class WalletService
             $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
 
             // Admin "hold funds" deactivates the wallet — block any spend from it.
+            // Customer-friendly message lives on the exception itself; the payment
+            // controller renders it verbatim instead of wrapping it in jargon.
             if (! $lockedWallet->is_active) {
-                throw new \RuntimeException('This wallet is currently on hold.');
+                throw new WalletOnHoldException;
             }
 
             $this->ensureSufficientBalance($lockedWallet, $amount);
@@ -262,6 +265,12 @@ class WalletService
     {
         DB::transaction(function () use ($wallet, $amount) {
             $lockedWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
+
+            // Held wallet: refuse the reservation up-front so the customer
+            // never sees a "Reserved" state they can't progress out of.
+            if (! $lockedWallet->is_active) {
+                throw new WalletOnHoldException;
+            }
 
             $this->ensureSufficientBalance($lockedWallet, $amount);
 

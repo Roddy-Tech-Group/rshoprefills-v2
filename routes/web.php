@@ -11,6 +11,7 @@ use App\Http\Controllers\EsimStoreController;
 use App\Http\Controllers\EsimTopupController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
+use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
 use App\Models\CurrencyRate;
 use App\Models\Product;
@@ -293,9 +294,10 @@ Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 // Returns compact JSON the Alpine cart store consumes. See CartWebController.
 Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('data', [CartWebController::class, 'show'])->name('data');
-    Route::post('items', [CartWebController::class, 'add'])->name('items.add');
-    Route::patch('items/{item}', [CartWebController::class, 'update'])->name('items.update');
-    Route::delete('items/{item}', [CartWebController::class, 'remove'])->name('items.remove');
+    // not-suspended is a no-op for guests; only kicks in for an authenticated suspended user.
+    Route::post('items', [CartWebController::class, 'add'])->middleware('not-suspended')->name('items.add');
+    Route::patch('items/{item}', [CartWebController::class, 'update'])->middleware('not-suspended')->name('items.update');
+    Route::delete('items/{item}', [CartWebController::class, 'remove'])->middleware('not-suspended')->name('items.remove');
 });
 
 // Checkout. Resolves the active cart (CartManager — same path the global CartComposer uses)
@@ -331,7 +333,7 @@ Route::get('checkout', function (CartManager $cartManager, CartPricingService $p
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
 // the controller. Requires auth: an Order needs a user_id.
 Route::post('checkout', [CheckoutController::class, 'process'])
-    ->middleware('auth')
+    ->middleware(['auth', 'not-suspended'])
     ->name('checkout.process');
 
 // Order confirmation page.
@@ -359,7 +361,7 @@ Route::middleware(['auth'])->group(function () {
     // the standard fulfilment job which routes to /orders/topups via the
     // parent_iccid metadata flag.
     Route::get('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'show'])->name('dashboard.esim.topup');
-    Route::post('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'purchase'])->name('dashboard.esim.topup.purchase');
+    Route::post('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'purchase'])->middleware('not-suspended')->name('dashboard.esim.topup.purchase');
 
     Volt::route('dashboard/transactions', 'dashboard.transactions')->name('dashboard.transactions');
 
@@ -378,6 +380,12 @@ Route::middleware(['auth'])->group(function () {
 
     // KYC identity-verification submission (documents stored on the private disk).
     Route::post('dashboard/kyc', [KycController::class, 'store'])->name('kyc.submit');
+
+    // Suspension review request — submitted from the banner the customer
+    // sees on their dashboard when their account is suspended. Lands in the
+    // shared admin notification feed.
+    Route::post('dashboard/suspension/request-review', [SuspensionController::class, 'requestReview'])
+        ->name('suspension.request-review');
 });
 
 // Legacy /settings/* URLs redirect to the new /dashboard/* paths so old bookmarks keep working.

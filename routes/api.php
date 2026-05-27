@@ -46,14 +46,15 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
     Route::get('esims/countries', [EsimCatalogController::class, 'countries'])->name('esims.countries');
     Route::get('esims/{slug}', [EsimCatalogController::class, 'show'])->name('esims.show');
 
-    // Cart Flow
+    // Cart Flow. `not-suspended` is a no-op for guests (cart access is open);
+    // it only blocks an authenticated suspended user from writing to the cart.
     Route::prefix('cart')->name('cart.')->group(function () {
         Route::get('/', [CartController::class, 'show'])->name('show');
-        Route::post('/items', [CartController::class, 'addItem'])->name('items.add');
-        Route::patch('/items/{id}', [CartController::class, 'updateItem'])->name('items.update');
-        Route::delete('/items/{id}', [CartController::class, 'removeItem'])->name('items.remove');
-        Route::delete('/', [CartController::class, 'clear'])->name('clear');
-        Route::post('/merge', [CartController::class, 'merge'])->name('merge');
+        Route::post('/items', [CartController::class, 'addItem'])->middleware('not-suspended')->name('items.add');
+        Route::patch('/items/{id}', [CartController::class, 'updateItem'])->middleware('not-suspended')->name('items.update');
+        Route::delete('/items/{id}', [CartController::class, 'removeItem'])->middleware('not-suspended')->name('items.remove');
+        Route::delete('/', [CartController::class, 'clear'])->middleware('not-suspended')->name('clear');
+        Route::post('/merge', [CartController::class, 'merge'])->middleware('not-suspended')->name('merge');
     });
 });
 
@@ -70,7 +71,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/fundings', [UserWalletController::class, 'fundings'])->name('fundings');
         Route::get('/fundings/{reference}', [UserWalletController::class, 'fundingDetails'])->name('fundings.show');
         Route::get('{currency}', [UserWalletController::class, 'show'])->name('show');
-        Route::post('fund/initiate', [UserWalletController::class, 'initiateFunding'])->name('fund.initiate');
+        Route::post('fund/initiate', [UserWalletController::class, 'initiateFunding'])->middleware('not-suspended')->name('fund.initiate');
 
         // Transaction PIN Routes
         Route::prefix('pin')->name('pin.')->group(function () {
@@ -85,7 +86,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('checkout')->name('api.checkout.')->group(function () {
-        Route::post('place-order', [CheckoutApiController::class, 'placeOrder'])->name('place-order')->middleware('throttle:10,1');
+        Route::post('place-order', [CheckoutApiController::class, 'placeOrder'])->name('place-order')->middleware(['throttle:10,1', 'not-suspended']);
     });
 
     Route::prefix('orders')->name('api.orders.')->group(function () {

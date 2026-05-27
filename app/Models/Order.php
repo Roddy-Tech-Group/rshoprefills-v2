@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Payment\Enums\PaymentStatus;
-use App\Domain\Fulfillment\Enums\FulfillmentStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -87,5 +87,81 @@ class Order extends Model
     public function paymentAttempts(): HasMany
     {
         return $this->hasMany(PaymentAttempt::class);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  Admin-facing USD accessors
+    //
+    //  The admin dashboard needs the source-of-truth USD figures, not the
+    //  customer's display_currency conversion (which can be wrong on legacy
+    //  rows where the exchange rate was missing or applied as 1.0). These
+    //  helpers prefer the snapshot metadata, fall back to deriving from the
+    //  display amounts via the stored exchange rate, and finally fall back
+    //  to the raw display amount if neither is present.
+    // ────────────────────────────────────────────────────────────
+
+    /**
+     * The platform's settlement (USD) exchange rate captured at order time,
+     * or null if the order pre-dates the snapshot.
+     */
+    public function exchangeRate(): ?float
+    {
+        $rate = $this->metadata['exchange_rate'] ?? null;
+
+        return is_numeric($rate) && (float) $rate > 0 ? (float) $rate : null;
+    }
+
+    public function usdTotal(): float
+    {
+        return $this->resolveUsdAmount('settlement_total_usd', (float) $this->total_amount);
+    }
+
+    public function usdSubtotal(): float
+    {
+        return $this->resolveUsdAmount('settlement_subtotal_usd', (float) $this->subtotal_amount);
+    }
+
+    public function usdMarkup(): float
+    {
+        return max(0, round($this->usdTotal() - $this->usdSubtotal(), 4));
+    }
+
+    /**
+     * Pricing data is suspect when the display currency is something other
+     * than USD but no exchange rate was recorded — those are pre-snapshot
+     * orders whose `total_amount` is actually the raw USD figure mis-labelled
+     * with a non-USD currency. Surfacing this badge lets admins know not to
+     * trust the customer-facing number on these rows.
+     */
+    public function hasSuspectPricing(): bool
+    {
+        $display = strtoupper((string) $this->display_currency);
+
+        if ($display === '' || $display === 'USD') {
+            return false;
+        }
+
+        return $this->exchangeRate() === null;
+    }
+
+    /**
+     * Prefer the snapshot key; otherwise derive USD by dividing the display
+     * amount by the recorded rate. As a last resort return the display
+     * amount as-is (which is the only honest answer when neither piece of
+     * provenance is present).
+     */
+    private function resolveUsdAmount(string $metadataKey, float $displayAmount): float
+    {
+        $snapshot = $this->metadata[$metadataKey] ?? null;
+        if (is_numeric($snapshot)) {
+            return round((float) $snapshot, 4);
+        }
+
+        $rate = $this->exchangeRate();
+        if ($rate !== null && $rate > 0) {
+            return round($displayAmount / $rate, 4);
+        }
+
+        return round($displayAmount, 4);
     }
 }

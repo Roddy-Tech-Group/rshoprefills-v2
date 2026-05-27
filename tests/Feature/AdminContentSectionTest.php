@@ -1,0 +1,80 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Admin;
+use Database\Seeders\AdminSeeder;
+use Database\Seeders\BlogPostSeeder;
+use Database\Seeders\FaqSeeder;
+use Database\Seeders\PressArticleSeeder;
+use Database\Seeders\ReviewSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class AdminContentSectionTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function adminLogin(): self
+    {
+        $this->seed(AdminSeeder::class);
+        $admin = Admin::first();
+        $this->actingAs($admin, 'admin');
+
+        return $this;
+    }
+
+    public function test_blog_admin_page_lists_seeded_posts(): void
+    {
+        $this->withoutVite()->adminLogin();
+        $this->seed(BlogPostSeeder::class);
+
+        $this->get(route('admin.content.blog'))
+            ->assertOk()
+            ->assertSee('Blog Posts')
+            ->assertSee('Getting started: your first purchase on RshopRefills');
+    }
+
+    public function test_press_admin_page_lists_seeded_articles(): void
+    {
+        $this->withoutVite()->adminLogin();
+        $this->seed(PressArticleSeeder::class);
+
+        $this->get(route('admin.content.press'))
+            ->assertOk()
+            ->assertSee('Press Articles')
+            ->assertSee('RshopRefills launches the Rcoin rewards program');
+    }
+
+    public function test_reviews_admin_page_lists_seeded_reviews_and_aggregate(): void
+    {
+        $this->withoutVite()->adminLogin();
+        $this->seed(ReviewSeeder::class);
+
+        $this->get(route('admin.content.reviews'))
+            ->assertOk()
+            ->assertSee('Reviews')
+            ->assertSee('Harshit Garg')
+            ->assertSeeText('4.4 / 5');
+    }
+
+    public function test_faq_admin_page_lists_seeded_questions_grouped_by_topic(): void
+    {
+        $this->withoutVite()->adminLogin();
+        $this->seed(FaqSeeder::class);
+
+        $this->get(route('admin.content.faqs'))
+            ->assertOk()
+            ->assertSee('FAQs')
+            ->assertSee('Orders & Delivery')
+            ->assertSee('How fast is delivery?');
+    }
+
+    public function test_admin_content_pages_require_admin_auth(): void
+    {
+        $this->get(route('admin.content.blog'))->assertRedirect(route('admin.login'));
+        $this->get(route('admin.content.press'))->assertRedirect(route('admin.login'));
+        $this->get(route('admin.content.reviews'))->assertRedirect(route('admin.login'));
+        $this->get(route('admin.content.faqs'))->assertRedirect(route('admin.login'));
+    }
+}

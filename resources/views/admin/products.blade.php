@@ -1,11 +1,23 @@
 @php
-    use App\Models\Product;
+    use App\Domain\Cart\Services\CartPricingService;
     use App\Models\Category;
+    use App\Models\Product;
+    use App\Models\ProductVariant;
     use Illuminate\Support\Facades\DB;
 
+    // Pricing engine — resolves the marked-up USD sales price using the
+    // product → subcategory → category → global rule hierarchy in
+    // pricing_rules. Same engine the cart uses at checkout, so what an
+    // admin sees in this grid matches what the customer would pay.
+    $pricing = app(CartPricingService::class);
+
     $search = request()->query('q', '');
-    $categorySlug = request()->query('category', 'all');
-    $country = strtoupper((string) request()->query('country', 'all'));
+    $categorySlug = request()->query('category', 'all');                   // Product Type filter
+    $subtypeFilter = (string) request()->query('subtype', '');             // eSIM sub-type: 'data' | 'voice'
+    $country = strtoupper((string) request()->query('country', 'all'));    // Country filter (ISO-2)
+    $brandKey = (string) request()->query('brand', '');                    // Brand filter (brand_key)
+    $providerName = (string) request()->query('provider', '');             // Provider filter (zendit | airalo)
+    $regionFilter = (string) request()->query('region', '');               // Region filter (continent name)
     $perPage = 25;
 
     // Pills: real categories from DB + an "All" sentinel that maps to no filter.
@@ -24,7 +36,6 @@
 
     $anyFilter = $search !== '' || $categorySlug !== 'all' || $country !== 'ALL';
 
-    // Builds an /admin/products URL with the given country, preserving the other filters.
     $countryFilterUrl = fn (?string $code) => route('admin.products', array_filter([
         'q' => $search ?: null,
         'category' => $categorySlug !== 'all' ? $categorySlug : null,
@@ -33,9 +44,7 @@
 
     $selectedCountryName = $country !== 'ALL' ? ($countryNames[$country] ?? $country) : null;
 
-    // Search resolves against the product name AND country. We accept ISO-2 codes
-    // ("US", "GB") directly, plus partial country names ("United Sta…", "Cameroon")
-    // which we translate to ISO codes via the config map so they hit country_code.
+    // Search resolves against the product name + country code + country name.
     $matchedCountryCodes = [];
     if ($search !== '') {
         $needle = mb_strtolower(trim($search));
@@ -44,29 +53,130 @@
                 $matchedCountryCodes[] = strtoupper($code);
             }
         }
-        // Allow direct ISO-2 / short-prefix matches (e.g. "us", "g" → countries starting with G).
         if (mb_strlen($needle) >= 1) {
             $matchedCountryCodes[] = strtoupper($needle);
         }
         $matchedCountryCodes = array_values(array_unique(array_filter($matchedCountryCodes)));
     }
 
-    $products = Product::query()
-        ->with(['category:id,name,slug', 'subcategory:id,name', 'variants:id,product_id,currency,retail_price,cost_price,face_value,min_amount,max_amount,is_variable,is_available'])
+    // Region map — derived from country_code via config/continents.php. Used
+    // as the FALLBACK when a variant has no metadata.regions value.
+    $countryToContinent = (array) config('continents.codes', []);
+    $regionToCountries = [];
+    foreach ($countryToContinent as $code => $continent) {
+        $regionToCountries[$continent][] = strtoupper($code);
+    }
+
+    // Real regions actually populated in metadata.regions (Zendit's canonical
+    // buckets: Africa, Western Europe, North America, Caribbean, Middle East
+    // and North Africa, etc.). Pull DISTINCT live values so the filter only
+    // ever offers regions that have at least one product.
+    $metaRegionRows = DB::table('product_variants')
+        ->selectRaw("DISTINCT JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.regions[0]')) as region")
+        ->whereRaw("JSON_EXTRACT(metadata, '$.regions[0]') IS NOT NULL")
+        ->pluck('region')
+        ->filter()
+        ->values()
+        ->all();
+
+    // Final filter list = real metadata regions ∪ continent fallbacks ∪ Global.
+    // "Global" matches eSIMs whose coverage spans many countries — captured
+    // via metadata.coverage / metadata.countries length in the query below.
+    $availableRegions = collect($metaRegionRows)
+        ->merge(array_keys($regionToCountries))
+        ->unique()
+        ->sort()
+        ->values()
+        ->prepend('Global')
+        ->all();
+
+    // Per-variant rows. Each variant is its own card — eSIM "Faster" vs "Standard"
+    // become independent rows so the admin sees pricing per SKU. Joins to the
+    // owning product + category + subcategory for context. Real filters live
+    // alongside search: brand, product type (category), country, region.
+    $variants = ProductVariant::query()
+        ->select('product_variants.*')
+        ->with(['product:id,name,brand_key,country_code,category_id,subcategory_id,logo_url,is_active', 'product.category:id,name,slug', 'subcategory:id,name'])
+        ->join('products', 'products.id', '=', 'product_variants.product_id')
         ->when($search !== '', function ($q) use ($search, $matchedCountryCodes) {
             $q->where(function ($qq) use ($search, $matchedCountryCodes) {
-                $qq->where('name', 'like', "%{$search}%")
-                    ->orWhere('country_code', 'like', strtoupper($search) . '%');
+                $qq->where('products.name', 'like', "%{$search}%")
+                    ->orWhere('products.country_code', 'like', strtoupper($search) . '%')
+                    ->orWhere('product_variants.sku', 'like', "%{$search}%");
                 if (! empty($matchedCountryCodes)) {
-                    $qq->orWhereIn('country_code', $matchedCountryCodes);
+                    $qq->orWhereIn('products.country_code', $matchedCountryCodes);
                 }
             });
         })
-        ->when($categorySlug !== 'all', fn ($q) => $q->whereHas('category', fn ($qq) => $qq->where('slug', $categorySlug)))
-        ->when($country !== 'ALL', fn ($q) => $q->where('country_code', $country))
-        ->latest('id')
+        ->when($categorySlug !== 'all', fn ($q) => $q->whereHas('product.category', fn ($qq) => $qq->where('slug', $categorySlug)))
+        ->when($subtypeFilter === 'data', fn ($q) => $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(product_variants.metadata, '$.plan_type')) = 'data_only'"))
+        ->when($subtypeFilter === 'voice', fn ($q) => $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(product_variants.metadata, '$.plan_type')) IN ('voice_sms_data', 'voice_only')"))
+        ->when($country !== 'ALL', fn ($q) => $q->where('products.country_code', $country))
+        ->when($brandKey !== '', fn ($q) => $q->where('products.brand_key', $brandKey))
+        ->when($providerName !== '', fn ($q) => $q->where('products.provider_name', $providerName))
+        ->when($regionFilter !== '', function ($q) use ($regionFilter, $regionToCountries) {
+            // Smart region filter — matches three sources:
+            //   1. metadata.regions[0] = X  (Zendit's canonical bucket)
+            //   2. country_code in continent X (fallback for variants without
+            //      metadata.regions, like eSIMs)
+            //   3. "Global" = coverage spans >5 countries (multi-country eSIMs
+            //      that effectively cover a region or the world)
+            $q->where(function ($qq) use ($regionFilter, $regionToCountries) {
+                if ($regionFilter === 'Global') {
+                    $qq->whereRaw("JSON_LENGTH(JSON_EXTRACT(product_variants.metadata, '$.coverage')) > 5")
+                       ->orWhereRaw("JSON_LENGTH(JSON_EXTRACT(product_variants.metadata, '$.countries')) > 5")
+                       ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(product_variants.metadata, '$.regions[0]')) IN ('Global', 'World', 'Worldwide')");
+
+                    return;
+                }
+
+                $qq->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(product_variants.metadata, '$.regions[0]')) = ?", [$regionFilter]);
+
+                if (isset($regionToCountries[$regionFilter])) {
+                    $qq->orWhere(function ($qqq) use ($regionFilter, $regionToCountries) {
+                        $qqq->whereRaw("JSON_EXTRACT(product_variants.metadata, '$.regions[0]') IS NULL")
+                            ->whereIn('products.country_code', $regionToCountries[$regionFilter]);
+                    });
+                }
+            });
+        })
+        ->orderByDesc('product_variants.id')
         ->paginate($perPage)
         ->withQueryString();
+
+    // Brand options for the filter dropdown — distinct brand_keys with their
+    // first product name so we can show display labels.
+    $brandOptions = Product::query()
+        ->select('brand_key', DB::raw('MIN(name) as label'))
+        ->whereNotNull('brand_key')
+        ->groupBy('brand_key')
+        ->orderBy('brand_key')
+        ->get();
+
+    // Provider options — for categories like eSIMs where products carry NO
+    // brand_key, the supplier itself (Airalo / Zendit) is the de-facto brand.
+    // Surface them in the Brand dropdown as a separate "By Provider" section.
+    $providerOptions = Product::query()
+        ->select('provider_name', DB::raw('COUNT(*) as cnt'))
+        ->whereNotNull('provider_name')
+        ->where('provider_name', '!=', '')
+        ->groupBy('provider_name')
+        ->orderBy('provider_name')
+        ->get();
+
+    // Helper to build a URL that toggles a single filter while preserving the others.
+    $filterUrl = function (array $overrides) use ($search, $categorySlug, $subtypeFilter, $country, $brandKey, $providerName, $regionFilter) {
+        return route('admin.products', array_filter([
+            'q' => $search ?: null,
+            'category' => $categorySlug !== 'all' ? $categorySlug : null,
+            'subtype' => $subtypeFilter ?: null,
+            'country' => $country !== 'ALL' ? $country : null,
+            'brand' => $brandKey ?: null,
+            'provider' => $providerName ?: null,
+            'region' => $regionFilter ?: null,
+            ...$overrides,
+        ], fn ($v) => $v !== null && $v !== ''));
+    };
 
     $stats = [
         'total'    => Product::count(),
@@ -74,6 +184,8 @@
         'featured' => Product::where('is_featured', true)->count(),
         'popular'  => Product::where('is_popular', true)->count(),
     ];
+
+    // $countryToContinent already defined above with the region filter map.
 @endphp
 
 <x-layouts.admin>
@@ -90,7 +202,7 @@
                 ['label' => 'Featured', 'value' => $stats['featured'], 'dot' => 'bg-amber-500'],
                 ['label' => 'Popular',  'value' => $stats['popular'],  'dot' => 'bg-fuchsia-500'],
             ] as $stat)
-                <div class="rounded-2xl bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
                     <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-600">
                         <span class="inline-block h-1.5 w-1.5 rounded-full {{ $stat['dot'] }}"></span>
                         {{ $stat['label'] }}
@@ -102,21 +214,123 @@
 
         {{-- Search + country filter + Add row --}}
         <form method="GET" action="{{ route('admin.products') }}" class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-            <div class="relative flex-1">
+            {{-- Live-search input. Typing fires a debounced fetch against
+                 admin.products.search-suggest and renders matches in a glass
+                 dropdown beneath the input. Pressing Enter still submits the
+                 form for a full filtered page (escape hatch). --}}
+            <div
+                x-data="adminProductSearch()"
+                @keydown.escape="results = []"
+                @click.outside="results = []"
+                class="relative flex-1"
+            >
                 <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
                 <input
                     type="search"
                     name="q"
+                    x-model.debounce.250ms="query"
+                    @input="suggest()"
+                    @focus="suggest()"
                     value="{{ $search }}"
-                    placeholder="Search products by name or country (e.g. Cameroon, US)"
-                    class="w-full rounded-xl border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                    placeholder="Search products by name, SKU or country (e.g. Cameroon, US, ESIM-AD)"
+                    class="w-full rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-white"
                 />
                 @if ($categorySlug !== 'all')
                     <input type="hidden" name="category" value="{{ $categorySlug }}">
                 @endif
+
+                {{-- Glass dropdown. Renders only when there's >= 1 match. Each
+                     row is a click target that navigates to the filtered page
+                     (uses the same `q=` URL param). --}}
+                <div
+                    x-show="results.length > 0 || loading"
+                    x-cloak
+                    x-transition.opacity
+                    class="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-[10px] bg-white/90 ring-1 ring-zinc-900/10 shadow-2xl shadow-zinc-900/20 backdrop-blur-xl dark:bg-[#0c1a36]/95 dark:ring-white/10 dark:shadow-black/40"
+                >
+                    {{-- Loading state --}}
+                    <div x-show="loading" class="flex items-center gap-2 px-4 py-3 text-[12px] text-zinc-500 dark:text-zinc-400">
+                        <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.25" stroke-width="3"/>
+                            <path d="M22 12a10 10 0 01-10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                        Searching…
+                    </div>
+
+                    {{-- Results --}}
+                    <ul x-show="! loading && results.length > 0" class="max-h-80 overflow-y-auto p-1.5">
+                        <template x-for="row in results" :key="row.id">
+                            <li>
+                                <a
+                                    :href="'{{ route('admin.products') }}?q=' + encodeURIComponent(row.name || row.sku)"
+                                    wire:navigate
+                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 hover:ring-1 hover:ring-blue-500 dark:hover:bg-blue-500/10"
+                                >
+                                    <template x-if="row.logo">
+                                        <img :src="row.logo" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
+                                    </template>
+                                    <template x-if="! row.logo">
+                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-[11px] font-bold uppercase text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20" x-text="(row.brand || row.name || row.sku || '').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase() || '—'"></span>
+                                    </template>
+                                    <span class="min-w-0 flex-1 leading-tight">
+                                        <span class="block truncate text-[13px] font-semibold text-zinc-900 dark:text-white" x-text="row.brand || row.name || row.sku"></span>
+                                        <span class="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                                            <span x-show="row.category" x-text="row.category"></span>
+                                            <span x-show="row.country"> · <span x-text="row.country"></span></span>
+                                            <span x-show="row.sku"> · <span class="font-mono" x-text="row.sku"></span></span>
+                                        </span>
+                                    </span>
+                                    <span class="shrink-0 text-right text-[11px] tabular-nums">
+                                        <span class="block text-zinc-500 dark:text-zinc-400">Cost</span>
+                                        <span class="block font-semibold text-zinc-900 dark:text-white" x-text="'USD ' + Number(row.cost).toFixed(2)"></span>
+                                    </span>
+                                </a>
+                            </li>
+                        </template>
+                    </ul>
+
+                    {{-- Footer: open full filtered page with current query --}}
+                    <div x-show="! loading && results.length > 0" class="border-t border-zinc-200/60 px-4 py-2 text-[11px] text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+                        Press <kbd class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:bg-white/10 dark:text-zinc-200">Enter</kbd> to see all matches
+                    </div>
+                </div>
             </div>
+
+            <script>
+                // Live-search controller — debounced fetch against the admin
+                // search-suggest endpoint, races-safe via an incrementing
+                // requestId so an in-flight slow request can't overwrite a
+                // newer one.
+                window.adminProductSearch = function () {
+                    return {
+                        query: @js($search),
+                        results: [],
+                        loading: false,
+                        _seq: 0,
+
+                        async suggest() {
+                            const q = (this.query || '').trim();
+                            if (q.length < 2) { this.results = []; this.loading = false; return; }
+
+                            const mySeq = ++this._seq;
+                            this.loading = true;
+                            try {
+                                const res = await fetch('{{ route('admin.products.search-suggest') }}?q=' + encodeURIComponent(q), {
+                                    headers: { 'Accept': 'application/json' },
+                                });
+                                if (mySeq !== this._seq) { return; } // stale response, drop
+                                this.results = await res.json();
+                            } catch (e) {
+                                this.results = [];
+                            } finally {
+                                if (mySeq === this._seq) { this.loading = false; }
+                            }
+                        },
+                    };
+                };
+            </script>
 
             {{-- Country filter — modern searchable dropdown. Each option is a real link
                  that preserves the search + category filters. --}}
@@ -130,11 +344,8 @@
                     type="button"
                     @click="open = ! open; if (open) $nextTick(() => $refs.countrySearch.focus())"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-xl border bg-white py-2.5 pl-3 pr-3 text-sm text-zinc-900 outline-none transition-colors"
+                    class="flex w-full items-center gap-2 rounded-[10px] border bg-white py-2.5 pl-3 pr-3 text-sm text-zinc-900 outline-none transition-colors"
                 >
-                    <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5-2.5 3.75-5.5 3.75-9S14.5 5.5 12 3m0 18c-2.5-2.5-3.75-5.5-3.75-9S9.5 5.5 12 3M3.6 9h16.8M3.6 15h16.8"/>
-                    </svg>
                     <span class="flex-1 truncate text-left font-medium">
                         @if ($selectedCountryName)
                             @if (Product::flagUrl($country))
@@ -156,7 +367,7 @@
                     x-transition:enter-start="opacity-0 -translate-y-1"
                     x-transition:enter-end="opacity-100 translate-y-0"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
+                    class="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10"
                 >
                     <div class="border-b border-zinc-100 p-2">
                         <input
@@ -164,13 +375,13 @@
                             x-model="search"
                             type="text"
                             placeholder="Search countries"
-                            class="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                         >
                     </div>
                     <div class="max-h-72 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         <a
                             href="{{ $countryFilterUrl(null) }}"
-                            class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $country === 'ALL' ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-100' }}"
+                            class="flex items-center justify-between rounded-[10px] px-3 py-2 text-sm font-medium transition-colors {{ $country === 'ALL' ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-100' }}"
                         >
                             <span>All countries</span>
                             <span class="text-xs text-zinc-500">{{ number_format($stats['total']) }}</span>
@@ -183,7 +394,7 @@
                             <a
                                 href="{{ $countryFilterUrl($code) }}"
                                 x-show="'{{ Str::lower($name . ' ' . $code) }}'.includes(search.toLowerCase())"
-                                class="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $country === $code ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-100' }}"
+                                class="flex items-center justify-between gap-2 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors {{ $country === $code ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-100' }}"
                             >
                                 <span class="flex min-w-0 items-center gap-2">
                                     @if (Product::flagUrl($code))
@@ -199,7 +410,7 @@
             </div>
 
             @if ($anyFilter)
-                <a href="{{ route('admin.products') }}" wire:navigate class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
+                <a href="{{ route('admin.products') }}" wire:navigate class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
                     <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-4 w-4 object-contain" loading="lazy">
                     Clear filters
                 </a>
@@ -209,8 +420,21 @@
             <livewire:admin.sync-products-button />
         </form>
 
-        {{-- Category filter pills, server-routed via query string. Hidden on mobile to remove the horizontal-slide bar
-             (filtering on mobile can be added later as a dropdown if you want it back). --}}
+        {{-- Category filter pills — glass treatment with an icon per category.
+             Server-routed via query string. Hidden on mobile to remove the
+             horizontal-slide bar (filtering on mobile can be added later). --}}
+        @php
+            // SVG asset per category slug, sitting in public/assets/. Each
+            // chip renders the matching file as an <img>; falls back to a
+            // neutral menu icon for any slug we don't have art for yet.
+            $categoryIcons = [
+                'all' => 'Hamburger menu.svg',
+                'gift-cards' => 'gift cards.svg',
+                'esims' => 'esim.svg',
+                'mobile-airtime' => 'mobile.svg',
+                'bill-payments' => 'bill payment.svg',
+            ];
+        @endphp
         <div class="-mx-1 hidden overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:block">
             <div class="flex w-max items-center gap-2">
                 @foreach ($categoryPills as $pill)
@@ -220,12 +444,29 @@
                             'category' => $pill['slug'] === 'all' ? null : $pill['slug'],
                             'q' => $search ?: null,
                         ]));
+                        $iconFile = $categoryIcons[$pill['slug']] ?? $categoryIcons['all'];
                     @endphp
                     <a
                         href="{{ $href }}"
                         wire:navigate
-                        class="inline-flex items-center rounded-full px-5 py-2 text-sm font-semibold ring-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $isActive ? 'bg-zinc-900 text-white ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white text-zinc-800 ring-zinc-200 hover:bg-zinc-50' }}"
+                        @class([
+                            'group relative inline-flex items-center gap-2 rounded-[10px] px-4 py-2 text-sm font-semibold ring-1 backdrop-blur-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40',
+                            // Active: solid blue glass — pops as the picked filter. Icon is whitened to read on the blue bg.
+                            'bg-blue-600/90 text-white ring-blue-500/50 shadow-lg shadow-blue-600/20' => $isActive,
+                            // Inactive: frosted glass — translucent panel with subtle hairline ring
+                            'bg-white/60 text-zinc-800 ring-zinc-200/70 hover:bg-white/80 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-white/10' => ! $isActive,
+                        ])
                     >
+                        <img
+                            src="{{ asset('assets/' . rawurlencode($iconFile)) }}"
+                            alt=""
+                            @class([
+                                'h-4 w-4 shrink-0 object-contain',
+                                // Whiten the icon when active so it reads on the blue bg
+                                'brightness-0 invert' => $isActive,
+                            ])
+                            loading="lazy"
+                        >
                         {{ $pill['name'] }}
                     </a>
                 @endforeach
@@ -236,155 +477,1007 @@
              Skeleton rows are layered under the real table and shown during wire:navigate
              page transitions (livewire:navigating fires on link click, ends on navigated).
              This relies on the global `wire:navigate` flow that's already in the project. --}}
+        {{-- Per-variant pills laid out as a table-grid. A shared grid-template
+             on the header + every row keeps every column dead-aligned so the
+             eye can scan a column top-to-bottom without zig-zag. The "Your
+             Price · Margin · FX" trio gets a soft blue bg extension on the
+             right to flag it as the pricing-tool zone (matches the reference). --}}
+        <style>
+            /* Single source of truth for column widths. Header + rows both use
+               .variant-row so any tweak here updates both. Seven columns only:
+               Region, Country, Product Type, Brand, Cost Price, Sales Price,
+               Benefits — wide enough to breathe. */
+            .variant-row {
+                display: grid;
+                grid-template-columns:
+                    minmax(160px, 1.4fr)    /* Brand (name only, no logo) */
+                    minmax(120px, 1fr)      /* Product Type */
+                    minmax(100px, 0.9fr)    /* Country */
+                    minmax(110px, 1fr)      /* Region */
+                    minmax(110px, 1fr)      /* Cost Price */
+                    minmax(110px, 1fr)      /* Value */
+                    minmax(90px,  0.8fr)    /* Discount % */
+                    minmax(120px, 1fr)      /* Sales Price (highlighted) */
+                    minmax(160px, 1.4fr);   /* Benefits */
+                gap: 1.25rem;
+                align-items: center;
+            }
+            @media (max-width: 1024px) {
+                .variant-row { grid-template-columns: minmax(160px, 1.5fr) minmax(110px, 1fr) minmax(120px, 1fr); }
+                .variant-row > *:not(.col-brand):not(.col-cost):not(.col-price) { display: none; }
+            }
+        </style>
+
         <div
             x-data="{ navigating: false }"
             x-on:livewire:navigate.window="navigating = true"
             x-on:livewire:navigated.window="navigating = false"
-            class="relative overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100"
+            class="relative flex flex-col gap-2"
         >
-            {{-- Skeleton overlay shown while navigating between paginator pages or filtered URLs. --}}
-            <div x-show="navigating" x-cloak class="absolute inset-0 z-10 flex flex-col bg-white" aria-hidden="true">
-                <div class="grid grid-cols-7 gap-3 bg-zinc-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-600">
-                    <span>Product</span><span>Category</span><span>Country</span><span>Variants</span><span>Price range</span><span>Status</span><span class="text-right">Actions</span>
-                </div>
-                <div class="skeleton-stagger divide-y divide-zinc-100">
-                    @for ($i = 0; $i < 8; $i++)
-                        <div class="grid grid-cols-7 items-center gap-3 px-5 py-3.5" style="--i: {{ $i }}">
-                            <span class="flex items-center gap-3">
-                                <x-skeleton class="h-10 w-10" rounded="rounded-[5px]" />
-                                <span class="flex flex-col gap-2">
-                                    <x-skeleton class="h-4 w-32" />
-                                    <x-skeleton class="h-3 w-20" />
-                                </span>
-                            </span>
-                            <x-skeleton class="h-4 w-20" />
-                            <x-skeleton class="h-4 w-9" />
-                            <x-skeleton class="h-4 w-14" />
-                            <x-skeleton class="h-4 w-24" />
-                            <x-skeleton class="h-6 w-16 rounded-full" />
-                            <x-skeleton class="h-4 w-12 justify-self-end" />
+
+            {{-- Header row — its own pill card. Each filterable column owns
+                 its own Alpine scope with a dropdown anchored directly beneath
+                 the column header so the panel appears exactly where clicked. --}}
+            @php
+                $filterIcon = asset('assets/'.rawurlencode('filter to be used as black and white for light mode and dark mode leave origianl color if only asked.png'));
+                $activeItem = 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300';
+                $inactiveItem = 'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-white/5';
+                $itemBase = 'block truncate rounded-[10px] px-3 py-2 text-[12px] font-medium transition-colors';
+                $panelBase = 'absolute left-0 top-full z-40 mt-2 w-72 overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60';
+            @endphp
+            <div class="variant-row hidden rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 shadow-sm shadow-zinc-900/5 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400 md:grid">
+
+                {{-- BRAND --}}
+                <span class="col-brand relative" x-data="{ open: false, search: '' }" @click.outside="open = false" @keydown.escape.window="open = false">
+                    <span class="inline-flex items-center gap-1.5">
+                        Brand
+                        <button type="button" @click="open = ! open" aria-label="Filter brand" class="flex h-5 w-5 items-center justify-center rounded-[6px] text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-white">
+                            <img src="{{ $filterIcon }}" alt="" class="h-3 w-3 object-contain opacity-70 brightness-0 dark:invert">
+                        </button>
+                    </span>
+                    <div x-show="open" x-cloak x-transition.opacity class="{{ $panelBase }}">
+                        <div class="border-b border-zinc-100 p-2 dark:border-zinc-700/60">
+                            <input x-model="search" type="text" placeholder="Search brands…" class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
                         </div>
-                    @endfor
-                </div>
-            </div>
+                        <div class="max-h-80 overflow-y-auto p-1">
+                            <a href="{{ $filterUrl(['brand' => null, 'provider' => null]) }}" wire:navigate class="{{ $itemBase }} {{ $brandKey === '' && $providerName === '' ? $activeItem : $inactiveItem }}">All brands</a>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="border-b border-zinc-100 bg-zinc-50">
-                        <tr class="text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600">
-                            <th class="px-5 py-3 font-semibold">Product</th>
-                            <th class="px-5 py-3 font-semibold">Category</th>
-                            <th class="px-5 py-3 font-semibold">Country</th>
-                            <th class="px-5 py-3 font-semibold">Variants</th>
-                            <th class="px-5 py-3 font-semibold">Price range</th>
-                            <th class="px-5 py-3 font-semibold">Status</th>
-                            <th class="px-5 py-3 text-right font-semibold">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-100/80">
-                        @forelse ($products as $product)
-                            @php
-                                $variants = $product->variants;
-                                $available = $variants->where('is_available', true)->count();
-                                $prices = $variants->pluck('retail_price')->filter()->all();
-                                $minPrice = ! empty($prices) ? min($prices) : null;
-                                $maxPrice = ! empty($prices) ? max($prices) : null;
-                                $currency = $product->currency_code ?: 'USD';
-                                $logoSrc = Product::brandLogoUrl($product->brand_key, $product->logo_url);
-                            @endphp
-                            <tr class="transition-colors duration-150 hover:bg-blue-50/40">
-                                <td class="px-5 py-3.5">
-                                    <div class="flex items-center gap-3">
-                                        @if ($logoSrc)
-                                            <img src="{{ $logoSrc }}" alt="" class="h-10 w-10 shrink-0 rounded-[5px] object-contain bg-white ring-1 ring-zinc-100" loading="lazy">
-                                        @else
-                                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[5px] bg-blue-50 text-xs font-bold uppercase tracking-tight text-blue-700 ring-1 ring-blue-100">
-                                                {{ str($product->name)->substr(0, 2)->upper() }}
-                                            </span>
-                                        @endif
-                                        <div class="min-w-0 leading-tight">
-                                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $product->name }}</p>
-                                            <p class="mt-0.5 truncate text-[11px] text-zinc-600">{{ $product->subcategory?->name ?? '—' }}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-5 py-3.5 text-sm text-zinc-700">{{ $product->category?->name ?? '—' }}</td>
-                                <td class="px-5 py-3.5">
-                                    <span class="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-zinc-700">
-                                        @if (Product::flagUrl($product->country_code))
-                                            <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-3 w-[18px] rounded-[1px] object-cover ring-1 ring-zinc-200" loading="lazy">
-                                        @endif
-                                        {{ $product->country_code ?? '—' }}
-                                    </span>
-                                </td>
-                                <td class="px-5 py-3.5 text-sm text-zinc-700">
-                                    <span class="font-semibold text-zinc-900 tabular-nums">{{ $variants->count() }}</span>
-                                    <span class="text-zinc-600">/ {{ $available }} live</span>
-                                </td>
-                                <td class="px-5 py-3.5 whitespace-nowrap text-sm">
-                                    @if ($minPrice !== null)
-                                        <span class="font-semibold tabular-nums text-zinc-900">{{ $currency }} {{ number_format($minPrice, 2) }}</span>
-                                        @if ($maxPrice !== null && $maxPrice > $minPrice)
-                                            <span class="text-zinc-600">–</span>
-                                            <span class="font-semibold tabular-nums text-zinc-700">{{ number_format($maxPrice, 2) }}</span>
-                                        @endif
-                                    @else
-                                        <span class="text-zinc-600">—</span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-3.5">
-                                    <div class="flex flex-wrap gap-1">
-                                        @if ($product->is_active)
-                                            <span class="rounded-[5px] bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Active</span>
-                                        @else
-                                            <span class="rounded-[5px] bg-zinc-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Inactive</span>
-                                        @endif
-                                        @if ($product->is_featured)
-                                            <span class="rounded-[5px] bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Featured</span>
-                                        @endif
-                                        @if ($product->is_popular)
-                                            <span class="rounded-[5px] bg-fuchsia-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Popular</span>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td class="px-5 py-3.5 text-right">
-                                    <a href="#" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700">
-                                        Edit
-                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                                        </svg>
+                            {{-- Provider section — relevant for categories like eSIMs
+                                 that have no brand_key (Airalo / Zendit are the de-facto brands). --}}
+                            @if ($providerOptions->isNotEmpty())
+                                <p class="mt-2 px-3 pb-1 text-[9px] font-bold uppercase tracking-wider text-zinc-400">By Provider</p>
+                                @foreach ($providerOptions as $opt)
+                                    <a href="{{ $filterUrl(['provider' => $opt->provider_name, 'brand' => null]) }}" wire:navigate
+                                       x-show="search === '' || '{{ Str::lower($opt->provider_name) }}'.includes(search.toLowerCase())"
+                                       class="{{ $itemBase }} {{ $providerName === $opt->provider_name ? $activeItem : $inactiveItem }}">
+                                        {{ ucfirst($opt->provider_name) }}
+                                        <span class="ml-1 text-[10px] text-zinc-400">{{ $opt->cnt }}</span>
                                     </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="px-5 py-20 text-center">
-                                    <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                        </svg>
-                                    </span>
-                                    <p class="mt-4 text-base font-semibold text-zinc-900">No products match these filters</p>
-                                    <p class="mt-1 text-sm text-zinc-600">Try clearing the search or picking a different category.</p>
-                                    @if ($search !== '' || $categorySlug !== 'all')
-                                        <a href="{{ route('admin.products') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
-                                            Clear all filters
-                                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
-                                        </a>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                @endforeach
+                            @endif
+
+                            {{-- Real brands (gift cards, mobile airtime, etc.) --}}
+                            @if ($brandOptions->isNotEmpty())
+                                <p class="mt-2 px-3 pb-1 text-[9px] font-bold uppercase tracking-wider text-zinc-400">By Brand</p>
+                                @foreach ($brandOptions as $opt)
+                                    <a href="{{ $filterUrl(['brand' => $opt->brand_key, 'provider' => null]) }}" wire:navigate
+                                       x-show="search === '' || '{{ Str::lower($opt->brand_key.' '.$opt->label) }}'.includes(search.toLowerCase())"
+                                       class="{{ $itemBase }} {{ $brandKey === $opt->brand_key ? $activeItem : $inactiveItem }}">
+                                        {{ \App\Models\Product::brandDisplayName($opt->brand_key) }}
+                                    </a>
+                                @endforeach
+                            @endif
+                        </div>
+                    </div>
+                </span>
+
+                {{-- PRODUCT TYPE --}}
+                <span class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                    <span class="inline-flex items-center gap-1.5">
+                        Product Type
+                        <button type="button" @click="open = ! open" aria-label="Filter product type" class="flex h-5 w-5 items-center justify-center rounded-[6px] text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-white">
+                            <img src="{{ $filterIcon }}" alt="" class="h-3 w-3 object-contain opacity-70 brightness-0 dark:invert">
+                        </button>
+                    </span>
+                    <div x-show="open" x-cloak x-transition.opacity class="{{ $panelBase }}">
+                        <div class="max-h-80 overflow-y-auto p-1">
+                            <a href="{{ $filterUrl(['category' => null, 'subtype' => null]) }}" wire:navigate class="{{ $itemBase }} {{ $categorySlug === 'all' && $subtypeFilter === '' ? $activeItem : $inactiveItem }}">All types</a>
+                            @foreach (\App\Models\Category::orderBy('sort_order')->get() as $cat)
+                                @if ($cat->slug === 'esims')
+                                    {{-- eSIM splits into Data / Voice via metadata.plan_type --}}
+                                    <a href="{{ $filterUrl(['category' => 'esims', 'subtype' => null]) }}" wire:navigate class="{{ $itemBase }} {{ $categorySlug === 'esims' && $subtypeFilter === '' ? $activeItem : $inactiveItem }}">All eSIMs</a>
+                                    <a href="{{ $filterUrl(['category' => 'esims', 'subtype' => 'data']) }}" wire:navigate class="{{ $itemBase }} pl-6 {{ $categorySlug === 'esims' && $subtypeFilter === 'data' ? $activeItem : $inactiveItem }}">Data eSIMs</a>
+                                    <a href="{{ $filterUrl(['category' => 'esims', 'subtype' => 'voice']) }}" wire:navigate class="{{ $itemBase }} pl-6 {{ $categorySlug === 'esims' && $subtypeFilter === 'voice' ? $activeItem : $inactiveItem }}">Voice eSIMs</a>
+                                @else
+                                    <a href="{{ $filterUrl(['category' => $cat->slug, 'subtype' => null]) }}" wire:navigate class="{{ $itemBase }} {{ $categorySlug === $cat->slug ? $activeItem : $inactiveItem }}">{{ $cat->name }}</a>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                </span>
+
+                {{-- COUNTRY --}}
+                <span class="relative" x-data="{ open: false, search: '' }" @click.outside="open = false" @keydown.escape.window="open = false">
+                    <span class="inline-flex items-center gap-1.5">
+                        Country
+                        <button type="button" @click="open = ! open" aria-label="Filter country" class="flex h-5 w-5 items-center justify-center rounded-[6px] text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-white">
+                            <img src="{{ $filterIcon }}" alt="" class="h-3 w-3 object-contain opacity-70 brightness-0 dark:invert">
+                        </button>
+                    </span>
+                    <div x-show="open" x-cloak x-transition.opacity class="{{ $panelBase }}">
+                        <div class="border-b border-zinc-100 p-2 dark:border-zinc-700/60">
+                            <input x-model="search" type="text" placeholder="Search countries…" class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                        </div>
+                        <div class="max-h-72 overflow-y-auto p-1">
+                            <a href="{{ $filterUrl(['country' => null]) }}" wire:navigate class="{{ $itemBase }} {{ $country === 'ALL' ? $activeItem : $inactiveItem }}">All countries</a>
+                            @foreach ($countryOptions as $opt)
+                                @php $code = strtoupper($opt->country_code); $name = $countryNames[$code] ?? $code; @endphp
+                                <a href="{{ $filterUrl(['country' => $code]) }}" wire:navigate
+                                   x-show="search === '' || '{{ Str::lower($name.' '.$code) }}'.includes(search.toLowerCase())"
+                                   class="{{ $itemBase }} {{ $country === $code ? $activeItem : $inactiveItem }}">
+                                    {{ $name }} <span class="text-[10px] text-zinc-400">{{ $code }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </span>
+
+                {{-- REGION --}}
+                <span class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                    <span class="inline-flex items-center gap-1.5">
+                        Region
+                        <button type="button" @click="open = ! open" aria-label="Filter region" class="flex h-5 w-5 items-center justify-center rounded-[6px] text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-white">
+                            <img src="{{ $filterIcon }}" alt="" class="h-3 w-3 object-contain opacity-70 brightness-0 dark:invert">
+                        </button>
+                    </span>
+                    <div x-show="open" x-cloak x-transition.opacity class="{{ $panelBase }}">
+                        <div class="max-h-72 overflow-y-auto p-1">
+                            <a href="{{ $filterUrl(['region' => null]) }}" wire:navigate class="{{ $itemBase }} {{ $regionFilter === '' ? $activeItem : $inactiveItem }}">All regions</a>
+                            @foreach ($availableRegions as $reg)
+                                <a href="{{ $filterUrl(['region' => $reg]) }}" wire:navigate class="{{ $itemBase }} {{ $regionFilter === $reg ? $activeItem : $inactiveItem }}">{{ $reg }}</a>
+                            @endforeach
+                        </div>
+                    </div>
+                </span>
+
+                <span class="col-cost">Cost Price</span>
+                <span>Value</span>
+                <span>Discount</span>
+                <span class="col-price text-blue-700/70 dark:text-blue-300/70">Sales Price</span>
+                <span>Benefits</span>
+            </div>
+            {{-- Skeleton overlay shown while navigating between paginator pages or filtered URLs. --}}
+            <div x-show="navigating" x-cloak class="absolute inset-0 z-10 flex flex-col gap-2 bg-[#eff6ff] dark:bg-transparent" aria-hidden="true">
+                @for ($i = 0; $i < 8; $i++)
+                    <div class="flex items-center gap-3 rounded-[10px] bg-white p-4 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60" style="--i: {{ $i }}">
+                        <x-skeleton class="h-10 w-10" rounded="rounded-[10px]" />
+                        <div class="flex flex-1 flex-col gap-2">
+                            <x-skeleton class="h-4 w-40" />
+                            <x-skeleton class="h-3 w-24" />
+                        </div>
+                        <x-skeleton class="h-4 w-20" />
+                        <x-skeleton class="h-4 w-16" />
+                        <x-skeleton class="h-6 w-16 rounded-[10px]" />
+                    </div>
+                @endfor
             </div>
 
-            @if ($products->hasPages())
-                <div class="border-t border-zinc-100 px-5 py-3">
-                    {{ $products->onEachSide(1)->links('vendor.pagination.circles') }}
+            @forelse ($variants as $variant)
+                @php
+                    $product = $variant->product;
+                    $meta = (array) ($variant->metadata ?? []);
+                    $costMeta = (array) ($meta['cost'] ?? []);
+                    $priceMeta = (array) ($meta['price'] ?? []);
+                    $categorySlugOfRow = $product?->category?->slug;
+
+                    // ── Country + coverage. Real metadata keys differ by source:
+                    //   eSIMs (Airalo):   metadata.coverage = ["AD"] or ["AD","FR",...]
+                    //   eSIMs (Zendit):   metadata.countries = [...]
+                    //   GC / Bills / TopUp: products.country_code (single)
+                    $coverage = array_values(array_filter(array_merge(
+                        (array) data_get($meta, 'coverage', []),
+                        (array) data_get($meta, 'countries', []),
+                    )));
+                    $coverageCount = count($coverage);
+                    $primaryCountry = strtoupper((string) ($product?->country_code ?? ($coverage[0] ?? '')));
+
+                    $countryLabel = ($categorySlugOfRow === 'esims' && $coverageCount > 1)
+                        ? 'Regional ('.$coverageCount.')'
+                        : ($primaryCountry !== '' ? $primaryCountry : '—');
+
+                    // ── Region. Real keys:
+                    //   metadata.regions = ["North America"]  (GC / Bills / TopUp)
+                    //   eSIMs have no regions field — derive from the primary
+                    //   country's continent (config/continents.php).
+                    $metaRegions = array_values(array_filter((array) data_get($meta, 'regions', [])));
+                    $region = $metaRegions[0] ?? ($primaryCountry !== '' ? ($countryToContinent[$primaryCountry] ?? '—') : '—');
+
+                    // ── Sub-type. subcategory FK wins; else metadata.subTypes[0]
+                    // (GC) or metadata.plan_type (eSIM).
+                    $subType = $variant->subcategory?->name
+                        ?? data_get($meta, 'subTypes.0')
+                        ?? data_get($meta, 'plan_type')
+                        ?? '—';
+
+                    // ── Benefits — what the customer actually receives. Per-category
+                    // mapping using the real keys discovered in DB:
+                    //   eSIMs:         data_limit + validity_days  → e.g. "Unlimited · 10 days"
+                    //   Mobile Airtime: dataGB / voiceMinutes / smsNumber / durationDays
+                    //   GC / Bills:    shortNotes, else face value summary
+                    if ($categorySlugOfRow === 'esims') {
+                        // eSIM metadata comes in TWO shapes depending on the supplier:
+                        //   1. Zendit data eSIMs → metadata.raw_payload.{dataGB,
+                        //      voiceMinutes, smsNumber, durationDays, *Unlimited}
+                        //   2. Airalo (voice+sms+data) → top-level
+                        //      {data_limit: "10 GB", voice_limit: "75", sms_limit: "30",
+                        //       validity_days: 365}
+                        // Plus a legacy shape with data_limit:"Unknown" / validity:0
+                        // → fall through to SKU parsing.
+                        $raw = (array) data_get($meta, 'raw_payload', []);
+                        $sku = (string) ($variant->sku ?? '');
+                        $parts = [];
+
+                        // DATA — try raw_payload (Zendit), then top-level (Airalo),
+                        // then SKU regex as last resort.
+                        if (data_get($raw, 'dataUnlimited')) {
+                            $parts[] = 'Unlimited data';
+                        } elseif (is_numeric(data_get($raw, 'dataGB'))) {
+                            $parts[] = ((float) data_get($raw, 'dataGB')).' GB';
+                        } elseif (($dl = data_get($meta, 'data_limit')) && is_string($dl) && strtolower($dl) !== 'unknown') {
+                            $parts[] = $dl; // already includes "GB" unit
+                        } elseif (preg_match('/(\d+)\s*GB/i', $sku, $m)) {
+                            $parts[] = $m[1].' GB';
+                        } elseif (preg_match('/UNLIMITED|UL[EPU]?(?=[-_])/i', $sku)) {
+                            $parts[] = 'Unlimited data';
+                        }
+
+                        // VOICE — raw_payload first, then top-level voice_limit (minutes).
+                        if (data_get($raw, 'voiceUnlimited')) {
+                            $parts[] = 'Unlimited voice';
+                        } elseif (is_numeric(data_get($raw, 'voiceMinutes')) && (int) data_get($raw, 'voiceMinutes') > 0) {
+                            $parts[] = ((int) data_get($raw, 'voiceMinutes')).' min';
+                        } elseif (($vl = data_get($meta, 'voice_limit')) && is_numeric($vl) && (int) $vl > 0) {
+                            $parts[] = ((int) $vl).' min';
+                        }
+
+                        // SMS — raw_payload first, then top-level sms_limit.
+                        if (data_get($raw, 'smsUnlimited')) {
+                            $parts[] = 'Unlimited SMS';
+                        } elseif (is_numeric(data_get($raw, 'smsNumber')) && (int) data_get($raw, 'smsNumber') > 0) {
+                            $parts[] = ((int) data_get($raw, 'smsNumber')).' SMS';
+                        } elseif (($sl = data_get($meta, 'sms_limit')) && is_numeric($sl) && (int) $sl > 0) {
+                            $parts[] = ((int) $sl).' SMS';
+                        }
+
+                        // VALIDITY — raw_payload, then top-level validity_days, then SKU.
+                        if (is_numeric(data_get($raw, 'durationDays')) && (int) data_get($raw, 'durationDays') > 0) {
+                            $parts[] = ((int) data_get($raw, 'durationDays')).' days';
+                        } elseif (($vd = data_get($meta, 'validity_days')) && is_numeric($vd) && (int) $vd > 0) {
+                            $parts[] = ((int) $vd).' days';
+                        } elseif (preg_match('/(\d+)D[-_]/i', $sku, $m)) {
+                            $parts[] = $m[1].' days';
+                        }
+
+                        $sentBenefits = $parts ? implode(' · ', $parts) : (data_get($raw, 'shortNotes') ?: data_get($meta, 'shortNotes'));
+                    } elseif ($categorySlugOfRow === 'mobile-airtime') {
+                        $parts = [];
+                        if (data_get($meta, 'dataUnlimited')) {
+                            $parts[] = 'Unlimited data';
+                        } elseif ($dataGb = data_get($meta, 'dataGB')) {
+                            $parts[] = $dataGb.' GB';
+                        }
+                        if (data_get($meta, 'voiceUnlimited')) {
+                            $parts[] = 'Unlimited voice';
+                        } elseif ($voice = data_get($meta, 'voiceMinutes')) {
+                            $parts[] = $voice.' min';
+                        }
+                        if (data_get($meta, 'smsUnlimited')) {
+                            $parts[] = 'Unlimited SMS';
+                        } elseif ($sms = data_get($meta, 'smsNumber')) {
+                            $parts[] = $sms.' SMS';
+                        }
+                        if ($days = data_get($meta, 'durationDays')) {
+                            $parts[] = $days.' days';
+                        }
+                        $sentBenefits = $parts ? implode(' · ', $parts) : data_get($meta, 'shortNotes');
+                    } else {
+                        $sentBenefits = data_get($meta, 'shortNotes')
+                            ?? ($variant->face_value ? number_format((float) $variant->face_value, 2).' '.$variant->currency.' value' : null);
+                    }
+
+                    $costUsd = (float) $variant->cost_price;
+
+                    // Value (supplier-suggested retail). Stored on the variant
+                    // at sync time as `retail_price` — falls back to face_value
+                    // when retail is missing. This is what the customer receives
+                    // and is the BASE we mark up against (not cost).
+                    $valueUsd = (float) ($variant->retail_price ?: $variant->face_value ?: $costUsd);
+
+                    // SALES PRICE — markup applied to VALUE, not cost. The
+                    // pricing engine takes a base + walks the product →
+                    // subcategory → category → global rule hierarchy; here we
+                    // pass the value so "my rates plus the value" is what the
+                    // customer pays. Falls back to value when no rule matches.
+                    $retailUsd = $product ? $pricing->resolveRetailPrice($product, $valueUsd) : $valueUsd;
+
+                    // Discount % — the supplier's wholesale discount: the gap
+                    // between the face Value (what the customer receives) and
+                    // the Cost (what the supplier charges us), as a % of Value.
+                    // e.g. Value $12.50, Cost $3.30 → 73.6% off face.
+                    $discountPct = $valueUsd > 0
+                        ? round((($valueUsd - $costUsd) / $valueUsd) * 100, 2)
+                        : null;
+                    $marginPct = $discountPct ?? 0.0;
+                    $fee = data_get($costMeta, 'fee');
+                    $feePct = data_get($costMeta, 'feePct');
+                    $costFx = data_get($costMeta, 'fx');
+                    $priceFx = data_get($priceMeta, 'fx');
+
+                    $brandLabel = $product?->brand_key ? \App\Models\Product::brandDisplayName($product->brand_key) : ($product?->name ?? '—');
+                    $logoSrc = $product ? \App\Models\Product::brandLogoUrl($product->brand_key, $product->logo_url) : null;
+                @endphp
+                {{-- Click anywhere on the row to open the slide-out detail panel.
+                     Drawer payload is everything the panel needs — keyed plainly
+                     so the Alpine template stays declarative. --}}
+                @php
+                    $countryNameForDrawer = $country !== '' ? ($countryNames[$country] ?? $country) : '—';
+                    $valueLabel = $variant->is_variable
+                        ? number_format((float) $variant->min_amount, 2).'–'.number_format((float) $variant->max_amount, 2).' '.$variant->currency
+                        : number_format((float) $variant->face_value, 2).' '.$variant->currency;
+                    $roamingCountries = collect((array) data_get($meta, 'roamingCountries', []))
+                        ->map(fn ($c) => is_array($c) ? $c : ['code' => $c, 'speeds' => null])
+                        ->values();
+                    $drawerPayload = [
+                        'id' => $variant->sku ?: ('VAR-'.$variant->id),
+                        'variantId' => $variant->id,
+                        'productId' => $product?->id,
+                        'productType' => $product?->category?->name ?? '—',
+                        'subType' => $subType,
+                        'notes' => data_get($meta, 'notes') ?? data_get($meta, 'shortNotes'),
+                        'isVariable' => (bool) $variant->is_variable,
+                        'region' => $region,
+                        'countryName' => $countryNameForDrawer,
+                        'countryCode' => $country,
+                        'dataAmount' => data_get($meta, 'dataAmount'),
+                        'duration' => data_get($meta, 'duration'),
+                        'dataSpeed' => data_get($meta, 'dataSpeed'),
+                        'isAvailable' => (bool) $variant->is_available,
+                        'isFeatured' => (bool) ($product?->is_featured ?? false),
+                        'isPopular' => (bool) ($product?->is_popular ?? false),
+                        'valueLabel' => $valueLabel,
+                        'increment' => data_get($meta, 'increment'),
+                        'costLabel' => number_format($costUsd, 2).' USD',
+                        // Sales price (computed): the rate-derived USD price.
+                        'retail' => number_format($retailUsd, 2),
+                        'retailLabel' => number_format($retailUsd, 2).' USD',
+                        // Admin override, if set. NULL means "using rules".
+                        'manualPriceUsd' => $variant->manual_retail_price_usd !== null
+                            ? (float) $variant->manual_retail_price_usd
+                            : null,
+                        'roamingCountries' => $roamingCountries,
+                    ];
+                @endphp
+                <article
+                    @click="$dispatch('variant-show', @js($drawerPayload))"
+                    class="variant-row group cursor-pointer rounded-[10px] border border-zinc-100 bg-white px-6 py-3 shadow-sm shadow-zinc-900/5 transition-colors hover:border-blue-600 hover:bg-blue-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:hover:border-blue-400 dark:hover:bg-blue-600/15"
+                >
+                    {{-- Brand (text only, no logo) --}}
+                    <span class="col-brand min-w-0 truncate text-[13px] font-semibold text-zinc-900 dark:text-white">{{ $brandLabel }}</span>
+
+                    {{-- Product Type --}}
+                    <span class="min-w-0 truncate text-[13px] text-zinc-700 dark:text-zinc-200">{{ $product?->category?->name ?? '—' }}</span>
+
+                    {{-- Country — single ISO code, OR "Regional (N)" for multi-country eSIMs. --}}
+                    <span class="min-w-0 truncate text-[13px] text-zinc-700 dark:text-zinc-200">{{ $countryLabel }}</span>
+
+                    {{-- Region --}}
+                    <span class="min-w-0 truncate text-[13px] text-zinc-700 dark:text-zinc-200">{{ $region }}</span>
+
+                    {{-- Cost Price — what we pay the supplier (USD) --}}
+                    <span class="col-cost min-w-0 truncate text-[13px] font-semibold tabular-nums text-zinc-900 dark:text-white">@moneyCode($costUsd, 'USD')</span>
+
+                    {{-- Value — supplier-suggested retail (what the customer receives). --}}
+                    <span class="min-w-0 truncate text-[13px] font-medium tabular-nums text-zinc-700 dark:text-zinc-200">
+                        @if ($variant->is_variable)
+                            {{ number_format((float) $variant->min_amount, 2) }}–{{ number_format((float) $variant->max_amount, 2) }} {{ $variant->currency }}
+                        @elseif ($valueUsd > 0)
+                            @moneyCode($valueUsd, 'USD')
+                        @else
+                            —
+                        @endif
+                    </span>
+
+                    {{-- Discount % — (Sales − Cost) / Sales, computed live --}}
+                    <span class="min-w-0 truncate text-[13px] tabular-nums text-zinc-700 dark:text-zinc-200">
+                        {{ $discountPct !== null ? number_format($discountPct, 2).'%' : '—' }}
+                    </span>
+
+                    {{-- Sales Price — markup applied to Value (highlighted).
+                         w-fit + inline-flex so the pill hugs its content and
+                         doesn't fill the full grid cell. --}}
+                    <span class="col-price">
+                        <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[10px] bg-blue-50/70 px-3 py-1.5 text-[13px] font-bold tabular-nums text-blue-900 ring-1 ring-blue-100 dark:bg-blue-600/10 dark:text-blue-200 dark:ring-blue-500/20">@moneyCode($retailUsd, 'USD')</span>
+                    </span>
+
+                    {{-- Benefits — clamp to 2 lines so long lists ("5GB · 30 days · 200 SMS")
+                         wrap naturally instead of being cut off after one line. --}}
+                    <span class="col-benefits min-w-0 text-[13px] leading-snug text-zinc-700 line-clamp-2 dark:text-zinc-200">{{ $sentBenefits ?? '—' }}</span>
+                </article>
+            @empty
+                <div class="rounded-[10px] bg-white px-5 py-20 text-center shadow-sm ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                    <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 dark:bg-blue-600/15 dark:text-blue-300">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </span>
+                    <p class="mt-4 text-base font-semibold text-zinc-900 dark:text-white">No products match these filters</p>
+                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Try clearing the search or picking a different category.</p>
+                    @if ($search !== '' || $categorySlug !== 'all')
+                        <a href="{{ route('admin.products') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300">
+                            Clear all filters
+                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
+                        </a>
+                    @endif
+                </div>
+            @endforelse
+
+            @if ($variants->hasPages())
+                <div class="mt-2 rounded-[10px] bg-white px-5 py-3 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                    {{ $variants->onEachSide(1)->links('vendor.pagination.circles') }}
                 </div>
             @endif
         </div>
+
+        {{-- Slide-out variant detail drawer. One instance reused for every row:
+             clicking a row dispatches `variant-show` with the variant payload, the
+             drawer picks it up and slides in from the right. Read-only for now —
+             pricing inputs render but don't persist (admin editing comes later). --}}
+        <div
+            x-data="variantDrawer()"
+            @variant-show.window="open($event.detail)"
+            @keydown.escape.window="close()"
+            x-cloak
+            class="fixed inset-0 z-50"
+            x-show="isOpen"
+        >
+            {{-- Backdrop --}}
+            <div
+                x-show="isOpen"
+                @click="close()"
+                x-transition.opacity
+                class="absolute inset-0 bg-zinc-900/40 dark:bg-zinc-950/60"
+            ></div>
+
+            {{-- Panel --}}
+            <aside
+                x-show="isOpen"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="translate-x-full"
+                x-transition:enter-end="translate-x-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="translate-x-full"
+                class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl dark:bg-[#1d3252]"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Product variant details"
+            >
+                {{-- Header --}}
+                <header class="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-700/60">
+                    <h2 class="text-base font-bold text-zinc-900 dark:text-white">Product Details</h2>
+                    <button type="button" @click="close()" aria-label="Close" class="flex h-8 w-8 items-center justify-center rounded-[10px] text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </header>
+
+                {{-- Scrollable body --}}
+                <div class="flex-1 overflow-y-auto px-5 py-4">
+
+                    {{-- ID + Status --}}
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">ID</p>
+                            <div class="mt-1 flex items-center gap-2">
+                                <p class="font-mono text-sm text-zinc-900 dark:text-white" x-text="data.id"></p>
+                                <button type="button" @click="navigator.clipboard.writeText(data.id)" aria-label="Copy ID" class="text-zinc-400 hover:text-zinc-700 dark:hover:text-white">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Status</p>
+                            <div class="mt-1 inline-flex items-center gap-0.5 rounded-[10px] bg-zinc-100 p-0.5 dark:bg-[#26416b]">
+                                <button type="button" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors" :class="data.isAvailable ? 'bg-red-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">Enabled</button>
+                                <button type="button" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors" :class="! data.isAvailable ? 'bg-zinc-700 text-white' : 'text-zinc-600 dark:text-zinc-300'">Disabled</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Two-column field grid --}}
+                    <dl class="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 text-[12px]">
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Product Type</dt>
+                            <dd class="mt-1 font-medium text-zinc-900 dark:text-white" x-text="data.productType"></dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Sub Type</dt>
+                            <dd class="mt-1">
+                                <span class="inline-flex items-center rounded-[10px] bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700 dark:bg-white/5 dark:text-zinc-200" x-text="data.subType"></span>
+                            </dd>
+                        </div>
+                        <div class="col-span-2" x-show="data.notes">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Extended Notes</dt>
+                            <dd class="mt-1 text-zinc-700 dark:text-zinc-300" x-text="data.notes"></dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Offer Price Type</dt>
+                            <dd class="mt-1">
+                                <span class="inline-flex items-center gap-1.5 rounded-[10px] bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-600/15 dark:text-blue-300">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                                    <span x-text="data.isVariable ? 'Variable' : 'Fixed'"></span>
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Region</dt>
+                            <dd class="mt-1 font-medium text-zinc-900 dark:text-white" x-text="data.region"></dd>
+                        </div>
+                        <div>
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Country</dt>
+                            <dd class="mt-1 font-medium text-zinc-900 dark:text-white" x-text="data.countryName"></dd>
+                        </div>
+                        <div x-show="data.dataAmount">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Data Amount</dt>
+                            <dd class="mt-1 font-medium text-zinc-900 dark:text-white" x-text="data.dataAmount || '—'"></dd>
+                        </div>
+                        <div x-show="data.duration">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Duration</dt>
+                            <dd class="mt-1 font-medium text-zinc-900 dark:text-white" x-text="data.duration || '—'"></dd>
+                        </div>
+                        <div x-show="data.dataSpeed">
+                            <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Data Speed</dt>
+                            <dd class="mt-1 font-medium text-zinc-900 dark:text-white" x-text="data.dataSpeed || '—'"></dd>
+                        </div>
+                    </dl>
+
+                    {{-- Roaming countries — only renders if the variant exposes a list. --}}
+                    <div class="mt-6 border-t border-zinc-100 pt-4 dark:border-zinc-700/60" x-show="(data.roamingCountries || []).length > 0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Roaming Countries</h3>
+                            <div class="inline-flex items-center gap-0.5 rounded-[10px] bg-zinc-100 p-0.5 dark:bg-[#26416b]">
+                                <button type="button" @click="roamingView = 'map'" :class="roamingView === 'map' ? 'bg-blue-600 text-white' : 'text-zinc-600 dark:text-zinc-300'" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors">Map View</button>
+                                <button type="button" @click="roamingView = 'list'" :class="roamingView === 'list' ? 'bg-blue-600 text-white' : 'text-zinc-600 dark:text-zinc-300'" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors">List View</button>
+                            </div>
+                        </div>
+
+                        {{-- Map view: lazy-loaded jsvectormap (same factory the dashboard uses).
+                             Each roaming country gets a coloured fill so the admin can scan
+                             coverage at a glance. --}}
+                        <div x-show="roamingView === 'map'" x-cloak class="mt-3" x-ref="mapContainer">
+                            <div
+                                wire:ignore
+                                x-data="variantRoamingMap()"
+                                x-init="render($el, data.roamingCountries)"
+                                x-effect="render($el, data.roamingCountries)"
+                                class="h-64 w-full rounded-[10px] bg-zinc-50 dark:bg-[#0c1a36]"
+                            ></div>
+                        </div>
+
+                        {{-- List view: rows with flag + country name + supported speeds. --}}
+                        <ul x-show="roamingView === 'list'" x-cloak class="mt-3 divide-y divide-zinc-100 dark:divide-zinc-700/60">
+                            <template x-for="country in (data.roamingCountries || [])" :key="country.code">
+                                <li class="flex items-center justify-between gap-3 py-2 text-[12px]">
+                                    <span class="flex items-center gap-2">
+                                        <img :src="'https://flagcdn.com/w40/' + (country.code || '').toLowerCase() + '.png'" alt="" class="h-3 w-[18px] shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200 dark:ring-white/15">
+                                        <span class="text-zinc-800 dark:text-zinc-200" x-text="country.name || country.code"></span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-500 dark:text-zinc-400" x-text="country.speeds || 'Speed not available'"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    {{-- Cost and Value --}}
+                    <div class="mt-6 border-t border-zinc-100 pt-4 dark:border-zinc-700/60">
+                        <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Cost and Value</h3>
+                        <dl class="mt-3 grid grid-cols-3 gap-x-4 gap-y-3 text-[12px]">
+                            <div>
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Value</dt>
+                                <dd class="mt-1 font-bold tabular-nums text-zinc-900 dark:text-white" x-text="data.valueLabel"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Increment</dt>
+                                <dd class="mt-1 text-zinc-700 dark:text-zinc-300" x-text="data.increment || 'N/A'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Cost</dt>
+                                <dd class="mt-1 font-bold tabular-nums text-zinc-900 dark:text-white" x-text="data.costLabel"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Fee</dt>
+                                <dd class="mt-1 text-zinc-700 dark:text-zinc-300" x-text="data.fee || '—'"></dd>
+                            </div>
+                            <div>
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Fee %</dt>
+                                <dd class="mt-1 text-zinc-700 dark:text-zinc-300" x-text="data.feePct || '—'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    {{-- Sales Price override. Blank input + Save = use the rates
+                         chain. Typed value + Save = pin this SKU to that USD
+                         price. Reset clears the override. --}}
+                    <div class="mt-6 border-t border-zinc-100 pt-4 dark:border-zinc-700/60">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Sales Price</h3>
+                            <span
+                                class="rounded-[10px] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                                :class="data.manualPriceUsd !== null ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'bg-zinc-100 text-zinc-600 dark:bg-white/5 dark:text-zinc-300'"
+                                x-text="data.manualPriceUsd !== null ? 'Override active' : 'Using rates'"
+                            ></span>
+                        </div>
+                        <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Leave blank to use the rates settings.</p>
+                        <div class="mt-3 flex items-stretch gap-2">
+                            <div class="flex flex-1 overflow-hidden rounded-[10px] border border-zinc-200 dark:border-zinc-700/60">
+                                <span class="bg-zinc-50 px-3 py-2 text-[11px] font-medium text-zinc-600 dark:bg-white/5 dark:text-zinc-300">USD</span>
+                                <input
+                                    type="number" step="0.01" min="0"
+                                    x-model="priceInput"
+                                    :placeholder="data.retail"
+                                    class="flex-1 border-0 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none dark:bg-[#26416b] dark:text-white"
+                                >
+                            </div>
+                            <button type="button"
+                                @click="savePrice()" :disabled="savingPrice"
+                                class="rounded-[10px] bg-blue-600 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                <span x-text="savingPrice ? 'Saving…' : 'Save'"></span>
+                            </button>
+                            <button type="button"
+                                @click="resetPrice()" :disabled="savingPrice || data.manualPriceUsd === null"
+                                class="rounded-[10px] border border-zinc-200 bg-white px-3 text-[11px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]">
+                                Reset
+                            </button>
+                        </div>
+                        <p class="mt-2 text-[10px] text-zinc-500">Rates-derived suggestion: <span class="font-semibold" x-text="data.retailLabel"></span></p>
+                    </div>
+
+                    {{-- Featured + Popular toggles. Both are product-level flags
+                         (not per-variant): toggling them on any one of a
+                         product's variants flips the badge sitewide. --}}
+                    <div class="mt-6 border-t border-zinc-100 pt-4 dark:border-zinc-700/60">
+                        <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Badges</h3>
+                        <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Applies to the parent product across the storefront.</p>
+                        <div class="mt-3 space-y-2">
+                            {{-- Featured toggle with glowing-gradient preview. --}}
+                            <label class="flex items-center justify-between gap-3 rounded-[10px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60">
+                                <span class="flex items-center gap-2.5">
+                                    <span class="inline-flex items-center gap-1 rounded-[10px] bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-pink-500/40">
+                                        <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.39 7.36H22l-6.18 4.49L18.18 21 12 16.51 5.82 21l2.36-7.15L2 9.36h7.61z"/></svg>
+                                        Featured
+                                    </span>
+                                    <span class="text-[12px] text-zinc-700 dark:text-zinc-200">Glowing gradient badge</span>
+                                </span>
+                                <input type="checkbox" x-model="data.isFeatured" @change="toggleFeatured()" :disabled="togglingFeatured" class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500">
+                            </label>
+
+                            {{-- Popular toggle. --}}
+                            <label class="flex items-center justify-between gap-3 rounded-[10px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60">
+                                <span class="flex items-center gap-2.5">
+                                    <span class="inline-flex items-center gap-1 rounded-[10px] bg-blue-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                                        <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.5a9.5 9.5 0 100 19 9.5 9.5 0 000-19zm1 14h-2v-2h2v2zm0-4h-2V6h2v6.5z"/></svg>
+                                        Popular
+                                    </span>
+                                    <span class="text-[12px] text-zinc-700 dark:text-zinc-200">Customer-favourite tag</span>
+                                </span>
+                                <input type="checkbox" x-model="data.isPopular" @change="togglePopular()" :disabled="togglingPopular" class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500">
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Coupon codes. Per-variant: one code → one SKU. Auto-expires
+                         when valid_until passes; admin can also delete or pause. --}}
+                    <div class="mt-6 border-t border-zinc-100 pt-4 dark:border-zinc-700/60">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Coupon Codes</h3>
+                            <span class="text-[11px] text-zinc-500" x-text="(coupons.length || 0) + ' active'"></span>
+                        </div>
+
+                        {{-- Create form --}}
+                        <div class="mt-3 space-y-2 rounded-[10px] border border-zinc-200 p-3 dark:border-zinc-700/60">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="text" x-model="couponForm.code" placeholder="CODE (e.g. SAVE10)" class="col-span-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] uppercase text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                                <select x-model="couponForm.discount_type" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                                    <option value="percent">Percent off</option>
+                                    <option value="fixed">USD off</option>
+                                </select>
+                                <input type="number" step="0.01" min="0.01" x-model="couponForm.discount_value" :placeholder="couponForm.discount_type === 'percent' ? '10' : '5.00'" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                                <input type="number" min="1" x-model="couponForm.max_uses" placeholder="Max uses (blank = ∞)" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                                <input type="datetime-local" x-model="couponForm.valid_until" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                            </div>
+                            <p x-show="couponError" x-text="couponError" class="text-[11px] text-red-600"></p>
+                            <button type="button" @click="createCoupon()" :disabled="creatingCoupon" class="w-full rounded-[10px] bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+                                <span x-text="creatingCoupon ? 'Creating…' : '+ Create coupon'"></span>
+                            </button>
+                        </div>
+
+                        {{-- Existing coupons list --}}
+                        <ul class="mt-3 space-y-1.5" x-show="coupons.length > 0">
+                            <template x-for="c in coupons" :key="c.id">
+                                <li class="flex items-center justify-between gap-2 rounded-[10px] border border-zinc-200 px-3 py-2 dark:border-zinc-700/60">
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate font-mono text-[12px] font-bold text-zinc-900 dark:text-white" x-text="c.code"></span>
+                                        <span class="block text-[10px] text-zinc-500 dark:text-zinc-400">
+                                            <span x-text="c.discount_type === 'percent' ? c.discount_value + '% off' : '$' + Number(c.discount_value).toFixed(2) + ' off'"></span>
+                                            <span x-show="c.max_uses"> · <span x-text="c.used_count + '/' + c.max_uses"></span></span>
+                                            <span x-show="c.valid_until"> · expires <span x-text="new Date(c.valid_until).toLocaleDateString()"></span></span>
+                                        </span>
+                                    </span>
+                                    <span
+                                        class="rounded-[10px] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                                        :class="c.is_redeemable ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : (c.is_expired ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-zinc-100 text-zinc-600 dark:bg-white/10 dark:text-zinc-300')"
+                                        x-text="c.is_redeemable ? 'Active' : (c.is_expired ? 'Expired' : (c.is_used_up ? 'Used up' : 'Paused'))"
+                                    ></span>
+                                    <button type="button" @click="deleteCoupon(c.id)" aria-label="Delete coupon" class="rounded-[10px] p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
+                        <p x-show="coupons.length === 0" class="mt-3 text-center text-[11px] text-zinc-500">No coupons yet for this SKU.</p>
+                    </div>
+                </div>
+
+                {{-- Footer: just Close. Save/Reset live inline with their fields. --}}
+                <footer class="border-t border-zinc-100 bg-zinc-50 px-5 py-3 dark:border-zinc-700/60 dark:bg-[#162a4a]">
+                    <button type="button" @click="close()" class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]">Close</button>
+                </footer>
+            </aside>
+        </div>
+
+        <script>
+            // Tiny Alpine factory for the drawer state. `data` holds whatever
+            // payload the row dispatches via `variant-show` — every row sends
+            // the same shape so the drawer template stays declarative.
+            window.variantDrawer = function () {
+                return {
+                    isOpen: false,
+                    data: {},
+                    roamingView: 'map',
+
+                    // Pricing override state
+                    priceInput: '',
+                    savingPrice: false,
+
+                    // Badge toggles
+                    togglingFeatured: false,
+                    togglingPopular: false,
+
+                    // Coupons
+                    coupons: [],
+                    couponForm: {
+                        code: '', discount_type: 'percent', discount_value: '',
+                        max_uses: '', valid_until: '',
+                    },
+                    creatingCoupon: false,
+                    couponError: '',
+
+                    open(payload) {
+                        this.data = payload || {};
+                        this.roamingView = 'map';
+                        this.priceInput = this.data.manualPriceUsd !== null && this.data.manualPriceUsd !== undefined
+                            ? String(this.data.manualPriceUsd)
+                            : '';
+                        this.coupons = [];
+                        this.couponError = '';
+                        this.couponForm = { code: '', discount_type: 'percent', discount_value: '', max_uses: '', valid_until: '' };
+                        this.isOpen = true;
+                        document.body.style.overflow = 'hidden';
+                        this.loadCoupons();
+                    },
+                    close() {
+                        this.isOpen = false;
+                        document.body.style.overflow = '';
+                    },
+
+                    _csrf() {
+                        return document.querySelector('meta[name="csrf-token"]')?.content
+                            || document.querySelector('input[name="_token"]')?.value
+                            || '';
+                    },
+
+                    async _send(method, url, body) {
+                        const opts = {
+                            method,
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': this._csrf(),
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            credentials: 'same-origin',
+                        };
+                        if (body !== undefined) {
+                            opts.headers['Content-Type'] = 'application/json';
+                            opts.body = JSON.stringify(body);
+                        }
+                        const res = await fetch(url, opts);
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            const err = new Error(json.message || 'Request failed');
+                            err.payload = json;
+                            err.status = res.status;
+                            throw err;
+                        }
+                        return json;
+                    },
+
+                    async savePrice() {
+                        if (!this.data.variantId) { return; }
+                        const value = parseFloat(this.priceInput);
+                        if (!value || value <= 0) {
+                            // Empty input + Save = clear the override (same as Reset).
+                            return this.resetPrice();
+                        }
+                        this.savingPrice = true;
+                        try {
+                            const json = await this._send('PATCH',
+                                `/admin/api/catalog/variants/${this.data.variantId}/price`,
+                                { manual_retail_price_usd: value });
+                            this.data.manualPriceUsd = json.manual_retail_price_usd;
+                        } catch (e) {
+                            alert(e.message);
+                        } finally {
+                            this.savingPrice = false;
+                        }
+                    },
+
+                    async resetPrice() {
+                        if (!this.data.variantId) { return; }
+                        this.savingPrice = true;
+                        try {
+                            await this._send('DELETE',
+                                `/admin/api/catalog/variants/${this.data.variantId}/price`);
+                            this.data.manualPriceUsd = null;
+                            this.priceInput = '';
+                        } catch (e) {
+                            alert(e.message);
+                        } finally {
+                            this.savingPrice = false;
+                        }
+                    },
+
+                    async toggleFeatured() {
+                        if (!this.data.productId) { return; }
+                        this.togglingFeatured = true;
+                        try {
+                            const json = await this._send('PATCH',
+                                `/admin/api/catalog/products/${this.data.productId}/toggle-featured`);
+                            this.data.isFeatured = json.is_featured;
+                        } catch (e) {
+                            this.data.isFeatured = !this.data.isFeatured; // revert
+                            alert(e.message);
+                        } finally {
+                            this.togglingFeatured = false;
+                        }
+                    },
+
+                    async togglePopular() {
+                        if (!this.data.productId) { return; }
+                        this.togglingPopular = true;
+                        try {
+                            const json = await this._send('PATCH',
+                                `/admin/api/catalog/products/${this.data.productId}/toggle-popular`);
+                            this.data.isPopular = json.is_popular;
+                        } catch (e) {
+                            this.data.isPopular = !this.data.isPopular;
+                            alert(e.message);
+                        } finally {
+                            this.togglingPopular = false;
+                        }
+                    },
+
+                    async loadCoupons() {
+                        if (!this.data.variantId) { return; }
+                        try {
+                            const json = await this._send('GET',
+                                `/admin/api/catalog/variants/${this.data.variantId}/coupons`);
+                            this.coupons = json.coupons || [];
+                        } catch (e) { /* silent — drawer still works */ }
+                    },
+
+                    async createCoupon() {
+                        if (!this.data.variantId) { return; }
+                        this.couponError = '';
+                        if (!this.couponForm.code || !this.couponForm.discount_value) {
+                            this.couponError = 'Code and discount value are required.';
+                            return;
+                        }
+                        this.creatingCoupon = true;
+                        try {
+                            const body = {
+                                code: this.couponForm.code,
+                                discount_type: this.couponForm.discount_type,
+                                discount_value: parseFloat(this.couponForm.discount_value),
+                            };
+                            if (this.couponForm.max_uses) { body.max_uses = parseInt(this.couponForm.max_uses, 10); }
+                            if (this.couponForm.valid_until) { body.valid_until = this.couponForm.valid_until; }
+                            const json = await this._send('POST',
+                                `/admin/api/catalog/variants/${this.data.variantId}/coupons`, body);
+                            this.coupons.unshift(json.coupon);
+                            this.couponForm = { code: '', discount_type: 'percent', discount_value: '', max_uses: '', valid_until: '' };
+                        } catch (e) {
+                            this.couponError = e.payload?.errors
+                                ? Object.values(e.payload.errors).flat().join(' ')
+                                : e.message;
+                        } finally {
+                            this.creatingCoupon = false;
+                        }
+                    },
+
+                    async deleteCoupon(id) {
+                        if (!confirm('Delete this coupon?')) { return; }
+                        try {
+                            await this._send('DELETE', `/admin/api/catalog/coupons/${id}`);
+                            this.coupons = this.coupons.filter((c) => c.id !== id);
+                        } catch (e) { alert(e.message); }
+                    },
+                };
+            };
+
+            // Roaming-coverage map. Lazy-imports jsvectormap on first render,
+            // colours every country in the variant's coverage list, and rebuilds
+            // when the drawer opens with a different variant.
+            window.variantRoamingMap = function () {
+                return {
+                    map: null,
+                    async render(el, countries) {
+                        if (!el) { return; }
+                        const list = Array.isArray(countries) ? countries : [];
+                        if (list.length === 0) {
+                            if (this.map && typeof this.map.destroy === 'function') { this.map.destroy(); this.map = null; }
+                            el.innerHTML = '';
+                            return;
+                        }
+                        // Lazy-import jsvectormap (same pattern the dashboard uses).
+                        const { default: JsVectorMap } = await import('jsvectormap');
+                        await import('jsvectormap/dist/jsvectormap.css');
+                        window.jsVectorMap = JsVectorMap;
+                        await import('jsvectormap/dist/maps/world-merc.js');
+
+                        // Tear down any previous instance — the drawer reuses
+                        // this container across variant clicks.
+                        if (this.map && typeof this.map.destroy === 'function') { this.map.destroy(); this.map = null; }
+                        el.innerHTML = '';
+
+                        const dark = document.documentElement.classList.contains('dark');
+                        const values = {};
+                        list.forEach((c) => {
+                            const code = (c.code || '').toUpperCase();
+                            if (code.length === 2) { values[code] = 1; }
+                        });
+
+                        this.map = new JsVectorMap({
+                            selector: el,
+                            map: 'world_merc',
+                            backgroundColor: 'transparent',
+                            zoomOnScroll: false,
+                            zoomButtons: false,
+                            regionStyle: {
+                                initial: { fill: dark ? '#1d3252' : '#e5e7eb', fillOpacity: 1, stroke: dark ? '#34507a' : '#cbd5e1', strokeWidth: 0.5 },
+                                hover: { fillOpacity: 0.85 },
+                            },
+                            series: {
+                                regions: [{
+                                    scale: ['#3b82f6', '#1d4ed8'],
+                                    values,
+                                    normalizeFunction: 'polynomial',
+                                    attribute: 'fill',
+                                }],
+                            },
+                        });
+                    },
+                };
+            };
+        </script>
 
     </div>
 </x-layouts.admin>

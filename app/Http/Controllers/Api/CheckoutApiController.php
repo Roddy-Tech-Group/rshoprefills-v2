@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Order\Services\CheckoutService;
+use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\OrderResource;
+use App\Http\Resources\PaymentSessionResource;
 use App\Models\Cart;
 use App\Models\Order;
-use App\Domain\Order\Services\CheckoutService;
-use App\Http\Resources\OrderResource;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -43,11 +46,15 @@ class CheckoutApiController extends Controller
             return response()->json([
                 'message' => 'Order placed successfully.',
                 'order' => new OrderResource($order),
-                'payment_session' => $paymentSession ? new \App\Http\Resources\PaymentSessionResource($paymentSession) : null,
+                'payment_session' => $paymentSession ? new PaymentSessionResource($paymentSession) : null,
             ], 201);
+        } catch (WalletOnHoldException|InsufficientBalanceException $e) {
+            // Friendly wallet errors carry a customer-ready message — return
+            // it verbatim instead of prefixing "Checkout failed:".
+            return response()->json(['message' => $e->getMessage()], 400);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Checkout failed: ' . $e->getMessage(),
+                'message' => 'Checkout failed: '.$e->getMessage(),
             ], 400);
         }
     }

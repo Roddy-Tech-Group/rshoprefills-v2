@@ -23,7 +23,7 @@ class EnsureAccountActive
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->withErrors(['email' => 'Your account has been suspended. Please contact support.']);
+                ->withErrors(['email' => 'Your account has been banned. Please contact support.']);
         }
 
         return $next($request);

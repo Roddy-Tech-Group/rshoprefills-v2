@@ -36,7 +36,7 @@ class CartPricingService
 
         $base = ($faceIsUsd && $faceValue > 0) ? $faceValue : $cost;
 
-        $unitPriceUsd = $this->resolveRetailPrice($variant->product, $base);
+        $unitPriceUsd = $this->resolveVariantRetailPrice($variant, $base);
         $subtotalUsd = $unitPriceUsd * $quantity;
 
         return [
@@ -100,6 +100,23 @@ class CartPricingService
             'value' => $value,
             'min_margin_percent' => $this->minMarginPercent(),
         ];
+    }
+
+    /**
+     * Variant-aware retail price. Honours the admin-set
+     * `manual_retail_price_usd` override when present, otherwise falls through
+     * to the rule-chain in `resolveRetailPrice`. The override is a flat USD
+     * figure — no markup or floor applied to it (admin is intentionally
+     * bypassing the rules).
+     */
+    public function resolveVariantRetailPrice(ProductVariant $variant, float $cost): float
+    {
+        $override = $variant->manual_retail_price_usd;
+        if ($override !== null && (float) $override > 0) {
+            return (float) $override;
+        }
+
+        return $this->resolveRetailPrice($variant->product, $cost);
     }
 
     /**

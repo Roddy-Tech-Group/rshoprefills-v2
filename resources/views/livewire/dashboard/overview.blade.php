@@ -256,7 +256,7 @@ new #[Lazy] class extends Component
                                     <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusTone }}">{{ $statusLabel }}</span>
                                 </div>
                                 <div class="mt-0.5 flex items-center justify-between gap-2">
-                                    <p class="truncate text-xs text-zinc-600">{{ $order->settlement_currency ?: 'USD' }} {{ number_format((float) $order->total_amount, 2) }}</p>
+                                    <p class="truncate text-xs text-zinc-600">@moneyCode((float) $order->total_amount, $order->settlement_currency)</p>
                                     <p class="shrink-0 text-[10px] text-zinc-600">{{ $order->created_at->diffForHumans() }}</p>
                                 </div>
                             </div>
@@ -802,7 +802,7 @@ new #[Lazy] class extends Component
                                                 <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusTone }}">{{ $statusLabel }}</span>
                                             </div>
                                             <div class="mt-0.5 flex items-center justify-between gap-2">
-                                                <p class="truncate text-xs text-zinc-600">{{ $order->settlement_currency ?: 'USD' }} {{ number_format((float) $order->total_amount, 2) }}</p>
+                                                <p class="truncate text-xs text-zinc-600">@moneyCode((float) $order->total_amount, $order->settlement_currency)</p>
                                                 <p class="shrink-0 text-[10px] text-zinc-600">{{ $order->created_at->diffForHumans() }}</p>
                                             </div>
                                         </div>

@@ -6,6 +6,8 @@ use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
 use App\Domain\Fraud\Services\FraudDetectionService;
 use App\Domain\Order\Services\CheckoutService;
+use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Http\Resources\PaymentSessionResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
@@ -101,6 +103,17 @@ class CheckoutController extends Controller
             );
 
             $fraudService->recordCheckout($user, $request->ip());
+        } catch (WalletOnHoldException|InsufficientBalanceException $e) {
+            // Customer-facing wallet errors carry their own polished message —
+            // surface them verbatim so the user sees the "wallet on hold /
+            // contact support" copy instead of a generic checkout failure.
+            $message = $e->getMessage();
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return redirect()->route('shop.checkout')->with('checkout_status', $message);
         } catch (Throwable $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([

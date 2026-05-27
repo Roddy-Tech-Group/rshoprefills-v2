@@ -64,6 +64,9 @@
             <x-cookie-consent />
 
             <x-nav.locale-modal />
+
+            {{-- Global confirm modal — intercepts any form/button with `data-confirm`. --}}
+            <x-confirm-modal />
         </div>
 
         @fluxScripts

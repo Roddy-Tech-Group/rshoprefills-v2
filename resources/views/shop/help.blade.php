@@ -1,40 +1,46 @@
 @php
-    // Help Center — static FAQ + topic filters + contact details. Customer-facing,
+    // Help Center — FAQ + topic filters + contact details. Customer-facing,
     // so copy stays generic (no payment-provider names). Search and topic cards
     // filter the FAQ list client-side via Alpine.
+    //
+    // FAQ entries are CMS-managed (faqs table). Topic icons stay in code: they
+    // pair with brand visuals, not editorial content, so they live with the view.
     $supportEmail = 'info@rshoprefill.com';
 
-    $topics = [
-        ['cat' => 'Orders & Delivery',        'desc' => 'Tracking, codes and delivery times.',     'path' => 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5'],
-        ['cat' => 'Payments & Wallet',        'desc' => 'Methods, funding and currencies.',        'path' => 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z'],
-        ['cat' => 'Gift Cards & eSIMs',       'desc' => 'Region locks and activation.',            'path' => 'M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z'],
-        ['cat' => 'Account & Verification',   'desc' => 'KYC, limits and your details.',           'path' => 'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'],
-        ['cat' => 'Transaction PIN & Security','desc' => 'Set, change and protect your PIN.',       'path' => 'M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'],
-        ['cat' => 'Refunds & Disputes',       'desc' => 'Failed orders and reversals.',            'path' => 'M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3'],
+    $faqs = \App\Models\Faq::published()->ordered()->get()->map(fn ($faq) => [
+        'cat' => $faq->topic,
+        'q' => $faq->question,
+        'a' => $faq->answer,
+    ])->all();
+
+    // Topic icons — keyed by topic name so any topic that exists in the DB but
+    // doesn't have an icon falls back to a sensible default.
+    $topicIconPaths = [
+        'Orders & Delivery'           => 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5',
+        'Payments & Wallet'           => 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z',
+        'Gift Cards & eSIMs'          => 'M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z',
+        'Account & Verification'      => 'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z',
+        'Transaction PIN & Security'  => 'M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z',
+        'Refunds & Disputes'          => 'M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3',
     ];
+    $defaultIconPath = 'M12 9v2m0 4h.01M4.93 19h14.14a2 2 0 001.74-3L13.74 4a2 2 0 00-3.48 0L3.19 16a2 2 0 001.74 3z';
 
-    $faqs = [
-        ['cat' => 'Orders & Delivery', 'q' => 'How fast is delivery?', 'a' => 'Most digital orders such as gift cards, eSIMs and top-ups are delivered instantly to your email and dashboard once payment is confirmed. A small number of items may take a few minutes while the item is being prepared.'],
-        ['cat' => 'Orders & Delivery', 'q' => 'Where do I find my codes?', 'a' => 'Open your dashboard, go to Orders and select the order. Delivered codes and PINs appear there, and a copy is sent to your delivery email.'],
-        ['cat' => 'Orders & Delivery', 'q' => 'My order says processing. What now?', 'a' => 'Processing means your payment cleared and we are preparing your item. It usually completes within minutes. If it stays in processing for a long time, contact support with your order number.'],
-
-        ['cat' => 'Payments & Wallet', 'q' => 'What payment methods can I use?', 'a' => 'You can pay by card, bank transfer, mobile money, crypto, or your wallet balance. The methods shown depend on the currency you select at checkout.'],
-        ['cat' => 'Payments & Wallet', 'q' => 'How do I fund my wallet?', 'a' => 'Go to Wallet in your dashboard, choose Add funds, pick an amount and a payment method, then confirm. Your balance updates as soon as the payment is confirmed.'],
-        ['cat' => 'Payments & Wallet', 'q' => 'Can I hold more than one currency?', 'a' => 'Yes. You can open a wallet in each supported currency from the Wallet page and fund whichever you need.'],
-
-        ['cat' => 'Gift Cards & eSIMs', 'q' => 'Are gift cards region locked?', 'a' => 'Some brands are sold per country. The store shows the countries each brand is available in based on the region you select.'],
-        ['cat' => 'Gift Cards & eSIMs', 'q' => 'How do I activate an eSIM?', 'a' => 'After purchase, your eSIM QR code and activation details appear in your order. Scan the QR code in your phone settings to install and activate the plan.'],
-
-        ['cat' => 'Account & Verification', 'q' => 'Why do I need to verify my identity?', 'a' => 'Verification helps keep your account and funds secure and can unlock higher limits. Upload your documents from the Verify Identity page in your dashboard.'],
-        ['cat' => 'Account & Verification', 'q' => 'How long does verification take?', 'a' => 'Most submissions are reviewed within a short window. You will be notified once your verification is approved or if anything further is needed.'],
-
-        ['cat' => 'Transaction PIN & Security', 'q' => 'What is a transaction PIN?', 'a' => 'It is a 4-digit PIN that authorizes payments from your wallet balance. You can set or change it under Security in your dashboard.'],
-        ['cat' => 'Transaction PIN & Security', 'q' => 'I forgot my transaction PIN.', 'a' => 'You can change it from the Security page. For your safety the PIN locks after several wrong attempts and unlocks automatically after a short cooldown.'],
-        ['cat' => 'Transaction PIN & Security', 'q' => 'How do I keep my account safe?', 'a' => 'Use a strong password, set a transaction PIN, and never share codes or PINs with anyone. We will never ask you for your password or PIN.'],
-
-        ['cat' => 'Refunds & Disputes', 'q' => 'Can I get a refund?', 'a' => 'Digital items that have been delivered and revealed generally cannot be refunded. If an item failed to deliver or is faulty, contact support and we will make it right.'],
-        ['cat' => 'Refunds & Disputes', 'q' => 'An order failed but I was charged.', 'a' => 'Failed payments are reversed automatically and any reserved wallet funds are released. If you still see a charge after some time, contact support with your order number.'],
+    // Topic cards derive from the FAQ list so removing a topic from the DB
+    // also drops the card. Description lives in code for now — could move to
+    // site_settings if editors need to edit it.
+    $topicDescriptions = [
+        'Orders & Delivery'           => 'Tracking, codes and delivery times.',
+        'Payments & Wallet'           => 'Methods, funding and currencies.',
+        'Gift Cards & eSIMs'          => 'Region locks and activation.',
+        'Account & Verification'      => 'KYC, limits and your details.',
+        'Transaction PIN & Security'  => 'Set, change and protect your PIN.',
+        'Refunds & Disputes'          => 'Failed orders and reversals.',
     ];
+    $topics = collect($faqs)->pluck('cat')->unique()->values()->map(fn ($cat) => [
+        'cat' => $cat,
+        'desc' => $topicDescriptions[$cat] ?? '',
+        'path' => $topicIconPaths[$cat] ?? $defaultIconPath,
+    ])->all();
 @endphp
 
 <x-layouts.app.header :title="'Help Center | RshopRefills'">

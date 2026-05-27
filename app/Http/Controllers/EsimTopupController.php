@@ -8,6 +8,8 @@ use App\Domain\Fulfillment\Providers\AiraloFulfillmentProvider;
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Domain\Wallet\Services\WalletService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Models\Order;
@@ -186,6 +188,11 @@ class EsimTopupController extends Controller
 
                 return $order;
             });
+        } catch (WalletOnHoldException|InsufficientBalanceException $e) {
+            // Customer-friendly: pass the wallet message through verbatim so the
+            // user sees e.g. "Your wallet is currently on hold. Please contact
+            // support…" instead of the generic "Could not start the top-up".
+            return back()->withErrors(['package_id' => $e->getMessage()]);
         } catch (\Throwable $e) {
             Log::error('eSIM top-up purchase failed', [
                 'user_id' => $user->id,

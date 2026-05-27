@@ -699,10 +699,22 @@
 
             <div class="bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:min-h-full lg:rounded-tl-[60px] lg:px-10 lg:py-8">
                 <div class="mx-auto max-w-7xl">
+                    {{-- Suspension banner: visible on every dashboard page when the
+                         account is suspended. Carries the admin-authored reason +
+                         the Request Review button (idempotent — re-clicks are safe). --}}
+                    @auth
+                        @if (auth()->user()->isSuspended())
+                            @include('partials.suspension-banner')
+                        @endif
+                    @endauth
+
                     {{ $slot }}
                 </div>
             </div>
         </flux:main>
+
+        {{-- Global confirm modal — intercepts any form/button with `data-confirm`. --}}
+        <x-confirm-modal />
 
         {{-- Mobile bottom tab bar with floating center Menu FAB (mobile + tablet).
              A single bubble slides smoothly between active tabs via Alpine. Initial active index is derived
