@@ -19,7 +19,18 @@
 
 <x-layouts.admin>
     <x-slot:heading>Order #{{ $order->order_number }}</x-slot:heading>
-    <x-slot:subheading>Placed {{ $fmtDate($order->placed_at ?? $order->created_at) }}</x-slot:subheading>
+    <x-slot:subheading>
+        Placed {{ $fmtDate($order->placed_at ?? $order->created_at) }}
+        @if ($order->hasSuspectPricing())
+            · <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-200">
+                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                </svg>
+                Suspect pricing
+            </span>
+            <span class="ml-1 text-[10px] text-zinc-500">(no exchange rate snapshot — display amount may be raw USD mis-labelled)</span>
+        @endif
+    </x-slot:subheading>
 
     <div class="flex flex-1 flex-col gap-6">
 
@@ -51,7 +62,7 @@
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
             {{-- Customer --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <h3 class="text-sm font-bold text-zinc-900">Customer</h3>
                 <dl class="mt-3 space-y-2.5 text-xs">
                     <div class="flex justify-between gap-4">
@@ -70,7 +81,7 @@
             </div>
 
             {{-- Order info --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <h3 class="text-sm font-bold text-zinc-900">Order</h3>
                 <dl class="mt-3 space-y-2.5 text-xs">
                     <div class="flex justify-between gap-4">
@@ -118,7 +129,7 @@
         </div>
 
         {{-- Items --}}
-        <div class="rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="border-b border-zinc-100 px-5 py-4">
                 <h3 class="text-sm font-bold text-zinc-900">Items ({{ $order->items->count() }})</h3>
             </div>
@@ -149,19 +160,35 @@
                                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 {{ $toneFor($item->fulfillment_status?->value) }}">
                                     {{ $item->fulfillment_status?->label() ?? 'Not Started' }}
                                 </span>
-                                <p class="text-sm font-bold text-zinc-900">{{ $item->display_currency }} {{ number_format((float) $item->subtotal_amount, 2) }}</p>
+                                {{-- Item subtotal — primary USD figure (truth), customer's
+                                     display amount underneath as context. --}}
+                                @php
+                                    $rate = $order->exchangeRate();
+                                    $itemUsdSubtotal = $rate
+                                        ? round((float) $item->subtotal_amount / $rate, 4)
+                                        : (float) $item->subtotal_amount;
+                                @endphp
+                                <p class="text-sm font-bold text-zinc-900">@moneyCode($itemUsdSubtotal, 'USD')</p>
+                                @if (! $order->hasSuspectPricing() && strtoupper((string) $item->display_currency) !== 'USD')
+                                    <p class="text-[10px] text-zinc-500">Customer: @moneyCode((float) $item->subtotal_amount, $item->display_currency)</p>
+                                @endif
                             </div>
                         </div>
 
                         {{-- Per-item fulfilment detail --}}
                         <div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] sm:grid-cols-4">
                             <div>
-                                <p class="text-zinc-800">Unit price</p>
-                                <p class="font-medium text-zinc-700">{{ $item->display_currency }} {{ number_format((float) $item->display_amount, 2) }}</p>
+                                <p class="text-zinc-800">Unit price (USD)</p>
+                                @php
+                                    $itemUsdUnit = $rate
+                                        ? round((float) $item->display_amount / $rate, 4)
+                                        : (float) $item->display_amount;
+                                @endphp
+                                <p class="font-medium text-zinc-700">@moneyCode($itemUsdUnit, 'USD')</p>
                             </div>
                             <div>
                                 <p class="text-zinc-800">Provider cost</p>
-                                <p class="font-medium text-zinc-700">${{ number_format((float) $item->provider_cost_usd, 2) }}</p>
+                                <p class="font-medium text-zinc-700">@moneyCode((float) $item->provider_cost_usd, 'USD')</p>
                             </div>
                             <div>
                                 <p class="text-zinc-800">Delivered</p>
@@ -197,27 +224,36 @@
                 @endforelse
             </div>
 
-            {{-- Totals --}}
+            {{-- Totals — USD is the platform's source of truth (we book revenue
+                 in USD and pay suppliers in USD). The customer-paid display
+                 amount sits underneath as context when it differs. --}}
             <div class="border-t border-zinc-100 px-5 py-4">
-                <dl class="ml-auto max-w-xs space-y-1.5 text-xs">
+                <dl class="ml-auto max-w-sm space-y-1.5 text-xs">
                     <div class="flex justify-between gap-4">
-                        <dt class="text-zinc-800">Subtotal</dt>
-                        <dd class="font-medium text-zinc-700">{{ $order->display_currency }} {{ number_format((float) $order->subtotal_amount, 2) }}</dd>
+                        <dt class="text-zinc-800">Subtotal (USD)</dt>
+                        <dd class="font-medium text-zinc-700">@moneyCode($order->usdSubtotal(), 'USD')</dd>
                     </div>
                     <div class="flex justify-between gap-4">
-                        <dt class="text-zinc-800">Markup</dt>
-                        <dd class="font-medium text-zinc-700">{{ $order->display_currency }} {{ number_format((float) $order->markup_amount, 2) }}</dd>
+                        <dt class="text-zinc-800">Markup (USD)</dt>
+                        <dd class="font-medium text-zinc-700">@moneyCode($order->usdMarkup(), 'USD')</dd>
                     </div>
                     <div class="flex justify-between gap-4 border-t border-zinc-100 pt-1.5">
-                        <dt class="font-bold text-zinc-900">Total</dt>
-                        <dd class="font-bold text-zinc-900">{{ $order->display_currency }} {{ number_format((float) $order->total_amount, 2) }}</dd>
+                        <dt class="font-bold text-zinc-900">Total (USD)</dt>
+                        <dd class="font-bold text-zinc-900">@moneyCode($order->usdTotal(), 'USD')</dd>
                     </div>
+
+                    @if (! $order->hasSuspectPricing() && strtoupper((string) $order->display_currency) !== 'USD')
+                        <div class="mt-2 flex justify-between gap-4 border-t border-zinc-100 pt-2">
+                            <dt class="text-zinc-600">Customer paid</dt>
+                            <dd class="text-zinc-600">@moneyCode((float) $order->total_amount, $order->display_currency) @if ($order->exchangeRate()) <span class="text-[10px] text-zinc-400">@ {{ number_format($order->exchangeRate(), 4) }}</span>@endif</dd>
+                        </div>
+                    @endif
                 </dl>
             </div>
         </div>
 
         {{-- Payment attempts --}}
-        <div class="rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="border-b border-zinc-100 px-5 py-4">
                 <h3 class="text-sm font-bold text-zinc-900">Payment attempts ({{ $order->paymentAttempts->count() }})</h3>
             </div>

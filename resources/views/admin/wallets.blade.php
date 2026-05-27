@@ -3,16 +3,34 @@
 
     $wallets = Wallet::with(['user', 'transactions'])->latest()->limit(50)->get();
     $totalWallets = Wallet::count();
-    $totalBalance = (float) Wallet::sum('balance');
+
+    // Per-currency totals — DON'T sum across currencies (the previous "$100,104.69"
+    // headline added NGN + USD + GHS + GBP + XAF as if they were the same unit).
+    // Each row in the subheading reads "<symbol><amount> <code>", so the admin
+    // sees an honest breakdown instead of a fake aggregate.
+    $balancesByCurrency = Wallet::query()
+        ->selectRaw('UPPER(currency) as currency, SUM(balance) as total')
+        ->groupBy('currency')
+        ->orderBy('currency')
+        ->get()
+        ->filter(fn ($row) => (float) $row->total > 0);
 @endphp
 
 <x-layouts.admin>
     <x-slot:heading>Wallets</x-slot:heading>
-    <x-slot:subheading>{{ number_format($totalWallets) }} wallets · combined balance ${{ number_format($totalBalance, 2) }}.</x-slot:subheading>
+    <x-slot:subheading>
+        {{ number_format($totalWallets) }} {{ \Illuminate\Support\Str::plural('wallet', $totalWallets) }}
+        @if ($balancesByCurrency->isNotEmpty())
+            ·
+            @foreach ($balancesByCurrency as $row)
+                @money((float) $row->total, $row->currency){{ ' ' }}{{ $row->currency }}@if (! $loop->last), @endif
+            @endforeach
+        @endif
+    </x-slot:subheading>
 
     <div class="flex flex-1 flex-col gap-6">
 
-        <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-[11px]">
                     <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-600">
@@ -43,7 +61,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-5 py-3 font-semibold text-zinc-900">{{ \App\Models\Product::currencySymbol($wallet->currency->value) }}{{ number_format((float) $wallet->balance, 2) }}</td>
+                                <td class="px-5 py-3 font-semibold text-zinc-900">@money((float) $wallet->balance, $wallet->currency->value)</td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $wallet->currency }}</td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $wallet->transactions->count() }}</td>
                                 <td class="px-5 py-3">

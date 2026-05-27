@@ -28,6 +28,11 @@ use Illuminate\Support\Str;
  * @property string|null $google_id
  * @property string|null $avatar_url
  * @property string $theme "light" | "dark" | "system"
+ * @property string|null $display_currency Customer-chosen display currency (null = auto)
+ * @property Carbon|null $banned_at
+ * @property Carbon|null $suspended_at
+ * @property string|null $suspension_reason
+ * @property Carbon|null $suspension_review_requested_at
  * @property Carbon|null $email_verified_at
  * @property string|null $password
  * @property string|null $remember_token
@@ -60,8 +65,12 @@ class User extends Authenticatable implements MustVerifyEmail
         'avatar_url',
         'avatar',
         'theme',
+        'display_currency',
         'kyc_status',
         'banned_at',
+        'suspended_at',
+        'suspension_reason',
+        'suspension_review_requested_at',
         'email_verified_at',
     ];
 
@@ -86,6 +95,8 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'banned_at' => 'datetime',
+            'suspended_at' => 'datetime',
+            'suspension_review_requested_at' => 'datetime',
             'password' => 'hashed',
             'transaction_pin_set_at' => 'datetime',
             'transaction_pin_locked_until' => 'datetime',
@@ -105,11 +116,48 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Whether the account is suspended (banned).
+     * Whether the account is banned. A banned user is forced out of the session
+     * by EnsureAccountActive middleware and blocked from signing in again.
      */
     public function isBanned(): bool
     {
         return $this->banned_at !== null;
+    }
+
+    /**
+     * Whether the account is suspended. Softer than ban: the user can still log
+     * in and view their dashboard, but write actions (checkout, cart, funding)
+     * are blocked by EnsureAccountNotSuspended. They can request a review,
+     * which surfaces in the admin notification feed.
+     */
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
+    }
+
+    public function hasRequestedSuspensionReview(): bool
+    {
+        return $this->suspension_review_requested_at !== null;
+    }
+
+    /**
+     * The currency the user sees prices in across the app. Resolution order:
+     *   1. Explicit `users.display_currency` preference (when the user picked one)
+     *   2. Their primary wallet's currency
+     *   3. USD as a final safety net
+     *
+     * Returns an ISO code (e.g. "NGN") so callers can pass it straight to
+     * App\Domain\Shared\Services\Money::format().
+     */
+    public function displayCurrency(): string
+    {
+        if (! empty($this->display_currency)) {
+            return strtoupper($this->display_currency);
+        }
+
+        $walletCurrency = $this->wallets()->orderBy('id')->value('currency');
+
+        return $walletCurrency ? strtoupper($walletCurrency) : 'USD';
     }
 
     // ────────────────────────────────────────────────────────────

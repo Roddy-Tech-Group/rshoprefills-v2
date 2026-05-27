@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminAuth;
 use App\Http\Middleware\EnsureAccountActive;
+use App\Http\Middleware\EnsureAccountNotSuspended;
 use App\Http\Middleware\ResolveRegion;
 use App\Http\Middleware\TraceRequestMiddleware;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -31,6 +32,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'admin' => AdminAuth::class,
+            // Selectively applied to write routes (checkout, cart writes,
+            // wallet funding). Suspended users stay logged in so they can
+            // see the banner + request a review — only the action is refused.
+            'not-suspended' => EnsureAccountNotSuspended::class,
         ]);
 
         $middleware->append(TraceRequestMiddleware::class);

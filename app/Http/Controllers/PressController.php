@@ -2,41 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Collection;
+use App\Models\PressArticle;
 
 class PressController extends Controller
 {
     /**
-     * Newsroom index: a grid of press posts.
+     * Newsroom index: a grid of press articles.
      */
     public function index()
     {
-        return view('shop.press', ['posts' => $this->posts()->all()]);
+        return view('shop.press', [
+            'posts' => PressArticle::published()->ordered()->get(),
+        ]);
     }
 
     /**
-     * A single press post.
+     * A single press article. 404s on unpublished / unknown slugs.
      */
     public function show(string $slug)
     {
-        $post = $this->posts()->firstWhere('slug', $slug);
+        $post = PressArticle::published()->where('slug', $slug)->firstOrFail();
 
-        abort_unless($post, 404);
-
-        $related = $this->posts()
-            ->where('slug', '!=', $slug)
-            ->take(3)
-            ->values()
-            ->all();
+        $related = PressArticle::published()
+            ->ordered()
+            ->where('id', '!=', $post->id)
+            ->limit(3)
+            ->get();
 
         return view('shop.press-post', ['post' => $post, 'related' => $related]);
-    }
-
-    /**
-     * @return Collection<int, array<string, mixed>>
-     */
-    private function posts(): Collection
-    {
-        return collect(config('press.posts', []));
     }
 }

@@ -135,6 +135,136 @@ class DashboardMetricsQuery
     }
 
     /**
+     * Report builder used by /admin/reports. Aggregates completed PRODUCT
+     * orders into buckets (daily / weekly / monthly), optionally narrowed to a
+     * category, and returns honest USD numbers via Order::usdTotal() — so
+     * legacy orders whose display_currency was mis-labelled don't poison the
+     * totals.
+     *
+     * Product-only scope:
+     *   - Sourced from `orders` only. Wallet top-ups live in `wallet_fundings`
+     *     (a different table with its own payment_attempts) and never appear
+     *     here. The `whereHas('items', category_id IS NOT NULL)` clause is
+     *     belt-and-braces against any future order shape that lands a row
+     *     without product items — those would be excluded too.
+     *   - eSIM in-dashboard top-ups DO count: they're real product purchases
+     *     stored as Orders + OrderItems (metadata flags them, but the data
+     *     model is identical to a fresh eSIM order).
+     *
+     * Cost is summed from `order_items.provider_cost_usd × quantity`, the
+     * source-of-truth USD we pay the supplier. Items without a recorded cost
+     * contribute zero — no synthetic estimate.
+     *
+     * Returns an array keyed by bucket date (Y-m-d), each row carrying:
+     *   - date              ISO bucket start
+     *   - transactions      distinct completed product orders in the bucket
+     *   - sales_usd         sum of order USD totals
+     *   - cost_usd          sum of supplier USD cost
+     *   - profit_usd        sales − cost
+     *   - profit_margin     profit / sales × 100, or 0 when sales = 0
+     *   - avg_per_tx_usd    sales / transactions, or 0 when transactions = 0
+     *
+     * Gap-fills empty buckets so the chart line is continuous.
+     *
+     * @return array<int, array{date: string, transactions: int, sales_usd: float, cost_usd: float, profit_usd: float, profit_margin: float, avg_per_tx_usd: float}>
+     */
+    public function getReportSeries(
+        Carbon $start,
+        Carbon $end,
+        string $granularity = 'daily',
+        ?int $categoryId = null,
+    ): array {
+        $granularity = in_array($granularity, ['daily', 'weekly', 'monthly'], true) ? $granularity : 'daily';
+
+        $ordersQuery = Order::query()
+            ->where('order_status', OrderStatus::Completed->value)
+            ->whereBetween('completed_at', [$start, $end])
+            // Defensive: only orders with at least one product item (i.e. a
+            // row in order_items with a non-null category_id) count. This is
+            // the "product data only" guarantee — if anything non-product
+            // ever sneaks into the orders table it's silently skipped here.
+            ->whereHas('items', fn ($q) => $q->whereNotNull('category_id'))
+            ->with(['items' => function ($query) use ($categoryId) {
+                if ($categoryId !== null) {
+                    $query->where('category_id', $categoryId);
+                }
+            }]);
+
+        if ($categoryId !== null) {
+            // When narrowing to a category, only count orders that have at
+            // least one item in that category. Stops the table from listing
+            // orders whose only contribution to "Total sales" is zero.
+            $ordersQuery->whereHas('items', fn ($q) => $q->where('category_id', $categoryId));
+        }
+
+        $orders = $ordersQuery->get();
+
+        // Bucket every order by date according to the chosen granularity. The
+        // bucket key is the first date in the period so the table reads as
+        // "week starting X" / "month of Y".
+        $buckets = [];
+        foreach ($orders as $order) {
+            $completedAt = $order->completed_at;
+            if (! $completedAt instanceof Carbon) {
+                continue;
+            }
+
+            $bucketKey = match ($granularity) {
+                'weekly' => $completedAt->copy()->startOfWeek()->format('Y-m-d'),
+                'monthly' => $completedAt->copy()->startOfMonth()->format('Y-m-d'),
+                default => $completedAt->copy()->startOfDay()->format('Y-m-d'),
+            };
+
+            if (! isset($buckets[$bucketKey])) {
+                $buckets[$bucketKey] = ['transactions' => 0, 'sales' => 0.0, 'cost' => 0.0];
+            }
+
+            $buckets[$bucketKey]['transactions']++;
+            $buckets[$bucketKey]['sales'] += $order->usdTotal();
+            $buckets[$bucketKey]['cost'] += $order->items->sum(
+                fn ($item) => (float) $item->provider_cost_usd * (int) $item->quantity,
+            );
+        }
+
+        // Gap-fill every bucket between start and end so the chart line is
+        // continuous (no missing days = no jagged drops to zero).
+        $series = [];
+        $cursor = match ($granularity) {
+            'weekly' => $start->copy()->startOfWeek(),
+            'monthly' => $start->copy()->startOfMonth(),
+            default => $start->copy()->startOfDay(),
+        };
+        $endCursor = $end->copy()->startOfDay();
+
+        while ($cursor <= $endCursor) {
+            $key = $cursor->format('Y-m-d');
+            $row = $buckets[$key] ?? ['transactions' => 0, 'sales' => 0.0, 'cost' => 0.0];
+            $sales = round((float) $row['sales'], 4);
+            $cost = round((float) $row['cost'], 4);
+            $profit = round($sales - $cost, 4);
+            $transactions = (int) $row['transactions'];
+
+            $series[] = [
+                'date' => $key,
+                'transactions' => $transactions,
+                'sales_usd' => $sales,
+                'cost_usd' => $cost,
+                'profit_usd' => $profit,
+                'profit_margin' => $sales > 0 ? round(($profit / $sales) * 100, 2) : 0.0,
+                'avg_per_tx_usd' => $transactions > 0 ? round($sales / $transactions, 4) : 0.0,
+            ];
+
+            match ($granularity) {
+                'weekly' => $cursor->addWeek(),
+                'monthly' => $cursor->addMonth(),
+                default => $cursor->addDay(),
+            };
+        }
+
+        return $series;
+    }
+
+    /**
      * Get revenue chart data aggregated by date and product category.
      *
      * Accepts either a named preset ('7d' | '30d' | '6m' | '1y') or a raw int

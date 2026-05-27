@@ -1,5 +1,5 @@
 @php
-    // Press & Media newsroom. Posts come from config/press.php (editable, no DB).
+    // Press & Media newsroom. Articles come from the press_articles table (CMS-managed).
     // Dark-mode safe: bg-white/bg-zinc-50/bg-blue-50 remap to navy in dark.
     $img = fn (string $file) => asset('assets/'.rawurlencode($file));
     $pressEmail = 'info@rshoprefill.com';
@@ -20,17 +20,17 @@
 
     {{-- ── Posts grid ────────────────────────────────────────── --}}
     <section class="mx-auto w-full max-w-[1140px] px-4 py-12 sm:px-6 sm:py-16">
-        @if (count($posts))
+        @if ($posts->isNotEmpty())
             <div class="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($posts as $post)
-                    <a href="{{ route('shop.press.show', $post['slug']) }}" wire:navigate class="group block">
+                    <a href="{{ route('shop.press.show', $post->slug) }}" wire:navigate class="group block">
                         <div class="flex items-center justify-center overflow-hidden rounded-2xl bg-blue-50 p-6 ring-1 ring-zinc-100" style="height: 12rem;">
-                            <img src="{{ $img($post['image']) }}" alt="" class="max-h-full w-auto object-contain" loading="lazy">
+                            <img src="{{ $img($post->image) }}" alt="" class="max-h-full w-auto object-contain" loading="lazy">
                         </div>
-                        <p class="mt-4 text-xs font-bold uppercase tracking-wider text-blue-600">{{ $post['category'] }}</p>
-                        <h2 class="mt-1 text-lg font-bold leading-snug text-zinc-900 transition-colors group-hover:text-blue-600">{{ $post['title'] }}</h2>
-                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">{{ $post['excerpt'] }}</p>
-                        <p class="mt-3 text-xs text-zinc-500">{{ \Illuminate\Support\Carbon::parse($post['date'])->format('M j, Y') }}</p>
+                        <p class="mt-4 text-xs font-bold uppercase tracking-wider text-blue-600">{{ $post->category }}</p>
+                        <h2 class="mt-1 text-lg font-bold leading-snug text-zinc-900 transition-colors group-hover:text-blue-600">{{ $post->title }}</h2>
+                        <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">{{ $post->excerpt }}</p>
+                        <p class="mt-3 text-xs text-zinc-500">{{ $post->published_at->format('M j, Y') }}</p>
                     </a>
                 @endforeach
             </div>

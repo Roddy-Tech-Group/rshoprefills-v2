@@ -19,6 +19,7 @@ use App\Listeners\CommerceNotificationListener;
 use App\Listeners\CreateWalletForNewUser;
 use App\Listeners\TransactionPinNotificationListener;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -63,5 +64,12 @@ class AppServiceProvider extends ServiceProvider
         Event::subscribe(AuditLogListener::class);
 
         View::composer('*', CartComposer::class);
+
+        // @money($amount, $code)      => "₦25,000.00"   (symbol + amount)
+        // @moneyCode($amount, $code)  => "NGN 25,000.00" (ISO code + amount)
+        // Delegates to App\Domain\Shared\Services\Money so we have one place
+        // to evolve currency rendering as new codes / locales come online.
+        Blade::directive('money', fn ($expr) => "<?php echo \App\Domain\Shared\Services\Money::format($expr); ?>");
+        Blade::directive('moneyCode', fn ($expr) => "<?php echo \App\Domain\Shared\Services\Money::codeAmount($expr); ?>");
     }
 }

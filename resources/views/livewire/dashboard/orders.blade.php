@@ -210,7 +210,7 @@ class extends Component {
                                 <dt class="text-zinc-500">Total amount</dt>
                                 {{-- total_amount is stored in the customer's display currency
                                      (face_value + markup, converted via the currency rate at order time). --}}
-                                <dd class="font-bold text-zinc-900">{{ number_format((float) $order->total_amount, 2) }} {{ $order->display_currency ?: 'USD' }}</dd>
+                                <dd class="font-bold text-zinc-900">@moneyCode((float) $order->total_amount, $order->display_currency)</dd>
                             </div>
                         </dl>
 

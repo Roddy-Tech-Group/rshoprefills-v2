@@ -6,12 +6,16 @@ use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminFintechController;
 use App\Http\Controllers\Admin\AdminKycController;
+use App\Http\Controllers\Admin\AdminReportExportController;
 use App\Http\Controllers\Admin\AdminSreController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
 use App\Http\Controllers\ThemeController;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -34,6 +38,51 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Admin content views — read-only Blade pages backed by shipped models.
         // Replace with controllers when CRUD/actions ship.
         Route::view('products', 'admin.products')->name('products');
+        // Live-search suggestions for the products page. Returns up to 8
+        // variants matching the query (name + SKU + country) as JSON.
+        Route::get('products/search-suggest', function (Request $request) {
+            $q = trim((string) $request->query('q', ''));
+            if (mb_strlen($q) < 2) {
+                return response()->json([]);
+            }
+
+            // Include product_id in the select — without it Eloquent can't
+            // load the `product` relation and every row comes back with null
+            // brand / name / country.
+            $variants = ProductVariant::query()
+                ->select('product_variants.id', 'product_variants.product_id', 'product_variants.sku', 'product_variants.cost_price', 'product_variants.retail_price', 'product_variants.face_value', 'product_variants.currency')
+                ->with(['product:id,name,brand_key,country_code,category_id,provider_name,logo_url', 'product.category:id,name'])
+                ->join('products', 'products.id', '=', 'product_variants.product_id')
+                ->where(function ($qq) use ($q) {
+                    $qq->where('products.name', 'like', "%{$q}%")
+                        ->orWhere('products.brand_key', 'like', "%{$q}%")
+                        ->orWhere('products.country_code', 'like', strtoupper($q).'%')
+                        ->orWhere('product_variants.sku', 'like', "%{$q}%");
+                })
+                ->orderByDesc('product_variants.id')
+                ->limit(8)
+                ->get();
+
+            return response()->json($variants->map(function ($v) {
+                $product = $v->product;
+                $brand = $product?->brand_key
+                    ? Product::brandDisplayName($product->brand_key)
+                    : ($product?->name ?? 'Unknown');
+
+                return [
+                    'id' => $v->id,
+                    'sku' => $v->sku,
+                    'name' => $product?->name,
+                    'brand' => $brand,
+                    'logo' => $product ? Product::brandLogoUrl($product->brand_key, $product->logo_url) : null,
+                    'country' => $product?->country_code,
+                    'category' => $product?->category?->name,
+                    'provider' => $product?->provider_name,
+                    'cost' => (float) $v->cost_price,
+                    'retail' => (float) $v->retail_price,
+                ];
+            }));
+        })->name('products.search-suggest');
         Route::view('orders', 'admin.orders')->name('orders');
         Route::get('orders/{order}', function (Order $order) {
             return view('admin.order', [
@@ -68,7 +117,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // and send a direct (email + dashboard) message.
         Route::patch('customers/{user}', [AdminCustomerController::class, 'update'])->name('customer.update');
         Route::post('customers/{user}/ban', [AdminCustomerController::class, 'toggleBan'])->name('customer.ban');
+        Route::post('customers/{user}/suspend', [AdminCustomerController::class, 'toggleSuspend'])->name('customer.suspend');
         Route::post('customers/{user}/funds', [AdminCustomerController::class, 'toggleFunds'])->name('customer.funds');
+        Route::post('customers/{user}/verify-email', [AdminCustomerController::class, 'toggleEmailVerification'])->name('customer.verify-email');
+        Route::post('customers/{user}/kyc-status', [AdminCustomerController::class, 'setKycStatus'])->name('customer.kyc-status');
         Route::post('customers/{user}/message', [AdminCustomerController::class, 'message'])->name('customer.message');
         // Friendly fallback: a GET on the same path (URL bar, back-button, link
         // prefetch) redirects to the customer page instead of 405ing.
@@ -78,6 +130,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Volt::route('rates', 'admin.rates')->name('rates');
         Volt::route('account', 'admin.account')->name('account');
         Volt::route('notifications', 'admin.notifications')->name('notifications');
+        Volt::route('reports', 'admin.reports')->name('reports');
+        Route::get('reports/export.csv', [AdminReportExportController::class, 'csv'])->name('reports.export');
+
+        // Content (CMS) — stub Volt pages that list what's in the DB today.
+        // CRUD UI lands in a follow-up; for now editors confirm data is wired.
+        Route::prefix('content')->name('content.')->group(function () {
+            Volt::route('blog', 'admin.content.blog')->name('blog');
+            Volt::route('press', 'admin.content.press')->name('press');
+            Volt::route('reviews', 'admin.content.reviews')->name('reviews');
+            Volt::route('faqs', 'admin.content.faqs')->name('faqs');
+        });
 
         // Admin Dashboard API
         Route::prefix('api/dashboard')->name('api.dashboard.')->group(function () {
@@ -127,6 +190,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('products/{product}/toggle-active', [AdminCatalogController::class, 'toggleActive']);
             Route::patch('products/{product}/toggle-featured', [AdminCatalogController::class, 'toggleFeatured']);
             Route::patch('products/{product}/toggle-popular', [AdminCatalogController::class, 'togglePopular']);
+
+            // Per-variant sales-price override + coupon management. All keyed
+            // on a ProductVariant — the drawer is variant-level.
+            Route::patch('variants/{variant}/price', [AdminCatalogController::class, 'setVariantPrice'])->name('variants.price.set');
+            Route::delete('variants/{variant}/price', [AdminCatalogController::class, 'clearVariantPrice'])->name('variants.price.clear');
+            Route::get('variants/{variant}/coupons', [AdminCatalogController::class, 'listCoupons'])->name('variants.coupons.index');
+            Route::post('variants/{variant}/coupons', [AdminCatalogController::class, 'createCoupon'])->name('variants.coupons.create');
+            Route::delete('coupons/{coupon}', [AdminCatalogController::class, 'deleteCoupon'])->name('coupons.delete');
         });
 
         // Admin Notifications & Compliance API

@@ -1304,6 +1304,80 @@ window.newUsersChart = function (series) {
     };
 };
 
+/**
+ * Glassmorphism tooltip renderer shared by the admin dashboard's Trends chart
+ * (salesCostChart) and the /admin/reports chart (reportChart). Builds an
+ * ApexCharts `tooltip.custom` HTML string that uses backdrop-blur + low-alpha
+ * background + an inset white border for the "frosted glass" look.
+ *
+ * Returns a closure ApexCharts can call directly. Theme-aware: pass the
+ * `dark` boolean (typically `document.documentElement.classList.contains('dark')`)
+ * so colours adapt.
+ */
+function buildGlassTooltipRenderer(dark) {
+    // Inverted glass: dark mode shows a WHITE-tinted frosted panel; light mode
+    // shows a DARK-tinted frosted panel. Both keep light text so legibility
+    // stays consistent regardless of the chart area behind the tooltip.
+    const panelBg = dark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.22)';
+    const panelBorder = dark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(15, 23, 42, 0.28)';
+    const insetHighlight = dark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.18)';
+    const labelColor = 'rgba(255, 255, 255, 0.72)';
+    const valueColor = '#ffffff';
+    const dateColor = 'rgba(255, 255, 255, 0.55)';
+
+    return ({ series, dataPointIndex, w }) => {
+        // Apex stores datetime-xaxis labels as raw ms-since-epoch strings (e.g.
+        // "1779753600000"). Try categoryLabels / labels first, then detect a
+        // numeric timestamp and humanise it, then fall back to seriesX.
+        let dateLabel = w.globals.categoryLabels?.[dataPointIndex]
+            ?? w.globals.labels?.[dataPointIndex]
+            ?? '';
+
+        if (dateLabel && /^\d{10,}$/.test(String(dateLabel))) {
+            try {
+                dateLabel = new Date(Number(dateLabel)).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            } catch (e) { /* keep raw label */ }
+        }
+
+        if (!dateLabel && w.globals.seriesX?.[0]?.[dataPointIndex]) {
+            const ts = w.globals.seriesX[0][dataPointIndex];
+            try {
+                dateLabel = new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            } catch (e) { /* swallow — header just won't show */ }
+        }
+
+        const rows = w.globals.seriesNames.map((name, idx) => {
+            const colour = w.globals.colors[idx];
+            const value = series[idx]?.[dataPointIndex];
+            if (value === undefined || value === null) { return ''; }
+            // Halo behind the dot via `box-shadow` so we can recolour per-series
+            // without an extra wrapping element. `${colour}33` = colour @ 20% alpha.
+            return `
+                <div style="display:flex;align-items:center;gap:7px;padding:1px 0;">
+                    <span style="height:6px;width:6px;border-radius:9999px;background:${colour};box-shadow:0 0 0 2px ${colour}30;display:inline-block;flex-shrink:0;"></span>
+                    <span style="font-size:10px;font-weight:500;color:${labelColor};letter-spacing:0.01em;">${name}</span>
+                    <span style="font-size:11px;font-weight:700;color:${valueColor};margin-left:10px;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;">USD ${Number(value).toFixed(2)}</span>
+                </div>`;
+        }).join('');
+
+        const header = dateLabel
+            ? `<p style="margin:0 0 4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:${dateColor};">${dateLabel}</p>`
+            : '';
+
+        return `<div style="
+            padding:7px 9px;
+            border-radius:10px;
+            background:${panelBg};
+            backdrop-filter:blur(16px) saturate(180%);
+            -webkit-backdrop-filter:blur(16px) saturate(180%);
+            border:1px solid ${panelBorder};
+            box-shadow:
+                0 8px 20px rgba(0, 0, 0, 0.32),
+                inset 0 1px 0 ${insetHighlight};
+        ">${header}${rows}</div>`;
+    };
+}
+
 window.salesCostChart = function (series) {
     const SALES_COLOR = '#34d399'; // emerald-400
     const COST_COLOR  = '#60a5fa'; // blue-400
@@ -1350,8 +1424,7 @@ window.salesCostChart = function (series) {
             const dark = document.documentElement.classList.contains('dark');
             const gridColor = dark ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
             const textColor = dark ? '#94a3b8' : '#52525b';
-            const tooltipBg = dark ? 'rgba(38, 65, 107, 0.95)' : 'rgba(255,255,255,0.96)';
-            const tooltipText = dark ? '#ffffff' : '#0f172a';
+            const renderGlassTooltip = buildGlassTooltipRenderer(dark);
 
             return {
                 chart: {
@@ -1415,20 +1488,7 @@ window.salesCostChart = function (series) {
                     style: { fontSize: '12px' },
                     x: { format: 'MMM dd, yyyy' },
                     y: { formatter: (v) => 'USD ' + Number(v).toFixed(2) },
-                    custom: ({ series, dataPointIndex, w }) => {
-                        const rows = w.globals.seriesNames.map((name, idx) => {
-                            const colour = w.globals.colors[idx];
-                            const value  = series[idx]?.[dataPointIndex];
-                            if (value === undefined || value === null) { return ''; }
-                            return `
-                                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;color:${tooltipText};">
-                                    <span style="height:8px;width:8px;border-radius:9999px;background:${colour};display:inline-block;"></span>
-                                    <span style="font-size:12px;font-weight:500;letter-spacing:0.01em;">${name}: USD ${Number(value).toFixed(2)}</span>
-                                </div>`;
-                        }).join('');
-                        return `
-                            <div style="padding:10px 14px;border-radius:12px;background:${tooltipBg};backdrop-filter:blur(8px);box-shadow:0 8px 24px -8px rgba(0,0,0,0.35);">${rows}</div>`;
-                    },
+                    custom: renderGlassTooltip,
                 },
                 markers: {
                     size: 0,
@@ -1440,3 +1500,242 @@ window.salesCostChart = function (series) {
         },
     };
 };
+
+/**
+ * Global confirm-modal wiring. Two pieces:
+ *
+ * 1. `confirmModal()` — Alpine factory bound to <x-confirm-modal />, owns the
+ *    open/cancel/confirm state and replays the original action when confirmed.
+ * 2. A capture-phase listener for forms / buttons carrying `data-confirm="..."`
+ *    that preempts the action and fires a `confirm-show` event the modal picks
+ *    up. Marking the element with `data-confirmed="true"` lets the replayed
+ *    submit/click pass straight through without re-triggering the modal.
+ *
+ * Why capture-phase and `stopImmediatePropagation`: third-party listeners (e.g.
+ * Livewire/Volt) already attach to submit/click in the bubble phase. We must
+ * intercept BEFORE them and silence the chain so the network request never
+ * fires until the admin/user actually confirms.
+ *
+ *   <form data-confirm="Delete row?" data-confirm-tone="danger" ...>
+ *   <button data-confirm="Continue?" @click="..."> ...
+ */
+window.confirmModal = function () {
+    return {
+        isOpen: false,
+        title: 'Are you sure?',
+        message: '',
+        confirmText: 'Confirm',
+        cancelText: 'Cancel',
+        tone: 'danger',       // 'danger' | 'warning' | 'primary' | 'success'
+        target: null,         // element to submit/click on confirm
+
+        open(detail) {
+            this.title = detail.title || 'Are you sure?';
+            this.message = detail.message || '';
+            this.confirmText = detail.confirmText || 'Confirm';
+            this.cancelText = detail.cancelText || 'Cancel';
+            this.tone = detail.tone || 'danger';
+            this.target = detail.target || null;
+            this.isOpen = true;
+
+            // Auto-focus the confirm button so Enter completes the action and
+            // Escape (bound on the panel) cancels — keyboard-only flow stays cheap.
+            this.$nextTick(() => this.$refs.confirmBtn?.focus());
+        },
+
+        cancel() {
+            this.isOpen = false;
+            this.target = null;
+        },
+
+        confirm() {
+            const el = this.target;
+            this.isOpen = false;
+            this.target = null;
+
+            if (!el) { return; }
+
+            // Replay the original action. `data-confirmed` shortcircuits our own
+            // listener so the submit/click goes through this time.
+            el.dataset.confirmed = 'true';
+
+            if (el.tagName === 'FORM') {
+                // .submit() bypasses any onsubmit handler — that's fine because
+                // we already gated it; the form's normal action runs.
+                el.submit();
+            } else {
+                el.click();
+            }
+        },
+    };
+};
+
+/**
+ * /admin/reports chart. Reuses the `series` shape coming out of
+ * DashboardMetricsQuery::getReportSeries — one row per bucket carrying
+ * `date / sales_usd / cost_usd`. Supports two chart types selected by the
+ * page's Bar / Line toggle:
+ *
+ *   - line: smooth area chart (same look as the dashboard's Trends widget)
+ *   - bar:  vertical columns, sales + cost side by side
+ *
+ *   x-data="reportChart(@js($this->series), @js($chartType))"
+ *
+ * The Volt component re-mounts the wrapper via `wire:key` whenever the
+ * chart type / granularity / category changes, so init() always runs against
+ * a fresh DOM node — no need for an in-place rebuild hook.
+ */
+window.reportChart = function (series, chartType) {
+    const SALES_COLOR = '#34d399'; // emerald-400
+    const COST_COLOR = '#60a5fa';  // blue-400
+
+    return {
+        chart: null,
+        series: series || [],
+        chartType: chartType || 'line',
+
+        async init() {
+            if (!this.series.length || !this.$refs.canvas) { return; }
+            const { default: ApexCharts } = await import('apexcharts');
+            this.$refs.canvas.innerHTML = '';
+            this.chart = new ApexCharts(this.$refs.canvas, this._options());
+            await this.chart.render();
+        },
+
+        destroy() {
+            if (this.chart) { this.chart.destroy(); this.chart = null; }
+            if (this.$refs.canvas) { this.$refs.canvas.innerHTML = ''; }
+        },
+
+        _options() {
+            const dark = document.documentElement.classList.contains('dark');
+            const gridColor = dark ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
+            const textColor = dark ? '#94a3b8' : '#52525b';
+            const isBar = this.chartType === 'bar';
+            const renderGlassTooltip = buildGlassTooltipRenderer(dark);
+
+            const base = {
+                chart: {
+                    type: isBar ? 'bar' : 'area',
+                    height: 320,
+                    toolbar: { show: false },
+                    zoom: { enabled: false },
+                    fontFamily: 'inherit',
+                    background: 'transparent',
+                    animations: { speed: 450, easing: 'easeout' },
+                    parentHeightOffset: 0,
+                },
+                series: [
+                    { name: 'Sales', data: this.series.map((p) => [new Date(p.date).getTime(), p.sales_usd]) },
+                    { name: 'Cost', data: this.series.map((p) => [new Date(p.date).getTime(), p.cost_usd]) },
+                ],
+                colors: [SALES_COLOR, COST_COLOR],
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
+                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    tooltip: { enabled: false },
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
+                        formatter: (v) => 'USD ' + Number(v).toFixed(2),
+                    },
+                },
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4,
+                    xaxis: { lines: { show: false } },
+                    yaxis: { lines: { show: true } },
+                    padding: { left: 0, right: 12, top: 0, bottom: 0 },
+                },
+                dataLabels: { enabled: false },
+                legend: { show: false },
+                tooltip: {
+                    theme: dark ? 'dark' : 'light',
+                    shared: true,
+                    intersect: false,
+                    x: { format: 'MMM dd, yyyy' },
+                    y: { formatter: (v) => 'USD ' + Number(v).toFixed(2) },
+                    custom: renderGlassTooltip,
+                },
+            };
+
+            if (isBar) {
+                return {
+                    ...base,
+                    plotOptions: {
+                        bar: { borderRadius: 6, borderRadiusApplication: 'end', columnWidth: '55%' },
+                    },
+                    stroke: { show: false, width: 0 },
+                };
+            }
+
+            return {
+                ...base,
+                stroke: { curve: 'smooth', width: 2.5, lineCap: 'round' },
+                fill: {
+                    type: 'gradient',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.30, opacityTo: 0.0, stops: [0, 90, 100] },
+                },
+                markers: {
+                    size: 0,
+                    strokeWidth: 2,
+                    strokeColors: dark ? '#1d3252' : '#ffffff',
+                    hover: { size: 6, sizeOffset: 2 },
+                },
+            };
+        },
+    };
+};
+
+(function installConfirmDispatcher() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') { return; }
+
+    function dispatch(target, source) {
+        window.dispatchEvent(new CustomEvent('confirm-show', {
+            detail: {
+                title: source.dataset.confirmTitle || 'Are you sure?',
+                message: source.dataset.confirm,
+                confirmText: source.dataset.confirmText || 'Confirm',
+                cancelText: source.dataset.confirmCancel || 'Cancel',
+                tone: source.dataset.confirmTone || 'danger',
+                target,
+            },
+        }));
+    }
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) { return; }
+        if (!form.dataset.confirm) { return; }
+        if (form.dataset.confirmed === 'true') {
+            // Replayed by the modal — clear the flag and let the submit through.
+            delete form.dataset.confirmed;
+            return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        dispatch(form, form);
+    }, true);
+
+    document.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-confirm]');
+        if (!btn) { return; }
+        // Skip submit buttons — the form's submit handler above owns those, so
+        // we don't double-prompt when the button lives inside a confirmed form.
+        if (btn.tagName === 'BUTTON' && btn.type === 'submit') { return; }
+        if (btn.tagName === 'FORM') { return; } // handled by the submit listener
+        if (btn.dataset.confirmed === 'true') {
+            delete btn.dataset.confirmed;
+            return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        dispatch(btn, btn);
+    }, true);
+})();

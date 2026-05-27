@@ -1,10 +1,17 @@
-{{--
-    Customer reviews row. Full-bleed width: Trustpilot aggregate card pinned on
-    the left, then a horizontal scroll of individual review cards. The header
-    arrow advances the scroll one screenful at a time with a custom rAF easing
-    pass (see customerReviewsCarousel in app.js) and loops back at the end.
-    During SPA navigation the card row is held behind a matching skeleton.
---}}
+@php
+    // Customer reviews row. Full-bleed width: Trustpilot aggregate card pinned on
+    // the left, then a horizontal scroll of individual review cards. The header
+    // arrow advances the scroll one screenful at a time with a custom rAF easing
+    // pass (see customerReviewsCarousel in app.js) and loops back at the end.
+    // During SPA navigation the card row is held behind a matching skeleton.
+    //
+    // Content source: the `reviews` table + `site_settings` (CMS-managed).
+    $reviews = \App\Models\Review::published()->ordered()->get();
+    $aggregateRating = (float) \App\Models\SiteSetting::get('reviews.aggregate.rating', 4.4);
+    $aggregateCount = (int) \App\Models\SiteSetting::get('reviews.aggregate.count', 0);
+    $aggregateSince = (int) \App\Models\SiteSetting::get('reviews.aggregate.since_year', date('Y'));
+    $aggregateSource = (string) \App\Models\SiteSetting::get('reviews.aggregate.source', 'Trustpilot');
+@endphp
 <section
     data-reveal
     aria-label="What our customers say"
@@ -44,7 +51,7 @@
         >
             <div class="flex w-max gap-4 sm:gap-5">
 
-                {{-- Trustpilot aggregate card --}}
+                {{-- Aggregate score card (Trustpilot / Google / etc., CMS-driven label) --}}
                 <article class="flex w-72 shrink-0 flex-col rounded-2xl bg-white p-5 ring-1 ring-zinc-200 shadow-sm">
 
                     <div class="flex items-start justify-between gap-2">
@@ -52,10 +59,10 @@
                             <svg class="h-5 w-5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                             </svg>
-                            <span class="text-base font-bold text-zinc-900">Trustpilot</span>
+                            <span class="text-base font-bold text-zinc-900">{{ $aggregateSource }}</span>
                         </div>
                         <p class="text-2xl font-bold leading-none text-zinc-900">
-                            4.4<span class="text-base font-normal text-zinc-600"> / 5</span>
+                            {{ number_format($aggregateRating, 1) }}<span class="text-base font-normal text-zinc-600"> / 5</span>
                         </p>
                     </div>
 
@@ -71,42 +78,37 @@
                     </div>
 
                     <div class="mt-auto pt-6">
-                        <p class="text-sm text-zinc-700">446+ reviews on Trustpilot</p>
-                        <p class="mt-1 text-sm font-semibold text-zinc-900">Trusted since 2018</p>
+                        @if ($aggregateCount > 0)
+                            <p class="text-sm text-zinc-700">{{ number_format($aggregateCount) }}+ reviews on {{ $aggregateSource }}</p>
+                        @endif
+                        <p class="mt-1 text-sm font-semibold text-zinc-900">Trusted since {{ $aggregateSince }}</p>
                     </div>
                 </article>
 
-                {{-- Individual review cards --}}
-                @foreach ([
-                    ['HG', 'Harshit Garg', 'May 12, 2026', 'This is the best after trying many i can say that\'s the best, like within 5 minutes u get the pin code voucher without any error.. very fast service... and this is my TOP number 1'],
-                    ['J',  'Jay',          'May 12, 2026', 'I had some issues with my first purchase and the support team spent their valiant efforts on fixing these issues for me and I am truly grateful for the customer service.'],
-                    ['C',  'carlbooze',    'May 10, 2026', 'It were fast, felt secure and safe, no issues at all. Very well guide to send the crypto with copy paste adress and amount to send so its impossible to mess up. Thank you very much'],
-                    ['M',  'Micheal',      'May 2, 2026',  'Very easy to use and quick support'],
-                    ['GH', 'gfjg hgdh',    'May 1, 2026',  'Always the best site to purchase gift card fastest and trusted'],
-                    ['ZA', 'Zul Aliffi',   'Apr 28, 2026', 'I have tried many sites for local gift cards but this has been the smoothest delivery.'],
-                ] as [$initials, $name, $date, $review])
+                {{-- Individual review cards (CMS-managed via the reviews table) --}}
+                @foreach ($reviews as $review)
                     <article class="flex w-72 shrink-0 flex-col rounded-2xl bg-white p-5 ring-1 ring-zinc-200 shadow-sm">
 
-                        {{-- Top row: avatar + name + Trustpilot mini-logo --}}
+                        {{-- Top row: avatar + name + source mini-logo --}}
                         <div class="flex items-start justify-between gap-3">
                             <div class="flex min-w-0 items-start gap-3">
-                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">{{ $initials }}</span>
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-bold text-zinc-600">{{ $review->initials }}</span>
                                 <div class="min-w-0 leading-tight">
-                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $name }}</p>
-                                    <p class="text-xs text-zinc-600">{{ $date }}</p>
+                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $review->author_name }}</p>
+                                    <p class="text-xs text-zinc-600">{{ $review->reviewed_at->format('M j, Y') }}</p>
                                 </div>
                             </div>
                             <div class="flex shrink-0 items-center gap-1">
                                 <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                     <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                                 </svg>
-                                <span class="text-[10px] font-bold text-zinc-900">Trustpilot</span>
+                                <span class="text-[10px] font-bold text-zinc-900">{{ $review->source }}</span>
                             </div>
                         </div>
 
-                        {{-- 5 stars --}}
+                        {{-- Per-review star count (model holds 1-5) --}}
                         <div class="mt-3 flex gap-0.5">
-                            @for ($i = 0; $i < 5; $i++)
+                            @for ($i = 0; $i < max(0, min(5, $review->rating)); $i++)
                                 <span class="flex h-4 w-4 items-center justify-center bg-emerald-500">
                                     <svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                         <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
@@ -116,7 +118,7 @@
                         </div>
 
                         {{-- Review text --}}
-                        <p class="mt-3 text-sm leading-relaxed text-zinc-700">{{ $review }}</p>
+                        <p class="mt-3 text-sm leading-relaxed text-zinc-700">{{ $review->body }}</p>
                     </article>
                 @endforeach
 

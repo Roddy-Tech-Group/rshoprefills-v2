@@ -789,9 +789,9 @@
 
     {{-- Actions --}}
     <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <a href="{{ route('dashboard') }}" wire:navigate
+        <a href="{{ route('dashboard.orders') }}" wire:navigate
             class="flex items-center justify-center rounded-xl border-2 border-blue-600 bg-white px-4 py-3 text-base font-semibold text-blue-600 transition-colors hover:bg-blue-600 hover:text-white">
-            Go to dashboard
+            Go to orders
         </a>
         <a href="{{ route('shop.gift-cards') }}" wire:navigate
             class="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700">

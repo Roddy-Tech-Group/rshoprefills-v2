@@ -11,7 +11,7 @@
 
     <div class="flex flex-1 flex-col gap-6">
 
-        <div class="overflow-hidden rounded-[20px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-[11px]">
                     <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-600">
@@ -57,7 +57,7 @@
                                 </td>
                                 <td class="px-5 py-3 text-zinc-600">{{ $user->created_at->format('M j, Y') }}</td>
                                 <td class="px-5 py-3 text-right">
-                                    <a href="{{ route('admin.customer', $user) }}" class="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50">View</a>
+                                    <a href="{{ route('admin.customer', $user) }}" class="inline-flex items-center rounded-[10px] border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50">View</a>
                                 </td>
                             </tr>
                         @empty

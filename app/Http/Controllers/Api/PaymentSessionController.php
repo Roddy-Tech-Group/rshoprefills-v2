@@ -7,6 +7,8 @@ use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Domain\Payment\Services\PaymentSessionService;
 use App\Domain\Shared\Enums\FundingStatus;
+use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Domain\Wallet\Services\WalletFundingService;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PaymentSessionResource;
@@ -336,6 +338,13 @@ class PaymentSessionController extends Controller
 
             return new PaymentSessionResource($session->fresh());
 
+        } catch (WalletOnHoldException|InsufficientBalanceException $e) {
+            // Customer-facing wallet errors carry their own polished message —
+            // render them verbatim instead of wrapping in "Payment processing
+            // failed: …" which reads like an internal stack trace.
+            Log::info('Payment session pay rejected: '.$e->getMessage());
+
+            return response()->json(['message' => $e->getMessage()], 400);
         } catch (\Exception $e) {
             Log::error('Payment session pay failed: '.$e->getMessage());
 

@@ -540,3 +540,27 @@ select:focus[data-flux-control] {
 .compact .bg-\[\#eff6ff\] .sm\:p-6   { padding: 1rem; }
 .compact .bg-\[\#eff6ff\] .lg\:py-8  { padding-top: 1rem; padding-bottom: 1rem; }
 .compact .bg-\[\#eff6ff\] .py-6      { padding-top: 1rem; padding-bottom: 1rem; }
+
+/* ------------------------------------------------------------
+   ApexCharts glass tooltip overrides
+   ------------------------------------------------------------
+   ApexCharts wraps `tooltip.custom` HTML in its own `.apexcharts-tooltip`
+   container that ships with a solid background + border + shadow. Those
+   defaults sit ON TOP of our frosted-glass inner panel and ruin the effect,
+   so we strip the wrapper back to a pure positioning shell. The chart
+   factory (`buildGlassTooltipRenderer` in app.js) handles all visuals
+   (blur, panel bg, border, shadow) inside the rendered HTML itself. */
+.apexcharts-tooltip.apexcharts-theme-light,
+.apexcharts-tooltip.apexcharts-theme-dark {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+.apexcharts-tooltip .apexcharts-tooltip-title {
+    display: none !important;
+}
+.apexcharts-tooltip .apexcharts-tooltip-series-group {
+    background: transparent !important;
+    padding: 0 !important;
+}
