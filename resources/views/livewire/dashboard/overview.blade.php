@@ -231,11 +231,14 @@ new #[Lazy] class extends Component
             <ul class="mt-4 space-y-3">
                 @forelse ($recentOrders as $order)
                     @php
-                        $firstItem = $order->items->first();
+                        $groupedItems = $order->items->groupBy('product_variant_id');
+                        $firstGroup = $groupedItems->first();
+                        $firstItem = $firstGroup?->first();
+                        $firstItemQty = $firstGroup ? $firstGroup->count() : 0;
                         $snap = (array) ($firstItem?->product_snapshot ?? []);
                         $brandKey = $snap['brand_key'] ?? null;
                         $itemName = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Order');
-                        $extraItems = max(0, $order->items->count() - 1);
+                        $extraVariants = max(0, $groupedItems->count() - 1);
                         $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                         [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-500 text-white'];
                     @endphp
@@ -251,7 +254,7 @@ new #[Lazy] class extends Component
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
                                     <p class="truncate text-sm font-semibold text-zinc-900">
-                                        {{ $itemName }}@if ($extraItems > 0) <span class="font-normal text-zinc-500">+{{ $extraItems }}</span>@endif
+                                        @if ($firstItemQty > 1){{ $firstItemQty }}x @endif{{ $itemName }}@if ($extraVariants > 0) <span class="font-normal text-zinc-500">+{{ $extraVariants }}</span>@endif
                                     </p>
                                     <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusTone }}">{{ $statusLabel }}</span>
                                 </div>
@@ -777,11 +780,14 @@ new #[Lazy] class extends Component
                         <ul class="mt-4 space-y-3">
                             @forelse ($recentOrders as $order)
                                 @php
-                                    $firstItem = $order->items->first();
+                                    $groupedItems = $order->items->groupBy('product_variant_id');
+                                    $firstGroup = $groupedItems->first();
+                                    $firstItem = $firstGroup?->first();
+                                    $firstItemQty = $firstGroup ? $firstGroup->count() : 0;
                                     $snap = (array) ($firstItem?->product_snapshot ?? []);
                                     $brandKey = $snap['brand_key'] ?? null;
                                     $itemName = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Order');
-                                    $extraItems = max(0, $order->items->count() - 1);
+                                    $extraVariants = max(0, $groupedItems->count() - 1);
                                     $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                                     [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-500 text-white'];
                                 @endphp
@@ -797,7 +803,7 @@ new #[Lazy] class extends Component
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center justify-between gap-2">
                                                 <p class="truncate text-sm font-semibold text-zinc-900">
-                                                    {{ $itemName }}@if ($extraItems > 0) <span class="font-normal text-zinc-500">+{{ $extraItems }}</span>@endif
+                                                    @if ($firstItemQty > 1){{ $firstItemQty }}x @endif{{ $itemName }}@if ($extraVariants > 0) <span class="font-normal text-zinc-500">+{{ $extraVariants }}</span>@endif
                                                 </p>
                                                 <span class="shrink-0 rounded-[5px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide {{ $statusTone }}">{{ $statusLabel }}</span>
                                             </div>
