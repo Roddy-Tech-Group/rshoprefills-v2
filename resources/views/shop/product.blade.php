@@ -239,6 +239,7 @@
             defaultDialCode: @js($dialCode),
             requiresAccountId: @js($isBill),
             rcoinConfig: @js([
+                'enabled' => (bool) \App\Models\Setting::get('rcoin_enabled', true),
                 'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
                 'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
             ]),
@@ -658,8 +659,8 @@
                         </div>
                     @endif
 
-                    {{-- Points you earn — calculated via backend rates (USD spent × cashback % ÷ Rcoin USD rate). The coin icon is the site favicon. --}}
-                    <p class="flex items-center gap-1.5 text-sm font-semibold text-zinc-700">
+                    {{-- Points you earn - calculated via backend rates (USD spent x cashback % / Rcoin USD rate). Coin icon is the site favicon. Hidden when the Rcoin engine is off. --}}
+                    <p x-show="rcoinConfig.enabled" class="flex items-center gap-1.5 text-sm font-semibold text-zinc-700">
                         Points you earn
                         <img src="{{ asset('assets/favicon.ico') }}" alt="coins" class="h-6 w-6 object-contain" loading="lazy">
                         <span x-data="valueFlip()" x-effect="selectedVariantId; quantity; flash()" class="inline-block text-zinc-900" x-text="pointsEarned()">0</span>

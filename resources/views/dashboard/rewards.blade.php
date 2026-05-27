@@ -1,14 +1,12 @@
 {{--
-    Customer Rewards page — /dashboard/rewards. The loyalty currency is "Rcoin".
+    Customer Rewards page - /dashboard/rewards. The loyalty currency is "Rcoin".
 
-    Frontend only — sample data + placeholder thresholds render until the backend
-    Rcoin ledger ships. Backend hooks pending:
-      - $user->rcoin_balance + $user->rcoin_earned   (no Rcoin model yet)
-      - $user->rcoinHistory()                        (earn/spend ledger)
-      - $user->rcoinRedemptions()                    (past conversions/withdrawals)
-      - Admin config: earn rate, Rcoin→USD rate, convert + withdraw thresholds
-      - POST handlers for convert-to-gift-card and withdraw-to-cash
-    Field names below (convert_*, withdraw_*) are the contract for that wiring.
+    Live state:
+      - Balance + history → wallet_transactions where currency = RCOIN
+      - Cashback + referral credits → RewardEngine (dispatched by ProcessOrderRewardsJob)
+      - Convert-to-wallet POST → RcoinConvertController::toWallet
+      - Withdraw-to-cash POST → RcoinWithdrawalController::store
+      - All thresholds, percentages, caps → Settings table, editable at /admin/content/rewards
 --}}
 @php
     use App\Models\Product;
@@ -30,8 +28,16 @@
         ->sum('amount');
         
     $rcoinPerUsd = 1 / Setting::get('rcoin_usd_rate', 0.005);
-    $convertThreshold = (int) Setting::get('redemption_min_rcoin', 100);
-    $withdrawThreshold = (int) Setting::get('withdrawal_min_rcoin', 5000);
+    $convertMinUsd = (float) Setting::get('wallet_conversion_min_usd', 2.00);
+    $convertEnabled = (bool) Setting::get('wallet_conversion_enabled', true);
+    // Minimum Rcoin needed to clear the USD floor - used to gate the form.
+    $convertThreshold = $rcoinPerUsd > 0 ? (int) ceil($convertMinUsd * $rcoinPerUsd) : PHP_INT_MAX;
+    $withdrawThreshold = (int) Setting::get('withdrawal_min_rcoin', 2000);
+
+    // Per-user earnings multiplier - admin can give influencers / power users
+    // a higher number from the admin customer page. 1.00 = standard.
+    $rcoinMultiplier = (float) ($user->rcoin_multiplier ?? 1.00);
+    $hasMultiplier = abs($rcoinMultiplier - 1.0) > 0.005;
     
     $cashValue = $rewardEngine->rcoinToUsd($rcoinBalance);
     $coin = asset('assets/favicon.ico');
@@ -58,10 +64,13 @@
         : 100;
 
     // ── Convert / withdraw availability ──
-    $canConvert  = $rcoinBalance >= $convertThreshold;
+    $canConvert  = $convertEnabled && $rcoinBalance >= $convertThreshold;
     $canWithdraw = $rcoinBalance >= $withdrawThreshold;
     $convertProgress  = min(100, round(($rcoinBalance / max(1, $convertThreshold)) * 100, 1));
     $withdrawProgress = min(100, round(($rcoinBalance / max(1, $withdrawThreshold)) * 100, 1));
+    // Convertible amount in USD given the current balance - what the user
+    // would receive in their wallet if they converted the maximum allowed.
+    $maxConvertibleUsd = $rcoinPerUsd > 0 ? round($rcoinBalance / $rcoinPerUsd, 2) : 0.0;
 
     // ── Rcoin history ──
     $transactions = $user->walletTransactions()
@@ -86,11 +95,23 @@
 
         {{-- ─── Rcoin balance card ─── --}}
         <section>
-            <h1 class="hidden text-xl font-bold tracking-tight text-black sm:text-3xl lg:block">Your Rcoin</h1>
+            <div class="hidden items-center gap-3 lg:flex">
+                <h1 class="text-xl font-bold tracking-tight text-black sm:text-3xl">Your Rcoin</h1>
+                @if ($hasMultiplier)
+                    {{-- Power-user multiplier badge. Only renders when admin
+                         has bumped the user above (or dropped below) 1×. --}}
+                    <span class="inline-flex items-center gap-1.5 rounded-[10px] bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm shadow-orange-500/30">
+                        <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2l2.39 7.36H22l-6.18 4.49L18.18 21 12 16.51 5.82 21l2.36-7.15L2 9.36h7.61z"/>
+                        </svg>
+                        {{ number_format($rcoinMultiplier, $rcoinMultiplier == (int) $rcoinMultiplier ? 0 : 2) }}× earner
+                    </span>
+                @endif
+            </div>
 
-            <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
+            <div class="mt-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
                 <div class="flex items-start gap-4">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 shadow-sm shadow-zinc-900/10">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 shadow-sm shadow-zinc-900/10">
                         <img src="{{ $coin }}" alt="Rcoin" class="h-7 w-7 object-contain">
                     </span>
 
@@ -125,10 +146,10 @@
         <section>
             <h2 class="text-sm font-bold text-black">Earn more Rcoin</h2>
 
-            <div class="mt-3 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
+            <div class="mt-3 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
                 <div class="flex items-start gap-4">
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                        <img src="{{ asset('assets/referals.png') }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 dark:bg-blue-500/15">
+                        <img src="{{ asset('assets/referals.png') }}" alt="" class="no-dark-invert h-5 w-5 object-contain" loading="lazy">
                     </span>
                     <div class="min-w-0">
                         <p class="text-base font-bold text-black">Refer friends, earn Rcoin</p>
@@ -142,11 +163,11 @@
 
                 {{-- Two ways referrals pay out Rcoin. --}}
                 <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
-                    <div class="rounded-xl bg-zinc-50 px-3 py-2.5">
+                    <div class="rounded-[10px] bg-zinc-50 px-3 py-2.5">
                         <p class="font-semibold text-zinc-900">On sign-up</p>
                         <p class="text-xs text-zinc-600">Rcoin lands when your referral creates their account.</p>
                     </div>
-                    <div class="rounded-xl bg-zinc-50 px-3 py-2.5">
+                    <div class="rounded-[10px] bg-zinc-50 px-3 py-2.5">
                         <p class="font-semibold text-zinc-900">On every order</p>
                         <p class="text-xs text-zinc-600">Keep earning Rcoin each time they buy.</p>
                     </div>
@@ -159,15 +180,17 @@
             <h2 class="text-sm font-bold text-black">Spend your Rcoin</h2>
             <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-                {{-- Convert to gift card --}}
-                <div class="flex flex-col rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                        <img src="{{ asset('assets/' . rawurlencode('gift cards.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
+                {{-- Convert to wallet - instant Rcoin → USD wallet swap.
+                     Posts to RcoinConvertController. Min USD floor lives in
+                     `wallet_conversion_min_usd` setting (default $2). --}}
+                <div class="flex flex-col rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-[10px] bg-blue-50 dark:bg-blue-500/15">
+                        <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="no-dark-invert h-5 w-5 dark:invert dark:brightness-200" loading="lazy">
                     </span>
-                    <p class="mt-3 text-base font-bold text-black">Convert to a gift card</p>
-                    <p class="mt-1 text-sm text-zinc-600">Turn your Rcoin into a gift card of your choice. Your balance decides the amount.</p>
+                    <p class="mt-3 text-base font-bold text-black">Convert to wallet balance</p>
+                    <p class="mt-1 text-sm text-zinc-600">Swap your Rcoin for instant USD wallet credit. Spend it on any product - gift cards, eSIMs, top-ups, flights.</p>
 
-                    <div class="mt-4 rounded-xl bg-zinc-50 px-3 py-2.5 text-sm">
+                    <div class="mt-4 rounded-[10px] bg-zinc-50 px-3 py-2.5 text-sm">
                         <div class="flex items-center justify-between">
                             <span class="text-zinc-600">Available</span>
                             <span class="inline-flex items-center gap-1 font-bold text-zinc-900">
@@ -175,39 +198,60 @@
                             </span>
                         </div>
                         <div class="mt-1 flex items-center justify-between">
-                            <span class="text-zinc-600">Gift card value</span>
-                            <span class="font-bold text-zinc-900">${{ number_format($cashValue, 2) }}</span>
+                            <span class="text-zinc-600">Convertible value</span>
+                            <span class="font-bold text-zinc-900">${{ number_format($maxConvertibleUsd, 2) }}</span>
                         </div>
                     </div>
 
-                    <div class="mt-auto pt-4">
-                        @if ($canConvert)
-                            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
-                                Choose a gift card
-                            </a>
-                        @else
-                            <button type="button" disabled class="w-full cursor-not-allowed rounded-xl bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
-                                {{ number_format($convertThreshold - $rcoinBalance) }} more Rcoin to unlock
+                    @if (session('status') && str_contains(session('status'), 'Converted'))
+                        <p class="mt-3 rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">{{ session('status') }}</p>
+                    @endif
+                    @error('convert_amount')
+                        <p class="mt-3 rounded-[10px] bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{{ $message }}</p>
+                    @enderror
+
+                    @if ($canConvert)
+                        <form method="POST" action="{{ route('dashboard.rewards.convert-to-wallet') }}" class="mt-4 flex flex-col gap-2.5">
+                            @csrf
+                            <input
+                                type="number"
+                                name="convert_amount"
+                                min="{{ $convertThreshold }}"
+                                max="{{ $rcoinBalance }}"
+                                step="1"
+                                value="{{ $convertThreshold }}"
+                                placeholder="Rcoin to convert"
+                                class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            >
+                            <p class="text-[11px] text-zinc-500">Minimum {{ number_format($convertThreshold) }} Rcoin (≈ ${{ number_format($convertMinUsd, 2) }}). Credit lands in your USD wallet instantly.</p>
+                            <button type="submit" class="mt-1 w-full rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                                Convert to USD wallet
+                            </button>
+                        </form>
+                    @else
+                        <div class="mt-auto pt-4">
+                            <button type="button" disabled class="w-full cursor-not-allowed rounded-[10px] bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
+                                {{ number_format(max(0, $convertThreshold - $rcoinBalance)) }} more Rcoin to unlock (${{ number_format($convertMinUsd, 2) }} minimum)
                             </button>
                             <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
                                 <div class="h-full rounded-full bg-blue-600" style="width: {{ $convertProgress }}%;"></div>
                             </div>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 </div>
 
                 {{-- Withdraw to cash --}}
                 <div
                     x-data="{ amount: '', method: 'wallet' }"
-                    class="flex flex-col rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100"
+                    class="flex flex-col rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100"
                 >
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-                        <img src="{{ asset('assets/' . rawurlencode('wallet 2.svg')) }}" alt="" class="h-5 w-5" loading="lazy">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-[10px] bg-emerald-50 dark:bg-emerald-500/15">
+                        <img src="{{ asset('assets/' . rawurlencode('wallet 2.svg')) }}" alt="" class="no-dark-invert h-5 w-5 dark:invert dark:brightness-200" loading="lazy">
                     </span>
                     <p class="mt-3 text-base font-bold text-black">Withdraw to cash</p>
                     <p class="mt-1 text-sm text-zinc-600">Cash out your Rcoin balance once you reach the minimum.</p>
 
-                    <div class="mt-4 rounded-xl bg-zinc-50 px-3 py-2.5 text-sm">
+                    <div class="mt-4 rounded-[10px] bg-zinc-50 px-3 py-2.5 text-sm">
                         <div class="flex items-center justify-between">
                             <span class="text-zinc-600">Available</span>
                             <span class="inline-flex items-center gap-1 font-bold text-zinc-900">
@@ -221,9 +265,16 @@
                     </div>
 
                     @if ($canWithdraw)
-                        {{-- Withdrawal request form. Field names: withdraw_amount, withdraw_method.
-                             Backend wires the POST handler + creates a withdrawal request record. --}}
-                        <form method="POST" action="#" class="mt-4 flex flex-col gap-2.5">
+                        {{-- Withdrawal request form. Posts to RcoinWithdrawalController
+                             which validates settings, debits the user's Rcoin wallet, and
+                             creates a `pending` RcoinWithdrawal row for admin review. --}}
+                        @if (session('status'))
+                            <p class="mt-3 rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">{{ session('status') }}</p>
+                        @endif
+                        @error('withdraw_amount')
+                            <p class="mt-3 rounded-[10px] bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{{ $message }}</p>
+                        @enderror
+                        <form method="POST" action="{{ route('dashboard.rewards.withdraw') }}" class="mt-4 flex flex-col gap-2.5">
                             @csrf
                             <input
                                 type="number"
@@ -232,20 +283,20 @@
                                 min="{{ $withdrawThreshold }}"
                                 max="{{ $rcoinBalance }}"
                                 placeholder="Rcoin to withdraw"
-                                class="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                                class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                             >
-                            <select name="withdraw_method" x-model="method" class="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                            <select name="withdraw_method" x-model="method" class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
                                 <option value="wallet">RShop wallet</option>
                                 <option value="bank">Bank transfer</option>
                                 <option value="mobile_money">Mobile money</option>
                             </select>
-                            <button type="submit" class="mt-1 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
+                            <button type="submit" class="mt-1 w-full rounded-[10px] bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
                                 Request withdrawal
                             </button>
                         </form>
                     @else
                         <div class="mt-auto pt-4">
-                            <button type="button" disabled class="w-full cursor-not-allowed rounded-xl bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
+                            <button type="button" disabled class="w-full cursor-not-allowed rounded-[10px] bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
                                 {{ number_format($withdrawThreshold - $rcoinBalance) }} more Rcoin to unlock
                             </button>
                             <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
@@ -261,7 +312,7 @@
         <section>
             <h2 class="mb-3 text-sm font-bold text-black">Membership tiers</h2>
             @php
-                // Solid-colour medal palettes per tier (no gradients — project rule).
+                // Solid-colour medal palettes per tier (no gradients - project rule).
                 // rim = outer disc, face = inner disc, ribbon = hanging tails, star = emblem.
                 $medals = [
                     'Bronze'   => ['rim' => '#8a5a2b', 'face' => '#c47f3e', 'ribbon' => '#a3672f', 'star' => '#fdf1e0'],
@@ -271,7 +322,7 @@
                     'Diamond'  => ['rim' => '#0e7490', 'face' => '#3bbdf4', 'ribbon' => '#0a90b6', 'star' => '#ffffff'],
                 ];
             @endphp
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 @foreach ($tierLadder as $tier)
                     @php
                         $reached = $rcoinBalance >= $tier['min'];
@@ -279,13 +330,14 @@
                         $m = $medals[$tier['name']] ?? $medals['Bronze'];
                     @endphp
                     <div @class([
-                        'rounded-2xl p-4 text-center ring-1 transition-colors',
+                        'rounded-[10px] p-2.5 text-center ring-1 transition-colors',
                         'bg-blue-600 text-white ring-blue-600' => $isCurrent,
                         'bg-white text-zinc-900 ring-zinc-100' => ! $isCurrent && $reached,
                         'bg-white text-zinc-400 ring-zinc-100' => ! $reached,
                     ])>
-                        {{-- Tier medal — ribboned medallion with a star emblem. --}}
-                        <svg viewBox="0 0 48 56" class="mx-auto mb-3 h-14 w-12 {{ $reached ? '' : 'opacity-40' }}" aria-hidden="true">
+                        {{-- Tier medal - reduced to a compact 36×32 medallion so
+                             the whole tile reads as a chip instead of a card. --}}
+                        <svg viewBox="0 0 48 56" class="mx-auto mb-1.5 h-9 w-8 {{ $reached ? '' : 'opacity-40' }}" aria-hidden="true">
                             <path d="M15 24 L9 54 L19 46 Z" fill="{{ $m['ribbon'] }}"/>
                             <path d="M33 24 L39 54 L29 46 Z" fill="{{ $m['ribbon'] }}"/>
                             <circle cx="24" cy="20" r="19" fill="{{ $m['rim'] }}"/>
@@ -294,8 +346,8 @@
                                 <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z" fill="{{ $m['star'] }}"/>
                             </g>
                         </svg>
-                        <p class="text-sm font-bold">{{ $tier['name'] }}</p>
-                        <p @class(['mt-0.5 text-xs', 'text-white/80' => $isCurrent, 'text-zinc-500' => ! $isCurrent])>{{ number_format($tier['min']) }} Rcoin</p>
+                        <p class="text-xs font-bold">{{ $tier['name'] }}</p>
+                        <p @class(['mt-0.5 text-[10px]', 'text-white/80' => $isCurrent, 'text-zinc-500' => ! $isCurrent])>{{ number_format($tier['min']) }} Rcoin</p>
                         @if ($tier['requires'])
                             <p @class(['mt-1.5 inline-flex items-center gap-1 rounded-[5px] px-1.5 py-0.5 text-[10px] font-semibold', 'bg-white/15 text-white' => $isCurrent, 'bg-amber-50 text-amber-700' => ! $isCurrent])>
                                 <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -312,7 +364,7 @@
         {{-- ─── Rcoin history ─── --}}
         <section>
             <h2 class="mb-3 text-sm font-bold text-black">Rcoin history</h2>
-            <div class="divide-y divide-zinc-100 rounded-2xl bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="divide-y divide-zinc-100 rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 @forelse ($rcoinHistory as $entry)
                     <div class="flex items-center justify-between gap-4 px-5 py-3">
                         <div class="min-w-0">
