@@ -93,4 +93,14 @@ class OrderItem extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
+
+    /**
+     * Category at order time. The product_snapshot JSON doesn't include the
+     * nested category relation, so anywhere that needs to branch on category
+     * slug (e.g. fulfilment provider routing) should rely on this FK instead.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
 }

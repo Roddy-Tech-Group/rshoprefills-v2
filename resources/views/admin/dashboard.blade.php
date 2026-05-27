@@ -23,47 +23,62 @@
     $latestUsers        = $dashboardQuery->getLatestUsers(5)->items();
     $latestTransactions = $dashboardQuery->getLatestTransactions(5)->items();
 
-    // ── Revenue chart series — `?revenue_days=N` (1-30) ──────────────
-    // Backend now accepts a raw int day count, so the picker is a real
-    // 1-30 day slider rather than a 7d/30d bucket toggle.
-    $revenueDays = max(1, min(30, (int) request('revenue_days', 30)));
-    $revenueData = $dashboardQuery->getRevenueChartData($revenueDays);
+    // ── Trends chart series — `?revenue_days=N` (1-365) ──────────────
+    // Sales / Cost timeseries rendered by ApexCharts in the browser. The
+    // period dropdown at the bottom of the chart picks a preset and SPA
+    // navigates with a fresh `?revenue_days=`, so the server re-aggregates.
+    // "This Month" / "This Year" are dynamic (today's day-of-month / -year);
+    // raw day counts not matching a preset fall back to "Last N Days".
+    $revenueDays = max(1, min(365, (int) request('revenue_days', 30)));
+    $salesCostSeries = $dashboardQuery->getSalesCostTimeseries($revenueDays);
+    $pointCount = count($salesCostSeries);
 
-    $chartW = 600;
-    $chartH = 220;
-    $chartPad = 10;
-    $seriesKeys = ['gift_cards' => '#ec4899', 'esim' => '#3b82f6', 'topup' => '#10b981', 'other' => '#f59e0b'];
+    $trendsPeriods = [
+        ['label' => 'This Week',    'days' => 7],
+        ['label' => 'This Month',   'days' => max(1, now()->day)],
+        ['label' => 'Last 30 Days', 'days' => 30],
+        ['label' => 'Last 90 Days', 'days' => 90],
+        ['label' => 'This Year',    'days' => max(1, now()->dayOfYear)],
+    ];
+    $currentTrendsLabel = (collect($trendsPeriods)->firstWhere('days', $revenueDays))['label']
+        ?? "Last {$revenueDays} Days";
 
-    $maxRevenue = 0.0;
-    foreach ($revenueData as $row) {
-        foreach (array_keys($seriesKeys) as $k) {
-            $maxRevenue = max($maxRevenue, (float) ($row[$k] ?? 0));
+    // ── Best Selling Countries map ──────────────────────────────────
+    // `?country_days=` drives the rolling window; `?country_cat=` narrows to
+    // a product category (esim | gift | topup); the Country / Region toggle
+    // is client-side (re-shades the same world map). The map widget pulls
+    // ISO → continent from config/continents.php.
+    $countryDays = max(1, min(365, (int) request('country_days', 7)));
+    $countryCategory = (string) request('country_cat', 'all');
+    $countriesByCode = $dashboardQuery->getBestSellingCountries($countryDays, $countryCategory);
+
+    $codeToContinent = (array) config('continents.codes', []);
+    $salesByRegion = [];
+    foreach ($countriesByCode as $cc => $total) {
+        $region = $codeToContinent[$cc] ?? null;
+        if ($region === null) {
+            continue;
         }
+        $salesByRegion[$region] = ($salesByRegion[$region] ?? 0) + (float) $total;
     }
-    $maxRevenue = max(1.0, $maxRevenue);
-    $pointCount = count($revenueData);
 
-    $buildPolyline = function (string $key) use ($revenueData, $chartW, $chartH, $chartPad, $maxRevenue, $pointCount): string {
-        if ($pointCount === 0) {
-            return '';
-        }
-        $points = [];
-        foreach ($revenueData as $i => $row) {
-            $x = $pointCount === 1 ? $chartW / 2 : round(($i / ($pointCount - 1)) * $chartW, 2);
-            $value = (float) ($row[$key] ?? 0);
-            $y = round($chartH - $chartPad - ($value / $maxRevenue) * ($chartH - 2 * $chartPad), 2);
-            $points[] = "{$x},{$y}";
-        }
-        return implode(' ', $points);
-    };
+    $countryPeriods = [
+        ['label' => 'Today',        'days' => 1],
+        ['label' => 'This Week',    'days' => 7],
+        ['label' => 'Last 30 Days', 'days' => 30],
+        ['label' => 'This Year',    'days' => max(1, now()->dayOfYear)],
+    ];
+    $currentCountryPeriod = (collect($countryPeriods)->firstWhere('days', $countryDays))['label']
+        ?? "Last {$countryDays} Days";
 
-    // ── New Users chart — `?signup_months=N` ─────────────────────────
-    // Backend method picks 1-24 months (caller-clamped). Default 6 to match
-    // the original behaviour. The dropdown above the chart drives this.
-    $signupMonths = max(1, min(24, (int) request('signup_months', 6)));
-    $signupsByMonth = $dashboardQuery->getNewUsersTimeseries($signupMonths);
-    $maxSignups = max(1, ...array_values($signupsByMonth));
-    $currentMonthLabel = now()->format('M');
+    $countryCategories = [
+        ['label' => 'All Products',  'key' => 'all'],
+        ['label' => 'eSIMs',         'key' => 'esim'],
+        ['label' => 'Gift Cards',    'key' => 'gift'],
+        ['label' => 'Mobile Top-up', 'key' => 'topup'],
+    ];
+    $currentCountryCategory = (collect($countryCategories)->firstWhere('key', $countryCategory))['label']
+        ?? 'All Products';
 @endphp
 
 <x-layouts.admin>
@@ -330,188 +345,260 @@
         {{-- ─── Charts row (placeholder UI — no aggregation endpoints yet) ─ --}}
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
-            {{-- New Users chart --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1.5">
-                        <h2 class="text-base font-semibold text-zinc-900">New Users</h2>
-                        <img src="{{ asset('assets/' . rawurlencode('new info.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
+            {{-- Best Selling Countries — jsvectormap world map shaded by sales.
+                 Footer carries the Period + Product filters (SPA-navigate the
+                 server for fresh aggregates); the Country / Region toggle is
+                 a client-side repaint via the Alpine factory. --}}
+            <div
+                x-data="bestSellingCountriesMap({
+                    countries: @js($countriesByCode),
+                    regions: @js($salesByRegion),
+                    codeToContinent: @js($codeToContinent),
+                })"
+                class="flex flex-col rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+            >
+                {{-- Header: title (left), Global label (right). Mirrors the
+                     reference — "Global" is purely a scope hint, not a control. --}}
+                <div class="flex items-start justify-between gap-3">
+                    <h2 class="text-base font-semibold text-zinc-900 dark:text-white">Best Selling Countries</h2>
+                    <span class="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-300">
+                        Global
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </span>
+                </div>
+
+                {{-- Map canvas. jsvectormap renders into x-ref="map" once init()
+                     resolves; it lazy-imports the lib + world-merc data. --}}
+                @if (empty($countriesByCode))
+                    <div class="mt-6 flex flex-1 items-center justify-center rounded-xl bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400" style="min-height: 320px;">
+                        No completed orders in the last {{ $countryDays }} {{ $countryDays === 1 ? 'day' : 'days' }}{{ $countryCategory !== 'all' ? ' for '.$currentCountryCategory : '' }} yet.
                     </div>
+                @else
+                    <div x-ref="map" class="mt-2 flex-1" style="min-height: 320px;"></div>
+                @endif
 
-                    {{-- Months selector — drives the bar chart via `?signup_months=N`.
-                         Backend method `getNewUsersTimeseries(N)` returns last-N-months
-                         counts including the current month. --}}
-                    <div
-                        x-data="{
-                            open: false,
-                            selected: {{ $signupMonths }},
-                            options: [3, 6, 12, 24],
-                            label(n) { return n + (n === 1 ? ' Month' : ' Months'); },
-                            pick(n) {
-                                this.selected = n;
-                                this.open = false;
-                                const url = '?signup_months=' + n;
-                                window.Livewire ? window.Livewire.navigate(url) : window.location.assign(url);
-                            },
-                        }"
-                        @click.outside="open = false"
-                        @keydown.escape.window="open = false"
-                        class="relative"
-                    >
-                        <button
-                            type="button"
-                            @click="open = !open"
-                            :aria-expanded="open.toString()"
-                            class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
-                        >
-                            <span x-text="label(selected)">{{ $signupMonths }} {{ $signupMonths === 1 ? 'Month' : 'Months' }}</span>
-                            <svg class="h-3 w-3 text-zinc-600 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-
-                        <div
-                            x-show="open"
-                            x-transition:enter="transition ease-out duration-150"
-                            x-transition:enter-start="opacity-0 -translate-y-1"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-100"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 -translate-y-1"
-                            style="display:none;"
-                            class="absolute right-0 top-full z-30 mt-2 w-[140px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
-                            role="menu"
-                        >
-                            <div class="p-1.5">
-                                <template x-for="n in options" :key="n">
-                                    <button
-                                        type="button"
-                                        @click="pick(n)"
-                                        :class="selected === n ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                                        class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors"
+                {{-- Footer: Period dropdown + Product dropdown (server-side),
+                     Country / Region toggle (client-side repaint). --}}
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        {{-- Period --}}
+                        <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative">
+                            <button
+                                type="button"
+                                @click="open = ! open"
+                                :aria-expanded="open.toString()"
+                                class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                            >
+                                <span>{{ $currentCountryPeriod }}</span>
+                                <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div
+                                x-show="open"
+                                x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                style="display:none;"
+                                class="absolute left-0 bottom-full z-30 mb-2 w-40 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                                role="menu"
+                            >
+                                @foreach ($countryPeriods as $p)
+                                    <a
+                                        href="?country_days={{ $p['days'] }}&country_cat={{ $countryCategory }}"
+                                        wire:navigate
+                                        @class([
+                                            'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors',
+                                            'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' => $currentCountryPeriod === $p['label'],
+                                            'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]' => $currentCountryPeriod !== $p['label'],
+                                        ])
                                     >
-                                        <span x-text="label(n)"></span>
-                                        <svg x-show="selected === n" class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                        </svg>
-                                    </button>
-                                </template>
+                                        {{ $p['label'] }}
+                                        @if ($currentCountryPeriod === $p['label'])
+                                            <svg class="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                        @endif
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        {{-- Product category --}}
+                        <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative">
+                            <button
+                                type="button"
+                                @click="open = ! open"
+                                :aria-expanded="open.toString()"
+                                class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                            >
+                                <span>{{ $currentCountryCategory }}</span>
+                                <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div
+                                x-show="open"
+                                x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                style="display:none;"
+                                class="absolute left-0 bottom-full z-30 mb-2 w-44 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                                role="menu"
+                            >
+                                @foreach ($countryCategories as $cat)
+                                    <a
+                                        href="?country_days={{ $countryDays }}&country_cat={{ $cat['key'] }}"
+                                        wire:navigate
+                                        @class([
+                                            'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors',
+                                            'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' => $currentCountryCategory === $cat['label'],
+                                            'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]' => $currentCountryCategory !== $cat['label'],
+                                        ])
+                                    >
+                                        {{ $cat['label'] }}
+                                        @if ($currentCountryCategory === $cat['label'])
+                                            <svg class="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                        @endif
+                                    </a>
+                                @endforeach
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {{-- Real signup counts grouped by month (last 6 months including current).
-                     Layout: outer h-56 flex row with default items-stretch, so each column
-                     gets the full vertical space. The bar wrapper inside uses flex-1 to
-                     take everything above the month label, so the bar's `height: N%`
-                     resolves against a real pixel value (was 100% of an auto-sized
-                     parent before, which collapsed to 0 — bars were invisible). --}}
-                <div class="mt-6 flex h-56 justify-between gap-3 sm:gap-5">
-                    @foreach ($signupsByMonth as $month => $count)
-                        @php $heightPct = round(($count / $maxSignups) * 100, 2); @endphp
-                        <div class="flex flex-1 flex-col items-center">
-                            <div class="relative w-full flex-1">
-                                <div
-                                    class="absolute bottom-0 w-full rounded-md {{ $month === $currentMonthLabel ? 'bg-blue-600' : 'bg-blue-200' }}"
-                                    style="height: {{ max(2, $heightPct) }}%;"
-                                    title="{{ $count }} new users"
-                                ></div>
-                            </div>
-                            <span class="mt-2 text-xs text-zinc-600">{{ $month }}</span>
-                        </div>
-                    @endforeach
-                </div>
-
-                <div class="mt-4 flex items-center gap-2 text-xs text-zinc-600">
-                    <span class="h-2.5 w-2.5 rounded-sm bg-blue-600"></span>
-                    <span>New Registered Users</span>
+                    {{-- Country / Region toggle — client-side, repaints the map. --}}
+                    <div class="flex items-center gap-1 rounded-full bg-zinc-100 p-1 dark:bg-[#26416b]">
+                        <button type="button" @click="setView('country')" :class="view === 'country' ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-200'" class="rounded-full px-3 py-1 text-xs font-semibold transition-colors">Country</button>
+                        <button type="button" @click="setView('region')"  :class="view === 'region'  ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-200'" class="rounded-full px-3 py-1 text-xs font-semibold transition-colors">Region</button>
+                    </div>
                 </div>
             </div>
 
-            {{-- Revenue Overview chart --}}
-            <div class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1.5">
-                        <h2 class="text-base font-semibold text-zinc-900">Revenue Overview</h2>
-                        <img src="{{ asset('assets/' . rawurlencode('new info.svg')) }}" alt="" class="h-4 w-4" loading="lazy">
+            {{-- Trends chart — smooth sales/cost area chart via ApexCharts.
+                 Alpine factory `salesCostChart` (resources/js/app.js) lazy-
+                 imports ApexCharts on init so it doesn't ship to pages that
+                 don't render a chart. Don't add x-init="init()" — Alpine
+                 auto-runs init() and explicitly calling it again duplicates
+                 the chart. --}}
+            <div
+                x-data="salesCostChart(@js($salesCostSeries))"
+                class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+            >
+                {{-- Header: title + squiggle legend (left), Sales/Cost dropdown (right) --}}
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <h2 class="text-base font-semibold text-zinc-900 dark:text-white">Trends</h2>
+                        <div class="flex items-center gap-3 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                            <span class="flex items-center gap-1.5">
+                                <svg viewBox="0 0 24 8" class="h-2 w-6 text-emerald-400" fill="none" aria-hidden="true">
+                                    <path d="M1 4 Q 4 0, 7 4 T 13 4 T 19 4 T 23 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Sales
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <svg viewBox="0 0 24 8" class="h-2 w-6 text-blue-400" fill="none" aria-hidden="true">
+                                    <path d="M1 4 Q 4 0, 7 4 T 13 4 T 19 4 T 23 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Cost
+                            </span>
+                        </div>
                     </div>
-                    {{-- Days selector (1 to 30) — picks ?revenue_days=N and SPA-navigates so
-                         the top PHP block re-runs with the new range and the chart redraws.
-                         Backend now accepts raw int day counts so the picker is full-granularity. --}}
-                    <div
-                        x-data="{ open: false, selected: {{ $revenueDays }} }"
-                        @click.outside="open = false"
-                        @keydown.escape.window="open = false"
-                        class="relative"
-                    >
+
+                    {{-- Sales / Cost selector — client-side series toggle. Drives the
+                         chart instance via salesCostChart.setMode(); no server round-trip. --}}
+                    <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative shrink-0">
                         <button
                             type="button"
-                            @click="open = !open"
+                            @click="open = ! open"
                             :aria-expanded="open.toString()"
-                            class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+                            class="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white dark:hover:bg-[#34507a]"
                         >
-                            <span x-text="selected + (selected === 1 ? ' Day' : ' Days')">15 Days</span>
-                            <svg class="h-3 w-3 text-zinc-600 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            <span x-text="modeLabel()">Sales / Cost</span>
+                            <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
 
                         <div
                             x-show="open"
-                            x-transition:enter="transition ease-out duration-150"
-                            x-transition:enter-start="opacity-0 -translate-y-1"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-100"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 -translate-y-1"
+                            x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"   x-transition:leave-start="opacity-100 translate-y-0"  x-transition:leave-end="opacity-0 -translate-y-1"
                             style="display:none;"
-                            class="absolute right-0 top-full z-30 mt-2 w-[140px] overflow-hidden rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                            class="absolute right-0 top-full z-30 mt-2 w-44 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
                             role="menu"
                         >
-                            <div class="max-h-64 overflow-y-auto p-1.5">
-                                <template x-for="i in 30" :key="i">
-                                    <button
-                                        type="button"
-                                        @click="selected = i; open = false; window.Livewire ? window.Livewire.navigate('?revenue_days=' + i) : window.location.assign('?revenue_days=' + i)"
-                                        :class="selected === i ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                                        class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors"
-                                    >
-                                        <span x-text="i + (i === 1 ? ' Day' : ' Days')"></span>
-                                        <svg x-show="selected === i" class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                        </svg>
-                                    </button>
-                                </template>
-                            </div>
+                            @foreach ([['both', 'Sales / Cost'], ['sales', 'Sales'], ['cost', 'Cost']] as [$key, $label])
+                                <button
+                                    type="button"
+                                    @click="setMode('{{ $key }}'); open = false"
+                                    :class="mode === '{{ $key }}' ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]'"
+                                    class="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors"
+                                >
+                                    {{ $label }}
+                                    <svg x-show="mode === '{{ $key }}'" class="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                    </svg>
+                                </button>
+                            @endforeach
                         </div>
                     </div>
                 </div>
 
-                {{-- Real chart — one line per product category from getRevenueChartData('30d').
-                     Backend returns date-grouped totals for gift_cards / esim / topup / other. --}}
+                {{-- Empty / chart canvas. ApexCharts renders into x-ref="canvas"
+                     once init() resolves; it lazy-imports the lib on demand. --}}
                 @if ($pointCount === 0)
-                    <div class="mt-6 flex h-56 items-center justify-center rounded-xl bg-zinc-50 text-sm text-zinc-600">
-                        No revenue data in the last 30 days yet.
+                    <div class="mt-6 flex h-72 items-center justify-center rounded-xl bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400">
+                        No completed orders in the last {{ $revenueDays }} {{ $revenueDays === 1 ? 'day' : 'days' }} yet.
                     </div>
                 @else
-                    <svg viewBox="0 0 600 240" class="mt-6 h-56 w-full" preserveAspectRatio="none" aria-hidden="true">
-                        {{-- Gridlines --}}
-                        @foreach ([0, 55, 110, 165, 220] as $y)
-                            <line x1="0" y1="{{ $y }}" x2="600" y2="{{ $y }}" stroke="#e4e4e7" stroke-width="1" stroke-dasharray="2,4"/>
-                        @endforeach
-
-                        @foreach ($seriesKeys as $key => $color)
-                            <polyline points="{{ $buildPolyline($key) }}" fill="none" stroke="{{ $color }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        @endforeach
-                    </svg>
+                    <div x-ref="canvas" class="mt-2 min-h-[320px]"></div>
                 @endif
 
-                <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-600">
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-pink-500"></span>Gift Cards</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-blue-500"></span>eSIMs</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Top-ups</span>
-                    <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-sm bg-amber-500"></span>Other</span>
+                {{-- Footer: period dropdown — SPA-navigates with ?revenue_days=N so
+                     the server re-aggregates the window. Currently selected period
+                     mirrors the URL (the PHP block above computes $currentTrendsLabel). --}}
+                <div class="mt-3 flex items-center">
+                    <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative">
+                        <button
+                            type="button"
+                            @click="open = ! open"
+                            :aria-expanded="open.toString()"
+                            class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                        >
+                            <span>{{ $currentTrendsLabel }}</span>
+                            <svg class="h-3 w-3 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"   x-transition:leave-start="opacity-100 translate-y-0"  x-transition:leave-end="opacity-0 -translate-y-1"
+                            style="display:none;"
+                            class="absolute left-0 bottom-full z-30 mb-2 w-40 overflow-hidden rounded-xl bg-white p-1.5 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60"
+                            role="menu"
+                        >
+                            @foreach ($trendsPeriods as $p)
+                                <a
+                                    href="?revenue_days={{ $p['days'] }}"
+                                    wire:navigate
+                                    @class([
+                                        'flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium transition-colors',
+                                        'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' => $currentTrendsLabel === $p['label'],
+                                        'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]' => $currentTrendsLabel !== $p['label'],
+                                    ])
+                                >
+                                    {{ $p['label'] }}
+                                    @if ($currentTrendsLabel === $p['label'])
+                                        <svg class="h-3.5 w-3.5 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                        </svg>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
             </div>
 

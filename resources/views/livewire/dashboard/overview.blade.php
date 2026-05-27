@@ -241,7 +241,7 @@ new #[Lazy] class extends Component
                     @endphp
                     <li>
                         <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
-                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
+                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100">
                                 @if ($logo)
                                     <img src="{{ $logo }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
                                 @else
@@ -787,7 +787,7 @@ new #[Lazy] class extends Component
                                 @endphp
                                 <li>
                                     <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
-                                        <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-zinc-100">
+                                        <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100">
                                             @if ($logo)
                                                 <img src="{{ $logo }}" alt="" class="h-8 w-8 object-contain" loading="lazy">
                                             @else
@@ -818,9 +818,11 @@ new #[Lazy] class extends Component
                     </div>
                 </div>
 
-                {{-- Trust strip --}}
-                <div class="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100">
+                {{-- Trust strip — serious glass pill. The frost + highlights
+                     + dark/light variants live on .trust-glow in resources/css/app.css
+                     so the Tailwind utilities here stay structural only. --}}
+                <div class="trust-glow flex items-center gap-4 rounded-full py-3 pl-3 pr-6 ring-1 ring-white/40 dark:ring-white/10">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100">
                         <img src="{{ asset('assets/secure payments.svg') }}" alt="" class="h-6 w-6" loading="lazy">
                     </span>
                     <div class="min-w-0 flex-1">

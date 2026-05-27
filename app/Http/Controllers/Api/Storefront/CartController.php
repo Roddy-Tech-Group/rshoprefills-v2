@@ -39,6 +39,11 @@ class CartController extends Controller
             'product_variant_id' => ['required', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1'],
             'requested_value' => ['nullable', 'numeric', 'min:0.01'],
+            'metadata' => ['nullable', 'array'],
+            // Top-up recipient: digits-only after normalisation, no longer
+            // than E.164's 15 digit upper bound. Stored on cart + order item.
+            'metadata.recipient_phone' => ['nullable', 'string', 'regex:/^\+?[0-9 \-]{6,20}$/'],
+            'metadata.delivery_email' => ['nullable', 'email'],
         ]);
 
         $cart = $this->resolveCart($request);
@@ -48,7 +53,8 @@ class CartController extends Controller
             $cart,
             $variant,
             (int) $request->quantity,
-            $request->requested_value ? (float) $request->requested_value : null
+            $request->requested_value ? (float) $request->requested_value : null,
+            $request->input('metadata') ?: null,
         );
 
         $cart->load('items.product', 'items.variant');
