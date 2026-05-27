@@ -34,7 +34,13 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         $offerId = $item->provider_offer_id;
 
         $title = strtolower($item->product_snapshot['name'] ?? '');
-        $isEsim = ($item->product_snapshot['category']['slug'] ?? '') === 'esims' || strpos($title, 'esim') !== false;
+        // The product_snapshot didn't carry the nested category for historical
+        // orders, so fall back to the FK relation. Without this, every top-up
+        // order was being routed to /vouchers/purchases (gift-card endpoint).
+        $categorySlug = (string) ($item->product_snapshot['category']['slug'] ?? $item->category?->slug ?? '');
+        $isEsim = $categorySlug === 'esims' || strpos($title, 'esim') !== false;
+        $isTopup = $categorySlug === 'mobile-airtime' || $categorySlug === 'topups' || strpos($title, 'top up') !== false;
+        $isBill = $categorySlug === 'bill-payments' || strpos($title, 'bill') !== false;
 
         $email = 'dev@roddytechgroup.com';
         $firstName = 'Rshop';
@@ -48,6 +54,95 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
                 'transactionId' => $customTransactionId,
             ];
             $endpoint = '/esim/purchases';
+        } elseif ($isTopup) {
+            // Mobile top-up: requires the recipient phone the buyer entered on
+            // the product page; CheckoutService persists it to order_items.metadata.
+            // E.164 format is the safest interchange (e.g. "+17575551234").
+            $recipientPhone = (string) ($item->metadata['recipient_phone'] ?? '');
+
+            if ($recipientPhone === '') {
+                Log::error("Zendit top-up: missing recipient phone on order item {$item->id}");
+
+                FulfillmentLog::create([
+                    'order_item_id' => $item->id,
+                    'provider_name' => 'zendit',
+                    'request_payload' => ['offerId' => $offerId, 'transactionId' => $customTransactionId],
+                    'response_payload' => null,
+                    'status' => 'FAILED',
+                    'error_message' => 'No recipient_phone in order item metadata',
+                ]);
+
+                return [
+                    'status' => FulfillmentStatus::Failed,
+                    'reference' => null,
+                    'payload' => ['error' => 'No recipient phone number on file for this top-up.'],
+                ];
+            }
+
+            $requestPayload = [
+                'offerId' => $offerId,
+                'transactionId' => $customTransactionId,
+                // Zendit's TopupPurchaseMakeInput uses `recipientPhoneNumber`
+                // (the Go struct's RecipientPhoneNumber field). Sending
+                // `recipientPhone` triggers a "required" validation error.
+                'recipientPhoneNumber' => $recipientPhone,
+            ];
+
+            // Variable-value top-ups: Zendit takes the amount in the operator's
+            // minor units (e.g. cents). Same convention as gift cards.
+            if (isset($item->variant_snapshot['is_variable']) && $item->variant_snapshot['is_variable']) {
+                $divisor = (float) ($item->variant_snapshot['metadata']['send']['currencyDivisor'] ?? 100);
+                $requestPayload['value'] = [
+                    'type' => 'PRICE',
+                    'value' => (int) round($item->display_amount * $divisor),
+                ];
+            }
+            $endpoint = '/topups/purchases';
+        } elseif ($isBill) {
+            // Bill payment: Zendit's /bills/purchases (or /vouchers with the
+            // billing.accountId field, depending on operator) expects the
+            // customer's biller account / meter number. Buyer types it on the
+            // product page; CheckoutService persists it to order_items.metadata.
+            $accountId = (string) ($item->metadata['account_id'] ?? '');
+
+            if ($accountId === '') {
+                Log::error("Zendit bill: missing account_id on order item {$item->id}");
+
+                FulfillmentLog::create([
+                    'order_item_id' => $item->id,
+                    'provider_name' => 'zendit',
+                    'request_payload' => ['offerId' => $offerId, 'transactionId' => $customTransactionId],
+                    'response_payload' => null,
+                    'status' => 'FAILED',
+                    'error_message' => 'No account_id in order item metadata',
+                ]);
+
+                return [
+                    'status' => FulfillmentStatus::Failed,
+                    'reference' => null,
+                    'payload' => ['error' => 'No account / meter number on file for this bill.'],
+                ];
+            }
+
+            $requestPayload = [
+                'offerId' => $offerId,
+                'transactionId' => $customTransactionId,
+                'fields' => [
+                    ['key' => 'billing.accountId', 'value' => $accountId],
+                    ['key' => 'recipient.email', 'value' => $email],
+                ],
+            ];
+
+            // Variable-amount bills (post-paid, water, etc.) use the same minor-
+            // units convention as vouchers + top-ups.
+            if (isset($item->variant_snapshot['is_variable']) && $item->variant_snapshot['is_variable']) {
+                $divisor = (float) ($item->variant_snapshot['metadata']['send']['currencyDivisor'] ?? 100);
+                $requestPayload['value'] = [
+                    'type' => 'PRICE',
+                    'value' => (int) round($item->display_amount * $divisor),
+                ];
+            }
+            $endpoint = '/vouchers/purchases'; // Zendit routes bills through the same vouchers endpoint
         } else {
             $requestPayload = [
                 'offerId' => $offerId,
@@ -187,8 +282,18 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             }
 
             $title = strtolower($item->product_snapshot['name'] ?? '');
-            $isEsim = ($item->product_snapshot['category']['slug'] ?? '') === 'esims' || strpos($title, 'esim') !== false;
-            $endpoint = $isEsim ? "/esim/purchases/{$zenditTxId}" : "/vouchers/purchases/{$zenditTxId}";
+            $categorySlug = (string) ($item->product_snapshot['category']['slug'] ?? $item->category?->slug ?? '');
+            $isEsim = $categorySlug === 'esims' || strpos($title, 'esim') !== false;
+            $isTopup = $categorySlug === 'mobile-airtime' || $categorySlug === 'topups' || strpos($title, 'top up') !== false;
+
+            // Status endpoint mirrors the purchase endpoint. Without the
+            // top-up branch we'd GET /vouchers/purchases/{txId} for airtime
+            // and Zendit would always come back blank → item stuck Processing.
+            $endpoint = match (true) {
+                $isEsim => "/esim/purchases/{$zenditTxId}",
+                $isTopup => "/topups/purchases/{$zenditTxId}",
+                default => "/vouchers/purchases/{$zenditTxId}",
+            };
 
             $response = Http::withoutVerifying()
                 ->timeout(10)
@@ -300,9 +405,28 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             $flat['esim_activation_code'] = $esimData['manualActivationCode'];
         }
 
+        // Top-up receipt: Zendit returns receipt.topupId + operator + recipientPhone
+        // + value*. There's no code to copy — confirmation just proves the airtime
+        // landed on the number. The orders view renders these as a "Credited to …"
+        // tile so the customer sees what happened.
+        $topup = null;
+        if ($receipt && (! empty($receipt['topupId']) || ! empty($receipt['recipientPhone']))) {
+            $topup = [
+                'topup_id' => $receipt['topupId'] ?? null,
+                'recipient_phone' => $receipt['recipientPhone'] ?? null,
+                'operator' => $receipt['operator'] ?? null,
+                'value_requested' => $receipt['valueRequested'] ?? null,
+                'value_delivered' => $receipt['valueDelivered'] ?? null,
+                'currency' => $receipt['currency'] ?? null,
+            ];
+            $flat['topup_recipient_phone'] = $topup['recipient_phone'];
+            $flat['topup_id'] = $topup['topup_id'];
+        }
+
         return array_merge($flat, [
             'pins' => $pins,
             'esim' => $esimData,
+            'topup' => $topup,
         ]);
     }
 

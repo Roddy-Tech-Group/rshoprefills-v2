@@ -327,6 +327,26 @@ document.addEventListener('alpine:init', () => {
     // wallet carousel always show the same wallet (synced live, no page reload).
     window.Alpine.store('wallet', { active: 0 });
 
+    // Admin sidebar collapse state — persisted to localStorage so the layout
+    // remembers between page loads. The CSS rules that respond to the class
+    // live next to the sidebar markup in resources/views/components/layouts/admin.blade.php.
+    window.Alpine.store('adminSidebar', {
+        collapsed: false,
+        init() {
+            try { this.collapsed = localStorage.getItem('admin.sidebar.collapsed') === '1'; } catch (e) {}
+            this._sync();
+        },
+        toggle() {
+            this.collapsed = ! this.collapsed;
+            try { localStorage.setItem('admin.sidebar.collapsed', this.collapsed ? '1' : '0'); } catch (e) {}
+            this._sync();
+        },
+        _sync() {
+            document.documentElement.classList.toggle('admin-sidebar-collapsed', this.collapsed);
+        },
+    });
+    window.Alpine.store('adminSidebar').init();
+
     /**
      * Customer-dashboard preferences. Persisted in localStorage so each customer's
      * choice survives navigation and reloads. Hooked up via the Customize button's
@@ -438,12 +458,19 @@ document.addEventListener('alpine:init', () => {
         },
 
         // Add a variant to the cart, then drop the nav popup open.
-        async add(variantId, quantity = 1, requestedValue = null) {
+        async add(variantId, quantity = 1, requestedValue = null, metadata = null) {
             this.loading = true;
             try {
                 const body = { product_variant_id: variantId, quantity };
                 if (requestedValue) {
                     body.requested_value = requestedValue;
+                }
+                // Free-form per-item context (recipient phone for top-ups,
+                // delivery email for gift cards, etc.) — server stores it
+                // on cart_items.metadata_snapshot and copies it onto the
+                // order item at checkout so fulfilment can act on it.
+                if (metadata && typeof metadata === 'object') {
+                    body.metadata = metadata;
                 }
                 const res = await fetch(this._url('/cart/items'), {
                     method: 'POST',
@@ -1042,3 +1069,374 @@ window.kycDatePicker = function (initial = '') {
         items[next].focus();
     });
 })();
+
+/**
+ * Admin dashboard Trends chart — smooth sales/cost area chart powered by
+ * ApexCharts, lazy-imported so the bundle stays light on pages that don't
+ * use it. Series accepts `[{ date, sales, cost }, …]`. The card header has a
+ * Sales / Cost / Both dropdown driving client-side series visibility.
+ *
+ *   x-data="salesCostChart(@js($salesCostSeries))"
+ */
+/**
+ * Admin dashboard Best Selling Countries world map — shades countries by
+ * sales volume. Lazy-imports jsvectormap + its world-merc data file on
+ * mount; persists its own dropdown state. Accepts:
+ *   - countries: { ISO2: usdTotal, … } (Country mode)
+ *   - regions:   { Continent: usdTotal, … } (Region mode)
+ *   - codeToContinent: { ISO2: 'Africa' | 'Asia' | ... }
+ *
+ *   x-data="bestSellingCountriesMap({
+ *     countries: @js($countriesByCode),
+ *     regions: @js($salesByRegion),
+ *     codeToContinent: @js($codeToContinent),
+ *   })"
+ */
+window.bestSellingCountriesMap = function (payload) {
+    const COUNTRIES = payload.countries || {};
+    const REGIONS = payload.regions || {};
+    const CODE_TO_CONTINENT = payload.codeToContinent || {};
+
+    return {
+        map: null,
+        view: 'country',  // 'country' | 'region'
+
+        async init() {
+            // jsvectormap's map data files are side-effect scripts that call
+            // `jsVectorMap.addMap(...)` against a GLOBAL constructor — they
+            // don't import it. So we have to publish the constructor first,
+            // THEN load the map data, or the map silently never registers
+            // and the canvas paints empty. Order matters here.
+            const { default: JsVectorMap } = await import('jsvectormap');
+            await import('jsvectormap/dist/jsvectormap.css');
+            window.jsVectorMap = JsVectorMap;
+            await import('jsvectormap/dist/maps/world-merc.js');
+
+            const el = this.$refs.map;
+            if (!el) { return; }
+            el.innerHTML = '';
+
+            const dark = document.documentElement.classList.contains('dark');
+            const bg = dark ? '#26416b' : '#e5e7eb';
+            const stroke = dark ? '#34507a' : '#cbd5e1';
+
+            // Cursor affordance: grab on idle, grabbing during a drag pan.
+            el.style.cursor = 'grab';
+            el.addEventListener('mousedown', () => { el.style.cursor = 'grabbing'; });
+            window.addEventListener('mouseup', () => { el.style.cursor = 'grab'; });
+
+            this.map = new JsVectorMap({
+                selector: el,
+                map: 'world_merc',
+                backgroundColor: 'transparent',
+                // Interactive zoom + pan — wheel zoom, +/- buttons, click-drag pan.
+                zoomOnScroll: true,
+                zoomOnScrollSpeed: 3,
+                zoomButtons: true,
+                zoomMax: 8,
+                zoomMin: 1,
+                draggable: true,
+                regionStyle: {
+                    initial: { fill: bg, fillOpacity: 1, stroke, strokeWidth: 0.5 },
+                    hover:   { fillOpacity: 0.85 },
+                },
+                series: {
+                    regions: [{
+                        scale: this._scale(),
+                        values: this._values(),
+                        normalizeFunction: 'polynomial',
+                        attribute: 'fill',
+                    }],
+                },
+                onRegionTooltipShow: (event, tooltip, code) => {
+                    const value = this._tooltipValue(code);
+                    const name  = tooltip.text();
+                    tooltip.text(value !== null
+                        ? `${name}: USD ${value.toFixed(2)}`
+                        : name, true);
+                },
+            });
+
+            this.$watch('view', () => this._refresh());
+        },
+
+        destroy() {
+            if (this.map && typeof this.map.destroy === 'function') { this.map.destroy(); }
+            this.map = null;
+        },
+
+        setView(v) { this.view = v; },
+
+        _scale() {
+            // Brand-blue ramp: pale → saturated. The ApexCharts data points use
+            // matching emerald + blue, but this widget stays single-hue so the
+            // intensity reads clearly without needing a legend.
+            return ['#dbeafe', '#0044FF'];
+        },
+
+        _values() {
+            if (this.view === 'country') { return { ...COUNTRIES }; }
+            // Region mode: every country in the same continent gets the
+            // continent's aggregate value, so the map paints by region.
+            const out = {};
+            Object.keys(CODE_TO_CONTINENT).forEach((cc) => {
+                const region = CODE_TO_CONTINENT[cc];
+                if (REGIONS[region] !== undefined) { out[cc] = REGIONS[region]; }
+            });
+            return out;
+        },
+
+        _tooltipValue(code) {
+            if (this.view === 'country') { return COUNTRIES[code] ?? null; }
+            const region = CODE_TO_CONTINENT[code];
+            return region ? (REGIONS[region] ?? null) : null;
+        },
+
+        _refresh() {
+            if (!this.map) { return; }
+            this.map.series.regions[0].setValues(this._values());
+        },
+    };
+};
+
+/**
+ * Admin dashboard New Users bar chart — monthly registrations rendered as
+ * a smooth rounded-bar chart by ApexCharts. Same lazy-import pattern as
+ * salesCostChart. Series accepts `[{ label, value }, …]`.
+ *
+ *   x-data="newUsersChart(@js($newUsersSeries))"
+ */
+window.newUsersChart = function (series) {
+    return {
+        chart: null,
+        series: series || [],
+
+        async init() {
+            const { default: ApexCharts } = await import('apexcharts');
+            if (this.chart) { this.chart.destroy(); this.chart = null; }
+            if (this.$refs.canvas) { this.$refs.canvas.innerHTML = ''; }
+            this.chart = new ApexCharts(this.$refs.canvas, this._options());
+            await this.chart.render();
+        },
+
+        destroy() {
+            if (this.chart) { this.chart.destroy(); this.chart = null; }
+            if (this.$refs.canvas) { this.$refs.canvas.innerHTML = ''; }
+        },
+
+        _options() {
+            const dark = document.documentElement.classList.contains('dark');
+            const gridColor = dark ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
+            const textColor = dark ? '#94a3b8' : '#52525b';
+            const tooltipBg = dark ? 'rgba(38, 65, 107, 0.95)' : 'rgba(255,255,255,0.96)';
+            const tooltipText = dark ? '#ffffff' : '#0f172a';
+
+            return {
+                chart: {
+                    type: 'bar',
+                    height: 320,
+                    toolbar: { show: false },
+                    fontFamily: 'inherit',
+                    background: 'transparent',
+                    animations: { speed: 450, easing: 'easeout' },
+                    parentHeightOffset: 0,
+                },
+                series: [{ name: 'New users', data: this.series.map((p) => p.value) }],
+                colors: ['#2563eb'], // brand blue-600
+                plotOptions: {
+                    bar: {
+                        borderRadius: 10,
+                        borderRadiusApplication: 'end',
+                        columnWidth: '38%',
+                        distributed: false,
+                    },
+                },
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        type: 'vertical',
+                        shadeIntensity: 1,
+                        gradientToColors: ['#3b82f6'],
+                        opacityFrom: 1,
+                        opacityTo: 0.85,
+                        stops: [0, 100],
+                    },
+                },
+                stroke: { show: false, width: 0 },
+                xaxis: {
+                    categories: this.series.map((p) => p.label),
+                    labels: { style: { colors: textColor, fontSize: '11px', fontWeight: 500 } },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
+                        formatter: (v) => Number(v).toFixed(0),
+                    },
+                },
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4,
+                    xaxis: { lines: { show: false } },
+                    yaxis: { lines: { show: true } },
+                    padding: { left: 0, right: 8 },
+                },
+                dataLabels: { enabled: false },
+                legend: { show: false },
+                tooltip: {
+                    theme: dark ? 'dark' : 'light',
+                    custom: ({ series, dataPointIndex, w }) => {
+                        const label = w.globals.labels?.[dataPointIndex] ?? '';
+                        const value = series[0]?.[dataPointIndex] ?? 0;
+                        return `
+                            <div style="padding:10px 14px;border-radius:12px;background:${tooltipBg};backdrop-filter:blur(8px);box-shadow:0 8px 24px -8px rgba(0,0,0,0.35);color:${tooltipText};">
+                                <div style="font-size:11px;font-weight:500;opacity:0.7;margin-bottom:4px;">${label}</div>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="height:8px;width:8px;border-radius:9999px;background:#2563eb;display:inline-block;"></span>
+                                    <span style="font-size:12px;font-weight:600;">${value} new user${value === 1 ? '' : 's'}</span>
+                                </div>
+                            </div>`;
+                    },
+                },
+            };
+        },
+    };
+};
+
+window.salesCostChart = function (series) {
+    const SALES_COLOR = '#34d399'; // emerald-400
+    const COST_COLOR  = '#60a5fa'; // blue-400
+
+    return {
+        chart: null,
+        mode: 'both',            // 'both' | 'sales' | 'cost'
+        series: series || [],
+        salesColor: SALES_COLOR,
+        costColor: COST_COLOR,
+
+        async init() {
+            const { default: ApexCharts } = await import('apexcharts');
+            // Defensive: if Livewire's wire:navigate re-mounts this card an
+            // older ApexCharts SVG may still be sitting inside $refs.canvas.
+            // Clear it before mounting a new one so we never stack charts.
+            if (this.chart) { this.chart.destroy(); this.chart = null; }
+            if (this.$refs.canvas) { this.$refs.canvas.innerHTML = ''; }
+            this.chart = new ApexCharts(this.$refs.canvas, this._options());
+            await this.chart.render();
+            this.$watch('mode', () => this._update());
+        },
+
+        destroy() {
+            if (this.chart) { this.chart.destroy(); this.chart = null; }
+            if (this.$refs.canvas) { this.$refs.canvas.innerHTML = ''; }
+        },
+
+        setMode(mode) { this.mode = mode; },
+
+        modeLabel() {
+            return this.mode === 'sales' ? 'Sales' : (this.mode === 'cost' ? 'Cost' : 'Sales / Cost');
+        },
+
+        _update() {
+            const wanted = this.mode === 'both' ? ['Sales', 'Cost'] : (this.mode === 'sales' ? ['Sales'] : ['Cost']);
+            ['Sales', 'Cost'].forEach((name) => {
+                if (wanted.includes(name)) { this.chart.showSeries(name); }
+                else                        { this.chart.hideSeries(name); }
+            });
+        },
+
+        _options() {
+            const dark = document.documentElement.classList.contains('dark');
+            const gridColor = dark ? 'rgba(255,255,255,0.08)' : '#e5e7eb';
+            const textColor = dark ? '#94a3b8' : '#52525b';
+            const tooltipBg = dark ? 'rgba(38, 65, 107, 0.95)' : 'rgba(255,255,255,0.96)';
+            const tooltipText = dark ? '#ffffff' : '#0f172a';
+
+            return {
+                chart: {
+                    type: 'area',
+                    height: 320,
+                    toolbar: { show: false },
+                    zoom: { enabled: false },
+                    fontFamily: 'inherit',
+                    background: 'transparent',
+                    animations: { speed: 450, easing: 'easeout' },
+                    parentHeightOffset: 0,
+                },
+                series: [
+                    { name: 'Sales', data: this.series.map((p) => [new Date(p.date).getTime(), p.sales]) },
+                    { name: 'Cost',  data: this.series.map((p) => [new Date(p.date).getTime(), p.cost])  },
+                ],
+                colors: [SALES_COLOR, COST_COLOR],
+                stroke: { curve: 'smooth', width: 2.5, lineCap: 'round' },
+                fill: {
+                    type: 'gradient',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.30, opacityTo: 0.0, stops: [0, 90, 100] },
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
+                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    crosshairs: {
+                        show: true,
+                        width: 1,
+                        position: 'back',
+                        stroke: { color: dark ? '#475569' : '#94a3b8', width: 1, dashArray: 0 },
+                    },
+                    tooltip: { enabled: false },
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
+                        formatter: (v) => 'USD ' + Number(v).toFixed(2),
+                    },
+                },
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4,
+                    xaxis: { lines: { show: false } },
+                    yaxis: { lines: { show: true } },
+                    padding: { left: 0, right: 12, top: 0, bottom: 0 },
+                },
+                dataLabels: { enabled: false },
+                legend: { show: false },
+                tooltip: {
+                    theme: dark ? 'dark' : 'light',
+                    shared: true,
+                    intersect: false,
+                    followCursor: false,
+                    fixed: { enabled: false },
+                    marker: { show: true },
+                    style: { fontSize: '12px' },
+                    x: { format: 'MMM dd, yyyy' },
+                    y: { formatter: (v) => 'USD ' + Number(v).toFixed(2) },
+                    custom: ({ series, dataPointIndex, w }) => {
+                        const rows = w.globals.seriesNames.map((name, idx) => {
+                            const colour = w.globals.colors[idx];
+                            const value  = series[idx]?.[dataPointIndex];
+                            if (value === undefined || value === null) { return ''; }
+                            return `
+                                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;color:${tooltipText};">
+                                    <span style="height:8px;width:8px;border-radius:9999px;background:${colour};display:inline-block;"></span>
+                                    <span style="font-size:12px;font-weight:500;letter-spacing:0.01em;">${name}: USD ${Number(value).toFixed(2)}</span>
+                                </div>`;
+                        }).join('');
+                        return `
+                            <div style="padding:10px 14px;border-radius:12px;background:${tooltipBg};backdrop-filter:blur(8px);box-shadow:0 8px 24px -8px rgba(0,0,0,0.35);">${rows}</div>`;
+                    },
+                },
+                markers: {
+                    size: 0,
+                    strokeWidth: 2,
+                    strokeColors: dark ? '#1d3252' : '#ffffff',
+                    hover: { size: 6, sizeOffset: 2 },
+                },
+            };
+        },
+    };
+};

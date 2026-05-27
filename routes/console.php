@@ -6,8 +6,10 @@ use App\Domain\Payment\Jobs\ExpireStalePaymentSessionsJob;
 use App\Domain\Wallet\Jobs\ReconcilePendingFundingsJob;
 use App\Domain\Wallet\Jobs\SyncExchangeRatesJob;
 use App\Jobs\FulfillOrderItemJob;
+use App\Jobs\PollPendingFulfillmentJob;
 use App\Jobs\SyncZenditGiftCardsJob;
 use App\Models\Order;
+use App\Models\OrderItem;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -73,6 +75,27 @@ Schedule::call(function () {
         }
     }
 })->everyFiveMinutes()->name('fulfillment:rescue-orphaned-orders');
+
+// Pending-fulfillment poll sweeper.
+//
+// When a provider returns Processing (Zendit top-ups + eSIMs, Airalo) the
+// fulfillment job queues a PollPendingFulfillmentJob with a 10s delay to
+// check status. On `QUEUE_CONNECTION=sync` that delay is moot — the job
+// runs inline and then never retries, so items stick at `processing`
+// forever. This sweeper kicks them every minute, with a 30-minute upper
+// bound so a stuck item doesn't churn forever (the poll job itself stops
+// re-releasing after 120 tries / 20 minutes).
+Schedule::call(function () {
+    $cutoff = now()->subMinutes(30);
+
+    OrderItem::query()
+        ->whereIn('fulfillment_status', [FulfillmentStatus::Processing, FulfillmentStatus::Delayed])
+        ->where('updated_at', '>=', $cutoff)
+        ->get()
+        ->each(function (OrderItem $item) {
+            dispatch_sync(new PollPendingFulfillmentJob($item));
+        });
+})->everyMinute()->name('fulfillment:poll-pending')->withoutOverlapping();
 
 // Enterprise Reconciliation Engine Scheduling
 Schedule::command('reconcile:wallet-balances')->dailyAt('02:00');

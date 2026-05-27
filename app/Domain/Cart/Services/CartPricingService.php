@@ -24,14 +24,17 @@ class CartPricingService
     {
         $cost = (float) $variant->cost_price;
 
-        // Use face_value as the BASE for markup calculation. Customers see and
-        // recognise the face denomination ($15 card), so the selling price is
-        // face_value + markup% (e.g. $15 × 1.08 = $16.20). Previously cost_price
-        // was the base, creating a mismatch between the displayed denomination
-        // and the charged amount. Falls back to cost-based pricing when no
-        // face_value exists (e.g. newly-synced products without denominations).
+        // Use face_value as the markup BASE only when it's in USD — a $15 gift
+        // card priced at $15 × markup reads correctly to the customer. For
+        // non-USD denominations (e.g. ₦4700 bill payment, £25 card) the
+        // face_value is a local-currency figure, not dollars; if we run markup
+        // on it directly we'd charge $4700 instead of ~$4. In that case fall
+        // back to the supplier's USD cost — already authoritative + currency-safe.
         $faceValue = (float) ($variant->face_value ?? $variant->retail_price ?? 0);
-        $base = $faceValue > 0 ? $faceValue : $cost;
+        $variantCurrency = strtoupper((string) ($variant->currency ?? 'USD'));
+        $faceIsUsd = $variantCurrency === 'USD' || $variantCurrency === '';
+
+        $base = ($faceIsUsd && $faceValue > 0) ? $faceValue : $cost;
 
         $unitPriceUsd = $this->resolveRetailPrice($variant->product, $base);
         $subtotalUsd = $unitPriceUsd * $quantity;
@@ -102,9 +105,10 @@ class CartPricingService
     /**
      * Resolve the marked-up USD retail price for a product. Applies the safety
      * fallback (no rule matched) and the margin floor, so the result is never
-     * at or below cost.
+     * at or below cost. Public so satellite flows (eSIM top-ups, manual
+     * adjustments) can reuse the markup hierarchy.
      */
-    private function resolveRetailPrice(?Product $product, float $cost): float
+    public function resolveRetailPrice(?Product $product, float $cost): float
     {
         $rule = $this->resolveRule($product);
 

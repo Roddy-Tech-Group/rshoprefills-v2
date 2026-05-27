@@ -46,6 +46,24 @@ enum Currency: string
         };
     }
 
+    /**
+     * Hard upper bound for a single wallet funding. Anything above this is
+     * rejected at the service layer before a payment session is created.
+     * Sized to ~$5,000 USD-equivalent at typical rates — large enough for
+     * any legitimate top-up, small enough to stop fat-finger UX bugs and
+     * gateway sandbox accidents like the ₦100,000 ghost funding.
+     */
+    public function maximumFundingAmount(): float
+    {
+        return match ($this) {
+            self::NGN => 8_000_000.00,   // ~$5,000 USD
+            self::USD => 5_000.00,
+            self::GBP => 4_000.00,
+            self::GHS => 75_000.00,
+            self::XAF => 3_000_000.00,
+        };
+    }
+
     public function decimalPrecision(): int
     {
         // For rendering, all standard fiat here use 2 decimal places.

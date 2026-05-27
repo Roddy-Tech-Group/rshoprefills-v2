@@ -69,6 +69,17 @@
     $paymentMethod = $methodLabels[$order->payment_method] ?? 'Card';
     $deliveryEmail = $order->metadata['delivery_email'] ?? auth()->user()?->email;
 
+    // Per-order category mix — drives which "what happens next" copy + which
+    // bottom notice we show (the gift-card region notice is irrelevant for
+    // pure top-up or eSIM orders).
+    $orderCategories = collect($order->items)
+        ->map(fn ($i) => (string) ($i->product_snapshot['category']['slug'] ?? $i->category?->slug ?? ''))
+        ->filter()
+        ->unique();
+    $orderHasGiftCards = $orderCategories->contains(fn ($s) => ! in_array($s, ['mobile-airtime', 'esims', 'bill-payments'], true));
+    $orderHasTopups    = $orderCategories->contains('mobile-airtime');
+    $orderHasEsims     = $orderCategories->contains('esims');
+
     // total_amount + line subtotals are stored in settlement_currency (USD per
     // CheckoutService); display_currency is a presentation hint that the backend's
     // FX pipeline doesn't yet convert against (exchange_rate_snapshot = 1.0 stub).
@@ -631,6 +642,22 @@
                     $brandKey = $snap['brand_key'] ?? null;
                     $name     = $brandKey ? Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Item');
                     $logo     = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
+                    // Snapshot didn't always include the category before today, so
+                    // fall back to the live FK relation for historical orders.
+                    $itemCategory = (string) ($snap['category']['slug'] ?? $item->category?->slug ?? '');
+                    $itemIsTopup = $itemCategory === 'mobile-airtime';
+                    $itemIsEsim  = $itemCategory === 'esims';
+                    // Pending copy varies by product: top-ups credit a phone,
+                    // eSIMs deliver a QR, gift cards email a code.
+                    $itemPendingCopy = match (true) {
+                        $itemIsTopup => 'Credited to your phone once payment clears',
+                        $itemIsEsim  => 'eSIM QR delivered once payment clears',
+                        default      => 'Code emailed once payment clears',
+                    };
+                    $itemMeta = (array) ($item->metadata ?? []);
+                    $itemRecipientPhone = is_scalar($itemMeta['recipient_phone'] ?? null)
+                        ? (string) $itemMeta['recipient_phone']
+                        : '';
                 @endphp
                 <li class="flex items-start gap-3 py-4">
                     {{-- Brand tile — matches the catalog / cart product card (16:10, edge-to-edge logo). --}}
@@ -680,7 +707,7 @@
                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                Code emailed once payment clears
+                                {{ $itemPendingCopy }}{{ $itemIsTopup && $itemRecipientPhone ? ' ('.$itemRecipientPhone.')' : '' }}
                             </p>
                         @endif
                     </div>
@@ -711,10 +738,30 @@
         <section class="mt-6 rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-6">
             <h2 class="text-lg font-bold text-zinc-900">What happens next</h2>
             <ol class="mt-4 space-y-4">
+                @php
+                    // Order content drives the wording. A pure top-up order
+                    // shouldn't say "codes will be emailed" — nothing is.
+                    $fulfilLabel = $orderHasGiftCards
+                        ? 'Codes are issued'
+                        : ($orderHasEsims ? 'eSIM is generated' : 'Top-up is processed');
+                    $fulfilDesc = $orderHasGiftCards
+                        ? 'Each item is fulfilled and its redemption code attached to your order.'
+                        : ($orderHasEsims
+                            ? 'Your eSIM QR is generated and attached to this order.'
+                            : 'Your top-up is sent to the recipient phone number.');
+                    $deliveryLabel = $orderHasGiftCards
+                        ? 'Delivery'
+                        : ($orderHasEsims ? 'eSIM ready' : 'Confirmation');
+                    $deliveryDesc = $orderHasGiftCards
+                        ? 'Codes arrive at '.($deliveryEmail ?: 'your email').' and stay available on this page.'
+                        : ($orderHasEsims
+                            ? 'Your QR + activation code land at '.($deliveryEmail ?: 'your email').' and on this page.'
+                            : 'A confirmation lands at '.($deliveryEmail ?: 'your email').' the moment the credit posts.');
+                @endphp
                 @foreach ([
                     ['Confirm payment', 'We verify your payment with the provider. This is usually instant.'],
-                    ['Codes are issued', 'Each item is fulfilled and its redemption code attached to your order.'],
-                    ['Delivery', 'Codes arrive at ' . ($deliveryEmail ?: 'your email') . ' and stay available on this page.'],
+                    [$fulfilLabel, $fulfilDesc],
+                    [$deliveryLabel, $deliveryDesc],
                 ] as $i => $step)
                     <li class="flex gap-3">
                         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700 ring-1 ring-blue-100">{{ $i + 1 }}</span>
@@ -728,13 +775,17 @@
         </section>
     @endif
 
-    {{-- Region notice --}}
-    <div class="mt-6 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5">
-        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-        </svg>
-        <p class="text-sm text-amber-800">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
-    </div>
+    {{-- Region notice — only meaningful for gift-card orders. Top-up + eSIM
+         orders aren't region-locked in the same way, so the notice would only
+         confuse the buyer. --}}
+    @if ($orderHasGiftCards)
+        <div class="mt-6 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5">
+            <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            <p class="text-sm text-amber-800">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
+        </div>
+    @endif
 
     {{-- Actions --}}
     <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">

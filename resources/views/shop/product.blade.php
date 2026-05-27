@@ -223,6 +223,9 @@
 <x-layouts.app.header :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'">
 
     <div
+        @php
+            $dialCode = config('dial_codes.codes.'.strtoupper((string) $product->country_code), '+1');
+        @endphp
         x-data="brandDetail({
             variants: @js($variantsForJs),
             rangeText: @js($rangeText),
@@ -232,6 +235,9 @@
             customRate: @js($customRate),
             customMin: @js($variable ? (float) $variable->min_amount : 0),
             customMax: @js($variable ? (float) $variable->max_amount : 0),
+            requiresRecipientPhone: @js($isTopup),
+            defaultDialCode: @js($dialCode),
+            requiresAccountId: @js($isBill),
         })"
         x-init="init()"
         style="--brand: {{ $brandColor }};"
@@ -248,7 +254,7 @@
                 {{-- top offset clears the sticky header (top-bar 36 + nav 64 + category bar 40)
                      so the card parks below it instead of sliding up behind the nav. --}}
                 <div class="lg:sticky lg:top-[156px]">
-                    <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#ededee] p-10 sm:p-14">
+                    <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#e8e8f7] p-10 sm:p-14 dark:bg-[#1d3252]">
                         <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-xl bg-[#ffffff] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
                             @if ($logoSrc)
                                 <img src="{{ $logoSrc }}" alt="{{ $brandName }} {{ $kindNoun }}" class="h-full w-full object-cover" loading="eager">
@@ -287,27 +293,41 @@
                     @endif
                 </div>
 
-                {{-- Trust badges row. Icons are PNGs tinted emerald-green via a CSS filter. --}}
+                {{-- Trust badges — each is a small emerald-tinted circle + label,
+                     mirroring the reference. Mobile keeps them on one scrollable row;
+                     sm+ wraps naturally. --}}
                 @php
-                    // Filter chain that tints a flat icon to ~emerald-500 (#10b981).
-                    $greenTint = 'filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(394%) hue-rotate(105deg) brightness(92%) contrast(87%);';
+                    $redeemLabel = $isTopup
+                        ? 'Credited straight to the number'
+                        : ($isBill ? 'Paid straight to the account' : 'Online redeemable');
+
+                    $badges = [
+                        ['label' => 'Instant delivery', 'd' => 'M13 10V3L4 14h7v7l9-11h-7z'],
+                        ['label' => $redeemLabel,       'd' => 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['label' => 'Fair refund policy', 'd' => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+                    ];
                 @endphp
-                {{-- Trust badges. Mobile: a horizontal carousel (scrollbar hidden); wraps from sm up. --}}
-                <div class="flex items-center gap-x-6 gap-y-2 overflow-x-auto text-sm font-semibold text-zinc-900 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
-                    <span class="flex shrink-0 items-center gap-1.5">
-                        <img src="{{ asset('assets/' . rawurlencode('instant delivery.png')) }}" alt="" class="h-5 w-5 object-contain" style="{{ $greenTint }}" loading="lazy">
-                        Instant delivery
-                    </span>
-                    <span class="flex shrink-0 items-center gap-1.5">
-                        <img src="{{ asset('assets/' . rawurlencode('Fair Redund Policy.png')) }}" alt="" class="h-5 w-5 object-contain" style="{{ $greenTint }}" loading="lazy">
-                        Fair refund policy
-                    </span>
-                    <span class="flex shrink-0 items-center gap-1.5">
-                        <svg class="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        {{ $isTopup ? 'Credited straight to the number' : ($isBill ? 'Paid straight to the account' : 'Online & instore redeemable') }}
-                    </span>
+                <div class="flex items-center gap-x-6 gap-y-3 overflow-x-auto text-sm font-medium text-zinc-700 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible dark:text-zinc-200">
+                    @foreach ($badges as $badge)
+                        <span class="flex shrink-0 items-center gap-2">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-500/15 dark:ring-emerald-500/30">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $badge['d'] }}"/>
+                                </svg>
+                            </span>
+                            {{ $badge['label'] }}
+                        </span>
+                    @endforeach
+                </div>
+
+                {{-- Category type pill — small chip below the trust badges so the
+                     buyer instantly knows what kind of product this is (matches the
+                     "Credits" tag in the reference). --}}
+                @php
+                    $kindPillLabel = $isTopup ? 'Credits' : ($isBill ? 'Bill Payment' : 'Gift Card');
+                @endphp
+                <div>
+                    <span class="inline-flex items-center rounded-[5px] bg-blue-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">{{ $kindPillLabel }}</span>
                 </div>
 
                 @if ($hasStock)
@@ -547,6 +567,93 @@
                         </div>
                     </div>
 
+                    {{-- Account ID — bill payments only. Captures the meter
+                         number / customer ID the biller expects. Mirrors the
+                         top-up phone pattern: validated client-side, blocks
+                         Add to cart until non-empty, persisted to cart→order
+                         metadata for the Zendit billing.accountId field. --}}
+                    @if ($isBill)
+                        <div>
+                            <label class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                                {{ $brandName }} account / meter number
+                            </label>
+                            <div
+                                :class="accountIdValid()
+                                    ? 'border-emerald-500 ring-2 ring-emerald-500/15'
+                                    : (accountId.length > 0 ? 'border-red-300' : 'border-zinc-200')"
+                                class="flex h-[52px] w-full items-center gap-2 rounded-lg border bg-white px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
+                            >
+                                <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    autocomplete="off"
+                                    x-model="accountId"
+                                    placeholder="e.g. 04220098765"
+                                    class="min-w-0 flex-1 bg-transparent text-base font-medium tracking-wider text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white"
+                                >
+                                <svg
+                                    x-show="accountIdValid()"
+                                    x-cloak
+                                    class="h-5 w-5 shrink-0 text-emerald-600"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+                                    aria-hidden="true"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                </svg>
+                            </div>
+                            <p
+                                x-show="accountId.length > 0 && ! accountIdValid()"
+                                x-cloak
+                                class="mt-1 text-[11px] font-medium text-red-600"
+                            >Enter a valid account or meter number.</p>
+                        </div>
+                    @endif
+
+                    {{-- Recipient phone — top-ups only. The buyer enters the
+                         number to credit before adding to cart; canAddToCart()
+                         enforces a valid number. Country flag + dial code are
+                         locked to the product's country_code via dial_codes.php. --}}
+                    @if ($isTopup)
+                        <div>
+                            <label class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                                @if (Product::flagUrl($product->country_code))
+                                    <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-3.5 w-5 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                @endif
+                                {{ $countryName }} phone number to refill
+                            </label>
+                            <div
+                                :class="recipientPhoneValid()
+                                    ? 'border-emerald-500 ring-2 ring-emerald-500/15'
+                                    : (recipientPhone.length > 0 ? 'border-red-300' : 'border-zinc-200')"
+                                class="flex h-[52px] w-full items-center gap-2 rounded-lg border bg-white px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
+                            >
+                                <span class="shrink-0 text-sm font-semibold text-zinc-600 dark:text-zinc-200" x-text="recipientDialCode">{{ $dialCode }}</span>
+                                <input
+                                    type="tel"
+                                    inputmode="tel"
+                                    autocomplete="tel-national"
+                                    x-model="recipientPhone"
+                                    placeholder="555 123 4567"
+                                    class="min-w-0 flex-1 bg-transparent text-base font-medium text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white"
+                                >
+                                <svg
+                                    x-show="recipientPhoneValid()"
+                                    x-cloak
+                                    class="h-5 w-5 shrink-0 text-emerald-600"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+                                    aria-hidden="true"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                </svg>
+                            </div>
+                            <p
+                                x-show="recipientPhone.length > 0 && ! recipientPhoneValid()"
+                                x-cloak
+                                class="mt-1 text-[11px] font-medium text-red-600"
+                            >Enter a valid {{ $countryName }} mobile number.</p>
+                        </div>
+                    @endif
+
                     {{-- Points you earn — 0.5 coins per $1 spent, floored. The coin icon is the site favicon. --}}
                     <p class="flex items-center gap-1.5 text-sm font-semibold text-zinc-700">
                         Points you earn
@@ -769,7 +876,7 @@
     </div>
 
     <script>
-        window.brandDetail = function ({ variants, rangeText, cryptos, defaultCrypto, markup, customRate, customMin, customMax }) {
+        window.brandDetail = function ({ variants, rangeText, cryptos, defaultCrypto, markup, customRate, customMin, customMax, requiresRecipientPhone, defaultDialCode, requiresAccountId }) {
             // `cryptos` is an array of {code, name, type, perUsd, decimals, icon} from the
             // admin currency_rates table. Reshape into a code-keyed object.
             const cryptoMap = {};
@@ -793,8 +900,47 @@
                 cartState: 'idle',
                 _cartTimer: null,
 
+                // Mobile top-up: the buyer enters the phone number to credit on
+                // the product page. The form below is only rendered when
+                // requiresRecipientPhone is true; the digits live here.
+                requiresRecipientPhone: !! requiresRecipientPhone,
+                recipientPhone: '',                          // digits the buyer typed (no country code)
+                recipientDialCode: defaultDialCode || '',    // e.g. '+1', shown as a prefix on the input
+
+                // Bill payment: account / meter number the biller will credit.
+                requiresAccountId: !! requiresAccountId,
+                accountId: '',
+
                 init() {
                     // Empty by default so the placeholder hint stays visible.
+                },
+
+                // Validation: digits + spaces + optional dashes, 6-15 digits when
+                // stripped. Server re-validates with the same regex but more strict.
+                recipientPhoneValid() {
+                    if (! this.requiresRecipientPhone) { return true; }
+                    const digits = (this.recipientPhone || '').replace(/[^0-9]/g, '');
+                    return digits.length >= 6 && digits.length <= 15;
+                },
+
+                // E.164-ish string we ship to the server. Strips the user-visible
+                // separators and prefixes the dial code, e.g. '+17575551234'.
+                fullRecipientPhone() {
+                    const digits = (this.recipientPhone || '').replace(/[^0-9]/g, '');
+                    if (! digits) { return ''; }
+                    const dial = (this.recipientDialCode || '').replace(/[^0-9+]/g, '');
+                    return dial && ! digits.startsWith(dial.replace('+', ''))
+                        ? dial + digits
+                        : '+' + digits;
+                },
+
+                // Bill payment account-id validation. Most billers accept 6-20
+                // characters of digits + optional separators. We don't restrict
+                // hyphens/spaces since some operators format their meter IDs.
+                accountIdValid() {
+                    if (! this.requiresAccountId) { return true; }
+                    const cleaned = (this.accountId || '').replace(/[^0-9A-Za-z]/g, '');
+                    return cleaned.length >= 4 && cleaned.length <= 30;
                 },
 
                 canAddToCart() {
@@ -804,7 +950,13 @@
                     if (this.customMode) {
                         // A custom amount must fall within the variable variant's range.
                         const value = Number(this.amount);
-                        return value >= this.customMin && value <= this.customMax;
+                        if (value < this.customMin || value > this.customMax) { return false; }
+                    }
+                    if (this.requiresRecipientPhone && ! this.recipientPhoneValid()) {
+                        return false;
+                    }
+                    if (this.requiresAccountId && ! this.accountIdValid()) {
+                        return false;
                     }
                     return true;
                 },
@@ -822,8 +974,18 @@
                         ? Number(this.amount) / (this.customRate || 1)
                         : null;
 
+                    // Per-item context: recipient phone (top-ups) or account
+                    // ID (bill payments). Persisted to cart→order metadata
+                    // and consumed by the fulfilment provider.
+                    let metadata = null;
+                    if (this.requiresRecipientPhone) {
+                        metadata = { recipient_phone: this.fullRecipientPhone() };
+                    } else if (this.requiresAccountId) {
+                        metadata = { account_id: (this.accountId || '').trim() };
+                    }
+
                     this.cartState = 'loading';
-                    const ok = await this.$store.cart.add(this.selectedVariantId, this.quantity || 1, requested);
+                    const ok = await this.$store.cart.add(this.selectedVariantId, this.quantity || 1, requested, metadata);
 
                     if (ok) {
                         // Hold the success cue briefly, then settle back to idle.

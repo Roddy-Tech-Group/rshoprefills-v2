@@ -264,9 +264,35 @@ class extends Component {
                                             'install' => is_scalar($payload['direct_install_url'] ?? null)
                                                 ? (string) $payload['direct_install_url']
                                                 : (is_scalar($esimManual['directInstallUrl'] ?? null) ? (string) $esimManual['directInstallUrl'] : null),
+                                            // Branded eSIMs Cloud sharing link — self-service portal
+                                            // where the customer monitors usage, re-installs, tops up.
+                                            'manage'  => is_scalar($payload['sharing_link'] ?? null)
+                                                ? (string) $payload['sharing_link']
+                                                : (is_scalar($esimManual['sharingLink'] ?? null) ? (string) $esimManual['sharingLink'] : null),
                                         ];
                                     }
-                                    if (! $esim && $cardCode === null && $cardPin === null) { $cardCode = $extractCode($item); }
+                                    // Mobile top-up confirmation: no code/PIN — the airtime is
+                                    // credited directly to the recipient's phone. We surface the
+                                    // number + a "Credited" confirmation tile instead.
+                                    $topup = null;
+                                    $topupPayload = (array) ($payload['topup'] ?? []);
+                                    $topupPhone   = is_scalar($payload['topup_recipient_phone'] ?? null)
+                                        ? (string) $payload['topup_recipient_phone']
+                                        : (is_scalar($topupPayload['recipient_phone'] ?? null) ? (string) $topupPayload['recipient_phone'] : null);
+                                    // Fall back to the metadata the buyer typed on the product page —
+                                    // works even when the provider hasn't echoed it yet.
+                                    if (! $topupPhone) {
+                                        $itemMeta = (array) ($item->metadata ?? []);
+                                        if (is_scalar($itemMeta['recipient_phone'] ?? null)) { $topupPhone = (string) $itemMeta['recipient_phone']; }
+                                    }
+                                    $isTopupCategory = ((string) ($snap['category']['slug'] ?? $item->category?->slug ?? '')) === 'mobile-airtime';
+                                    if (! $esim && ($isTopupCategory || $topupPhone)) {
+                                        $topup = [
+                                            'phone' => $topupPhone,
+                                            'operator' => $topupPayload['operator'] ?? null,
+                                        ];
+                                    }
+                                    if (! $esim && ! $topup && $cardCode === null && $cardPin === null) { $cardCode = $extractCode($item); }
                                     $redeemHtml = $snap['redeem_instructions'] ?? null;
                                     $termsHtml  = $snap['terms_and_conditions'] ?? null;
                                     // Apple gift cards: build the redeem deep-link so iPhone customers can
@@ -325,6 +351,25 @@ class extends Component {
                                                     Install on this iPhone
                                                 </a>
                                             @endif
+                                            @if ($esim['manage'])
+                                                {{-- Branded eSIMs Cloud portal — customer monitors usage,
+                                                     re-installs, and tops up on a RshopRefills-branded page. --}}
+                                                <a href="{{ $esim['manage'] }}" target="_blank" rel="noopener" class="flex items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.788m13.788 0c3.808 3.808 3.808 9.98 0 13.788M12 12h.008v.008H12V12z"/>
+                                                    </svg>
+                                                    Manage your eSIM
+                                                </a>
+                                            @endif
+                                            @if ($esim['iccid'] && $item->provider_name === 'airalo' && $item->fulfillment_status->value === 'fulfilled')
+                                                {{-- Native top-up — refill the same ICCID from the dashboard. --}}
+                                                <a href="{{ route('dashboard.esim.topup', $item) }}" wire:navigate class="flex items-center justify-center gap-2 rounded-[10px] bg-white px-4 py-3 text-sm font-semibold text-blue-600 ring-1 ring-blue-200 transition-colors hover:bg-blue-50 dark:bg-[#26416b] dark:text-blue-300 dark:ring-blue-400/40 dark:hover:bg-[#34507a]">
+                                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                    </svg>
+                                                    Top up this eSIM
+                                                </a>
+                                            @endif
                                             @foreach (array_filter(['SM-DP+' => $esim['lpa'], 'Code' => $esim['code'], 'ICCID' => $esim['iccid']]) as $credLabel => $credValue)
                                                 <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3" wire:key="esim-{{ $item->id }}-{{ $credLabel }}">
                                                     <span class="w-14 shrink-0 text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ $credLabel }}</span>
@@ -343,6 +388,41 @@ class extends Component {
                                                     </button>
                                                 </div>
                                             @endforeach
+                                        </div>
+                                    @elseif ($topup)
+                                        {{-- Mobile top-up — no code to copy; airtime lands on the
+                                             recipient phone. Tile confirms the number that was credited. --}}
+                                        <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3">
+                                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                                </svg>
+                                            </span>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Credited to</p>
+                                                @if ($topup['phone'])
+                                                    <p class="truncate text-base font-bold tabular-nums text-zinc-900">{{ $topup['phone'] }}</p>
+                                                @else
+                                                    <p class="text-sm text-zinc-600">Your phone number on file</p>
+                                                @endif
+                                                @if (! empty($topup['operator']))
+                                                    <p class="mt-0.5 truncate text-[11px] font-medium text-zinc-600">{{ $topup['operator'] }}</p>
+                                                @endif
+                                            </div>
+                                            @if ($topup['phone'])
+                                                <button
+                                                    type="button"
+                                                    x-data="{ copied: false }"
+                                                    @click="navigator.clipboard.writeText(@js($topup['phone'])); copied = true; setTimeout(() => copied = false, 1500)"
+                                                    class="shrink-0 text-zinc-400 transition-colors hover:text-blue-600"
+                                                    aria-label="Copy phone number"
+                                                >
+                                                    <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/>
+                                                    </svg>
+                                                    <span x-show="copied" x-cloak class="text-xs font-bold text-emerald-600">Copied</span>
+                                                </button>
+                                            @endif
                                         </div>
                                     @elseif ($cardCode || $cardPin)
                                         {{-- Gift card — code + PIN, each independently copyable. --}}

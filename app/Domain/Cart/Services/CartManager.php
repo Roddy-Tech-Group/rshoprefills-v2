@@ -39,10 +39,15 @@ class CartManager
 
     /**
      * Add an item to the cart.
+     *
+     * @param  array<string, mixed>|null  $metadata  Per-item context (recipient
+     *                                               phone for top-ups, delivery email for gift cards, etc.). Merged
+     *                                               into cart_items.metadata_snapshot; later copied onto the order
+     *                                               item at checkout so fulfilment providers can read it.
      */
-    public function addItem(Cart $cart, ProductVariant $variant, int $quantity, ?float $requestedValue = null): CartItem
+    public function addItem(Cart $cart, ProductVariant $variant, int $quantity, ?float $requestedValue = null, ?array $metadata = null): CartItem
     {
-        return DB::transaction(function () use ($cart, $variant, $quantity, $requestedValue) {
+        return DB::transaction(function () use ($cart, $variant, $quantity, $requestedValue, $metadata) {
             // 1. Validate addition
             $this->validationService->validateAddition($variant, $requestedValue);
 
@@ -65,6 +70,15 @@ class CartManager
                 $pricing['subtotal_snapshot'] = $requestedValue * $quantity; // Assuming 1:1 for simplicity if not scaled
             }
 
+            // Merge any incoming metadata over the snapshot we may already
+            // have stored on the cart row — newer values win so re-adding
+            // the same top-up with a corrected phone number replaces the
+            // earlier entry without losing other keys.
+            $mergedMeta = array_filter(array_merge(
+                (array) ($existingItem?->metadata_snapshot ?? []),
+                $metadata ?? [],
+            ), fn ($v) => $v !== null && $v !== '');
+
             if ($existingItem) {
                 // Update existing
                 $newQuantity = $existingItem->quantity + $quantity;
@@ -77,6 +91,7 @@ class CartManager
 
                 $existingItem->update(array_merge([
                     'quantity' => $newQuantity,
+                    'metadata_snapshot' => $mergedMeta ?: null,
                 ], $newPricing));
 
                 $item = $existingItem;
@@ -87,6 +102,7 @@ class CartManager
                     'product_variant_id' => $variant->id,
                     'quantity' => $quantity,
                     'display_currency' => $variant->currency ?? 'USD',
+                    'metadata_snapshot' => $mergedMeta ?: null,
                 ], $pricing));
             }
 

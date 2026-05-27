@@ -8,6 +8,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EmailPreviewController;
 use App\Http\Controllers\EsimStoreController;
+use App\Http\Controllers\EsimTopupController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
 use App\Http\Controllers\ThemeController;
@@ -351,6 +352,14 @@ Route::middleware(['auth'])->group(function () {
     Route::view('dashboard/kyc', 'dashboard.kyc')->name('dashboard.kyc');
 
     Volt::route('dashboard/orders', 'dashboard.orders')->name('dashboard.orders');
+
+    // Native eSIM top-up — refill an existing Airalo eSIM from the dashboard
+    // without leaving the site. The controller hits Airalo's /sims/{iccid}/topups
+    // for the available packages, debits the wallet on purchase, and dispatches
+    // the standard fulfilment job which routes to /orders/topups via the
+    // parent_iccid metadata flag.
+    Route::get('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'show'])->name('dashboard.esim.topup');
+    Route::post('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'purchase'])->name('dashboard.esim.topup.purchase');
 
     Volt::route('dashboard/transactions', 'dashboard.transactions')->name('dashboard.transactions');
 

@@ -28,6 +28,11 @@ return [
         'base_url' => env('AIRALO_BASE_URL', 'https://sandbox-partners-api.airalo.com/v2'),
         'client_id' => env('AIRALO_CLIENT_ID'),
         'client_secret' => env('AIRALO_CLIENT_SECRET'),
+        // Optional HMAC secret for webhook verification. Airalo only issues
+        // partners a client_id + client_secret, so leaving this null is the
+        // common case — the controller falls back to AIRALO_CLIENT_SECRET.
+        // Only set this if you're on a custom Airalo signing arrangement.
+        'webhook_secret' => env('AIRALO_WEBHOOK_SECRET'),
     ],
 
     'ses' => [
