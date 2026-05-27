@@ -77,6 +77,11 @@ class OrderService
             }
 
             $order->save();
+
+            // Dispatch rewards job if the order just transitioned to Completed
+            if ($order->wasChanged('order_status') && $order->order_status === OrderStatus::Completed) {
+                \App\Jobs\ProcessOrderRewardsJob::dispatch($order)->onQueue('rewards');
+            }
         });
     }
 }

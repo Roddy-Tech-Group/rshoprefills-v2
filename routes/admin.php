@@ -136,5 +136,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('metrics', [NotificationAdminApiController::class, 'metrics'])->name('metrics');
             Route::post('{id}/retry', [NotificationAdminApiController::class, 'retry'])->name('retry');
         });
+        // Admin Rewards API
+        Route::prefix('api/rewards')->name('api.rewards.')->group(function () {
+            Route::get('settings', [\App\Http\Controllers\Admin\AdminRewardSettingsController::class, 'index'])->name('settings.index');
+            Route::put('settings', [\App\Http\Controllers\Admin\AdminRewardSettingsController::class, 'update'])->name('settings.update');
+            Route::get('analytics/metrics', [\App\Http\Controllers\Admin\AdminRewardAnalyticsController::class, 'metrics'])->name('analytics.metrics');
+        });
     });
 });

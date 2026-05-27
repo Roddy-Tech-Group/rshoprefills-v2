@@ -420,6 +420,7 @@ document.addEventListener('alpine:init', () => {
             this.currency = data.currency || 'USD';
             this.currencySymbol = data.currency_symbol || '$';
             this.rate = data.rate || 1;
+            this.estimated_rcoin_reward = data.estimated_rcoin_reward || 0;
         },
 
         // True when the display currency differs from USD — only then does the UI

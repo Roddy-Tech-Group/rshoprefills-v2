@@ -169,6 +169,7 @@ class CartWebController extends Controller
             'rate' => (float) $rate->rate_per_usd,
             'subtotal_usd' => round($subtotalUsd, 2),
             'subtotal' => round($rate->convert($subtotalUsd), 2),
+            'estimated_rcoin_reward' => (int) ($totals['estimated_rcoin_reward'] ?? 0),
             'items' => $items,
         ]);
 
