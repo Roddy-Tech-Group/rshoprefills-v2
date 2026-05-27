@@ -926,7 +926,7 @@
         @endif
 
             <div class="flex min-h-full flex-col bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:px-10 lg:py-8 dark:bg-[#0c1a36]">
-                <div class="mx-auto w-full max-w-7xl flex-1">
+                <div class="w-full flex-1">
                     {{-- Suspension banner: visible on every dashboard page when the
                          account is suspended. Carries the admin-authored reason +
                          the Request Review button (idempotent — re-clicks are safe). --}}
@@ -940,9 +940,8 @@
                 </div>
 
                 {{-- Footer — Privacy Policy + version + copyright. Mirrors the
-                     admin layout. Full-width (no max-w cap) so the legal line
-                     sits flush with the page edges, not centred under the
-                     content max-width. `mt-auto` pins it to the bottom. --}}
+                     admin layout. Full-width so the legal line sits flush with
+                     the page edges. `mt-auto` pins it to the bottom. --}}
                 <footer class="mt-auto w-full pt-12 flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
                     <a href="{{ route('shop.privacy') }}" wire:navigate class="hover:text-zinc-900 dark:hover:text-white">Privacy Policy</a>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>

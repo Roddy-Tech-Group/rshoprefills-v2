@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Notification\Enums\DeliveryStatus;
 use App\Domain\Notification\Enums\NotificationChannel;
+use App\Domain\Shared\Enums\Currency;
+use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Wallet\Services\WalletService;
 use App\Http\Controllers\Controller;
 use App\Mail\AdminDirectMessageMail;
 use App\Models\Notification;
@@ -37,6 +40,104 @@ class AdminCustomerController extends Controller
         $user->update($validated);
 
         return back()->with('status', 'Customer details updated.');
+    }
+
+    /**
+     * Set a per-user Rcoin earnings multiplier. 1.00 = standard, 2.00 = 2×
+     * earner (influencer / power user), 0.50 = half earnings (flagged user).
+     * Applied by RewardEngine on both cashback AND referral credits - the
+     * multiplier is the same dial for both. Capped at 10× as a sanity guard.
+     */
+    public function setRcoinMultiplier(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'rcoin_multiplier' => ['required', 'numeric', 'min:0', 'max:10'],
+        ]);
+
+        $user->update(['rcoin_multiplier' => $validated['rcoin_multiplier']]);
+
+        return back()->with('status', "Rcoin multiplier set to {$validated['rcoin_multiplier']}×.");
+    }
+
+    /**
+     * Manually credit or debit any of a customer's wallets (Rcoin, USD, NGN,
+     * crypto - anything in Currency enum). Used for goodwill credits, fraud
+     * reversals, contest prizes, and refunds the finance team is processing
+     * out-of-band. Every adjustment writes a wallet_transactions row via
+     * WalletService with category=Adjustment so the admin who did it, when,
+     * and why are all auditable.
+     *
+     * Direction is explicit in the request (no signed amounts) - the UI
+     * sends separate Credit / Debit buttons so a typo in either direction
+     * isn't possible.
+     */
+    public function adjustWalletBalance(Request $request, User $user): RedirectResponse
+    {
+        // Build the allowed-currency list dynamically from the enum so this
+        // never goes stale when a new currency is added.
+        $allowedCurrencies = array_column(Currency::cases(), 'value');
+
+        $validated = $request->validate([
+            'currency' => ['required', 'string', Rule::in($allowedCurrencies)],
+            'direction' => ['required', 'in:credit,debit'],
+            'amount' => ['required', 'numeric', 'min:0.0001', 'max:1000000'],
+            'reason' => ['required', 'string', 'min:3', 'max:280'],
+        ]);
+
+        $currencyCase = Currency::from($validated['currency']);
+        $walletService = app(WalletService::class);
+        $wallet = $walletService->getOrCreateWallet($user, $currencyCase);
+
+        // Rcoin is integer-only; everything else permits decimals. Cast to
+        // the right shape so the ledger row stores a clean value.
+        $amount = $currencyCase === Currency::RCOIN
+            ? (int) $validated['amount']
+            : (float) $validated['amount'];
+
+        $adminId = (string) (auth()->guard('admin')->id() ?? 'system');
+        $description = "Admin adjustment ({$currencyCase->value}): {$validated['reason']}";
+        $metadata = [
+            'admin_id' => $adminId,
+            'reason' => $validated['reason'],
+            'kind' => $validated['direction'],
+            'currency' => $currencyCase->value,
+        ];
+
+        try {
+            if ($validated['direction'] === 'credit') {
+                $walletService->credit(
+                    wallet: $wallet,
+                    amount: $amount,
+                    category: TransactionCategory::Adjustment,
+                    description: $description,
+                    metadata: $metadata,
+                );
+            } else {
+                if ((float) $wallet->balance < $amount) {
+                    return back()->withErrors([
+                        'amount' => 'Customer only has '.number_format((float) $wallet->balance, $currencyCase === Currency::RCOIN ? 0 : 2)." {$currencyCase->value} - can't debit more than that.",
+                    ]);
+                }
+                $walletService->debit(
+                    wallet: $wallet,
+                    amount: $amount,
+                    category: TransactionCategory::Adjustment,
+                    description: $description,
+                    metadata: $metadata,
+                );
+            }
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['amount' => 'Adjustment failed. Check the logs.']);
+        }
+
+        $verb = $validated['direction'] === 'credit' ? 'Credited' : 'Debited';
+        $formatted = $currencyCase === Currency::RCOIN
+            ? number_format($amount)
+            : number_format($amount, 2);
+
+        return back()->with('status', "{$verb} {$formatted} {$currencyCase->value}.");
     }
 
     /**
@@ -104,7 +205,7 @@ class AdminCustomerController extends Controller
     }
 
     /**
-     * Set the customer's KYC status — `pending` (under review), `verified`, or
+     * Set the customer's KYC status - `pending` (under review), `verified`, or
      * `rejected`. Bypasses the formal KycSubmission review trail; use this for
      * out-of-band cases (proof held offline, manual fast-track) or to flip a
      * verified user back to pending while you investigate.
@@ -145,7 +246,7 @@ class AdminCustomerController extends Controller
     /**
      * Send a direct message to the customer. The dashboard notification (database
      * row) is the source of truth and saves first; the email is best-effort and
-     * its failure is logged but never propagated — a misconfigured mail driver
+     * its failure is logged but never propagated - a misconfigured mail driver
      * shouldn't 500 the admin's click. The type ('notification' or 'warning')
      * changes the tone + accent in both surfaces.
      */
@@ -160,7 +261,7 @@ class AdminCustomerController extends Controller
         $isWarning = $validated['type'] === 'warning';
         $title = $isWarning ? 'Account warning' : 'Message from RshopRefills';
 
-        // 1. Dashboard notification — always lands. We write directly to the
+        // 1. Dashboard notification - always lands. We write directly to the
         //    custom `notifications` table (App\Models\Notification) to match
         //    the project's DatabaseChannel pattern; Laravel's default Notifiable
         //    targets a different `data` JSON column that this table doesn't have.
@@ -189,7 +290,7 @@ class AdminCustomerController extends Controller
             'attempted_at' => now(),
         ]);
 
-        // 2. Email — best-effort. Sending the Mailable directly keeps a transport
+        // 2. Email - best-effort. Sending the Mailable directly keeps a transport
         //    failure from rolling back the database row above.
         $emailDelivered = true;
         try {
@@ -213,11 +314,11 @@ class AdminCustomerController extends Controller
             : 'Message sent to the customer.';
 
         if (! $emailDelivered) {
-            $status .= ' (Dashboard delivered; email could not be sent — check mail driver.)';
+            $status .= ' (Dashboard delivered; email could not be sent - check mail driver.)';
         }
 
         // Explicit redirect (not back()) so the browser's address bar ends up on
-        // the customer detail page rather than the POST endpoint — a refresh
+        // the customer detail page rather than the POST endpoint - a refresh
         // after submit would otherwise GET this URL and 405.
         return redirect()->route('admin.customer', $user)->with('status', $status);
     }

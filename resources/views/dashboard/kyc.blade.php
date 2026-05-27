@@ -1,19 +1,17 @@
 {{--
     Identity Verification (KYC) page — /dashboard/kyc.
 
-    Frontend only. The verification flow renders against placeholder state until the
-    backend KYC model ships. Backend hooks pending:
-      - $user->kyc_status   ('unsubmitted' | 'pending' | 'verified' | 'rejected')
-      - $user->email_verified_at  (already exists)
-      - POST handler for the submission form below
-        (fields: kyc_full_name, kyc_dob, kyc_country, kyc_document_type,
-         kyc_document_number, kyc_document_front, kyc_document_back, kyc_selfie)
-      - Transaction-limit enforcement keyed off kyc_status
+    Reads real customer state from users.kyc_status + users.email_verified_at.
+    Form submissions POST to KycController::store which creates a KycSubmission
+    row; admins review at /admin/kyc/... and flip the user's kyc_status.
 
     Verification model:
-      - Not verified           -> "Basic" badge        -> standard limits
-      - Email verified         -> "Email Verified" badge -> standard limits, unlocks Platinum tier
-      - ID (KYC) verified      -> "Verified" badge      -> raised limits, unlocks Diamond tier
+      - Not verified         → "Basic" badge          → standard limits
+      - Email verified       → "Email Verified" badge → standard limits, unlocks Platinum tier
+      - ID (KYC) verified    → "Verified" badge       → raised limits, unlocks Diamond tier
+
+    Transaction-limit ENFORCEMENT against $limits below is not wired yet —
+    the table is display copy until the limit middleware ships.
 --}}
 @php
     $user = auth()->user();

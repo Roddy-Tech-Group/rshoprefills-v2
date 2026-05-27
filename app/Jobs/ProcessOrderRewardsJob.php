@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Rewards\Services\RewardEngine;
 use App\Models\Order;
 use Illuminate\Bus\Queueable;
@@ -23,12 +24,18 @@ class ProcessOrderRewardsJob implements ShouldQueue
 
     /**
      * Execute the job.
+     *
+     * Fresh-loads the order so a delayed fraud-hold dispatch sees the latest
+     * status - if the order was refunded / cancelled during the hold window
+     * we skip the credit entirely. The serialised order on `$this->order`
+     * would otherwise be stale by the time the queue worker fires.
      */
     public function handle(RewardEngine $rewardEngine): void
     {
-        // Double-check order status just to be safe
-        if ($this->order->order_status === \App\Domain\Order\Enums\OrderStatus::Completed) {
-            $rewardEngine->processOrderRewards($this->order);
+        $fresh = Order::find($this->order->id);
+
+        if ($fresh && $fresh->order_status === OrderStatus::Completed) {
+            $rewardEngine->processOrderRewards($fresh);
         }
     }
 }

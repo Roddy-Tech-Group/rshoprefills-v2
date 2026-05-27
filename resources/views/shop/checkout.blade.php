@@ -39,8 +39,16 @@
     $fieldClass = 'mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
 
     $rcoinConfig = [
+        // Master kill-switch. When off the buyer sees no Rcoin earn lines and
+        // no redemption toggle - the programme is invisible storefront-side.
+        'enabled' => (bool) \App\Models\Setting::get('rcoin_enabled', true),
         'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
         'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+        // Redemption rules - checkout toggle reads these to decide whether to
+        // show the "Use Rcoin" switch and how many Rcoin can be applied.
+        'redemption_enabled' => (bool) \App\Models\Setting::get('redemption_enabled', true),
+        'redemption_min'     => (int) \App\Models\Setting::get('redemption_min_rcoin', 2000),
+        'redemption_max_pct' => (float) \App\Models\Setting::get('redemption_max_percentage', 30.0),
     ];
 @endphp
 
@@ -112,7 +120,7 @@
                                         </svg>
                                         <span x-text="item.recipient_phone"></span>
                                     </p>
-                                    <p class="mt-1 inline-flex items-center gap-1 text-xs text-zinc-600">
+                                    <p x-show="rcoinConfig.enabled" class="mt-1 inline-flex items-center gap-1 text-xs text-zinc-600">
                                         <span x-text="item.quantity"></span> x
                                         <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-3.5 w-3.5 object-contain">
                                         <span class="font-semibold text-zinc-900" x-text="Math.floor(((item.line_total_usd || 0) * (rcoinConfig.cashback_percentage / 100)) / rcoinConfig.usd_rate)"></span> Points
@@ -160,13 +168,67 @@
 
                     {{-- Points + total --}}
                     <div class="mt-4 space-y-2 border-t border-zinc-100 pt-4 text-sm">
-                        <div class="flex items-center justify-between">
+                        <div x-show="rcoinConfig.enabled" class="flex items-center justify-between">
                             <span class="inline-flex items-center gap-1.5 text-zinc-600">
                                 Points you earn
                                 <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain">
                             </span>
                             <span x-data="valueFlip()" x-effect="points(); flash()" class="inline-block font-bold text-zinc-900" x-text="points()">0</span>
                         </div>
+
+                        {{-- Rcoin redemption — three states (off / partial / full).
+                             Hidden when redemption is disabled, customer is a guest,
+                             or balance < min. Mode picker reveals when the box is
+                             ticked AND balance is enough to cover the whole order. --}}
+                        <div
+                            x-show="rcoinConfig.enabled && rcoinConfig.redemption_enabled && isLoggedIn && (walletBalances.RCOIN || 0) >= rcoinConfig.redemption_min"
+                            x-cloak
+                            class="rounded-[10px] border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-500/30 dark:bg-blue-500/10"
+                        >
+                            {{-- Hidden input — its value is whatever the user picked.
+                                 Empty string = off; '1' = partial; 'full' = entire bill.
+                                 Backend reads apply_rcoin === 'full' for the full path. --}}
+                            <input type="hidden" name="apply_rcoin" :value="applyRcoin" form="checkout-form">
+
+                            <label class="flex cursor-pointer items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    :checked="applyRcoin !== ''"
+                                    @change="applyRcoin = $event.target.checked ? '1' : ''"
+                                    class="mt-0.5 h-4 w-4 shrink-0 rounded text-blue-600 focus:ring-blue-500"
+                                >
+                                <span class="min-w-0 flex-1">
+                                    <span class="flex flex-wrap items-baseline justify-between gap-x-3">
+                                        <span class="text-sm font-bold text-zinc-900 dark:text-white">Use my Rcoin</span>
+                                        <span class="text-[11px] text-zinc-600 dark:text-zinc-400">
+                                            Balance: <span class="font-semibold tabular-nums text-zinc-900 dark:text-white" x-text="Number(walletBalances.RCOIN || 0).toLocaleString()"></span>
+                                        </span>
+                                    </span>
+                                    <span class="mt-0.5 block text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+                                        Apply up to <span class="font-semibold" x-text="rcoinConfig.redemption_max_pct + '%'"></span> of your order
+                                        — save up to
+                                        <span class="font-bold text-blue-700 dark:text-blue-300" x-text="'$' + (Math.min((walletBalances.RCOIN || 0) * rcoinConfig.usd_rate, ($store.cart.subtotalUsd || 0) * (rcoinConfig.redemption_max_pct / 100))).toFixed(2)"></span>
+                                        on this purchase.
+                                    </span>
+                                </span>
+                            </label>
+
+                            {{-- Mode picker — only when checked + balance ≥ order total.
+                                 Lets the user upgrade from "partial" to "pay full bill". --}}
+                            <div
+                                x-show="applyRcoin !== '' && (walletBalances.RCOIN || 0) * rcoinConfig.usd_rate >= ($store.cart.subtotalUsd || 0)"
+                                x-cloak
+                                class="mt-3 flex items-center gap-1 rounded-[10px] bg-white/70 p-1 dark:bg-white/5"
+                            >
+                                <button type="button" @click="applyRcoin = '1'" :class="applyRcoin === '1' ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-300'" class="flex-1 rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors">
+                                    Apply up to <span x-text="rcoinConfig.redemption_max_pct + '%'"></span>
+                                </button>
+                                <button type="button" @click="applyRcoin = 'full'" :class="applyRcoin === 'full' ? 'bg-blue-600 text-white' : 'text-zinc-700 dark:text-zinc-300'" class="flex-1 rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors">
+                                    Pay full bill
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="flex items-start justify-between border-t border-zinc-100 pt-2 text-base font-bold text-zinc-900">
                             <span>Total estimate</span>
                             <span class="text-right">
@@ -177,8 +239,11 @@
                     </div>
                 </section>
 
-                {{-- ─── RIGHT: Select payment method ─── --}}
-                <form method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-6">
+                {{-- ─── RIGHT: Select payment method.
+                     `id="checkout-form"` so the Rcoin redemption checkbox in
+                     the left column can post into this form via its
+                     `form="checkout-form"` attribute. --}}
+                <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-6">
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
@@ -782,6 +847,15 @@
                 cryptoRates: cryptoRates || {},
                 walletBalances: walletBalances || {},
                 isLoggedIn: isLoggedIn || false,
+
+                // Rcoin redemption state — three values:
+                //   ''     = off (default)
+                //   '1'    = partial, capped at redemption_max_percentage
+                //   'full' = pay the entire order with Rcoin (rewards-page
+                //            convert flow). Only enabled when balance × rate
+                //            ≥ order total.
+                // CheckoutService reads `apply_rcoin` and branches accordingly.
+                applyRcoin: '',
 
                 allMethods: [
                     { key: 'card', label: 'Card', desc: 'Visa, Mastercard', icon: '/assets/credit%20card%20payment.png' },

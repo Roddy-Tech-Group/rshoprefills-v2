@@ -409,6 +409,9 @@
                         <a href="{{ route('admin.content.press') }}" class="{{ $subItem($isCurrent('admin.content.press')) }}">Press Articles</a>
                         <a href="{{ route('admin.content.reviews') }}" class="{{ $subItem($isCurrent('admin.content.reviews')) }}">Reviews</a>
                         <a href="{{ route('admin.content.faqs') }}" class="{{ $subItem($isCurrent('admin.content.faqs')) }}">FAQs</a>
+                        <a href="{{ route('admin.content.rewards') }}" class="{{ $subItem($isCurrent('admin.content.rewards')) }}">Rcoin Rewards</a>
+                        <a href="{{ route('admin.content.rewards.analytics') }}" class="{{ $subItem($isCurrent('admin.content.rewards.analytics')) }}">Rcoin Analytics</a>
+                        <a href="{{ route('admin.content.rewards.withdrawals') }}" class="{{ $subItem($isCurrent('admin.content.rewards.withdrawals')) }}">Rcoin Withdrawals</a>
                     </div>
                 </div>
 

@@ -1,6 +1,7 @@
 @php
-    // Earn Points — marketing page for the Rcoin rewards programme. Dark-mode safe:
+    // Earn Points - marketing page for the Rcoin rewards programme. Dark-mode safe:
     // bg-white/bg-blue-50 remap to navy in dark; bg-blue-600 stays blue.
+    $rcoinEnabled = (bool) \App\Models\Setting::get('rcoin_enabled', true);
     $ways = [
         ['title' => 'Shop and earn', 'desc' => 'Earn Rcoin automatically on every purchase, from gift cards and eSIMs to top-ups, bills and travel.', 'path' => 'M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z'],
         ['title' => 'Refer your friends', 'desc' => 'Share your referral code. When friends join and shop, you both get rewarded.', 'path' => 'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z'],
@@ -9,6 +10,25 @@
 @endphp
 
 <x-layouts.app.header :title="'Earn Points | RshopRefills'">
+
+    @unless ($rcoinEnabled)
+        {{-- Engine is off. Show a single hero explaining the programme is
+             paused and let the page end early so we don't promise rewards
+             that won't be paid. Existing balances stay spendable from the
+             Rewards dashboard. --}}
+        <section class="border-b border-zinc-100 bg-blue-50">
+            <div class="mx-auto w-full max-w-[1140px] px-4 py-14 text-center sm:px-6 sm:py-20">
+                <span class="inline-flex items-center gap-2 rounded-[5px] bg-amber-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700">Paused</span>
+                <h1 class="mt-5 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">Rewards are currently paused</h1>
+                <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base">
+                    The Rcoin earning programme is temporarily off. Any Rcoin already in your wallet stays yours and can still be used at checkout when the programme resumes.
+                </p>
+                <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                    <a href="{{ route('home') }}" class="inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700">Back to home</a>
+                </div>
+            </div>
+        </section>
+    @else
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -66,4 +86,5 @@
         </div>
     </section>
 
+    @endunless
 </x-layouts.app.header>
