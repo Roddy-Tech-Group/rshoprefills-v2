@@ -102,6 +102,7 @@
                 <ul class="mt-4 space-y-2.5 text-base">
                     <li><a href="{{ route('shop.about') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">About us</a></li>
                     <li><a href="{{ route('shop.blog') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Blog</a></li>
+                    <li><a href="{{ route('shop.reviews') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Reviews</a></li>
                     <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Careers</a></li>
                     <li><a href="{{ route('shop.press') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Press &amp; Media</a></li>
                     <li>
