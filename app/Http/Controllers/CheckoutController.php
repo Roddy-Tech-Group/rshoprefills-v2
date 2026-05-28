@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
 use App\Domain\Fraud\Services\FraudDetectionService;
+use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Http\Resources\PaymentSessionResource;
 use App\Models\Order;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -31,10 +33,23 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'delivery_email' => ['required', 'email'],
             'payment_method' => ['required', 'in:card,mobile_money,crypto,wallet,bank_transfer,apple_pay'],
+            'coupon_code' => ['nullable', 'string', 'max:64'],
         ]);
 
         $user = $request->user();
         abort_unless($user, 403);
+
+        // Optional hard-gate: when the compliance toggle is ON, the buyer must
+        // have a verified email address before they can pay. Soft by default
+        // so the storefront stays browseable without verification friction.
+        if (Setting::get('require_email_verified_for_checkout', false) && ! $user->hasVerifiedEmail()) {
+            $msg = 'Please verify your email address before completing checkout. Check your inbox for the verification link.';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => $msg, 'redirect' => route('verification.notice')], 403);
+            }
+
+            return redirect()->route('verification.notice')->with('checkout_status', $msg);
+        }
 
         $cart = $this->cartManager->resolveCart($user->id);
         $cart->load('items.product', 'items.variant');
@@ -101,13 +116,25 @@ class CheckoutController extends Controller
                 displayCurrency: $displayCurrency,
                 deliveryEmail: $data['delivery_email'],
                 // Three states for Rcoin redemption:
-                //   - 'full' → pay the entire order with Rcoin (rewards-page convert flow)
-                //   - true   → standard partial redemption capped at redemption_max_percentage
-                //   - false  → no Rcoin
-                applyRcoin: $request->input('apply_rcoin') === 'full' ? 'full' : $request->boolean('apply_rcoin')
+                //   - 'full' -> pay the entire order with Rcoin (rewards-page convert flow)
+                //   - true   -> standard partial redemption capped at redemption_max_percentage
+                //   - false  -> no Rcoin
+                applyRcoin: $request->input('apply_rcoin') === 'full' ? 'full' : $request->boolean('apply_rcoin'),
+                couponCode: $data['coupon_code'] ?? null,
             );
 
             $fraudService->recordCheckout($user, $request->ip());
+        } catch (InvalidCouponException $e) {
+            // Coupon error - surface the customer-safe message verbatim so the
+            // buyer sees "That coupon code is not valid" instead of a generic
+            // checkout failure.
+            $message = $e->getMessage();
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return redirect()->route('shop.checkout')->with('checkout_status', $message);
         } catch (WalletOnHoldException|InsufficientBalanceException $e) {
             // Customer-facing wallet errors carry their own polished message —
             // surface them verbatim so the user sees the "wallet on hold /

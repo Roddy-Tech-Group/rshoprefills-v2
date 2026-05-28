@@ -5,6 +5,7 @@ namespace App\Domain\Order\Services;
 use App\Domain\Fulfillment\Enums\FulfillmentStatus;
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Order\Events\OrderPlaced;
+use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Providers\WalletPaymentProvider;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
@@ -14,6 +15,7 @@ use App\Domain\Shared\Enums\Currency;
 use App\Domain\Wallet\Services\WalletService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Models\Cart;
+use App\Models\Coupon;
 use App\Models\CurrencyRate;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -38,7 +40,7 @@ class CheckoutService
      *
      * @throws \Exception
      */
-    public function placeOrder(User $user, Cart $cart, string $paymentMethod, string $displayCurrency, ?string $deliveryEmail = null, bool|string $applyRcoin = false): Order
+    public function placeOrder(User $user, Cart $cart, string $paymentMethod, string $displayCurrency, ?string $deliveryEmail = null, bool|string $applyRcoin = false, ?string $couponCode = null): Order
     {
         // 1. Recalculate and validate cart items/prices (in raw USD)
         $validatedTotals = $this->orderValidationService->validateForCheckout($cart);
@@ -64,11 +66,48 @@ class CheckoutService
         //    in step 5 throws (encryption key, bad currency, network), we want
         //    the cart to stay intact so the customer can retry without losing
         //    their items. Cart deletion now lives at the end, after init succeeds.
-        $order = DB::transaction(function () use ($user, $cart, $paymentMethod, $displayCurrency, $validatedTotals, $orderNumber, $deliveryEmail, $exchangeRate, $applyRcoin) {
+        $order = DB::transaction(function () use ($user, $cart, $paymentMethod, $displayCurrency, $validatedTotals, $orderNumber, $deliveryEmail, $exchangeRate, $applyRcoin, $couponCode) {
 
             // Re-lock the cart to avoid race conditions
             $lockedCart = Cart::where('id', $cart->id)->lockForUpdate()->firstOrFail();
             $lockedCart->load('items.product', 'items.variant');
+
+            // Coupon redemption. Resolved BEFORE Rcoin so the customer's wallet
+            // redemption is calculated against the discounted total. Coupons are
+            // per-variant so the matching cart item is what carries the discount.
+            $couponId = null;
+            $couponCodeApplied = null;
+            $couponDiscountUsd = 0.0;
+            $couponModel = null;
+
+            if ($couponCode !== null && $couponCode !== '') {
+                $normalizedCode = Str::upper(trim($couponCode));
+                $couponModel = Coupon::where('code', $normalizedCode)->lockForUpdate()->first();
+
+                if ($couponModel === null) {
+                    throw InvalidCouponException::unknown($normalizedCode);
+                }
+                if (! $couponModel->isRedeemable()) {
+                    throw InvalidCouponException::notRedeemable($normalizedCode);
+                }
+
+                $matchingItem = $lockedCart->items->firstWhere('product_variant_id', $couponModel->product_variant_id);
+                if ($matchingItem === null) {
+                    throw InvalidCouponException::notInCart($normalizedCode);
+                }
+
+                // Discount is applied per-unit then scaled by quantity. subtotal_snapshot
+                // is the line total (unit x qty) so divide back to a unit price first.
+                $unitPriceUsd = (float) $matchingItem->subtotal_snapshot / max(1, $matchingItem->quantity);
+                $discountedUnit = $couponModel->applyTo($unitPriceUsd);
+                $couponDiscountUsd = round(($unitPriceUsd - $discountedUnit) * $matchingItem->quantity, 2);
+
+                if ($couponDiscountUsd > 0) {
+                    $validatedTotals['total'] = max(0, $validatedTotals['total'] - $couponDiscountUsd);
+                    $couponId = $couponModel->id;
+                    $couponCodeApplied = $couponModel->code;
+                }
+            }
 
             $rcoinApplied = 0;
             $rcoinDiscountUsd = 0.0;
@@ -134,6 +173,9 @@ class CheckoutService
                     'settlement_total_usd' => $validatedTotals['total'],
                     'rcoin_applied' => $rcoinApplied,
                     'rcoin_discount_usd' => $rcoinDiscountUsd,
+                    'coupon_id' => $couponId,
+                    'coupon_code' => $couponCodeApplied,
+                    'coupon_discount_usd' => $couponDiscountUsd,
                 ],
             ]);
 
@@ -187,6 +229,12 @@ class CheckoutService
                 $walletService = app(WalletService::class);
                 $wallet = $walletService->getOrCreateWallet($user, Currency::RCOIN);
                 $walletService->lockFunds($wallet, $rcoinApplied);
+            }
+
+            // Increment the coupon's redemption counter inside the same lock so
+            // a max_uses cap can't be exceeded under concurrent checkouts.
+            if ($couponModel !== null && $couponId !== null) {
+                $couponModel->increment('used_count');
             }
 
             return $order;
