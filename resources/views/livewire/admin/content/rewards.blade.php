@@ -66,7 +66,11 @@ class extends Component {
                 ['key' => 'withdrawal_min_rcoin',         'label' => 'Min Rcoin to withdraw',       'type' => 'integer', 'help' => 'Floor on a single withdrawal request.', 'suffix' => 'RCOIN', 'min' => '0'],
                 ['key' => 'withdrawal_minimum_usd',       'label' => 'Min USD value to withdraw',   'type' => 'float',   'help' => 'Belt-and-braces floor expressed in USD - protects against rate drift bypassing the Rcoin floor.', 'suffix' => 'USD', 'step' => '0.01', 'min' => '0'],
                 ['key' => 'withdrawal_fee_percentage',    'label' => 'Withdrawal fee',              'type' => 'float',   'help' => 'Optional fee deducted from each withdrawal.', 'suffix' => '%', 'step' => '0.1', 'min' => '0'],
-                ['key' => 'withdrawal_conversion_rate',   'label' => 'Withdrawal USD rate',         'type' => 'float',   'help' => 'Rcoin → USD rate applied at withdrawal time. Usually matches the global Rcoin rate but can be set lower to incentivise on-site spending.', 'suffix' => 'USD', 'step' => '0.0001', 'min' => '0'],
+                ['key' => 'withdrawal_conversion_rate',   'label' => 'Withdrawal USD rate',         'type' => 'float',   'help' => 'Rcoin -> USD rate applied at withdrawal time. Usually matches the global Rcoin rate but can be set lower to incentivise on-site spending.', 'suffix' => 'USD', 'step' => '0.0001', 'min' => '0'],
+            ],
+            'Compliance & Security' => [
+                ['key' => 'require_email_verified_for_checkout', 'label' => 'Require verified email at checkout', 'type' => 'boolean', 'help' => 'Block checkout until the buyer has clicked the email verification link. Soft-default (OFF) keeps the storefront friction-free; flip ON when fraud or chargebacks justify the extra step.'],
+                ['key' => 'require_kyc_for_withdrawal',          'label' => 'Require KYC for withdrawals',        'type' => 'boolean', 'help' => 'Block Rcoin withdrawal requests until the customer has completed and been approved for identity verification. Flip ON when compliance / regulatory exposure justifies the friction.'],
             ],
         ];
     }
