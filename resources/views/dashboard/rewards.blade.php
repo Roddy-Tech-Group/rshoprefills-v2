@@ -64,8 +64,14 @@
         : 100;
 
     // ── Convert / withdraw availability ──
+    // KYC hard-gate is opt-in via the compliance setting; when ON, even a
+    // sufficient balance can't unlock the withdraw button until the customer
+    // is KYC-verified. The dashboard surfaces the reason inline (see below).
+    $requireKycForWithdrawal = (bool) Setting::get('require_kyc_for_withdrawal', false);
+    $kycVerified = strtolower((string) ($user->kyc_status ?? '')) === 'verified';
+    $kycBlocksWithdrawal = $requireKycForWithdrawal && ! $kycVerified;
     $canConvert  = $convertEnabled && $rcoinBalance >= $convertThreshold;
-    $canWithdraw = $rcoinBalance >= $withdrawThreshold;
+    $canWithdraw = $rcoinBalance >= $withdrawThreshold && ! $kycBlocksWithdrawal;
     $convertProgress  = min(100, round(($rcoinBalance / max(1, $convertThreshold)) * 100, 1));
     $withdrawProgress = min(100, round(($rcoinBalance / max(1, $withdrawThreshold)) * 100, 1));
     // Convertible amount in USD given the current balance - what the user
@@ -296,12 +302,19 @@
                         </form>
                     @else
                         <div class="mt-auto pt-4">
-                            <button type="button" disabled class="w-full cursor-not-allowed rounded-[10px] bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
-                                {{ number_format($withdrawThreshold - $rcoinBalance) }} more Rcoin to unlock
-                            </button>
-                            <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
-                                <div class="h-full rounded-full bg-emerald-600" style="width: {{ $withdrawProgress }}%;"></div>
-                            </div>
+                            @if ($kycBlocksWithdrawal)
+                                <a href="{{ route('dashboard.kyc') }}" wire:navigate class="block w-full rounded-[10px] bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-700 ring-1 ring-amber-200 transition-colors hover:bg-amber-100">
+                                    Verify your identity to unlock withdrawals
+                                </a>
+                                <p class="mt-2 text-center text-[11px] text-zinc-500">KYC is required for withdrawals.</p>
+                            @else
+                                <button type="button" disabled class="w-full cursor-not-allowed rounded-[10px] bg-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-500">
+                                    {{ number_format($withdrawThreshold - $rcoinBalance) }} more Rcoin to unlock
+                                </button>
+                                <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200">
+                                    <div class="h-full rounded-full bg-emerald-600" style="width: {{ $withdrawProgress }}%;"></div>
+                                </div>
+                            @endif
                         </div>
                     @endif
                 </div>

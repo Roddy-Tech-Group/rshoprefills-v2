@@ -39,6 +39,13 @@ class RcoinWithdrawalController extends Controller
             return back()->withErrors(['withdraw_amount' => 'Rcoin withdrawals are currently disabled.']);
         }
 
+        // Optional compliance gate - finance/legal can require KYC before
+        // letting funds leave the platform. Soft by default; flip the setting
+        // ON when regulatory exposure justifies the extra friction.
+        if (Setting::get('require_kyc_for_withdrawal', false) && strtolower((string) $user->kyc_status) !== 'verified') {
+            return back()->withErrors(['withdraw_amount' => 'Please complete identity verification (KYC) before requesting a withdrawal.']);
+        }
+
         $minRcoin = (int) Setting::get('withdrawal_min_rcoin', 2000);
         $minUsd = (float) Setting::get('withdrawal_minimum_usd', 10.00);
         $feePct = (float) Setting::get('withdrawal_fee_percentage', 0);

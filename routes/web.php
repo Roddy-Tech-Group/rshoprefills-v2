@@ -261,6 +261,9 @@ Route::get('press/{slug}', [PressController::class, 'show'])->name('shop.press.s
 Route::get('blog', [BlogController::class, 'index'])->name('shop.blog');
 Route::get('blog/{slug}', [BlogController::class, 'show'])->name('shop.blog.show');
 
+// Reviews - curated customer reviews + Trustpilot review-collector CTA.
+Route::view('reviews', 'shop.reviews')->name('shop.reviews');
+
 // Terms of Service.
 Route::view('terms', 'shop.terms')->name('shop.terms');
 
