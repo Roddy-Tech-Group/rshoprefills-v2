@@ -72,4 +72,28 @@ return [
         'ipn_secret' => env('NOWPAYMENTS_IPN_SECRET'),
     ],
 
+    'trustpilot' => [
+        // Public IDs from the Trustpilot widget snippet (Share & promote -> Widgets).
+        // Safe to commit defaults since the same values would render in HTML anyway.
+        'business_unit_id' => env('TRUSTPILOT_BUSINESS_UNIT_ID', '6a09a40f1ccabec3e9c1b491'),
+        'review_collector_template_id' => env('TRUSTPILOT_REVIEW_COLLECTOR_TEMPLATE_ID', '56278e9abfbbba0bdcd568bc'),
+        'review_collector_token' => env('TRUSTPILOT_REVIEW_COLLECTOR_TOKEN', 'cfe1b67e-5fc4-4d20-9666-cc4ca9b37b87'),
+        'profile_url' => env('TRUSTPILOT_PROFILE_URL', 'https://www.trustpilot.com/review/rshoprefill.com'),
+        'short_link' => env('TRUSTPILOT_SHORT_LINK', 'https://trstp.lt/WMNWs7ZKQx'),
+        'locale' => env('TRUSTPILOT_LOCALE', 'en-US'),
+    ],
+
+    'google_reviews' => [
+        // Direct review URL from Google Business Profile -> "Get more reviews".
+        // Used for the "Review us on Google" CTA button on /reviews.
+        'review_url' => env('GOOGLE_REVIEW_URL', 'https://g.page/r/CZeYrL5rBXvuEAE/review'),
+        // QR code rendered next to the CTA so desktop visitors can scan with
+        // their phone. File lives in public/assets.
+        'qr_asset' => env('GOOGLE_REVIEW_QR_ASSET', 'google reviews qr cord.png'),
+        // Optional: Place ID + Places API key for fetching live Google reviews
+        // (paths 2/3 in the integration plan). Leave null until set up.
+        'place_id' => env('GOOGLE_PLACE_ID'),
+        'places_api_key' => env('GOOGLE_PLACES_API_KEY'),
+    ],
+
 ];
