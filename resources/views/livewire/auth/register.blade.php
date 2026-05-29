@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
+use App\Domain\Security\Services\TurnstileService;
+use App\Support\TaggedCache;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -20,11 +23,15 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public string $password_confirmation = '';
 
+    public ?string $turnstileToken = null;
+
     /**
      * Handle an incoming registration request.
      */
     public function register(): void
     {
+        $this->validateTurnstile();
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
@@ -70,6 +77,41 @@ new #[Layout('components.layouts.auth')] class extends Component {
         Auth::login($user);
 
         $this->redirect(route('dashboard', absolute: false), navigate: true);
+    }
+
+    protected function validateTurnstile(): void
+    {
+        $enforceAuth = config('services.turnstile.enforce_auth', true);
+        if (! $enforceAuth) {
+            return;
+        }
+
+        $service = TurnstileService::make();
+        $result = $service->validateToken($this->turnstileToken, request()->ip());
+
+        if ($result['status'] === TurnstileService::STATUS_SUCCESS || $result['status'] === TurnstileService::STATUS_BYPASSED) {
+            return;
+        }
+
+        if ($result['status'] === TurnstileService::STATUS_TIMEOUT) {
+            throw ValidationException::withMessages([
+                'turnstileToken' => 'Security verification service is temporarily unavailable. Please try again later.',
+            ]);
+        }
+
+        $this->recordTurnstileFailure();
+
+        throw ValidationException::withMessages([
+            'turnstileToken' => 'Security verification failed. Please refresh the page and try again.',
+        ]);
+    }
+
+    private function recordTurnstileFailure(): void
+    {
+        $ip = request()->ip();
+        $key = "turnstile_failures_{$ip}";
+        $failures = TaggedCache::for(['security'])->get($key, 0);
+        TaggedCache::for(['security'])->put($key, $failures + 1, now()->addMinutes(15));
     }
 }; ?>
 
@@ -232,6 +274,18 @@ new #[Layout('components.layouts.auth')] class extends Component {
             </div>
 
             {{-- Submit --}}
+            <div wire:ignore class="mb-2">
+                @if(config('services.turnstile.enabled') && config('services.turnstile.enforce_auth'))
+                    <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-callback="onTurnstileSuccessRegister" data-theme="light"></div>
+                    <script>
+                        function onTurnstileSuccessRegister(token) {
+                            @this.set('turnstileToken', token);
+                        }
+                    </script>
+                @endif
+            </div>
+            @error('turnstileToken') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
+
             <button
                 type="submit"
                 class="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"

@@ -59,6 +59,34 @@ class CheckoutController extends Controller
                 ->with('checkout_status', 'Your cart is empty.');
         }
 
+        $fraudService = app(FraudDetectionService::class);
+        $cartTotals = app(CartPricingService::class)->calculateCartTotals($cart->items);
+        $amount = $cartTotals['total'];
+
+        // Turnstile Validation
+        if (config('services.turnstile.enabled') && config('services.turnstile.enforce_checkout', true)) {
+            $service = \App\Domain\Security\Services\TurnstileService::make();
+            $result = $service->validateToken($request->input('cf-turnstile-response'), $request->ip());
+
+            if ($result['status'] === \App\Domain\Security\Services\TurnstileService::STATUS_TIMEOUT) {
+                // Fail OPEN conditionally: block if fraud risk is elevated
+                if ($fraudService->isSuspiciousCheckout($user, $amount, $request->ip())) {
+                    $msg = 'Security verification service is temporarily unavailable and transaction risk is elevated. Please try again later.';
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['message' => $msg], 403);
+                    }
+                    return redirect()->route('shop.checkout')->with('checkout_status', $msg);
+                }
+            } elseif ($result['status'] !== \App\Domain\Security\Services\TurnstileService::STATUS_SUCCESS && $result['status'] !== \App\Domain\Security\Services\TurnstileService::STATUS_BYPASSED) {
+                $fraudService->recordTurnstileFailure($request->ip());
+                $msg = 'Security verification failed. Please refresh the page and try again.';
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['message' => $msg], 422);
+                }
+                return redirect()->route('shop.checkout')->with('checkout_status', $msg);
+            }
+        }
+
         // Display currency comes from the customer's locale (hidden field on the
         // checkout form). Settlement is always USD; this is presentation only.
         $displayCurrency = strtoupper((string) $request->input('currency', 'USD'));
@@ -94,10 +122,6 @@ class CheckoutController extends Controller
             'crypto' => 'crypto',
             default => 'flutterwave',
         };
-
-        $fraudService = app(FraudDetectionService::class);
-        $cartTotals = app(CartPricingService::class)->calculateCartTotals($cart->items);
-        $amount = $cartTotals['total'];
 
         if ($fraudService->isSuspiciousCheckout($user, $amount, $request->ip())) {
             $msg = 'Your checkout attempt was flagged by our security systems. Please contact support.';
