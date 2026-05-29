@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureAccountActive;
 use App\Http\Middleware\EnsureAccountNotSuspended;
 use App\Http\Middleware\ResolveRegion;
 use App\Http\Middleware\TraceRequestMiddleware;
+use App\Http\Middleware\VerifyTurnstile;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // wallet funding). Suspended users stay logged in so they can
             // see the banner + request a review - only the action is refused.
             'not-suspended' => EnsureAccountNotSuspended::class,
+            'verify-turnstile' => VerifyTurnstile::class,
         ]);
 
         $middleware->append(TraceRequestMiddleware::class);

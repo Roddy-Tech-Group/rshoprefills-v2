@@ -96,4 +96,13 @@ return [
         'places_api_key' => env('GOOGLE_PLACES_API_KEY'),
     ],
 
+    'turnstile' => [
+        'enabled' => env('TURNSTILE_ENABLED', false),
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'enforce_checkout' => env('TURNSTILE_ENFORCE_CHECKOUT', true),
+        'enforce_auth' => env('TURNSTILE_ENFORCE_AUTH', true),
+        'bypass_local' => env('TURNSTILE_BYPASS_LOCAL', true),
+    ],
+
 ];

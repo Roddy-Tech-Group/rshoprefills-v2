@@ -526,6 +526,14 @@
                         </p>
                     </div>
 
+                    {{-- Turnstile --}}
+                    @if(config('services.turnstile.enabled') && config('services.turnstile.enforce_checkout', true))
+                        <div wire:ignore class="mt-4">
+                            <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-action="checkout" data-theme="light"></div>
+                            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                        </div>
+                    @endif
+
                     {{-- Continue --}}
                     @auth
                         <button type="submit" :disabled="!canContinue() || submitting"
