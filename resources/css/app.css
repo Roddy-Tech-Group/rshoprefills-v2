@@ -1,3 +1,4 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';
 
@@ -9,7 +10,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Satoshi-Regular', 'Satoshi', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -26,6 +27,31 @@
     --color-accent: var(--color-neutral-800);
     --color-accent-content: var(--color-neutral-800);
     --color-accent-foreground: var(--color-white);
+
+    /* Brand. Single source of truth for the primary action / link color. Tailwind's blue-600 is #2563eb,
+       but RshopRefills brand is the saturated #0044FF used on the hero glow and CTAs. The two are visually
+       close at a glance, so most components can keep using `text-blue-600`/`bg-blue-600` and only swap to
+       `text-brand`/`bg-brand` where we want the exact brand hue (hero, marketing CTAs, primary buttons). */
+    --color-brand: #0044FF;
+    --color-brand-hover: #0036cc;
+    --color-brand-50: #ebf0ff;
+    --color-brand-100: #d6e0ff;
+
+    /* Canonical radii — pick the named size in markup, not arbitrary px values. */
+    --radius-sm:  0.5rem;     /* 8px  — pills, badges, tiny chips */
+    --radius-md:  0.75rem;    /* 12px — inputs, small buttons */
+    --radius-lg:  1rem;       /* 16px — list rows, dropdown panels */
+    --radius-xl:  1.25rem;    /* 20px — primary cards (table containers, kpi cards) */
+    --radius-2xl: 1.5rem;     /* 24px — hero cards, sheet panels */
+    --radius-3xl: 1.75rem;    /* 28px — large surfaces, mobile sheets */
+
+    /* Canonical shadows — graduated by elevation; pair with ring-1 ring-zinc-100 for crispness. */
+    --shadow-card:   0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 1px 0 rgb(15 23 42 / 0.03);
+    --shadow-card-md: 0 4px 12px -2px rgb(15 23 42 / 0.06), 0 2px 4px -1px rgb(15 23 42 / 0.04);
+    --shadow-card-lg: 0 12px 28px -8px rgb(15 23 42 / 0.12), 0 4px 8px -2px rgb(15 23 42 / 0.06);
+
+    /* Standard transition. ~180ms with the Material-emphasis curve — fast but not abrupt. */
+    --ease-emphasis: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer theme {
@@ -47,8 +73,271 @@
     }
 }
 
+/* Scrollbars. Only the page (document) shows one — a thin, modern, rounded
+   bar. Every in-page scroll container (dropdown panels, scroll areas, modals)
+   shows NO scrollbar at all; the content still scrolls by wheel/touch/drag. */
+
+/* Default: hide every scrollbar. */
+* {
+    scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+    display: none;
+}
+
+/* Exception: the page itself keeps a modern slim scrollbar. */
+html,
+body {
+    scrollbar-width: thin;
+    scrollbar-color: #c4cad6 transparent;
+}
+
+/* Active sidebar item in dark mode — black tile with white icons.
+   The class lives on every active <a>/<button> in admin + customer sidebars
+   (see navItem/navItemClass closures in the layout views). In light mode the
+   active state is the soft blue tint shipped by Tailwind utilities; in dark
+   mode the dark:bg-zinc-900 utility wins. This rule whitens the icon — both
+   <img>-loaded SVGs (filter invert) and inline <svg> with stroke=currentColor
+   (text color cascades). Works in both expanded and collapsed sidebar. */
+html.dark .nav-item-active img {
+    filter: brightness(0) invert(1) !important;
+}
+html.dark .nav-item-active svg {
+    color: #ffffff;
+}
+/* Mobile-only horizontal-overflow lock. Stops dropdowns / off-canvas panels
+   / decorative gradients from pushing the viewport wider than the screen.
+   Disabled at lg+ because the collapsed-sidebar flyout popups deliberately
+   render past the sidebar's right edge into the page area — clipping the
+   body there would hide them. `overflow-x: clip` doesn't create a new
+   scroll container, so sticky positioning keeps working on mobile. */
+@media (max-width: 1023px) {
+    html,
+    body {
+        overflow-x: clip;
+    }
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: block;
+    width: 10px;
+}
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+    background: transparent;
+}
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+    background-color: #c4cad6;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+    background-color: #a0a8b8;
+}
+
 [data-flux-field] {
     @apply grid gap-2;
+}
+
+/* Gentle floating motion for illustrations (empty cart, etc.). Use with the .animate-float class. */
+@keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+}
+.animate-float {
+    animation: floatY 3s ease-in-out infinite;
+    will-change: transform;
+}
+
+/* 3D pointer-tracked tilt for gift-card tiles. cardTilt() in app.js sets the
+   --tilt-* / --glare-* custom properties on hover; .card-3d-scene supplies the
+   perspective on the link wrapper. Snappy: the card follows the pointer with no
+   transform transition while tracked, then eases flat in ~280ms on leave. */
+.card-3d-scene {
+    perspective: 820px;
+}
+.card-3d {
+    transform:
+        rotateX(var(--tilt-rx, 0deg))
+        rotateY(var(--tilt-ry, 0deg))
+        translateY(var(--tilt-lift, 0px))
+        scale(var(--tilt-scale, 1));
+    transition: transform 280ms var(--ease-emphasis), box-shadow 280ms var(--ease-emphasis);
+}
+.card-3d.is-tilting {
+    /* While the pointer is tracked, the card follows it instantly — only the
+       shadow keeps a transition. will-change is scoped here (not the base
+       class) so a long grid of cards doesn't hold idle compositor layers. */
+    transition: box-shadow 280ms var(--ease-emphasis);
+    will-change: transform;
+}
+/* Pointer dot removed — the .card-3d-glare span stays in the DOM (cardTilt()
+   still writes --glare-x/y harmlessly), but renders nothing. */
+.card-3d-glare {
+    display: none;
+}
+
+/* "Add to cart" success cue — a brief, confident bounce when the item lands. */
+@keyframes cartPop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(0.96); }
+    70%  { transform: scale(1.04); }
+    100% { transform: scale(1); }
+}
+.animate-cart-pop {
+    animation: cartPop 420ms var(--ease-emphasis);
+}
+
+/* Dynamic value flipper — a quick roll-and-fade when a displayed number changes
+   (denomination, quantity, estimated price, points). Re-triggered by valueFlip(). */
+@keyframes valueFlip {
+    0%   { opacity: 0; transform: translateY(0.4em); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+.value-flip {
+    animation: valueFlip 260ms var(--ease-emphasis);
+}
+
+/* eSIM connectivity pulse — concentric rings radiate outward from a signal
+   source, like a network broadcasting. Place .signal-ring elements (absolutely
+   positioned, same size) inside a relative container; the stagger delays make
+   them ripple one after another. */
+@keyframes signalPulse {
+    0%   { transform: scale(0.55); opacity: 0.65; }
+    80%  { opacity: 0; }
+    100% { transform: scale(2.4); opacity: 0; }
+}
+.signal-ring {
+    animation: signalPulse 2.6s ease-out infinite;
+}
+.signal-ring:nth-child(2) { animation-delay: 0.85s; }
+.signal-ring:nth-child(3) { animation-delay: 1.7s; }
+
+/* Trust strip — serious glass pill. No halo, no breath: a frosted surface
+   that lets whatever sits behind it (page bg, gradient, image) bleed through
+   the heavy backdrop blur. The inset highlight at the top + the dark inset
+   shadow at the bottom give it the convex "glass dome" reflection so it
+   reads as a physical surface, not just transparency. */
+.trust-glow {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.32) 100%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.06),
+        0 10px 30px -10px rgba(15, 23, 42, 0.18);
+}
+html.dark .trust-glow {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.04) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+        0 12px 40px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* Honour reduced-motion: drop the tilt, glare, pop, flip and signal pulse. */
+@media (prefers-reduced-motion: reduce) {
+    .card-3d {
+        transform: none !important;
+    }
+    .card-3d-glare {
+        display: none;
+    }
+    .animate-cart-pop,
+    .value-flip,
+    .signal-ring {
+        animation: none !important;
+    }
+}
+
+/* Livewire wire:navigate top progress bar (NProgress) — taller + brand blue. */
+#nprogress .bar {
+    background: #0044FF !important;
+    height: 3px !important;
+}
+#nprogress .peg {
+    box-shadow: 0 0 10px #0044FF, 0 0 5px #0044FF !important;
+}
+#nprogress .spinner-icon {
+    border-top-color: #0044FF !important;
+    border-left-color: #0044FF !important;
+}
+
+/* Keep Alpine x-cloak elements hidden until Alpine initialises them, so
+   skeleton/overlay markup never flashes on first paint. */
+[x-cloak] {
+    display: none !important;
+}
+
+/* Skeleton shimmer — apply to any element with .skeleton.
+   Uses a transform-animated pseudo-element so the animation stays on the compositor layer
+   (no paint/layout work per frame). Pairs with Tailwind utilities (h-X, w-X, rounded-X). */
+@keyframes skeletonShimmer {
+    100% { transform: translateX(100%); }
+}
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: #d4d4d4;
+}
+.skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+    will-change: transform;
+}
+/* Slightly more visible variant for cards on a tinted page background. */
+.skeleton-dark {
+    background-color: #d4dbe6;
+}
+
+/* Premium card surface — soft shadow + crisp 1px ring + smooth hover lift.
+   Use on cards that should feel "raised but quiet". Pair with `rounded-xl` or `rounded-2xl`. */
+.card-surface {
+    background-color: #ffffff;
+    box-shadow: var(--shadow-card);
+    --tw-ring-color: rgb(244 244 245 / 1);  /* zinc-100 */
+    box-shadow: var(--shadow-card), 0 0 0 1px var(--tw-ring-color);
+    transition: box-shadow 200ms var(--ease-emphasis), transform 200ms var(--ease-emphasis);
+}
+.card-surface-interactive:hover {
+    box-shadow: var(--shadow-card-md), 0 0 0 1px rgb(228 231 236 / 1);
+    transform: translateY(-1px);
+}
+
+/* Focus ring that respects the brand color without depending on Tailwind utilities each time. */
+.focus-brand:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(0 68 255 / 0.18);
+}
+
+/* Improve muted text legibility — slightly higher contrast than Tailwind's text-zinc-500
+   on light backgrounds without being heavy. Use sparingly where text-zinc-500 reads too washed out. */
+.text-muted {
+    color: #5b6472;
+}
+
+/* Staggered entrance for grouped skeletons.
+   Add `.skeleton-stagger` on a wrapper and `style="--i: N"` on each child to cascade reveals.
+   `animation-fill-mode: backwards` keeps the child invisible until its delay fires. */
+@keyframes skeletonReveal {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.skeleton-stagger > * {
+    animation: skeletonReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+}
+/* Subtle stagger variant for tighter grids (cards under 60px tall). */
+.skeleton-stagger-fast > * {
+    animation: skeletonReveal 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i, 0) * 35ms);
 }
 
 [data-flux-label] {
@@ -64,3 +353,241 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* ============================================================
+   DARK MODE
+   Applied when <html> carries `.dark` (set by the theme engine in
+   partials/theme-engine.blade.php — light / dark / auto).
+
+   The app is built entirely in light-mode Tailwind utilities, so
+   dark mode is a palette remap: the light surface/text utilities
+   are overridden under `.dark` to a navy-anchored dark ramp.
+   `.dark .bg-white` (specificity 0,2,0) wins over the `.bg-white`
+   utility, so no Blade markup needs to change.
+
+   Card surface = navy (#0c1a2e). Page sits darker so cards lift.
+   Intentionally-dark utilities (bg-zinc-800/900, bg-blue-950/900,
+   text-white) are deliberately NOT remapped — dark bars, hero
+   panels and button labels keep working as-is. Brand blue is kept.
+
+   Refine per-section by adding real `dark:` classes where a spot
+   needs something other than this global remap.
+   ============================================================ */
+.dark {
+    color-scheme: dark;
+}
+
+/* Surfaces — light backgrounds resolve to the navy dark ramp. */
+/* Deep Charcoal Blue palette. One base (#0c1a36) for chrome + page, one step
+   up (#162a4a) for cards/panels, a touch lighter again (#1d3252) for elevated
+   surfaces, and a dim grey-blue (#26416b) for chips / hovers. Sub-base (#070f1c)
+   is reserved for the deepest seam (sidebar hover, recessed inputs). */
+.dark .bg-white          { background-color: #162a4a; }   /* cards / panels */
+.dark .bg-zinc-50        { background-color: #1d3252; }   /* slightly elevated */
+.dark .bg-zinc-100       { background-color: #0c1a36; }   /* page-level surface */
+.dark .bg-zinc-200       { background-color: #26416b; }   /* chips, hover */
+.dark .bg-\[\#eff6ff\]   { background-color: #0c1a36; }   /* admin / customer page bg */
+/* The customer dashboard puts `flux:main` at `lg:bg-white` so the curve element
+   on top of it has something to round against. `bg-white` becomes `#0c1a2e` in
+   dark mode (the sidebar colour), which made the curved corner reveal a wedge
+   of sidebar-colour next to the slightly-darker content area. Override the
+   flux:main bg on desktop in dark mode to match the content's dark bg so the
+   curve is invisible while the sidebar↔content contrast is preserved. */
+@media (min-width: 64rem) {
+    .dark .lg\:bg-white { background-color: #070f1c; }
+}
+.dark .bg-\[\#f9fafb\]   { background-color: #070f1c; }
+.dark .bg-\[\#ededee\]   { background-color: #101f33; }   /* product hero plate */
+
+/* Glass surfaces — semi-transparent white panels. */
+.dark .bg-white\/40 { background-color: rgb(12 26 46 / 0.55); }
+.dark .bg-white\/70 { background-color: rgb(12 26 46 / 0.80); }
+.dark .bg-white\/80 { background-color: rgb(12 26 46 / 0.86); }
+.dark .bg-white\/85 { background-color: rgb(12 26 46 / 0.88); }
+.dark .bg-white\/90 { background-color: rgb(12 26 46 / 0.92); }
+.dark .bg-white\/95 { background-color: rgb(12 26 46 / 0.95); }
+
+/* Blue tints used as subtle highlights / selected states. */
+.dark .bg-blue-50  { background-color: #15273f; }
+.dark .bg-blue-100 { background-color: #1d3252; }
+
+/* Text — dark text resolves to near-white; muted greys lighten. */
+.dark .text-black,
+.dark .text-zinc-950,
+.dark .text-zinc-900 { color: #f4f4f5; }
+.dark .text-zinc-800 { color: #e6e6e8; }
+.dark .text-zinc-700 { color: #d6d6da; }
+.dark .text-zinc-600 { color: #c8c8cd; }   /* muted body text — bumped from #a6a6ad for legibility on the dark navy backgrounds */
+.dark .text-zinc-500 { color: #b5b5bb; }   /* bumped from #909098 */
+
+/* Borders, rings and dividers. */
+.dark .border-zinc-100,
+.dark .border-zinc-200 { border-color: #24364f; }
+.dark .ring-zinc-100,
+.dark .ring-zinc-200   { --tw-ring-color: #24364f; }
+.dark .divide-zinc-100 > *,
+.dark .divide-zinc-200 > * { border-color: #24364f; }
+/* Heavier borders (inputs) — a touch lighter so the field reads as a distinct
+   control on the navy surface, not a bright grey line. */
+.dark .border-zinc-300,
+.dark .border-zinc-400,
+.dark .border-zinc-500 { border-color: #36496b; }
+.dark .hover\:border-zinc-500:hover { border-color: #44597d; }
+
+/* Nav search box — a white resting border in dark mode so the field stands
+   out against the navy chrome. Focus still shows the blue border + ring
+   (the `border-zinc-400` class is only present while the field is closed). */
+.dark form[role="search"].border-zinc-400 { border-color: #ffffff; }
+
+/* Form controls — text colour for every input; a dark surface only for inputs
+   that actually paint their own background. Inputs marked `bg-transparent`
+   (e.g. the nav search field, which sits inside a styled form) are skipped so
+   they show the parent surface instead of a box of their own. */
+.dark input,
+.dark textarea,
+.dark select { color: #f4f4f5; }
+.dark input:not(.bg-transparent),
+.dark textarea:not(.bg-transparent),
+.dark select:not(.bg-transparent) { background-color: #0f1d31; }
+.dark input::placeholder,
+.dark textarea::placeholder { color: #8a93a3; }
+
+/* Skeleton shimmer reads as a lighter block on the dark surface. */
+.dark .skeleton { background-color: #1c2c44; }
+.dark .skeleton::after {
+    background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.12) 50%, transparent 100%);
+}
+
+/* Hover / focus background variants — the bare `.dark .bg-*` rules above do NOT
+   match `hover:bg-*` / `focus:bg-*` utility classes, so a hovered row, list
+   item or sidebar link would flash a bright light colour. Remap the common
+   ones to a subtle hover-lift (slightly lighter than the dark surface). */
+.dark .hover\:bg-white:hover,
+.dark .hover\:bg-zinc-50:hover,
+.dark .hover\:bg-zinc-100:hover  { background-color: #16273d; }
+.dark .hover\:bg-zinc-200:hover  { background-color: #1f3048; }
+.dark .hover\:bg-zinc-300:hover  { background-color: #243752; }
+.dark .hover\:bg-blue-50:hover   { background-color: #1f3354; }
+.dark .hover\:bg-blue-100:hover  { background-color: #274069; }
+.dark .hover\:bg-white\/70:hover { background-color: rgb(22 39 61 / 0.9); }
+.dark .focus\:bg-white:focus,
+.dark .focus\:bg-zinc-50:focus,
+.dark .focus\:bg-zinc-100:focus  { background-color: #16273d; }
+
+/* Blue accent text lightens so links / selected labels stay legible on dark. */
+.dark .text-blue-600,
+.dark .text-blue-700 { color: #60a5fa; }
+
+/* Dark icon SVGs (rendered as <img>) are dark artwork — invert every one to
+   light so they read on the dark surface. !important beats inline filters.
+   Opt a specific image out with class="no-dark-invert" if it is a colour
+   illustration that must keep its own hues. */
+.dark img[src$=".svg"]:not(.no-dark-invert) {
+    filter: brightness(0) invert(0.92) !important;
+}
+/* Crypto coin icons are colour brand marks (BTC orange, ETH, SOL, USDT) — the
+   blanket invert above would flatten them to white blobs. Keep their own hues.
+   Equal specificity to the rule above, declared after it, so this wins. */
+.dark img[src$=".svg"][src*="BTC"],
+.dark img[src$=".svg"][src*="ETH"],
+.dark img[src$=".svg"][src*="SOLANA"],
+.dark img[src$=".svg"][src*="USDT"] {
+    filter: none !important;
+}
+/* Country flag SVGs (Ghana, Nigeria, Cameroon/XAF) are coloured artwork — the
+   blanket invert would flatten them to white blobs the same way crypto coins
+   would. Keep their own hues so the wallet / profile / footer flags render
+   correctly in dark mode. Flag PNGs from flagcdn (.png) are unaffected by the
+   SVG rule above, so they don't need an exception. */
+.dark img[src$=".svg"][src*="GH.svg"],
+.dark img[src$=".svg"][src*="NGN.svg"],
+.dark img[src$=".svg"][src*="XAF.svg"] {
+    filter: none !important;
+}
+/* PNG coin icons (BNB, LTC) can't be recoloured by CSS — sit them on a light
+   disc so a dark logo stays visible against the dark surface. */
+.dark img[src*="BNB.png"],
+.dark img[src*="LTC.png"] {
+    background-color: #f4f4f5;
+    border-radius: 9999px;
+}
+/* referals.png is a monochrome dark icon PNG — the SVG invert above misses
+   PNGs, so invert it to white explicitly for the dark surface. */
+.dark img[src*="referals.png"] {
+    filter: brightness(0) invert(1) !important;
+}
+
+/* ------------------------------------------------------------
+   THEME-STATIC — elements that must look IDENTICAL in light and
+   dark mode. Mark the element (or its wrapper) with `theme-static`.
+   The order delivery card is the reason: resellers screenshot it to
+   hand to their own customers, so it must not shift with the
+   reseller's theme. These rules re-pin the LIGHT palette inside a
+   theme-static element, out-specifying the .dark remap above.
+   ------------------------------------------------------------ */
+.dark .theme-static.bg-white,
+.dark .theme-static .bg-white      { background-color: #ffffff; }
+.dark .theme-static.bg-zinc-50,
+.dark .theme-static .bg-zinc-50    { background-color: #fafafa; }
+.dark .theme-static.bg-zinc-100,
+.dark .theme-static .bg-zinc-100   { background-color: #f5f5f5; }
+.dark .theme-static.bg-zinc-200,
+.dark .theme-static .bg-zinc-200   { background-color: #e5e5e5; }
+.dark .theme-static .text-black,
+.dark .theme-static .text-zinc-900 { color: #171717; }
+.dark .theme-static .text-zinc-800 { color: #262626; }
+.dark .theme-static .text-zinc-700 { color: #404040; }
+.dark .theme-static .text-zinc-600 { color: #525252; }
+.dark .theme-static .text-zinc-500 { color: #737373; }
+.dark .theme-static .text-zinc-400 { color: #a3a3a3; }
+.dark .theme-static .text-blue-600,
+.dark .theme-static .text-blue-700 { color: #2563eb; }
+.dark .theme-static.border-zinc-100,
+.dark .theme-static .border-zinc-100 { border-color: #f5f5f5; }
+.dark .theme-static.border-zinc-200,
+.dark .theme-static .border-zinc-200 { border-color: #e5e5e5; }
+.dark .theme-static .ring-zinc-100 { --tw-ring-color: #f5f5f5; }
+.dark .theme-static .ring-zinc-200 { --tw-ring-color: #e5e5e5; }
+/* Icons inside a theme-static element keep their real artwork (no invert). */
+.dark .theme-static img[src$=".svg"] { filter: none !important; }
+
+/* ------------------------------------------------------------
+   COMPACT MODE — toggled by the customer-dashboard's Customize
+   menu (writes `compact` onto <html>; persisted in localStorage
+   via the dashPrefs Alpine store in app.js).
+
+   Scope is intentionally narrow: only the dashboard's main content
+   area (`.bg-[#eff6ff]`). We don't tighten the sidebar, the modals,
+   or any storefront page — just the cards inside the dashboard.
+   ------------------------------------------------------------ */
+.compact .bg-\[\#eff6ff\] .gap-6     { gap: 1rem; }
+.compact .bg-\[\#eff6ff\] .gap-5     { gap: 0.75rem; }
+.compact .bg-\[\#eff6ff\] .p-5       { padding: 0.875rem; }
+.compact .bg-\[\#eff6ff\] .p-6       { padding: 1rem; }
+.compact .bg-\[\#eff6ff\] .sm\:p-6   { padding: 1rem; }
+.compact .bg-\[\#eff6ff\] .lg\:py-8  { padding-top: 1rem; padding-bottom: 1rem; }
+.compact .bg-\[\#eff6ff\] .py-6      { padding-top: 1rem; padding-bottom: 1rem; }
+
+/* ------------------------------------------------------------
+   ApexCharts glass tooltip overrides
+   ------------------------------------------------------------
+   ApexCharts wraps `tooltip.custom` HTML in its own `.apexcharts-tooltip`
+   container that ships with a solid background + border + shadow. Those
+   defaults sit ON TOP of our frosted-glass inner panel and ruin the effect,
+   so we strip the wrapper back to a pure positioning shell. The chart
+   factory (`buildGlassTooltipRenderer` in app.js) handles all visuals
+   (blur, panel bg, border, shadow) inside the rendered HTML itself. */
+.apexcharts-tooltip.apexcharts-theme-light,
+.apexcharts-tooltip.apexcharts-theme-dark {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+.apexcharts-tooltip .apexcharts-tooltip-title {
+    display: none !important;
+}
+.apexcharts-tooltip .apexcharts-tooltip-series-group {
+    background: transparent !important;
+    padding: 0 !important;
+}

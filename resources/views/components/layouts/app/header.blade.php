@@ -1,124 +1,91 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
-        @include('partials.head')
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="csrf-token" content="{{ csrf_token() }}" />
+        <title>{{ $title ?? 'RshopRefills' }}</title>
+        <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
+
+        <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
+        <link rel="apple-touch-icon" href="{{ asset('assets/PWAicon.png') }}">
+
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700|urbanist:800" rel="stylesheet" />
+
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        {{-- Page transition — the incoming page slides up from the bottom on navigation. --}}
+        <style>
+            main { transition: opacity 700ms ease, transform 1200ms cubic-bezier(0.22, 1, 0.36, 1); }
+            main.page-entering { opacity: 0; transform: translateY(40px); transition: none; }
+
+            /* Every page rises into view on load; page-entering handles SPA swaps. */
+            @keyframes pageRise { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+            main { animation: pageRise 600ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+            /* Modals/dialogs rise instead of flashing open. */
+            @keyframes modalRise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+            [role="dialog"]:not(.modal-norise) { animation: modalRise 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+            @media (prefers-reduced-motion: reduce) {
+                main, [role="dialog"] { animation: none; }
+            }
+        </style>
+
+        {{-- Theme engine (light / dark / system) — same as admin/dashboard so dark mode works storefront-wide. --}}
+        @include('partials.theme-engine')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:header container class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+    <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased">
 
-            <a href="{{ route('dashboard') }}" class="ml-2 mr-5 flex items-center space-x-2 lg:ml-0" wire:navigate>
-                <x-app-logo class="size-8" href="#"></x-app-logo>
-            </a>
+        {{-- Translation engine (auto-detect + manual switching from the locale modal) --}}
+        @include('partials.translate-engine')
 
-            <flux:navbar class="-mb-px max-lg:hidden">
-                <flux:navbar.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
-                    Dashboard
-                </flux:navbar.item>
-            </flux:navbar>
+        <div
+            x-data="storefrontLocale()"
+            x-init="init()"
+            @keydown.escape.window="localeModalOpen = false"
+            x-effect="document.body.classList.toggle('overflow-hidden', localeModalOpen)"
+            class="flex flex-1 flex-col"
+        >
+            <header class="sticky top-0 z-50 w-full">
+                <x-nav.top-bar />
+                <x-nav.main-nav />
+            </header>
 
-            <flux:spacer />
+            <main class="flex-1 bg-zinc-100">
+                {{ $slot }}
+            </main>
 
-            <flux:navbar class="mr-1.5 space-x-0.5 py-0!">
-                <flux:tooltip content="Search" position="bottom">
-                    <flux:navbar.item class="!h-10 [&>div>svg]:size-5" icon="magnifying-glass" href="#" label="Search" />
-                </flux:tooltip>
-                <flux:tooltip content="Repository" position="bottom">
-                    <flux:navbar.item
-                        class="h-10 max-lg:hidden [&>div>svg]:size-5"
-                        icon="folder-git-2"
-                        href="https://github.com/laravel/livewire-starter-kit"
-                        target="_blank"
-                        label="Repository"
-                    />
-                </flux:tooltip>
-                <flux:tooltip content="Documentation" position="bottom">
-                    <flux:navbar.item
-                        class="h-10 max-lg:hidden [&>div>svg]:size-5"
-                        icon="book-open-text"
-                        href="https://laravel.com/docs/starter-kits"
-                        target="_blank"
-                        label="Documentation"
-                    />
-                </flux:tooltip>
-            </flux:navbar>
+            <x-footer />
 
-            <!-- Desktop User Menu -->
-            <flux:dropdown position="top" align="end">
-                <flux:profile
-                    class="cursor-pointer"
-                    :initials="auth()->user()->initials()"
-                />
+            <x-back-to-top />
 
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        <div class="p-0 text-sm font-normal">
-                            <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                                <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                    <span
-                                        class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white"
-                                    >
-                                        {{ auth()->user()->initials() }}
-                                    </span>
-                                </span>
+            <x-cookie-consent />
 
-                                <div class="grid flex-1 text-left text-sm leading-tight">
-                                    <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                    <span class="truncate text-xs">{{ auth()->user()->email }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </flux:menu.radio.group>
+            <x-nav.locale-modal />
 
-                    <flux:menu.separator />
-
-                    <flux:menu.radio.group>
-                        <flux:menu.item href="/settings/profile" icon="cog" wire:navigate>Settings</flux:menu.item>
-                    </flux:menu.radio.group>
-
-                    <flux:menu.separator />
-
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
-                            {{ __('Log Out') }}
-                        </flux:menu.item>
-                    </form>
-                </flux:menu>
-            </flux:dropdown>
-        </flux:header>
-
-        <!-- Mobile Menu -->
-        <flux:sidebar stashable sticky class="lg:hidden border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
-
-            <a href="{{ route('dashboard') }}" class="ml-1 flex items-center space-x-2" wire:navigate>
-                <x-app-logo class="size-8" href="#"></x-app-logo>
-            </a>
-
-            <flux:navlist variant="outline">
-                <flux:navlist.group heading="Platform">
-                    <flux:navlist.item icon="layout-grid" href="{{ route('dashboard') }}" :current="request()->routeIs('dashboard')" wire:navigate>
-                        Dashboard
-                    </flux:navlist.item>
-                </flux:navlist.group>
-            </flux:navlist>
-
-            <flux:spacer />
-
-            <flux:navlist variant="outline">
-                <flux:navlist.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    Repository
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="book-open-text" href="https://laravel.com/docs/starter-kits" target="_blank">
-                    Documentation
-                </flux:navlist.item>
-            </flux:navlist>
-        </flux:sidebar>
-
-        {{ $slot }}
+            {{-- Global confirm modal — intercepts any form/button with `data-confirm`. --}}
+            <x-confirm-modal />
+        </div>
 
         @fluxScripts
+
+        <script>
+            (function () {
+                let firstLoad = true;
+                function playPageTransition() {
+                    const main = document.querySelector('main');
+                    if (! main) return;
+                    main.classList.add('page-entering');
+                    void main.offsetWidth; // commit the offset before transitioning back
+                    main.classList.remove('page-entering');
+                }
+                document.addEventListener('livewire:navigated', () => {
+                    if (firstLoad) { firstLoad = false; return; }
+                    playPageTransition();
+                });
+            })();
+        </script>
     </body>
 </html>

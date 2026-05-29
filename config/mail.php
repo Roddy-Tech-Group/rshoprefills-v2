@@ -113,4 +113,16 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Email Address
+    |--------------------------------------------------------------------------
+    |
+    | Used by the system to send critical alerts, such as low API balances,
+    | fraud detection triggers, and other critical system notifications.
+    |
+    */
+
+    'admin_address' => env('ADMIN_ALERT_EMAIL', 'admin@roddytechgroup.com'),
+
 ];

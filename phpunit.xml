@@ -29,5 +29,9 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="FLW_PUBLIC_KEY" value="FLW_PUB_KEY_MOCK"/>
+        <env name="FLW_SECRET_KEY" value="FLW_SECRET_KEY_MOCK"/>
+        <env name="FLW_WEBHOOK_HASH" value="FLW_WEBHOOK_HASH_MOCK"/>
+        <env name="ZENDIT_API_KEY" value="ZENDIT_API_KEY_MOCK"/>
     </php>
 </phpunit>

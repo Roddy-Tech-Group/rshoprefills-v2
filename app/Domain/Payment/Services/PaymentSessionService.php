@@ -1,0 +1,268 @@
+<?php
+
+namespace App\Domain\Payment\Services;
+
+use App\Domain\Payment\Events\PaymentSessionConfirmed;
+use App\Domain\Payment\Events\PaymentSessionCreated;
+use App\Domain\Payment\Events\PaymentSessionExpired;
+use App\Domain\Payment\Events\PaymentSessionFailed;
+use App\Models\Cart;
+use App\Models\Order;
+use App\Models\PaymentAttempt;
+use App\Models\PaymentSession;
+use App\Models\WalletFunding;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+class PaymentSessionService
+{
+    /**
+     * Create a payment session for an Order checkout attempt.
+     */
+    public function createForOrder(Order $order, PaymentAttempt $attempt, array $providerInitData): PaymentSession
+    {
+        return DB::transaction(function () use ($order, $attempt, $providerInitData) {
+            $expiresAt = $attempt->expires_at ?? now()->addMinutes(15);
+
+            $session = PaymentSession::create([
+                'payment_attempt_id' => $attempt->id,
+                'provider' => $attempt->gateway,
+                'session_type' => $this->resolveSessionType($attempt->gateway),
+                'status' => 'pending',
+                'client_reference' => 'SESS_'.Str::random(40),
+                'provider_reference' => $providerInitData['gateway_reference'] ?? $attempt->gateway_reference,
+                'provider_transaction_id' => null,
+                'amount' => $attempt->amount,
+                'currency' => $attempt->currency,
+                'display_currency' => $order->display_currency,
+                'exchange_rate_snapshot' => $attempt->exchange_rate_snapshot ?? 1.0000,
+                'payment_payload' => $providerInitData,
+                'checkout_context' => [
+                    'order_number' => $order->order_number,
+                    'items_count' => $order->items()->count(),
+                ],
+                'customer_email' => $order->user->email,
+                'customer_ip' => request()->ip(),
+                'device_metadata' => [
+                    'user_agent' => request()->userAgent(),
+                ],
+                'expires_at' => $expiresAt,
+            ]);
+
+            $initialStatus = match ($session->session_type) {
+                'wallet' => $order->user->hasTransactionPin() ? 'awaiting_customer_action' : 'awaiting_payment',
+                'crypto' => 'awaiting_transfer',
+                default => 'awaiting_method',
+            };
+            $session->transitionTo($initialStatus);
+
+            event(new PaymentSessionCreated($session));
+
+            return $session;
+        });
+    }
+
+    /**
+     * Create a payment session for a Wallet Deposit funding attempt.
+     */
+    public function createForWalletFunding(WalletFunding $funding, PaymentAttempt $attempt, array $providerInitData): PaymentSession
+    {
+        return DB::transaction(function () use ($funding, $attempt, $providerInitData) {
+            $expiresAt = $attempt->expires_at ?? now()->addMinutes(15);
+
+            $session = PaymentSession::create([
+                'payment_attempt_id' => $attempt->id,
+                'provider' => $attempt->gateway,
+                'session_type' => $this->resolveSessionType($attempt->gateway),
+                'status' => 'pending',
+                'client_reference' => 'SESS_'.Str::random(40),
+                'provider_reference' => $providerInitData['gateway_reference'] ?? $attempt->gateway_reference,
+                'provider_transaction_id' => null,
+                'amount' => $attempt->amount,
+                'currency' => $attempt->currency,
+                'display_currency' => $funding->currency->value,
+                'exchange_rate_snapshot' => $attempt->exchange_rate_snapshot ?? 1.0000,
+                'payment_payload' => $providerInitData,
+                'checkout_context' => [
+                    'wallet_funding_reference' => $funding->reference,
+                ],
+                'customer_email' => $funding->user->email,
+                'customer_ip' => request()->ip(),
+                'device_metadata' => [
+                    'user_agent' => request()->userAgent(),
+                ],
+                'expires_at' => $expiresAt,
+            ]);
+
+            $initialStatus = match ($session->session_type) {
+                'wallet' => 'awaiting_payment',
+                'crypto' => 'awaiting_transfer',
+                default => 'awaiting_method',
+            };
+            $session->transitionTo($initialStatus);
+
+            event(new PaymentSessionCreated($session));
+
+            return $session;
+        });
+    }
+
+    /**
+     * Transition payment session to confirmed.
+     */
+    public function confirmSession(PaymentSession $session, ?array $payload = null): void
+    {
+        DB::transaction(function () use ($session, $payload) {
+            $session = PaymentSession::where('id', $session->id)->lockForUpdate()->firstOrFail();
+
+            if ($session->status === 'confirmed') {
+                return;
+            }
+
+            if (in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
+                $session->transitionTo('processing');
+            }
+
+            $session->transitionTo('confirmed');
+
+            if ($payload) {
+                $session->metadata = array_merge($session->metadata ?? [], ['confirmation_payload' => $payload]);
+                if (isset($payload['transaction_id'])) {
+                    $session->provider_transaction_id = $payload['transaction_id'];
+                }
+            }
+
+            $session->save();
+
+            // Clear the customer's cart only now that payment is confirmed. This
+            // is deferred from checkout init so a failed/abandoned card or crypto
+            // payment keeps the cart intact for retry. (No-op for wallet funding,
+            // which has no order/cart.)
+            $cartId = $session->paymentAttempt?->order?->cart_id;
+            if ($cartId) {
+                $cart = Cart::find($cartId);
+                if ($cart) {
+                    $cart->items()->delete();
+                    $cart->update(['status' => 'abandoned']);
+                }
+            }
+
+            // Deduct RCOIN if it was locked during checkout
+            $order = $session->paymentAttempt?->order;
+            if ($order) {
+                $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
+                if ($rcoinApplied > 0) {
+                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    
+                    // Unlock and debit
+                    $walletService->unlockFunds($wallet, $rcoinApplied);
+                    $walletService->debit(
+                        wallet: $wallet,
+                        amount: $rcoinApplied,
+                        category: \App\Domain\Shared\Enums\TransactionCategory::RewardRedemption,
+                        description: "RCOIN redeemed on Order #{$order->order_number}",
+                        metadata: [
+                            'order_id' => $order->id,
+                            'rcoin_discount_usd' => $order->metadata['rcoin_discount_usd'] ?? 0,
+                        ]
+                    );
+                }
+            }
+
+            event(new PaymentSessionConfirmed($session));
+        });
+    }
+
+    /**
+     * Transition payment session to failed.
+     */
+    public function failSession(PaymentSession $session, string $reason, ?array $payload = null): void
+    {
+        DB::transaction(function () use ($session, $reason, $payload) {
+            $session = PaymentSession::where('id', $session->id)->lockForUpdate()->firstOrFail();
+
+            if (in_array($session->status, ['confirmed', 'failed', 'expired', 'cancelled'])) {
+                return;
+            }
+
+            if (in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
+                $session->transitionTo('processing');
+            }
+
+            $session->transitionTo('failed');
+
+            // Full audit trail goes to metadata — never exposed to the client.
+            $session->metadata = array_merge($session->metadata ?? [], [
+                'failure_reason' => $reason,
+                'failure_payload' => $payload,
+            ]);
+
+            // Customer-facing reason ALSO goes on payment_payload — that's the
+            // field PaymentSessionResource exposes and the checkout wizard reads
+            // (`payment_payload?.failure_reason`). Without this, the customer
+            // always sees the generic "Transaction could not be completed."
+            // fallback regardless of the actual gateway error.
+            $session->payment_payload = array_merge($session->payment_payload ?? [], [
+                'failure_reason' => $reason,
+            ]);
+
+            $session->save();
+
+            // Unlock RCOIN if it was locked during checkout
+            $order = $session->paymentAttempt?->order;
+            if ($order) {
+                $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
+                if ($rcoinApplied > 0) {
+                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    $walletService->unlockFunds($wallet, $rcoinApplied);
+                }
+            }
+
+            event(new PaymentSessionFailed($session, $reason));
+        });
+    }
+
+    /**
+     * Transition payment session to expired.
+     */
+    public function expireSession(PaymentSession $session): void
+    {
+        DB::transaction(function () use ($session) {
+            $session = PaymentSession::where('id', $session->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($session->status, ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_confirmation', 'awaiting_customer_action'])) {
+                return;
+            }
+
+            $session->transitionTo('expired');
+
+            // Unlock RCOIN if it was locked during checkout
+            $order = $session->paymentAttempt?->order;
+            if ($order) {
+                $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
+                if ($rcoinApplied > 0) {
+                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    $walletService->unlockFunds($wallet, $rcoinApplied);
+                }
+            }
+
+            event(new PaymentSessionExpired($session));
+        });
+    }
+
+    /**
+     * Resolve type of session from gateway name.
+     */
+    private function resolveSessionType(string $gateway): string
+    {
+        return match ($gateway) {
+            'wallet' => 'wallet',
+            'nowpayments', 'crypto' => 'crypto',
+            'flutterwave' => 'card',
+            default => 'card',
+        };
+    }
+}

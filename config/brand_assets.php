@@ -1,0 +1,52 @@
+<?php
+
+/*
+ * Override map for brand logos. When a brand has a handcrafted asset saved in
+ * `public/assets/`, we prefer that over Zendit's `logo_url` (which is sometimes
+ * a wide gray placeholder that renders poorly inside a card tile).
+ *
+ * Keys must match `products.brand_key` exactly (case-sensitive) — these are
+ * the raw Zendit brand identifiers, NOT the friendly display names.
+ *
+ * Add a row here when you save a new brand logo to public/assets/.
+ */
+
+return [
+    'logos' => [
+        'Apple' => 'apple.png',
+        'Amazon' => 'amazon.png',
+        'AmazonPrime' => 'amazon.png',
+        'GooglePlay' => 'googleplay.png',
+        'Netflix' => 'netflix.webp',
+        'Nintendo' => 'nintendo.webp',
+        'NintendoSwitch' => 'nintendo.webp',
+        'Playstation' => 'playstation.png',
+        'Spotify' => 'spotify.webp',
+        'Steam' => 'steam.png',
+        'HuluPlus' => 'hulu.webp',
+        'Twitch' => 'twitch.webp',
+        'Xbox' => 'x-box_300x190.png',
+        'XboxGamePass' => 'x-box_300x190.png',
+        'XboxLiveGold' => 'x-box_300x190.png',
+
+        // Mobile network operators (mobile top-up / airtime products). Keyed by
+        // brand_key, so each logo shows for that operator in every country it
+        // appears in — e.g. MTN across CM/NG/GH, not just Cameroon.
+        'MTN' => 'mtn.webp',
+        'Orange' => 'orange.webp',
+        'Att' => 'at&t-prepaid_2_300x190.webp',
+        'Boost' => 'boost-mobile_300x190.webp',
+        'Cricket' => 'cricket-wireless_300x190.webp',
+        'GoSmart' => 'go-smart-mobile_300x190.webp',
+        'H2O' => 'h2o-unlimited_300x190.webp',
+        'LycaMobile' => 'lyca-mobile_300x190.webp',
+        'MetroPCS' => 'metro-pcs_300x190.webp',
+        'Net10' => 'net10parent_300x190.webp',
+        'PagePlus' => 'pageplus-wireless_300x190.webp',
+        'StraightTalk' => 'images.png',
+        'Tmobile' => 't-mobile_300x190.webp',
+        'TotalbyVerizon' => 'totalbyverizonusa_300x190.webp',
+        'UltraMobile' => 'ultra-mobile_300x190.webp',
+        'Verizon' => 'verizon_300x190.webp',
+    ],
+];
