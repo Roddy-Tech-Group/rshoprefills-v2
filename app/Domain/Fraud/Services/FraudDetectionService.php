@@ -45,6 +45,14 @@ class FraudDetectionService
             }
         }
 
+        // 4. Excessive Turnstile failures (abuse cooldown)
+        if (! $flagged) {
+            if ($this->hasExcessiveTurnstileFailures($ip)) {
+                $flagged = true;
+                $reason = "Excessive Turnstile verification failures from IP {$ip}.";
+            }
+        }
+
         if ($flagged) {
             $adminEmail = config('mail.admin_address', 'admin@roddytechgroup.com');
             Notification::route('mail', $adminEmail)
@@ -78,5 +86,26 @@ class FraudDetectionService
         $ipVelocityKey = "fraud_velocity_ip_{$ip}";
         $currentIpCheckouts = TaggedCache::for(['fraud'])->get($ipVelocityKey, 0);
         TaggedCache::for(['fraud'])->put($ipVelocityKey, $currentIpCheckouts + 1, now()->addHour());
+    }
+
+    /**
+     * Record a failed Turnstile verification attempt for an IP.
+     */
+    public function recordTurnstileFailure(string $ip): void
+    {
+        $key = "fraud_turnstile_failures_{$ip}";
+        $failures = TaggedCache::for(['fraud', 'security'])->get($key, 0);
+        TaggedCache::for(['fraud', 'security'])->put($key, $failures + 1, now()->addMinutes(30));
+    }
+
+    /**
+     * Check if an IP has exceeded the Turnstile failure threshold.
+     */
+    public function hasExcessiveTurnstileFailures(string $ip): bool
+    {
+        $key = "fraud_turnstile_failures_{$ip}";
+        $failures = TaggedCache::for(['fraud', 'security'])->get($key, 0);
+        
+        return $failures >= 5;
     }
 }

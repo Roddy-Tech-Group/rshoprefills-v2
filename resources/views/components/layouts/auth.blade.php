@@ -43,6 +43,9 @@
                 });
             });
         </script>
+        @if(config('services.turnstile.enabled') && config('services.turnstile.enforce_auth'))
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+        @endif
     </head>
     <body class="min-h-screen bg-zinc-100 text-zinc-900 antialiased">
 

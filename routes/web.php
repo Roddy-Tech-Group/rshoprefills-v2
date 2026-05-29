@@ -227,7 +227,7 @@ Route::view('how-it-works', 'shop.how-it-works')->name('shop.how-it-works');
 
 // Contact - storefront contact page + message submission (stored + admin-notified).
 Route::get('contact', [ContactController::class, 'index'])->name('shop.contact');
-Route::post('contact', [ContactController::class, 'store'])->name('contact.send');
+Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:5,1')->name('contact.send');
 
 // Refund and Cancellation Policy.
 Route::view('refund-policy', 'shop.refund-policy')->name('shop.refund-policy');
@@ -338,7 +338,7 @@ Route::get('checkout', function (CartManager $cartManager, CartPricingService $p
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
 // the controller. Requires auth: an Order needs a user_id.
 Route::post('checkout', [CheckoutController::class, 'process'])
-    ->middleware(['auth', 'not-suspended'])
+    ->middleware(['auth', 'not-suspended', 'throttle:10,1'])
     ->name('checkout.process');
 
 // Flutterwave hosted-checkout return URL. Customers land here after USSD,
