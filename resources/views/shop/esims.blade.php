@@ -36,15 +36,68 @@
         class="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:py-12"
     >
 
-        {{-- ── Hero ─────────────────────────────────────────────────────────── --}}
-        <section class="overflow-hidden rounded-[10px] bg-blue-100 px-6 py-8 sm:px-10 sm:py-12">
-            <div class="flex flex-col items-center gap-6 lg:flex-row lg:justify-between lg:gap-8">
+        {{-- ── Hero ───────────────────────────────────────────────────────────
+             Photo-led variant: the "united states esim picture.jpg" sits as
+             the background, with a pure-black overlay + side gradient so the
+             copy stays readable on any frame. Same pattern as the home
+             services-promo (Store front video 1.mp4). --}}
+        <section class="relative overflow-hidden rounded-[40px] bg-zinc-950 px-6 py-8 text-white sm:px-10 sm:py-12">
+            {{-- Background photo. Object-cover fills the section regardless of
+                 aspect ratio; aria-hidden so screen readers skip it. --}}
+            <img
+                src="{{ asset('assets/'.rawurlencode('united states esim picture.jpg')) }}"
+                alt=""
+                aria-hidden="true"
+                loading="eager"
+                class="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            >
+            <div class="pointer-events-none absolute inset-0 bg-black/70" aria-hidden="true"></div>
+            <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/40" aria-hidden="true"></div>
+
+            {{-- Floating bubbles. Seven circles drift slowly upward with varying
+                 sizes, delays and speeds so the motion never repeats visibly.
+                 pointer-events-none + aria-hidden so they don't interfere with
+                 the page. Respects prefers-reduced-motion via the keyframe
+                 disable below. --}}
+            <style>
+                @keyframes rshop-bubble-float {
+                    0%   { transform: translate3d(0, 0, 0) scale(1);   opacity: 0; }
+                    10%  { opacity: var(--bubble-opacity, 0.35); }
+                    50%  { transform: translate3d(var(--bubble-drift, 20px), -55%, 0) scale(1.08); }
+                    90%  { opacity: var(--bubble-opacity, 0.35); }
+                    100% { transform: translate3d(0, -110%, 0) scale(0.95); opacity: 0; }
+                }
+                .rshop-bubble {
+                    position: absolute;
+                    bottom: -10%;
+                    border-radius: 9999px;
+                    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.18) 40%, rgba(96,165,250,0.18) 75%, rgba(59,130,246,0.05) 100%);
+                    box-shadow: inset 0 0 8px rgba(255,255,255,0.25), 0 0 12px rgba(96,165,250,0.15);
+                    animation: rshop-bubble-float var(--bubble-duration, 14s) ease-in-out infinite;
+                    animation-delay: var(--bubble-delay, 0s);
+                    will-change: transform, opacity;
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .rshop-bubble { animation: none; opacity: 0; }
+                }
+            </style>
+            <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+                <span class="rshop-bubble" style="left: 8%;  width: 90px;  height: 90px;  --bubble-duration: 16s; --bubble-delay: 0s;    --bubble-drift: 30px;  --bubble-opacity: 0.35;"></span>
+                <span class="rshop-bubble" style="left: 22%; width: 50px;  height: 50px;  --bubble-duration: 12s; --bubble-delay: 2.5s;  --bubble-drift: -20px; --bubble-opacity: 0.30;"></span>
+                <span class="rshop-bubble" style="left: 38%; width: 140px; height: 140px; --bubble-duration: 22s; --bubble-delay: 5s;    --bubble-drift: 45px;  --bubble-opacity: 0.22;"></span>
+                <span class="rshop-bubble" style="left: 55%; width: 70px;  height: 70px;  --bubble-duration: 14s; --bubble-delay: 1s;    --bubble-drift: -35px; --bubble-opacity: 0.32;"></span>
+                <span class="rshop-bubble" style="left: 70%; width: 100px; height: 100px; --bubble-duration: 18s; --bubble-delay: 7s;    --bubble-drift: 25px;  --bubble-opacity: 0.28;"></span>
+                <span class="rshop-bubble" style="left: 82%; width: 40px;  height: 40px;  --bubble-duration: 10s; --bubble-delay: 3.5s;  --bubble-drift: -15px; --bubble-opacity: 0.38;"></span>
+                <span class="rshop-bubble" style="left: 92%; width: 60px;  height: 60px;  --bubble-duration: 15s; --bubble-delay: 9s;    --bubble-drift: 20px;  --bubble-opacity: 0.30;"></span>
+            </div>
+
+            <div class="relative flex flex-col items-center gap-6 lg:flex-row lg:justify-between lg:gap-8">
                 {{-- Desktop: both illustrations sit either side of the heading. --}}
                 <img src="{{ asset('assets/'.rawurlencode('Esim stay connectd.png')) }}" alt="" class="hidden w-64 shrink-0 object-contain lg:block xl:w-80" loading="eager">
 
                 <div class="max-w-xl text-center">
-                    <h1 class="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">Feel the freedom of unlimited data</h1>
-                    <p class="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-zinc-600 sm:text-base">
+                    <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Feel the freedom of unlimited data</h1>
+                    <p class="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-zinc-200 sm:text-base">
                         Go ahead and watch that video, listen to that song, download that app. Explore our eSIM data packages for an uninterrupted connection in 190+ countries.
                     </p>
                 </div>

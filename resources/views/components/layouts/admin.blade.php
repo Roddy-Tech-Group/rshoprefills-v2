@@ -269,10 +269,10 @@
             @php
                 $isCurrent = fn (...$patterns) => request()->routeIs(...$patterns);
                 $navItemClass = fn (bool $active) => $active
-                    ? 'group flex items-center gap-3 rounded-[10px] bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                    : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-[#070f1c] dark:hover:text-blue-400 dark:hover:font-semibold';
+                    ? 'group flex items-center gap-3 rounded-[10px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                    : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
                 $iconClass = fn (bool $active) => $active
-                    ? 'h-5 w-5 shrink-0 text-blue-700 dark:text-blue-300'
+                    ? 'h-5 w-5 shrink-0 text-black dark:text-white'
                     : 'h-5 w-5 shrink-0 text-zinc-600 transition-colors';
                 // For <img>-based icons (file SVGs): natural colour everywhere.
                 // No invert filter — active state is a soft blue tint now, not
@@ -295,8 +295,8 @@
                     $productPatterns = ['admin.products*', 'admin.gift-cards*', 'admin.esims*', 'admin.mobile-topups*', 'admin.bill-payments*', 'admin.flights*', 'admin.stays*'];
                     $productActive = $isCurrent(...$productPatterns);
                     $subItemClass = fn (bool $active) => $active
-                        ? 'flex items-center rounded-[10px] bg-blue-50 px-3 py-2.5 text-sm font-semibold text-blue-700 dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                        : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#070f1c] dark:hover:text-blue-400 dark:hover:font-semibold';
+                        ? 'flex items-center rounded-[10px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                        : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
                 @endphp
                 <div
                     x-data="{ expanded: {{ $productActive ? 'true' : 'false' }} }"
@@ -319,14 +319,24 @@
                         </svg>
                     </button>
 
+                    {{-- All product sub-links route to /admin/products with the
+                         matching category query param so the admin stays inside
+                         the admin surface (not the storefront). The active flag
+                         compares the current route + ?category= so the right
+                         child highlights. --}}
+                    @php
+                        $currentCategory = (string) request()->query('category', '');
+                        $isProductsRoot  = $isCurrent('admin.products') && $currentCategory === '';
+                        $isCategory      = fn (string $slug) => $isCurrent('admin.products') && $currentCategory === $slug;
+                    @endphp
                     <div x-show="expanded" x-collapse class="nav-submenu ml-5 flex flex-col gap-1 border-l border-zinc-200 pl-4">
-                        <a href="{{ route('admin.products') }}" class="{{ $subItemClass($isCurrent('admin.products') && !$isCurrent('admin.products.*')) }}">All Products</a>
-                        <a href="{{ route('shop.gift-cards') }}" class="{{ $subItemClass($isCurrent('admin.gift-cards*')) }}">Gift Cards</a>
-                        <a href="#" class="{{ $subItemClass($isCurrent('admin.esims*')) }}">eSIMs</a>
-                        <a href="#" class="{{ $subItemClass($isCurrent('admin.mobile-topups*')) }}">Mobile Top-ups</a>
-                        <a href="#" class="{{ $subItemClass($isCurrent('admin.bill-payments*')) }}">Bill Payments</a>
-                        <a href="#" class="{{ $subItemClass($isCurrent('admin.flights*')) }}">Flights</a>
-                        <a href="#" class="{{ $subItemClass($isCurrent('admin.stays*')) }}">Stays</a>
+                        <a href="{{ route('admin.products') }}" class="{{ $subItemClass($isProductsRoot) }}">All Products</a>
+                        <a href="{{ route('admin.products', ['category' => 'gift-cards']) }}" class="{{ $subItemClass($isCategory('gift-cards')) }}">Gift Cards</a>
+                        <a href="{{ route('admin.products', ['category' => 'esims']) }}" class="{{ $subItemClass($isCategory('esims')) }}">eSIMs</a>
+                        <a href="{{ route('admin.products', ['category' => 'mobile-airtime']) }}" class="{{ $subItemClass($isCategory('mobile-airtime')) }}">Mobile Top-ups</a>
+                        <a href="{{ route('admin.products', ['category' => 'bill-payments']) }}" class="{{ $subItemClass($isCategory('bill-payments')) }}">Bill Payments</a>
+                        <a href="{{ route('admin.products', ['category' => 'flights']) }}" class="{{ $subItemClass($isCategory('flights')) }}">Flights</a>
+                        <a href="{{ route('admin.products', ['category' => 'stays']) }}" class="{{ $subItemClass($isCategory('stays')) }}">Stays</a>
                     </div>
                 </div>
 
@@ -402,8 +412,8 @@
                     <div x-show="open" x-collapse class="nav-submenu mt-1 ml-3 flex flex-col gap-0.5 border-l border-zinc-200 pl-3">
                         @php
                             $subItem = fn (bool $active) => $active
-                                ? 'block rounded-[10px] bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                                : 'block rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#070f1c] dark:hover:text-blue-400 dark:hover:font-semibold';
+                                ? 'block rounded-[10px] bg-zinc-200 px-3 py-2 text-xs font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                                : 'block rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
                         @endphp
                         <a href="{{ route('admin.content.blog') }}" class="{{ $subItem($isCurrent('admin.content.blog')) }}">Blog Posts</a>
                         <a href="{{ route('admin.content.press') }}" class="{{ $subItem($isCurrent('admin.content.press')) }}">Press Articles</a>

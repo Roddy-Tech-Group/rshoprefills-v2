@@ -418,9 +418,9 @@
         @php
             $currentMultiplier = (float) ($user->rcoin_multiplier ?? 1.00);
             $multiplierTone = match (true) {
-                $currentMultiplier > 1.0 => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                $currentMultiplier < 1.0 => 'bg-amber-50 text-amber-700 ring-amber-200',
-                default => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+                $currentMultiplier > 1.0 => 'emerald',
+                $currentMultiplier < 1.0 => 'amber',
+                default => 'zinc',
             };
             // Resolve the live Rcoin balance + lifetime earnings (sum of all
             // cashback + referral credits ever awarded to this customer).
@@ -600,7 +600,7 @@
                     <h3 class="text-sm font-bold text-zinc-900">Rcoin earnings multiplier</h3>
                     <p class="mt-0.5 text-[11px] text-zinc-500">Reward power users who advertise the product. Applied to cashback AND referral bonuses.</p>
                 </div>
-                <span class="inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 {{ $multiplierTone }}">{{ number_format($currentMultiplier, 2) }}×</span>
+                <x-admin.badge :tone="$multiplierTone">{{ number_format($currentMultiplier, 2) }}×</x-admin.badge>
             </div>
             <div class="px-5 py-4">
                 <form method="POST" action="{{ route('admin.customer.rcoin-multiplier', $user) }}" class="flex flex-wrap items-end gap-3">
@@ -656,16 +656,16 @@
         {{-- Identity verification (KYC) --}}
         @php
             $kycTone = match ($user->kyc_status) {
-                'verified' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                'pending'  => 'bg-amber-50 text-amber-700 ring-amber-200',
-                'rejected' => 'bg-red-50 text-red-700 ring-red-200',
-                default    => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+                'verified' => 'emerald',
+                'pending'  => 'amber',
+                'rejected' => 'red',
+                default    => 'zinc',
             };
         @endphp
         <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
                 <h3 class="text-sm font-bold text-zinc-900">Identity verification (KYC)</h3>
-                <span class="inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 {{ $kycTone }}">{{ $user->kyc_status }}</span>
+                <x-admin.badge :tone="$kycTone">{{ $user->kyc_status }}</x-admin.badge>
             </div>
 
             @if ($kyc)

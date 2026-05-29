@@ -119,22 +119,24 @@ class extends Component {
     </div>
 
     @if ($orders->isNotEmpty())
-        {{-- All orders live in ONE card; each order is a drop-down row. --}}
-        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+        {{-- All orders live in ONE card; each order is a drop-down row.
+             State lifted to the parent so opening an order auto-closes the
+             previously-opened one (single-expanded accordion behaviour). --}}
+        <div x-data="{ openId: null }" class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
             @foreach ($orders as $order)
                 @php
                     [$statusLabel, $statusPillClass] = $statusUi[$order->order_status->value] ?? ['Placed', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
                     $points = app(\App\Domain\Rewards\Services\RewardEngine::class)->usdToRcoin((float) $order->total_amount * ((float) \App\Models\Setting::get('cashback_percentage', 1.0) / 100));
                 @endphp
-                <div x-data="{ open: false }" wire:key="order-{{ $order->id }}">
-                    {{-- Header (always visible) --}}
-                    <button type="button" @click="open = !open" class="flex w-full items-center gap-3 px-5 pt-4 text-left">
+                <div wire:key="order-{{ $order->id }}">
+                    {{-- Header (always visible). Toggling sets openId to this order or null. --}}
+                    <button type="button" @click="openId = openId === {{ $order->id }} ? null : {{ $order->id }}" class="flex w-full items-center gap-3 px-5 pt-4 text-left">
                         <span class="min-w-0 flex-1 truncate text-sm text-zinc-400">
                             {{ ($order->placed_at ?? $order->created_at)->format('d/m/Y') }}
                             <span class="px-1">|</span>
                             <span class="text-zinc-500">{{ $order->id }}</span>
                         </span>
-                        <svg class="h-5 w-5 shrink-0 text-zinc-500 transition-transform duration-200" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <svg class="h-5 w-5 shrink-0 text-zinc-500 transition-transform duration-200" :class="openId === {{ $order->id }} && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
@@ -182,7 +184,7 @@ class extends Component {
                     </div>
 
                     {{-- Expanded detail --}}
-                    <div x-show="open" x-collapse x-cloak class="px-5 pb-5">
+                    <div x-show="openId === {{ $order->id }}" x-collapse x-cloak class="px-5 pb-5">
 
                         {{-- Meta rows --}}
                         <dl class="space-y-3 text-sm">
@@ -514,38 +516,108 @@ class extends Component {
             @endforeach
         </div>
     @else
-        {{-- Empty state --}}
-        <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
-            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
-                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/>
-                </svg>
-            </span>
-            <p class="mt-4 text-base font-semibold text-zinc-900">
-                @if (trim($search) !== '')
-                    No orders match that id
-                @elseif ($expired)
-                    No expired orders
-                @else
-                    No orders yet
-                @endif
-            </p>
-            <p class="mt-1 text-sm text-zinc-600">
-                @if (trim($search) !== '' || $expired)
-                    Try a different search or filter.
-                @else
-                    Your purchases will show up here with their redemption codes.
-                @endif
-            </p>
-            @unless (trim($search) !== '' || $expired)
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
-                    Browse gift cards
+        {{-- Empty state. Filtered (search/expired) variant stays minimal because
+             the customer is mid-flow looking for a specific order. The "no
+             orders ever" variant is much warmer and offers four storefront
+             surfaces to start from so the page doesn't feel like a dead end. --}}
+        @if (trim($search) !== '' || $expired)
+            <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </span>
+                <p class="mt-4 text-base font-semibold text-zinc-900 dark:text-white">
+                    @if (trim($search) !== '')
+                        No orders match that id
+                    @else
+                        No expired orders
+                    @endif
+                </p>
+                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Try a different search or filter.</p>
+            </div>
+        @else
+            @php
+                // Quick-link cards for the empty state. Each opens a storefront
+                // surface; icon assets live in /public/assets and the route
+                // names match the existing nav so renames stay in one place.
+                $shopLinks = [
+                    [
+                        'label'   => 'Gift Cards',
+                        'caption' => 'Pay anyone, anywhere',
+                        'icon'    => 'gift cards.svg',
+                        'href'    => route('shop.gift-cards'),
+                    ],
+                    [
+                        'label'   => 'eSIMs',
+                        'caption' => 'Travel data in 190+ countries',
+                        'icon'    => 'esim.svg',
+                        'href'    => route('shop.esims'),
+                    ],
+                    [
+                        'label'   => 'Mobile Top-ups',
+                        'caption' => 'Recharge any number worldwide',
+                        'icon'    => 'topup1.svg',
+                        'href'    => route('shop.topups'),
+                    ],
+                    [
+                        'label'   => 'Bill Payments',
+                        'caption' => 'Settle utility bills instantly',
+                        'icon'    => 'Bills 2.svg',
+                        'href'    => route('shop.bills'),
+                    ],
+                ];
+            @endphp
+
+            <div class="overflow-hidden rounded-[10px] bg-white px-6 py-12 text-center ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60 sm:px-10">
+                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/20">
+                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/>
+                    </svg>
+                </span>
+                <h3 class="mt-5 text-xl font-bold text-zinc-900 dark:text-white sm:text-2xl">You have no orders yet</h3>
+                <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                    When you make your first purchase, your orders, redemption codes, and receipts will all live here. Pick a category below to get started.
+                </p>
+
+                {{-- Quick-link grid. 2 cols mobile, 4 cols desktop so the
+                     storefront surfaces stay one tap away from the dashboard. --}}
+                <div class="mx-auto mt-7 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                    @foreach ($shopLinks as $link)
+                        <a
+                            href="{{ $link['href'] }}"
+                            wire:navigate
+                            class="group flex flex-col items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-sm dark:border-zinc-700/60 dark:bg-[#0c1a36] dark:hover:border-blue-400/50"
+                        >
+                            <span class="flex h-11 w-11 items-center justify-center rounded-[10px] bg-blue-50 ring-1 ring-blue-100 transition-colors group-hover:bg-blue-100 dark:bg-blue-500/15 dark:ring-blue-500/20">
+                                <img src="{{ asset('assets/' . rawurlencode($link['icon'])) }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
+                            </span>
+                            <span class="leading-tight">
+                                <span class="block text-sm font-semibold text-zinc-900 dark:text-white">{{ $link['label'] }}</span>
+                                <span class="mt-0.5 block text-[11px] text-zinc-500 dark:text-zinc-400">{{ $link['caption'] }}</span>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+
+                <a
+                    href="{{ route('home') }}"
+                    wire:navigate
+                    class="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                >
+                    Explore everything
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                    </svg>
                 </a>
-            @endunless
-        </div>
+            </div>
+        @endif
     @endif
 
     @if ($orders->hasPages())
-        <div>{{ $orders->links() }}</div>
+        {{-- Matches the admin products page paginator (vendor/pagination/circles). --}}
+        <div class="mt-2 rounded-[10px] border-2 border-zinc-100 bg-white px-5 py-3 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+            {{ $orders->onEachSide(1)->links('vendor.pagination.circles') }}
+        </div>
     @endif
 </div>

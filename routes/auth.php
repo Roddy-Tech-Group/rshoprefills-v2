@@ -41,3 +41,10 @@ Route::middleware('auth')->group(function () {
 
 Route::post('logout', Logout::class)
     ->name('logout');
+
+// OAuth popup completion page. The Google sign-in popup lands here after a
+// successful (or failed) callback; tiny JS notifies the opener window and
+// closes itself. Accessible to anyone because the user is logged in by the
+// time they reach this page (or still a guest if the OAuth flow failed).
+Route::view('auth/popup-complete', 'auth.popup-complete')
+    ->name('auth.popup-complete');

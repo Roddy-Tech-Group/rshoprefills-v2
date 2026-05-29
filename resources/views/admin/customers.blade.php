@@ -5,19 +5,20 @@
     $totalCustomers = User::count();
 
     // Status pill tone — drives the right-side chip per row. Active means the
-    // email is verified AND the account isn't banned/suspended.
+    // email is verified AND the account isn't banned/suspended. Tone names
+    // map onto <x-admin.badge>'s canonical palette.
     $statusFor = function (User $user): array {
         if ($user->banned_at !== null) {
-            return ['label' => 'Banned', 'class' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'];
+            return ['label' => 'Banned', 'tone' => 'red'];
         }
         if ($user->suspended_at !== null) {
-            return ['label' => 'Suspended', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+            return ['label' => 'Suspended', 'tone' => 'amber'];
         }
         if ($user->email_verified_at === null) {
-            return ['label' => 'Pending', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+            return ['label' => 'Pending', 'tone' => 'amber'];
         }
 
-        return ['label' => 'Active', 'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'];
+        return ['label' => 'Active', 'tone' => 'emerald'];
     };
 @endphp
 
@@ -80,9 +81,7 @@
 
                 {{-- Status pill --}}
                 <span class="col-status">
-                    <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $status['class'] }}">
-                        {{ $status['label'] }}
-                    </span>
+                    <x-admin.badge :tone="$status['tone']">{{ $status['label'] }}</x-admin.badge>
                 </span>
 
                 {{-- Wallet balance --}}

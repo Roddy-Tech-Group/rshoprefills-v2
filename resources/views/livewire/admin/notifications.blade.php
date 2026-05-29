@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Notification\Enums\DeliveryStatus;
+use App\Domain\Notification\Jobs\RetryFailedNotificationsJob;
 use App\Domain\Notification\Jobs\SendAsynchronousNotificationJob;
 use App\Domain\Notification\Services\NotificationAuditService;
 use App\Models\Notification;
@@ -68,6 +69,17 @@ class extends Component {
         $this->dispatch('notification-retried');
     }
 
+    /**
+     * Re-queue every failed notification in one click. Runs the same auto-retry
+     * sweep that the scheduler fires every 15 minutes, but synchronously so the
+     * admin sees the change in real time.
+     */
+    public function retryAllFailed(): void
+    {
+        RetryFailedNotificationsJob::dispatchSync();
+        $this->dispatch('notification-retried');
+    }
+
     public function with(): array
     {
         $query = Notification::with('user')->latest();
@@ -121,21 +133,51 @@ class extends Component {
             @endforeach
         </div>
 
-        {{-- Filter pills --}}
-        <div class="inline-flex w-max items-center rounded-[10px] bg-zinc-100 p-1" role="tablist" aria-label="Filter notifications">
-            @foreach (['all' => 'All', 'pending' => 'Pending', 'sent' => 'Sent', 'failed' => 'Failed'] as $value => $label)
+        {{-- Filter pills + bulk-retry action. The auto-retry job runs on the
+             scheduler every 15 minutes, but the button gives the admin a way
+             to flush ALL failed rows immediately after fixing the root cause
+             (rate-limited provider, swapped API key, etc.). --}}
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="inline-flex w-max items-center rounded-[10px] bg-zinc-100 p-1" role="tablist" aria-label="Filter notifications">
+                @foreach (['all' => 'All', 'pending' => 'Pending', 'sent' => 'Sent', 'failed' => 'Failed'] as $value => $label)
+                    <button
+                        type="button"
+                        wire:click="setFilter('{{ $value }}')"
+                        @class([
+                            'inline-flex items-center justify-center rounded-[10px] px-3.5 py-1.5 text-xs font-semibold transition-all',
+                            'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' => $filter === $value,
+                            'text-zinc-600 hover:text-zinc-900' => $filter !== $value,
+                        ])
+                    >
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
+
+            @if (($this->metrics['failed_deliveries'] ?? 0) > 0)
                 <button
                     type="button"
-                    wire:click="setFilter('{{ $value }}')"
-                    @class([
-                        'inline-flex items-center justify-center rounded-[10px] px-3.5 py-1.5 text-xs font-semibold transition-all',
-                        'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' => $filter === $value,
-                        'text-zinc-600 hover:text-zinc-900' => $filter !== $value,
-                    ])
+                    wire:click="retryAllFailed"
+                    wire:loading.attr="disabled"
+                    wire:target="retryAllFailed"
+                    wire:confirm="Re-queue every failed notification? Each row is capped at {{ \App\Domain\Notification\Jobs\RetryFailedNotificationsJob::MAX_AUTO_RETRIES }} auto-retries."
+                    class="inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                 >
-                    {{ $label }}
+                    <svg wire:loading.remove wire:target="retryAllFailed" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                    <svg wire:loading wire:target="retryAllFailed" class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                    </svg>
+                    <span wire:loading.remove wire:target="retryAllFailed">Retry all failed</span>
+                    <span wire:loading wire:target="retryAllFailed">Retrying...</span>
                 </button>
-            @endforeach
+            @endif
+
+            <span class="ml-auto text-[11px] text-zinc-500">
+                Auto-retry runs every 15 min, capped at {{ \App\Domain\Notification\Jobs\RetryFailedNotificationsJob::MAX_AUTO_RETRIES }} attempts per notification.
+            </span>
         </div>
 
         {{-- Notifications table --}}

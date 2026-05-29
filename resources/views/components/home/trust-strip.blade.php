@@ -33,7 +33,7 @@
 
         {{-- Easy & Fast --}}
         <li class="flex min-h-[110px] items-center gap-3 rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-300 transition-transform duration-200 hover:-translate-y-0.5 sm:min-h-0 sm:p-5">
-            <img src="{{ asset('assets/fast.png') }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
+            <img src="{{ asset('assets/' . rawurlencode('Easy & Fast.png')) }}" alt="" class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900">Easy & Fast</p>
                 <p class="text-sm text-zinc-600">Simple 3-step checkout</p>

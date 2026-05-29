@@ -29,7 +29,7 @@ class extends Component {
     #[Validate('required|integer|min:1|max:5')]
     public int $rating = 5;
 
-    #[Validate('required|string|max:40')]
+    #[Validate('required|in:Trustpilot,Google,RshopRefills')]
     public string $source = 'Trustpilot';
 
     #[Validate('required|date')]
@@ -209,9 +209,9 @@ class extends Component {
                             <td class="px-5 py-3 text-zinc-700">{{ $review->reviewed_at->format('M j, Y') }}</td>
                             <td class="px-5 py-3 max-w-md truncate text-zinc-600">{{ $review->body }}</td>
                             <td class="px-5 py-3">
-                                <span class="inline-flex items-center rounded-[5px] {{ $review->is_published ? 'bg-emerald-500' : 'bg-zinc-400' }} px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                <x-admin.badge :tone="$review->is_published ? 'emerald' : 'zinc'">
                                     {{ $review->is_published ? 'Published' : 'Draft' }}
-                                </span>
+                                </x-admin.badge>
                             </td>
                             <td class="px-5 py-3 text-right">
                                 <div class="inline-flex items-center gap-1.5">
@@ -271,7 +271,12 @@ class extends Component {
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Source</label>
-                            <input wire:model="source" type="text" placeholder="Trustpilot" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                            <select wire:model="source" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <option value="Trustpilot">Trustpilot (emerald star)</option>
+                                <option value="Google">Google (multi-colour G)</option>
+                                <option value="RshopRefills">RshopRefills (our website)</option>
+                            </select>
+                            <p class="mt-1 text-[10px] text-zinc-500">Picks the brand icon and star colour on the storefront card.</p>
                             @error('source') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>

@@ -201,9 +201,9 @@ class extends Component {
                             <td class="px-5 py-3 text-zinc-700">{{ $post->category }}</td>
                             <td class="px-5 py-3 text-zinc-700">{{ $post->published_at->format('M j, Y') }}</td>
                             <td class="px-5 py-3">
-                                <span class="inline-flex items-center rounded-[5px] {{ $post->is_published ? 'bg-emerald-500' : 'bg-zinc-400' }} px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                                <x-admin.badge :tone="$post->is_published ? 'emerald' : 'zinc'">
                                     {{ $post->is_published ? 'Published' : 'Draft' }}
-                                </span>
+                                </x-admin.badge>
                             </td>
                             <td class="px-5 py-3 text-right">
                                 <div class="inline-flex items-center gap-1.5">

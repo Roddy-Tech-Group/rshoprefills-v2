@@ -505,6 +505,27 @@
                         </div>
                     </div>
 
+                    {{-- Hosted-redirect methods (USSD, Pay With Bank, Bank QR,
+                         Mobile Wallet) all share the same "you'll finish on
+                         the next screen" panel. Each gets a tiny method-specific
+                         hint so the customer knows what to expect (dial code,
+                         bank login, QR scan, e-wallet pin). --}}
+                    @php
+                        $hostedMethods = [
+                            'ussd'           => ['title' => 'USSD',           'hint' => 'You will dial a short code on your phone to authorise the payment.'],
+                            'pay_with_bank'  => ['title' => 'Pay With Bank',  'hint' => 'You will sign in to your internet or mobile banking to complete the payment.'],
+                            'bank_qr'        => ['title' => 'Bank QR (NQR)',  'hint' => 'You will scan a QR code with your bank app to confirm the payment.'],
+                            'mobile_wallet'  => ['title' => 'Mobile Wallet',  'hint' => 'You will authorise the payment inside your mobile wallet app.'],
+                        ];
+                    @endphp
+                    @foreach ($hostedMethods as $key => $meta)
+                        <div x-show="method === '{{ $key }}'" x-collapse x-cloak class="mt-5 rounded-[10px] bg-blue-50 px-4 py-4 ring-1 ring-blue-100">
+                            <p class="text-sm font-bold text-blue-900">{{ $meta['title'] }}</p>
+                            <p class="mt-1 text-xs leading-relaxed text-blue-800/90">{{ $meta['hint'] }}</p>
+                            <p class="mt-2 text-[11px] text-blue-700/80">After you tap Continue we will redirect you to our payment partner to finish the payment safely.</p>
+                        </div>
+                    @endforeach
+
                     @error('payment_method') <p class="mt-3 text-xs text-red-600">{{ $message }}</p> @enderror
 
                     {{-- Total --}}
@@ -858,24 +879,49 @@
                 applyRcoin: '',
 
                 allMethods: [
-                    { key: 'card', label: 'Card', desc: 'Visa, Mastercard', icon: '/assets/credit%20card%20payment.png' },
-                    { key: 'mobile_money', label: 'Mobile Money', desc: 'MTN, Orange, Vodafone', icon: '/assets/pay%20with%20crypto%20momo%20%2B.png' },
-                    { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account', icon: '/assets/Bank%20transfer.png' },
-                    { key: 'apple_pay', label: 'Apple Pay', desc: 'Pay via Apple Wallet', icon: '/assets/apply%20pay.png' },
-                    { key: 'crypto', label: 'Crypto', desc: 'USDT, BTC, ETH and more', icon: '/assets/USDT.svg' },
-                    { key: 'wallet', label: 'Wallet', desc: 'Pay with wallet balance', icon: '/assets/Wallet.svg' }
+                    { key: 'card',          label: 'Card',          desc: 'Visa, Mastercard',           icon: '/assets/credit%20card%20payment.png' },
+                    { key: 'mobile_money',  label: 'Mobile Money',  desc: 'MTN, Orange, Vodafone',      icon: '/assets/pay%20with%20crypto%20momo%20%2B.png' },
+                    { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account',    icon: '/assets/Bank%20transfer.png' },
+                    // New: covers Flutterwave's "Pay With Bank" (internet banking
+                    // redirect) for NGN / GBP / EUR.
+                    { key: 'pay_with_bank', label: 'Pay With Bank', desc: 'Internet & mobile banking',  icon: '/assets/Bank%20transfer.png' },
+                    // New: USSD dial codes (Nigeria). Customer dials a code on
+                    // their phone to authorise the payment.
+                    { key: 'ussd',          label: 'USSD',          desc: 'Dial a code on your phone',  icon: '/assets/credit%20card%20payment.png' },
+                    // New: scan-to-pay QR (Nigerian banks).
+                    { key: 'bank_qr',       label: 'Bank QR',       desc: 'Scan to pay in your bank app', icon: '/assets/credit%20card%20payment.png' },
+                    // New: NGN digital wallets (OPay / eNaira). Provider name
+                    // hidden per project convention; admin reconciliation still
+                    // sees the specific provider on the order.
+                    { key: 'mobile_wallet', label: 'Mobile Wallet', desc: 'Pay with a Nigerian e-wallet', icon: '/assets/Wallet.svg' },
+                    { key: 'apple_pay',     label: 'Apple Pay',     desc: 'Pay via Apple Wallet',       icon: '/assets/apply%20pay.png' },
+                    { key: 'crypto',        label: 'Crypto',        desc: 'USDT, BTC, ETH and more',    icon: '/assets/USDT.svg' },
+                    { key: 'wallet',        label: 'Wallet',        desc: 'Pay with wallet balance',    icon: '/assets/Wallet.svg' }
                 ],
 
                 getFilteredMethods() {
                     const currency = this.$store.cart.currency;
+                    // Currency -> allowed method keys. Mirrors what's enabled on
+                    // the Flutterwave dashboard so we never offer a method that
+                    // their modal would then reject. Order matters: it's the
+                    // order tabs render in the grid.
+                    // Ordering is by DOMINANT local method first so the customer
+                    // sees their familiar option at top-left of the grid:
+                    //   - Francophone Africa (XAF/XOF) → MTN MoMo first
+                    //   - Nigeria (NGN) → Bank Transfer first (most-used FW method)
+                    //   - Ghana / Kenya / Uganda / Rwanda → Mobile money first
+                    //   - US / EU / UK → Card first, crypto for the savvy users
                     const mapping = {
-                        'USD': ['card', 'apple_pay', 'crypto', 'wallet'],
-                        'EUR': ['card', 'apple_pay', 'crypto', 'wallet'],
-                        'GBP': ['card', 'apple_pay', 'crypto', 'wallet'],
-                        'NGN': ['card', 'apple_pay', 'bank_transfer', 'crypto', 'wallet'],
-                        'GHS': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
-                        'XAF': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
-                        'XOF': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+                        'USD': ['card', 'crypto', 'apple_pay', 'wallet'],
+                        'EUR': ['card', 'pay_with_bank', 'crypto', 'apple_pay', 'wallet'],
+                        'GBP': ['card', 'pay_with_bank', 'crypto', 'apple_pay', 'wallet'],
+                        'NGN': ['bank_transfer', 'card', 'pay_with_bank', 'ussd', 'bank_qr', 'mobile_wallet', 'apple_pay', 'crypto', 'wallet'],
+                        'GHS': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'XAF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'XOF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'KES': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'UGX': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'RWF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
                     };
                     const allowedKeys = mapping[currency] || ['card', 'apple_pay', 'crypto'];
                     return this.allMethods.filter(m => {
@@ -1193,6 +1239,12 @@
                         } else if (this.method === 'bank_transfer') {
                             this.paymentState = 'processing';
                             await this.paySession('bank_transfer', {});
+                        } else if (['ussd', 'pay_with_bank', 'bank_qr', 'mobile_wallet'].includes(this.method)) {
+                            // Hosted-redirect family. paySession() will receive
+                            // status === 'awaiting_redirect' from the API and
+                            // send the customer to Flutterwave's hosted page.
+                            this.paymentState = 'processing';
+                            await this.paySession(this.method, {});
                         }
                     } catch (err) {
                         this.submitting = false;
@@ -1301,6 +1353,18 @@
                     if (status === 'confirmed') {
                         this.paymentState = 'success';
                         setTimeout(() => { window.location.href = this.redirectUrl; }, 2000);
+                    } else if (status === 'awaiting_redirect') {
+                        // Hosted-checkout methods (USSD / Pay With Bank /
+                        // Bank QR / Mobile Wallet). The API has returned a
+                        // Flutterwave-hosted URL; send the customer there and
+                        // they'll come back through /checkout/return.
+                        const url = sessionData.payment_payload?.redirect_url;
+                        if (url) {
+                            window.location.href = url;
+                            return;
+                        }
+                        this.paymentState = 'error';
+                        this.errorMessage = 'Could not start the payment. Please try a different method.';
                     } else if (status === 'failed') {
                         this.paymentState = 'error';
                         this.errorMessage = sessionData.payment_payload?.failure_reason || 'Transaction could not be completed.';

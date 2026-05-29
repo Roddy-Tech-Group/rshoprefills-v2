@@ -6,16 +6,16 @@
     $orders = Order::with(['user', 'items'])->whereNotIn('order_status', $hiddenStatuses)->latest()->limit(50)->get();
     $totalOrders = Order::whereNotIn('order_status', $hiddenStatuses)->count();
 
-    // Status pill tone — matches the transactions/customers ring pattern so
-    // every list page reads the same. Keys are OrderStatus values.
+    // Status pill tone — maps OrderStatus values to the canonical x-admin.badge
+    // tone palette so every list page reads the same.
     $statusPillFor = function (?string $status): array {
         return match ($status) {
-            'completed' => ['label' => 'Completed', 'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'],
-            'partially_completed' => ['label' => 'Partial', 'class' => 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
-            'failed', 'cancelled' => ['label' => 'Failed', 'class' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
-            'requires_attention' => ['label' => 'Attention', 'class' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
-            'processing' => ['label' => 'Processing', 'class' => 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30'],
-            default => ['label' => 'Pending', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
+            'completed' => ['label' => 'Completed', 'tone' => 'emerald'],
+            'partially_completed' => ['label' => 'Partial', 'tone' => 'blue'],
+            'failed', 'cancelled' => ['label' => 'Failed', 'tone' => 'red'],
+            'requires_attention' => ['label' => 'Attention', 'tone' => 'red'],
+            'processing' => ['label' => 'Processing', 'tone' => 'blue'],
+            default => ['label' => 'Pending', 'tone' => 'amber'],
         };
     };
 @endphp
@@ -106,9 +106,7 @@
 
                 {{-- Status pill --}}
                 <span class="col-status">
-                    <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $status['class'] }}">
-                        {{ $status['label'] }}
-                    </span>
+                    <x-admin.badge :tone="$status['tone']">{{ $status['label'] }}</x-admin.badge>
                 </span>
 
                 {{-- Date --}}

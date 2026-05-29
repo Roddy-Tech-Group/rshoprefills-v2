@@ -3,9 +3,61 @@
     these controls on small screens. The country/language buttons open the
     shared <x-nav.locale-modal /> popup.
 --}}
-<div class="bg-zinc-50 border-b border-zinc-100">
+@php
+    // Pull the live Trustpilot aggregate (CMS-managed via SiteSetting).
+    // Falls back to a sensible default so the badge always renders.
+    $tpRating = (float) \App\Models\SiteSetting::get('reviews.aggregate.rating', 4.4);
+    $tpCount  = (int)   \App\Models\SiteSetting::get('reviews.aggregate.count', 0);
+@endphp
+<div class="bg-zinc-50">
     <div class="max-w-[1350px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-end h-9 gap-1">
+        <div class="flex items-center justify-between h-9 gap-1">
+
+            {{-- Trustpilot rating badge - desktop only. Wired to the live
+                 aggregate so the score and review count match the /reviews
+                 page. Click-through opens the public Trustpilot profile in a
+                 new tab (config('services.trustpilot.profile_url')). --}}
+            <a
+                href="{{ config('services.trustpilot.profile_url') }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] text-[13px] font-medium text-zinc-900 hover:bg-zinc-200 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                aria-label="See our {{ number_format($tpRating, 1) }} out of 5 rating on Trustpilot (opens in a new tab)"
+            >
+                {{-- Stars: each one is its own 16px box. The "fill" is driven
+                     by a CSS gradient (Trustpilot green up to a per-star %)
+                     so the half-step at e.g. 4.5 stars renders as a real
+                     half-green / half-grey square, matching the live widget. --}}
+                <span class="flex items-center gap-[2px]">
+                    @for ($i = 1; $i <= 5; $i++)
+                        @php
+                            // How filled is THIS star (0..1) given the rating?
+                            $fill = max(0, min(1, $tpRating - ($i - 1)));
+                            $pct  = (int) round($fill * 100);
+                        @endphp
+                        <span
+                            class="flex h-4 w-4 items-center justify-center rounded-[2px]"
+                            style="background: linear-gradient(to right, #00b67a {{ $pct }}%, #dcdce6 {{ $pct }}%);"
+                        >
+                            <svg class="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                            </svg>
+                        </span>
+                    @endfor
+                </span>
+                <span class="ml-1.5 inline-flex items-center gap-1 text-[13px] font-bold tracking-tight text-zinc-900">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="#00b67a" aria-hidden="true">
+                        <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                    </svg>
+                    <span>Trustpilot</span>
+                </span>
+            </a>
+
+            {{-- Spacer keeps the right-aligned controls in place on mobile
+                 (when the Trustpilot badge is hidden). --}}
+            <span class="md:hidden"></span>
+
+            <div class="flex items-center gap-1">
 
             {{-- Country --}}
             <button
@@ -40,6 +92,7 @@
             {{-- Theme picker (light / dark / system) — hover or click to open --}}
             <x-theme-toggle class="h-9 w-9 rounded-[10px] text-zinc-900 hover:bg-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40" />
 
+            </div>
         </div>
     </div>
 </div>

@@ -6,21 +6,36 @@
     $payments = PaymentAttempt::with(['user', 'order'])->latest()->limit(50)->get();
     $totalPayments = PaymentAttempt::count();
 
-    // Status pill tone — one set of classes per known status. Drives the
-    // right-side status chip on every row.
+    // Status pill tone — maps PaymentAttempt status onto the canonical
+    // x-admin.badge tone palette.
     $statusPillFor = function (?string $status): string {
         return match ($status) {
-            'paid' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30',
-            'failed', 'expired' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30',
-            'refunded', 'partially_refunded' => 'bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-zinc-700/60',
-            'processing', 'reserved' => 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30',
-            default => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30',
+            'paid' => 'emerald',
+            'failed', 'expired' => 'red',
+            'refunded', 'partially_refunded' => 'zinc',
+            'processing', 'reserved' => 'blue',
+            default => 'amber',
         };
     };
 @endphp
 
 <x-layouts.admin>
-    <x-slot:heading>Transactions</x-slot:heading>
+    <x-slot:heading>
+        <div class="flex items-end justify-between gap-3">
+            <span>Transactions</span>
+            {{-- CSV export. Forwards any active filter query params so an admin
+                 can scope the file to whatever they were just looking at. --}}
+            <a
+                href="{{ route('admin.transactions.export', request()->query()) }}"
+                class="inline-flex items-center gap-1.5 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-zinc-300 dark:hover:bg-[#26416b]"
+            >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                </svg>
+                Export CSV
+            </a>
+        </div>
+    </x-slot:heading>
     <x-slot:subheading>{{ number_format($totalPayments) }} payment attempts total. Showing the latest 50.</x-slot:subheading>
 
     {{-- Grid template shared between the header pill and every data row so
@@ -58,7 +73,7 @@
         @forelse ($payments as $payment)
             @php
                 $statusValue = $payment->payment_status?->value ?? 'pending';
-                $pillClass = $statusPillFor($statusValue);
+                $pillTone = $statusPillFor($statusValue);
                 $reference = $payment->gateway_reference ?: $payment->idempotency_key;
                 $isWalletFunding = ! $payment->order;
             @endphp
@@ -122,9 +137,7 @@
 
                 {{-- Status pill --}}
                 <span class="col-status">
-                    <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $pillClass }}">
-                        {{ $payment->payment_status?->label() ?? 'Pending' }}
-                    </span>
+                    <x-admin.badge :tone="$pillTone">{{ $payment->payment_status?->label() ?? 'Pending' }}</x-admin.badge>
                 </span>
             </article>
         @empty

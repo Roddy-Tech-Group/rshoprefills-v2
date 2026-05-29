@@ -83,7 +83,7 @@
                     <img src="{{ asset('assets/' . rawurlencode('flight 2.svg')) }}" alt="" class="h-5 w-5 shrink-0 brightness-0 invert" loading="lazy">
                     <h3 class="text-xl font-bold leading-tight">Flights</h3>
                 </div>
-                <p class="mt-1 text-sm leading-snug text-white/90">Book flights effortlessly and pay with crypto from anywhere in the world.</p>
+                <p class="mt-1 text-sm leading-snug text-white/90">Travel smarter with secure bookings, fast confirmations, and global access from anywhere in the world.</p>
             </div>
         </article>
 

@@ -14,6 +14,7 @@
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
+    --color-zinc-150: #ececee;
     --color-zinc-200: #e5e5e5;
     --color-zinc-300: #d4d4d4;
     --color-zinc-400: #a3a3a3;
@@ -105,6 +106,13 @@ html.dark .nav-item-active img {
 html.dark .nav-item-active svg {
     color: #ffffff;
 }
+/* The active class also carries `bg-blue-50` for light mode. In dark mode that
+   utility is globally remapped to navy (#15273f) further down the stylesheet,
+   which wins over the inline `dark:bg-black` utility due to source order. Pin
+   the active background to pure black here so the dark sidebar reads correctly. */
+html.dark .nav-item-active {
+    background-color: #000000 !important;
+}
 /* Mobile-only horizontal-overflow lock. Stops dropdowns / off-canvas panels
    / decorative gradients from pushing the viewport wider than the screen.
    Disabled at lg+ because the collapsed-sidebar flyout popups deliberately
@@ -140,6 +148,29 @@ body::-webkit-scrollbar-thumb:hover {
 
 [data-flux-field] {
     @apply grid gap-2;
+}
+
+/* Carousel inner track — moved via transform: translate3d(...) from JS.
+   The cubic-bezier curve below is the premium e-commerce standard: it
+   triggers the motion instantly on click (zero lag) and decelerates
+   beautifully into a soft stop. will-change + backface-visibility lift the
+   element onto its own GPU layer so the motion is hardware-composited,
+   eliminating tearing and stutter even on long card lists. */
+.carousel-list {
+    transition: transform 0.6s cubic-bezier(0.215, 0.610, 0.355, 1.000);
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+}
+.carousel-list > * {
+    flex-shrink: 0;
+}
+/* Brand-row variant: cards are sized to a JS-set --card-w. Reviews carousel
+   skips this rule because each review card carries its own w-72 / w-* class. */
+.carousel-list[style*="--card-w"] > * {
+    width: var(--card-w, 280px);
+    min-width: var(--card-w, 280px);
 }
 
 /* Gentle floating motion for illustrations (empty cart, etc.). Use with the .animate-float class. */
@@ -399,13 +430,16 @@ select:focus[data-flux-control] {
 .dark .bg-\[\#f9fafb\]   { background-color: #070f1c; }
 .dark .bg-\[\#ededee\]   { background-color: #101f33; }   /* product hero plate */
 
-/* Glass surfaces — semi-transparent white panels. */
+/* Glass surfaces — semi-transparent white panels.
+   Dropdowns/panels (bg-white/80, /85) are remapped to the card surface colour
+   (#162a4a) so they appear elevated above the dark page background rather than
+   blending into it. Lower-opacity tints stay on the deeper base. */
 .dark .bg-white\/40 { background-color: rgb(12 26 46 / 0.55); }
 .dark .bg-white\/70 { background-color: rgb(12 26 46 / 0.80); }
-.dark .bg-white\/80 { background-color: rgb(12 26 46 / 0.86); }
-.dark .bg-white\/85 { background-color: rgb(12 26 46 / 0.88); }
-.dark .bg-white\/90 { background-color: rgb(12 26 46 / 0.92); }
-.dark .bg-white\/95 { background-color: rgb(12 26 46 / 0.95); }
+.dark .bg-white\/80 { background-color: rgba(22, 42, 74, 0.95); }
+.dark .bg-white\/85 { background-color: rgba(22, 42, 74, 0.97); }
+.dark .bg-white\/90 { background-color: rgba(22, 42, 74, 0.98); }
+.dark .bg-white\/95 { background-color: rgba(22, 42, 74, 1.0); }
 
 /* Blue tints used as subtle highlights / selected states. */
 .dark .bg-blue-50  { background-color: #15273f; }
@@ -485,13 +519,26 @@ select:focus[data-flux-control] {
 .dark img[src$=".svg"]:not(.no-dark-invert) {
     filter: brightness(0) invert(0.92) !important;
 }
+/* Nav category bar — force white text + full-opacity white icons in dark mode.
+   The link text inherits colour from the global zinc remaps but we pin it to
+   pure white here so the bar stays readable regardless of the underlying
+   backdrop. Opacity-50 on inactive icons is intentional on light mode but too
+   dim on the dark navy header, so we lift all icons to full opacity. */
+.dark nav[aria-label="Product categories"] a {
+    color: #ffffff !important;
+}
+.dark nav[aria-label="Product categories"] a img {
+    filter: brightness(0) invert(1) !important;
+    opacity: 1 !important;
+}
 /* Crypto coin icons are colour brand marks (BTC orange, ETH, SOL, USDT) — the
    blanket invert above would flatten them to white blobs. Keep their own hues.
    Equal specificity to the rule above, declared after it, so this wins. */
 .dark img[src$=".svg"][src*="BTC"],
 .dark img[src$=".svg"][src*="ETH"],
 .dark img[src$=".svg"][src*="SOLANA"],
-.dark img[src$=".svg"][src*="USDT"] {
+.dark img[src$=".svg"][src*="USDT"],
+.dark img[src$="/USD.svg"] {
     filter: none !important;
 }
 /* Country flag SVGs (Ghana, Nigeria, Cameroon/XAF) are coloured artwork — the
@@ -514,6 +561,12 @@ select:focus[data-flux-control] {
 /* referals.png is a monochrome dark icon PNG — the SVG invert above misses
    PNGs, so invert it to white explicitly for the dark surface. */
 .dark img[src*="referals.png"] {
+    filter: brightness(0) invert(1) !important;
+}
+/* RShopRefills brand logo PNG renders as dark wordmark on transparent — flip it
+   to white in dark mode so it reads on the navy chrome (nav, footer, auth, admin
+   sidebar). */
+.dark img[src*="Rshoprefillslogo.png"] {
     filter: brightness(0) invert(1) !important;
 }
 

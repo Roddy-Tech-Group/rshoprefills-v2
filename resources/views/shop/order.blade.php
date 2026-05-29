@@ -99,6 +99,335 @@
 
 <x-layouts.app.header :title="'Order ' . $order->order_number . ' | RshopRefills'">
 
+@if ($status->value === 'completed')
+    {{-- ── Clean success view for completed orders ──────────────────────
+         Mobile-first, focused on the deliverable (codes + actions). Renders
+         the original detailed view only for non-completed states below. --}}
+    @php
+        $tpProfileUrl = config('services.trustpilot.profile_url');
+        $groupedItemsSuccess = $order->items->groupBy('product_variant_id');
+    @endphp
+
+    <div class="min-h-full bg-zinc-50 dark:bg-[#0c1a36]">
+        <div class="mx-auto w-full max-w-sm px-4 py-8 sm:py-10">
+
+            {{-- Hero with confetti splash. Tick pops in with a bouncy scale,
+                 and a ring of coloured particles bursts outward then fades.
+                 Pure CSS + inline custom properties; runs once on page load. --}}
+            <style>
+                @keyframes rshop-tick-pop {
+                    0%   { transform: scale(0); }
+                    60%  { transform: scale(1.2); }
+                    100% { transform: scale(1); }
+                }
+                @keyframes rshop-confetti-burst {
+                    0%   { transform: translate(-50%, -50%) rotate(var(--rshop-angle, 0deg)) translateX(0) scale(1); opacity: 1; }
+                    80%  { opacity: 1; }
+                    100% { transform: translate(-50%, -50%) rotate(var(--rshop-angle, 0deg)) translateX(var(--rshop-distance, 70px)) scale(0.3); opacity: 0; }
+                }
+                .rshop-tick {
+                    animation: rshop-tick-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+                }
+                .rshop-confetti {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: 8px;
+                    height: 8px;
+                    background: var(--rshop-color, #fbbf24);
+                    border-radius: 2px;
+                    pointer-events: none;
+                    opacity: 0;
+                    animation: rshop-confetti-burst 1.1s ease-out 0.15s forwards;
+                }
+                .rshop-confetti.is-round { border-radius: 9999px; }
+                .rshop-confetti.is-bar   { width: 10px; height: 3px; border-radius: 2px; }
+                @media (prefers-reduced-motion: reduce) {
+                    .rshop-tick { animation: none; }
+                    .rshop-confetti { display: none; }
+                }
+            </style>
+
+            <div class="text-center">
+                <div class="relative mx-auto inline-block">
+                    {{-- Confetti particles - 14 around the tick, angles spread
+                         evenly, mixed shapes + festive colour palette. --}}
+                    <span class="rshop-confetti"          style="--rshop-angle:   0deg; --rshop-distance: 70px; --rshop-color:#ef4444;"></span>
+                    <span class="rshop-confetti is-round" style="--rshop-angle:  26deg; --rshop-distance: 80px; --rshop-color:#f97316;"></span>
+                    <span class="rshop-confetti is-bar"   style="--rshop-angle:  52deg; --rshop-distance: 65px; --rshop-color:#fbbf24;"></span>
+                    <span class="rshop-confetti"          style="--rshop-angle:  78deg; --rshop-distance: 85px; --rshop-color:#84cc16;"></span>
+                    <span class="rshop-confetti is-round" style="--rshop-angle: 104deg; --rshop-distance: 75px; --rshop-color:#10b981;"></span>
+                    <span class="rshop-confetti is-bar"   style="--rshop-angle: 130deg; --rshop-distance: 90px; --rshop-color:#06b6d4;"></span>
+                    <span class="rshop-confetti"          style="--rshop-angle: 156deg; --rshop-distance: 70px; --rshop-color:#3b82f6;"></span>
+                    <span class="rshop-confetti is-round" style="--rshop-angle: 182deg; --rshop-distance: 80px; --rshop-color:#8b5cf6;"></span>
+                    <span class="rshop-confetti is-bar"   style="--rshop-angle: 208deg; --rshop-distance: 65px; --rshop-color:#ec4899;"></span>
+                    <span class="rshop-confetti"          style="--rshop-angle: 234deg; --rshop-distance: 85px; --rshop-color:#f43f5e;"></span>
+                    <span class="rshop-confetti is-round" style="--rshop-angle: 260deg; --rshop-distance: 75px; --rshop-color:#fbbf24;"></span>
+                    <span class="rshop-confetti is-bar"   style="--rshop-angle: 286deg; --rshop-distance: 90px; --rshop-color:#22c55e;"></span>
+                    <span class="rshop-confetti"          style="--rshop-angle: 312deg; --rshop-distance: 70px; --rshop-color:#0ea5e9;"></span>
+                    <span class="rshop-confetti is-round" style="--rshop-angle: 338deg; --rshop-distance: 80px; --rshop-color:#a855f7;"></span>
+
+                    {{-- The tick itself --}}
+                    <span class="rshop-tick relative flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30">
+                        <svg class="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                        </svg>
+                    </span>
+                </div>
+                <h1 class="mt-5 text-2xl font-bold text-zinc-900 dark:text-white">Order completed</h1>
+                <p class="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">Thank you for your purchase</p>
+            </div>
+
+            {{-- Download as CSV --}}
+            <div class="mt-7 flex justify-center">
+                <a href="{{ route('shop.order.codes.csv', $order->order_number) }}" class="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900 underline underline-offset-4 transition-colors hover:text-blue-700 dark:text-white dark:hover:text-blue-300">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                    Download as CSV
+                </a>
+            </div>
+
+            {{-- Per-unit product cards - exact copy of the dashboard orders
+                 page card design (livewire/dashboard/orders.blade.php) so the
+                 same gift-card look shows on both surfaces. --}}
+            @php
+                $countryNamesSuccess = array_flip(config('countries.codes', []));
+            @endphp
+            <div class="mt-6 space-y-4">
+                @foreach ($groupedItemsSuccess as $variantItems)
+                    @foreach ($variantItems as $idx => $item)
+                        @php
+                            $snap = $item->product_snapshot ?? [];
+                            $vsnap = $item->variant_snapshot ?? [];
+                            $brandKey = $snap['brand_key'] ?? null;
+                            $name = $brandKey ? \App\Models\Product::brandDisplayName($brandKey) : ($snap['name'] ?? 'Item');
+                            $logo = \App\Models\Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
+                            $faceVal = $vsnap['face_value'] ?? null;
+                            $faceCur = $vsnap['currency'] ?? ($snap['currency_code'] ?? 'USD');
+                            $faceTxt = $faceVal !== null
+                                ? \App\Models\Product::currencySymbol($faceCur).rtrim(rtrim(number_format((float) $faceVal, 2), '0'), '.')
+                                : ($sym . number_format((float) $item->display_amount, 0));
+                            $country = $countryNamesSuccess[strtoupper((string) ($snap['country_code'] ?? ''))] ?? ($snap['country_code'] ?? null);
+                            $payload = (array) ($item->fulfillment_payload ?? []);
+                            $cardPin = (! empty($payload['pin']) && is_scalar($payload['pin'])) ? (string) $payload['pin'] : null;
+                            $cardCode = null;
+                            foreach (['code', 'voucher_code', 'redeem_code', 'card_number', 'serial', 'activation_code'] as $credKey) {
+                                if (! empty($payload[$credKey]) && is_scalar($payload[$credKey])) { $cardCode = (string) $payload[$credKey]; break; }
+                            }
+                            $qrUrl = is_scalar($payload['qrcode_url'] ?? null) ? (string) $payload['qrcode_url'] : null;
+                            $phone = is_scalar($payload['phone_number'] ?? null) ? (string) $payload['phone_number'] : null;
+                        @endphp
+
+                        {{-- Gift card - mirrors the dashboard orders page card so the
+                             customer sees the same gift-card visual on both surfaces. --}}
+                        <div class="theme-static mx-auto max-w-[340px] rounded-[10px] border-2 border-zinc-100 bg-zinc-100 px-3 py-1.5">
+                            <div class="flex items-start justify-between gap-3 px-2 pt-2">
+                                <div class="flex min-w-0 flex-col items-start gap-2.5">
+                                    @if ($logo)
+                                        <img src="{{ $logo }}" alt="{{ $name }}" class="h-16 w-auto max-w-[130px] object-contain mix-blend-multiply" loading="lazy">
+                                    @else
+                                        <span class="text-3xl font-black uppercase text-zinc-400">{{ str($name)->substr(0, 2)->upper() }}</span>
+                                    @endif
+                                    <p class="truncate text-sm font-bold text-zinc-900">For {{ $name }}</p>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                    <p class="text-2xl font-extrabold leading-none text-zinc-900">{{ $faceTxt }}</p>
+                                    @if ($country)
+                                        <p class="mt-1 flex items-center justify-end gap-1.5 text-sm text-zinc-600">
+                                            @if (\App\Models\Product::flagUrl($snap['country_code'] ?? null))
+                                                <img src="{{ \App\Models\Product::flagUrl($snap['country_code'] ?? null) }}" alt="" class="h-3 w-[18px] rounded-[1px] object-cover ring-1 ring-zinc-200">
+                                            @endif
+                                            {{ $country }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Card body space --}}
+                            <div class="h-14"></div>
+
+                            @if ($qrUrl)
+                                <div class="flex flex-col items-center gap-2 rounded-[10px] border-2 border-zinc-100 bg-white p-4">
+                                    <img src="{{ $qrUrl }}" alt="eSIM activation QR code" class="h-44 w-44 object-contain" loading="lazy">
+                                    <p class="text-center text-xs font-medium text-zinc-600">Scan this QR from another device to install your eSIM.</p>
+                                </div>
+                            @elseif ($phone)
+                                <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3">
+                                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                        </svg>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500">Credited to</p>
+                                        <p class="truncate text-base font-bold tabular-nums text-zinc-900">{{ $phone }}</p>
+                                    </div>
+                                </div>
+                            @elseif ($cardCode || $cardPin)
+                                <div class="space-y-2">
+                                    @foreach (array_filter(['Code' => $cardCode, 'Pin' => $cardPin]) as $credLabel => $credValue)
+                                        <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3" wire:key="success-cred-{{ $item->id }}-{{ $credLabel }}">
+                                            <span class="w-9 shrink-0 text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ $credLabel }}</span>
+                                            <span class="min-w-0 flex-1 truncate text-base font-bold tracking-wider text-zinc-900">{{ $credValue }}</span>
+                                            <button
+                                                type="button"
+                                                x-data="{ copied: false }"
+                                                @click="navigator.clipboard.writeText(@js($credValue)); copied = true; setTimeout(() => copied = false, 1500)"
+                                                class="shrink-0 text-zinc-400 transition-colors hover:text-blue-600"
+                                                aria-label="Copy {{ $credLabel }}"
+                                            >
+                                                <svg x-show="!copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/>
+                                                </svg>
+                                                <span x-show="copied" x-cloak class="text-xs font-bold text-emerald-600">Copied</span>
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="flex items-center gap-2 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-xs font-medium text-zinc-500">
+                                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Your code appears here once payment clears.
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                @endforeach
+            </div>
+
+            {{-- ── Order-level actions: wallet + side-by-side help links ──
+                 Mirrors the mobile mockup: "Add to wallet" on its own row,
+                 then two small text links that toggle an inline collapsible
+                 panel beneath them. Single Alpine root tracks which panel
+                 is open at a time. --}}
+            <div class="mt-6" x-data="{
+                    open: null,
+                    toggle(name) { this.open = this.open === name ? null : name; },
+                    isApple: /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent),
+                }">
+
+                {{-- Add to Apple Wallet - shown only on Apple devices that
+                     actually have Wallet (iPhone / iPad / Mac). x-if (not
+                     x-show) so the button never enters the DOM at all on
+                     Windows / Android. Gift-card orders only - eSIMs and
+                     top-ups don't go in Wallet. --}}
+                @if ($orderHasGiftCards)
+                    <template x-if="isApple">
+                        <div class="flex justify-center">
+                            <a href="{{ route('shop.order.codes.pdf', $order->order_number) }}" class="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900 transition-colors hover:text-blue-700 dark:text-white dark:hover:text-blue-300">
+                                <svg class="h-5 w-5 text-zinc-700 dark:text-zinc-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M16 16.5c0.8284 0 1.5 -0.6716 1.5 -1.5s-0.6716 -1.5 -1.5 -1.5 -1.5 0.6716 -1.5 1.5 0.6716 1.5 1.5 1.5"/>
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M15.7041 0.0447311c0.2313 -0.0716753 0.482 -0.0571144 0.7051 0.0429688 0.255 0.1145191 0.4506 0.3305361 0.539 0.5957031l1.7725 5.316407H20c0.5523 0 1 0.44771 1 1v3h2c0.5523 0 1 0.44769 1 0.99999v8c0 0.5523 -0.4477 1 -1 1h-2v3c0 0.5523 -0.4477 1 -1 1H1c-0.552285 0 -1 -0.4477 -1 -1V6.99981c0 -0.55229 0.447715 -1 1 -1h0.7959L15.6064 0.0808639zM11.4141 14.9998l3 3H22v-6h-7.5859zM6.87109 5.99981h9.74121l-1.2178 -3.65332z"/>
+                                </svg>
+                                Add to wallet
+                            </a>
+                        </div>
+                    </template>
+                @endif
+
+                {{-- Side-by-side text links --}}
+                <div class="mt-3 flex items-center justify-center gap-8 text-xs">
+                    <button type="button" @click="toggle('redeem')" :class="open === 'redeem' ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-500 dark:text-zinc-400'" class="transition-colors hover:text-blue-700 dark:hover:text-blue-300">
+                        Redeem instructions
+                    </button>
+                    <button type="button" @click="toggle('terms')" :class="open === 'terms' ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-500 dark:text-zinc-400'" class="transition-colors hover:text-blue-700 dark:hover:text-blue-300">
+                        Terms and conditions
+                    </button>
+                </div>
+
+                {{-- Inline collapsible panels - one renders at a time below the links. --}}
+                <div x-show="open === 'redeem'" x-collapse x-cloak class="mt-3 overflow-hidden rounded-[10px] bg-white px-4 py-3 text-xs leading-relaxed text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-300 dark:ring-zinc-700/60">
+                    @if ($orderHasGiftCards)
+                        <p class="font-semibold text-zinc-900 dark:text-white">Gift cards</p>
+                        <ol class="ml-4 mt-1 list-decimal space-y-1">
+                            <li>Visit the brand's redemption page (e.g. apple.com/redeem for Apple, amazon.com/gc for Amazon).</li>
+                            <li>Sign in or create an account in the matching region.</li>
+                            <li>Enter the PIN/code above exactly as shown - codes are case-sensitive and single-use.</li>
+                            <li>The balance is added to your account immediately.</li>
+                        </ol>
+                    @endif
+                    @if ($orderHasEsims)
+                        <p class="{{ $orderHasGiftCards ? 'mt-3' : '' }} font-semibold text-zinc-900 dark:text-white">eSIMs</p>
+                        <ol class="ml-4 mt-1 list-decimal space-y-1">
+                            <li>Open Settings on iOS (or your device's mobile network settings on Android).</li>
+                            <li>Go to Cellular or Mobile Data, then "Add eSIM" / "Add cellular plan".</li>
+                            <li>Scan the QR code shown on the card above.</li>
+                            <li>Follow the prompts to label and activate. The plan starts on first network connection in the destination country.</li>
+                        </ol>
+                    @endif
+                    @if ($orderHasTopups)
+                        <p class="{{ $orderHasGiftCards || $orderHasEsims ? 'mt-3' : '' }} font-semibold text-zinc-900 dark:text-white">Mobile top-ups</p>
+                        <p class="mt-1">The top-up has been credited directly to the phone number shown above - no further action needed. If the credit does not appear within 15 minutes, contact support with this order number.</p>
+                    @endif
+                </div>
+
+                <div x-show="open === 'terms'" x-collapse x-cloak class="mt-3 overflow-hidden rounded-[10px] bg-white px-4 py-3 text-xs leading-relaxed text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-300 dark:ring-zinc-700/60">
+                    <ul class="ml-4 list-disc space-y-1">
+                        <li>Codes are equivalent to cash. RshopRefills cannot reissue codes that have been viewed, shared or used.</li>
+                        @if ($orderHasGiftCards)
+                            <li>Gift cards are region-locked. They can only be redeemed by accounts registered in the matching country.</li>
+                        @endif
+                        @if ($orderHasEsims)
+                            <li>eSIM data plans activate on first network connection. The validity period (where applicable) starts from that point.</li>
+                        @endif
+                        @if ($orderHasTopups)
+                            <li>Mobile top-ups are non-refundable once credited to the destination phone number.</li>
+                        @endif
+                        <li>For the full legal terms see our <a href="{{ route('shop.terms') }}" wire:navigate class="text-blue-700 underline-offset-2 hover:underline dark:text-blue-300">Terms and Conditions</a>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            {{-- Review prompt - clicking any star opens Trustpilot in a new tab --}}
+            <div class="mt-10 text-center">
+                <h2 class="text-base font-bold text-zinc-900 dark:text-white">Share your experience</h2>
+                <p class="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">Your review helps other people decide with confidence.</p>
+                {{-- Trustpilot-style interactive rating: empty/outlined stars
+                     by default, fill in blue as the cursor passes over them
+                     (left-to-right wave via staggered transition-delay). Click
+                     any star to open Trustpilot's review form in a new tab. --}}
+                <div class="mt-5 flex items-center justify-center gap-3" x-data="{ hovered: 0 }">
+                    @for ($i = 1; $i <= 5; $i++)
+                        <a
+                            href="{{ $tpProfileUrl }}"
+                            target="_blank"
+                            rel="noopener"
+                            aria-label="Rate {{ $i }} out of 5 on Trustpilot"
+                            @mouseenter="hovered = {{ $i }}"
+                            @mouseleave="hovered = 0"
+                            class="transition-transform duration-200 hover:scale-110"
+                        >
+                            <svg
+                                class="h-9 w-9 transition-all duration-300 ease-out"
+                                :class="hovered >= {{ $i }} ? 'fill-blue-600 stroke-blue-600 drop-shadow-[0_0_8px_rgba(37,99,235,0.45)] dark:fill-blue-400 dark:stroke-blue-400' : 'fill-transparent stroke-zinc-300 dark:stroke-zinc-600'"
+                                :style="hovered >= {{ $i }} ? 'transition-delay: {{ ($i - 1) * 60 }}ms' : 'transition-delay: 0ms'"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/>
+                            </svg>
+                        </a>
+                    @endfor
+                </div>
+            </div>
+
+            {{-- Back to dashboard --}}
+            <div class="mt-10 text-center">
+                <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-700 underline-offset-4 hover:underline dark:text-blue-300">View all my orders</a>
+            </div>
+
+        </div>
+    </div>
+
+@else
+    {{-- ── Existing detailed view for non-completed states (pending,
+         processing, failed, etc.) - kept verbatim. ──────────────── --}}
+
 <div class="min-h-full bg-zinc-100">
 <div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:py-10">
 
@@ -582,15 +911,16 @@
                 <p class="mt-1 text-xs text-zinc-500">Please do not close this window.</p>
             </div>
 
-            <!-- Success state -->
-            <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
-                    <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <!-- Success state: matches the post-order-complete hero so the
+                 customer sees a consistent green tick across both moments. -->
+            <div x-show="paymentState === 'success'" class="flex flex-col items-center py-10 text-center">
+                <span class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30">
+                    <svg class="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
                     </svg>
                 </span>
-                <h3 class="mt-4 text-base font-bold text-zinc-950">Payment Complete!</h3>
-                <p class="mt-1.5 text-xs text-zinc-600">Your order status is refreshing now.</p>
+                <h3 class="mt-5 text-2xl font-bold text-zinc-900 dark:text-white">Payment complete</h3>
+                <p class="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">Your order status is refreshing now.</p>
             </div>
 
             <!-- Error state -->
@@ -831,4 +1161,5 @@
 </div>
 </div>
 
+@endif
 </x-layouts.app.header>

@@ -44,7 +44,7 @@ new class extends Component {
             <div>
                 <flux:heading size="lg">{{ __('Delete your account?') }}</flux:heading>
                 <flux:subheading>
-                    {{ __('All your data — orders, wallet balance, transaction history — will be permanently removed. Enter your password to confirm.') }}
+                    {{ __('Everything will be permanently removed: orders, wallet balance, and transaction history. Enter your password to confirm.') }}
                 </flux:subheading>
             </div>
 

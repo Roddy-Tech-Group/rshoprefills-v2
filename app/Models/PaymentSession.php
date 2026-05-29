@@ -120,16 +120,18 @@ class PaymentSession extends Model
      *
      * Allowed statuses:
      * pending, awaiting_method, awaiting_customer_action, awaiting_transfer,
-     * awaiting_confirmation, processing, confirmed, failed, expired, cancelled.
+     * awaiting_redirect, awaiting_confirmation, processing, confirmed, failed,
+     * expired, cancelled.
      */
     public function transitionTo(string $newStatus): void
     {
         $allowedTransitions = [
-            'pending' => ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_customer_action', 'cancelled'],
+            'pending' => ['awaiting_payment', 'awaiting_method', 'awaiting_transfer', 'awaiting_redirect', 'awaiting_customer_action', 'cancelled'],
             'awaiting_payment' => ['processing', 'expired', 'cancelled', 'confirmed', 'failed'],
-            'awaiting_method' => ['awaiting_customer_action', 'awaiting_transfer', 'awaiting_confirmation', 'processing', 'confirmed', 'failed', 'cancelled'],
+            'awaiting_method' => ['awaiting_customer_action', 'awaiting_transfer', 'awaiting_redirect', 'awaiting_confirmation', 'processing', 'confirmed', 'failed', 'cancelled'],
             'awaiting_customer_action' => ['processing', 'confirmed', 'failed', 'cancelled'],
             'awaiting_transfer' => ['awaiting_confirmation', 'processing', 'confirmed', 'failed', 'expired', 'cancelled'],
+            'awaiting_redirect' => ['processing', 'confirmed', 'failed', 'expired', 'cancelled'],
             'awaiting_confirmation' => ['confirmed', 'failed', 'expired', 'cancelled'],
             'processing' => ['confirmed', 'failed'],
             'confirmed' => [],

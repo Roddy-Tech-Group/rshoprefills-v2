@@ -8,6 +8,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 new
 #[Layout('components.layouts.dashboard')]
@@ -30,6 +31,62 @@ class extends Component {
     {
         $this->filter = in_array($filter, ['all', 'credit', 'debit'], true) ? $filter : 'all';
         $this->resetPage();
+    }
+
+    /**
+     * Stream the customer's wallet ledger as a CSV download. Respects the
+     * current search + direction filter so the file matches what's on-screen.
+     * Streamed (not buffered) so a multi-year ledger doesn't blow the PHP
+     * memory limit. Filename includes the date so repeat exports don't
+     * collide in the user's downloads folder.
+     */
+    public function downloadCsv(): StreamedResponse
+    {
+        $userId = Auth::id();
+        $search = trim($this->search);
+        $filter = $this->filter;
+
+        $filename = 'transactions-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($userId, $search, $filter) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Date', 'Reference', 'Direction', 'Category', 'Description', 'Amount', 'Currency', 'Balance after']);
+
+            $query = \App\Models\User::find($userId)->walletTransactions()->latest();
+
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('reference', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+            if ($filter === 'credit') {
+                $query->where('type', WalletTransactionType::Credit);
+            } elseif ($filter === 'debit') {
+                $query->where('type', WalletTransactionType::Debit);
+            }
+
+            // chunkById keeps memory flat regardless of ledger size.
+            $query->chunkById(500, function ($rows) use ($out) {
+                foreach ($rows as $row) {
+                    fputcsv($out, [
+                        $row->created_at->format('Y-m-d H:i:s'),
+                        $row->reference,
+                        $row->type === WalletTransactionType::Credit ? 'Credit' : 'Debit',
+                        $row->transaction_category?->label(),
+                        $row->description,
+                        number_format((float) $row->amount, 2, '.', ''),
+                        $row->currency?->value,
+                        $row->balance_after !== null ? number_format((float) $row->balance_after, 2, '.', '') : '',
+                    ]);
+                }
+            });
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type'  => 'text/csv',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
     }
 
     public function with(): array
@@ -100,17 +157,39 @@ class extends Component {
         </div>
     </div>
 
-    {{-- Direction filter pills --}}
-    <div class="flex items-center gap-2">
-        @foreach (['all' => 'All', 'credit' => 'Money in', 'debit' => 'Money out'] as $key => $label)
-            <button
-                type="button"
-                wire:click="setFilter('{{ $key }}')"
-                class="rounded-[6px] px-3.5 py-2 text-sm font-semibold transition-colors {{ $filter === $key ? 'bg-blue-600 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50' }}"
-            >
-                {{ $label }}
-            </button>
-        @endforeach
+    {{-- Direction filter pills + CSV export. The download honours the current
+         search + filter so what the customer sees on screen is what they get
+         in the file. --}}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+            @foreach (['all' => 'All', 'credit' => 'Money in', 'debit' => 'Money out'] as $key => $label)
+                <button
+                    type="button"
+                    wire:click="setFilter('{{ $key }}')"
+                    class="rounded-[6px] px-3.5 py-2 text-sm font-semibold transition-colors {{ $filter === $key ? 'bg-blue-600 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50' }}"
+                >
+                    {{ $label }}
+                </button>
+            @endforeach
+        </div>
+
+        <button
+            type="button"
+            wire:click="downloadCsv"
+            wire:loading.attr="disabled"
+            wire:target="downloadCsv"
+            class="inline-flex items-center gap-1.5 rounded-[6px] border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-zinc-200 dark:hover:bg-[#26416b]"
+        >
+            <svg wire:loading.remove wire:target="downloadCsv" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+            </svg>
+            <svg wire:loading wire:target="downloadCsv" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+            <span wire:loading.remove wire:target="downloadCsv">Export CSV</span>
+            <span wire:loading wire:target="downloadCsv">Preparing...</span>
+        </button>
     </div>
 
     {{-- Recent deposits — in-flight / failed funding attempts. --}}

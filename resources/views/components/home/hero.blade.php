@@ -103,10 +103,11 @@
                 </svg>
             </a>
 
-            {{-- Explore eSIMs (glass button). Literal-hex bg/text so the dark-mode
-                 palette remap skips it — it is a light glass accent on the
-                 always-dark hero and must look the same in both themes. --}}
-            <a href="{{ route('shop.esims') }}" wire:navigate class="group inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff]/60 backdrop-blur-md px-5 py-3 text-base font-semibold text-[#18181b] ring-1 ring-zinc-200/80 shadow-lg shadow-zinc-900/5 transition-all hover:-translate-y-0.5 hover:bg-[#ffffff]/80 hover:ring-zinc-300">
+            {{-- Explore eSIMs - pure transparent glass that adapts to theme:
+                 dark text + zinc ring on light hero, white text + white ring on
+                 dark hero. Backdrop blur stays the same; only the visible
+                 contrast pieces flip. --}}
+            <a href="{{ route('shop.esims') }}" wire:navigate class="group inline-flex items-center gap-2 rounded-[10px] bg-transparent backdrop-blur-md px-5 py-3 text-base font-semibold text-zinc-900 ring-1 ring-zinc-400 transition-all hover:-translate-y-0.5 hover:bg-zinc-900/5 hover:ring-zinc-500 dark:text-white dark:ring-white/30 dark:hover:bg-white/10 dark:hover:ring-white/50">
                 Explore eSIMs
                 <svg viewBox="0 0 24 24" class="h-5 w-5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 3h8.5L19 7.5V20a1 1 0 0 1 -1 1H6a1 1 0 0 1 -1 -1V4a1 1 0 0 1 1 -1z"/>
@@ -126,34 +127,81 @@
             // Each chip starts as a small circle showing only its PNG. The active
             // chip expands to reveal its title, subtitle, and arrow. The cycle
             // advances right to left, one chip every 6 seconds. Pauses on hover.
+            // Live catalog stats. Cached for 10 minutes so the homepage doesn't
+            // hit the DB on every render. Floor to a "marketing round" number
+            // (nearest thousand for products, nearest ten for countries) so the
+            // hero copy stays clean even as the catalog grows.
+            $catalogStats = \Illuminate\Support\Facades\Cache::remember(
+                'hero.catalog_stats',
+                now()->addMinutes(10),
+                fn () => [
+                    'variants'  => (int) \App\Models\ProductVariant::where('is_available', true)->count(),
+                    'countries' => (int) \App\Models\Product::where('is_active', true)
+                        ->whereNotNull('country_code')
+                        ->distinct('country_code')
+                        ->count('country_code'),
+                ],
+            );
+            $productsRounded = number_format(max(1000, intdiv($catalogStats['variants'], 1000) * 1000));
+            $countriesRounded = max(10, intdiv($catalogStats['countries'], 10) * 10);
+
+            // Each chip's `href` resolves to the storefront surface that best
+            // matches the teaser, so clicking "200+ countries" lands on /esims.
             $heroChips = [
                 [
                     'image'    => 'hero gift.png',
-                    'title'    => 'Shop Gift Cards Smartly',
-                    'subtitle' => 'Shop more than 14k+ GiftCards Pay your bill and send gifts',
+                    'title'    => $productsRounded.'+ digital products',
+                    'subtitle' => 'Gift cards, eSIMs, top-ups and bill payments worldwide',
+                    'href'     => route('shop.gift-cards'),
                 ],
                 [
                     'image'    => 'global coverage.png',
-                    'title'    => 'Stay connected anywhere',
-                    'subtitle' => '200+ countries supported with local rates.',
+                    'title'    => $countriesRounded.'+ countries covered',
+                    'subtitle' => 'Travel eSIMs and local top-ups in over '.$countriesRounded.' destinations',
+                    'href'     => route('shop.esims'),
                 ],
                 [
                     'image'    => 'secured users.png',
-                    'title'    => 'Trusted by thousands of users',
-                    'subtitle' => 'Our users trust our Products and supports us',
+                    'title'    => 'Verified customer reviews',
+                    'subtitle' => 'Real feedback from buyers on Trustpilot and Google',
+                    'href'     => route('shop.reviews'),
                 ],
                 [
                     'image'    => 'compactible on all devices.png',
-                    'title'    => 'Browse products Smartly',
-                    'subtitle' => 'Compactible on Laptop, Ipad & Mobile',
+                    'title'    => 'Works on every device',
+                    'subtitle' => 'Compatible with laptop, iPad and mobile',
+                    'href'     => route('shop.mobile-app'),
                 ],
                 [
                     'image'    => 'seach products.png',
-                    'title'    => 'Search Gift Cards, Esims, Appartments',
-                    'subtitle' => 'Search and make your self comfortanle with our services',
+                    'title'    => 'Find what you need fast',
+                    'subtitle' => 'Search gift cards, eSIMs and top-ups in seconds',
+                    'href'     => route('shop.topups'),
                 ],
             ];
         @endphp
+
+        {{-- Mobile chip slide animations - active chip slides in from the left
+             (when ping-pong direction is leftward) or from the right (rightward).
+             Disabled on lg+ so the desktop expand/collapse animation is the only
+             motion at that breakpoint. --}}
+        <style>
+            @keyframes rshop-chip-slide-from-left {
+                from { transform: translateX(-40px); opacity: 0; }
+                to   { transform: translateX(0);     opacity: 1; }
+            }
+            @keyframes rshop-chip-slide-from-right {
+                from { transform: translateX(40px); opacity: 0; }
+                to   { transform: translateX(0);    opacity: 1; }
+            }
+            @media (max-width: 1023.98px) {
+                .rshop-chip-from-left  { animation: rshop-chip-slide-from-left  600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+                .rshop-chip-from-right { animation: rshop-chip-slide-from-right 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .rshop-chip-from-left, .rshop-chip-from-right { animation: none; }
+            }
+        </style>
 
         {{-- Floating expandable chip bar (single row, one chip expanded at a time) --}}
         <div data-anim="hero-banner" class="mx-auto mt-14 w-full max-w-5xl">
@@ -162,6 +210,10 @@
                     total: {{ count($heroChips) }},
                     // Index of the chip currently expanded. Starts on the rightmost.
                     current: {{ count($heroChips) - 1 }},
+                    // Ping-pong direction: -1 = next chip is one to the LEFT,
+                    // +1 = next chip is one to the RIGHT. Exposed in state so
+                    // the mobile slide-in animation can pick the right side.
+                    direction: -1,
                     paused: false,
                     wait(ms) {
                         return new Promise(r => {
@@ -173,17 +225,13 @@
                         });
                     },
                     async cycle() {
-                        // Ping-pong: walk left to the first chip, bounce back to the right,
-                        // then bounce back to the left. Repeat forever.
-                        // direction === -1 means moving leftward, +1 means moving rightward.
-                        let direction = -1;
                         while (true) {
                             await this.wait(10000);
-                            const next = this.current + direction;
+                            const next = this.current + this.direction;
                             if (next < 0 || next >= this.total) {
                                 // Hit an edge: reverse direction and step the other way.
-                                direction = -direction;
-                                this.current = this.current + direction;
+                                this.direction = -this.direction;
+                                this.current = this.current + this.direction;
                             } else {
                                 this.current = next;
                             }
@@ -198,16 +246,19 @@
             >
                 @foreach ($heroChips as $i => $chip)
                     <a
-                        href="#"
+                        href="{{ $chip['href'] }}"
+                        wire:navigate
                         x-data="{ hovered: false }"
                         @mouseenter="hovered = true"
                         @mouseleave="hovered = false"
                         :class="[
                             current === {{ $i }} ? 'pr-4 sm:pr-5 lg:pr-8' : 'pr-2 sm:pr-2.5',
                             (current === {{ $i }} && hovered) ? '-translate-y-0.5' : '',
-                            current === {{ $i }} ? 'max-lg:w-full' : 'max-lg:hidden'
+                            current === {{ $i }} ? 'max-lg:w-full' : 'max-lg:hidden',
+                            current === {{ $i }} && direction < 0 ? 'rshop-chip-from-left' : '',
+                            current === {{ $i }} && direction > 0 ? 'rshop-chip-from-right' : ''
                         ]"
-                        class="group inline-flex h-[72px] shrink-0 items-center rounded-[10px] bg-white pl-2 shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200 transition-all duration-500 ease-out sm:h-[88px] sm:pl-2.5"
+                        class="group inline-flex h-[72px] shrink-0 items-center rounded-[10px] bg-white pl-2 shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200 lg:transition-all lg:duration-500 lg:ease-out sm:h-[88px] sm:pl-2.5"
                         aria-label="{{ $chip['title'] }}"
                     >
                         {{-- Icon (always visible) --}}
@@ -215,10 +266,13 @@
                             <img src="{{ asset('assets/' . rawurlencode($chip['image'])) }}" alt="" class="h-14 w-14 object-contain sm:h-[68px] sm:w-[68px]" loading="lazy">
                         </span>
 
-                        {{-- Title + subtitle (revealed when this chip is active) --}}
+                        {{-- Title + subtitle (revealed when this chip is active).
+                             Desktop gets a smooth reveal/collapse transition; on
+                             mobile the swap is instant so chip changes don't
+                             animate awkwardly. --}}
                         <span
                             :class="current === {{ $i }} ? 'flex-1 ml-3 opacity-100 lg:flex-none lg:max-w-[360px]' : 'max-w-0 ml-0 opacity-0'"
-                            class="block min-w-0 overflow-hidden whitespace-nowrap text-left transition-all duration-500 ease-out"
+                            class="block min-w-0 overflow-hidden whitespace-nowrap text-left lg:transition-all lg:duration-500 lg:ease-out"
                         >
                             <span class="block truncate text-[15px] font-semibold leading-tight text-zinc-900 transition-colors duration-200 group-hover:text-blue-600 sm:text-base">{{ $chip['title'] }}</span>
                             <span class="block truncate text-[13px] leading-tight text-zinc-600">{{ $chip['subtitle'] }}</span>
@@ -242,20 +296,20 @@
                                 </svg>
                             </span>
 
-                            {{-- White "Show more" button slides in from the right on hover.
+                            {{-- Glass "Show more" pill slides in from the right on hover.
                                  Pops slightly past the chip's right edge (translate-x-3 = 12px)
-                                 so the chip's gap accommodates it without overlapping neighbours. --}}
-                            {{-- bg/text use literal hexes (not bg-white/text-zinc-700) so the
-                                 dark-mode palette remap leaves this pill white — it is a light
-                                 accent on the always-dark hero and must stay light in both themes. --}}
+                                 so the chip's gap accommodates it without overlapping neighbours.
+                                 Frosted glass surface with rounded-full so it reads as a soft
+                                 floating capsule against the dark hero behind it. --}}
                             <span
                                 :class="(current === {{ $i }} && hovered) ? 'translate-x-3 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'"
-                                class="absolute inset-0 z-10 inline-flex h-14 items-center justify-start rounded-[10px] bg-[#ffffff] pl-5 pr-6 text-[#3f3f46] shadow-2xl shadow-zinc-900/25 transition-all duration-400 ease-out"
+                                class="absolute right-0 top-1/2 z-10 inline-flex h-9 -translate-y-1/2 items-center justify-center rounded-full px-3 text-white shadow-lg shadow-zinc-900/30 ring-1 ring-white/30 backdrop-blur-xl backdrop-saturate-150 transition-all duration-400 ease-out"
+                                style="background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 100%);"
                             >
-                                <svg class="mr-3 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <svg class="mr-1.5 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
                                 </svg>
-                                <span class="whitespace-nowrap text-base font-semibold">Show more</span>
+                                <span class="whitespace-nowrap text-xs font-semibold">Show more</span>
                             </span>
                         </span>
                     </a>

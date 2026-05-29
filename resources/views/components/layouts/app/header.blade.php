@@ -48,12 +48,21 @@
             x-effect="document.body.classList.toggle('overflow-hidden', localeModalOpen)"
             class="flex flex-1 flex-col"
         >
+            {{-- The whole header is sticky as one block (sticky needs a tall
+                 containing block, the body provides that here). main-nav's
+                 own Alpine then collapses the primary row on scroll, leaving
+                 just the top bar + category strip pinned. --}}
             <header class="sticky top-0 z-50 w-full">
                 <x-nav.top-bar />
                 <x-nav.main-nav />
             </header>
 
-            <main class="flex-1 bg-zinc-100">
+            {{-- overflow-x-clip prevents the carousel full-bleed (mx-[calc(50%-50vw)]
+                 w-screen) from creating a horizontal scrollbar: 100vw includes the
+                 vertical scrollbar width, so the breakout would otherwise be ~15px
+                 wider than the body. `clip` (not `hidden`) doesn't create a new
+                 scroll container, so sticky positioning still works. --}}
+            <main class="flex-1 overflow-x-clip bg-zinc-100">
                 {{ $slot }}
             </main>
 

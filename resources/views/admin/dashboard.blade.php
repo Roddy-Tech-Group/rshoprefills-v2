@@ -154,9 +154,28 @@
                         'tone' => 'bg-blue-200',
                         'icon' => 'trusted by millions.svg',
                         'span' => false,
-                        // Progress toward 1,000-user milestone. Capped at 100%
-                        // so once we cross the target the ring stays full.
-                        'donut' => ['pct' => min(100.0, ($totalUsers / 1000) * 100), 'color' => '#0044FF', 'caption' => 'of 1,000'],
+                        // Progress toward the next user-count milestone. The
+                        // milestone auto-scales with live user count so the
+                        // ring stays meaningful: at 50 users we aim at 100,
+                        // at 700 we aim at 1,000, at 4.5k we aim at 5,000,
+                        // and so on through 10k, 25k, 50k, 100k, 250k, 500k,
+                        // 1M. Always picks the first tier ABOVE the current
+                        // total so the ring never sits at 100% forever.
+                        'donut' => (function () use ($totalUsers) {
+                            $tiers = [100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+                            $target = $tiers[count($tiers) - 1];
+                            foreach ($tiers as $tier) {
+                                if ($totalUsers < $tier) {
+                                    $target = $tier;
+                                    break;
+                                }
+                            }
+                            return [
+                                'pct'     => min(100.0, ($totalUsers / $target) * 100),
+                                'color'   => '#0044FF',
+                                'caption' => 'of '.number_format($target),
+                            ];
+                        })(),
                     ],
                     [
                         'label' => 'Total Orders',
@@ -599,15 +618,13 @@
                                             // Same badge logic as the Customers list page so the dashboard
                                             // and list view never disagree on a user's status.
                                             $userStatus = match (true) {
-                                                $user->banned_at !== null => ['label' => 'Banned', 'class' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'],
-                                                $user->suspended_at !== null => ['label' => 'Suspended', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
-                                                $user->email_verified_at === null => ['label' => 'Pending', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'],
-                                                default => ['label' => 'Active', 'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'],
+                                                $user->banned_at !== null => ['label' => 'Banned', 'tone' => 'red'],
+                                                $user->suspended_at !== null => ['label' => 'Suspended', 'tone' => 'amber'],
+                                                $user->email_verified_at === null => ['label' => 'Pending', 'tone' => 'amber'],
+                                                default => ['label' => 'Active', 'tone' => 'emerald'],
                                             };
                                         @endphp
-                                        <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $userStatus['class'] }}">
-                                            {{ $userStatus['label'] }}
-                                        </span>
+                                        <x-admin.badge :tone="$userStatus['tone']">{{ $userStatus['label'] }}</x-admin.badge>
                                     </td>
                                     <td class="px-5 py-3 text-[11px] text-zinc-600">{{ $user->created_at->format('M j, Y') }}</td>
                                     <td class="px-5 py-3 text-right">

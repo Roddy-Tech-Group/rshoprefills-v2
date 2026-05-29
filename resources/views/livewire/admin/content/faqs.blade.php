@@ -134,7 +134,9 @@ class extends Component {
                             <p class="text-sm font-semibold text-zinc-900">{{ $faq->question }}</p>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">{{ $faq->answer }}</p>
                             @unless ($faq->is_published)
-                                <span class="mt-2 inline-flex items-center rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Draft</span>
+                                <span class="mt-2 inline-block">
+                                    <x-admin.badge tone="zinc">Draft</x-admin.badge>
+                                </span>
                             @endunless
                         </div>
                         <div class="flex shrink-0 items-center gap-1.5">

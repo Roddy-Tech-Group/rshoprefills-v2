@@ -582,6 +582,43 @@ document.addEventListener('alpine:init', () => {
 });
 
 /**
+ * Open Google OAuth in a centred popup window instead of full-page redirect.
+ * The popup lands on /auth/popup-complete after sign-in (success or failure);
+ * that page postMessages back here and closes itself. We listen for the
+ * message — on success we navigate to the dashboard, on cancel we just stay
+ * on the current page. Popup-blocker fallback: if window.open returns null,
+ * we navigate to the URL in the current tab so the user can still sign in.
+ */
+window.rshopOpenGoogleOAuth = function (href) {
+    const w = 500, h = 650;
+    const dualLeft  = (window.screenLeft !== undefined ? window.screenLeft : window.screenX) || 0;
+    const dualTop   = (window.screenTop  !== undefined ? window.screenTop  : window.screenY) || 0;
+    const winWidth  = window.innerWidth  || document.documentElement.clientWidth  || screen.width;
+    const winHeight = window.innerHeight || document.documentElement.clientHeight || screen.height;
+    const left = dualLeft + (winWidth  - w) / 2;
+    const top  = dualTop  + (winHeight - h) / 2;
+    const popup = window.open(href, 'rshop-google-oauth', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,noopener=no`);
+    if (! popup) {
+        // Popup blocked - fall back to a normal redirect so the user can still sign in.
+        window.location.href = href;
+        return;
+    }
+    popup.focus();
+    const onMessage = (event) => {
+        if (event.origin !== window.location.origin) { return; }
+        const data = event.data;
+        if (! data || data.source !== 'rshop-google-oauth') { return; }
+        window.removeEventListener('message', onMessage);
+        if (data.status === 'success') {
+            // Match the original full-redirect destination.
+            window.location.href = '/dashboard';
+        }
+        // status === 'cancelled' leaves the user on the current page.
+    };
+    window.addEventListener('message', onMessage);
+};
+
+/**
  * Live brand search dropdown for the storefront nav. Hits /api/search/brands?q=
  * with a small debounce, renders a dropdown of matching brands while the user
  * types. Pressing Enter submits the form to /gift-cards?q= for the full
@@ -712,63 +749,100 @@ window.dashboardSearch = function () {
 window.customerReviewsCarousel = function () {
     return {
         navigating: false,
-        animating: false,
+        tx: 0,
+        maxTx: 0,
+        cardW: 288,
+        gap: 20,
+        padLeft: 0,
+        savedDuration: '0.6s',
+        dragging: false,
+        dragStartX: 0,
+        dragStartTx: 0,
 
-        // Cubic ease-in-out — slow start, quick middle, gentle finish.
-        _ease(t) {
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        // Wire up the transform-based carousel: measure the content column
+        // padding, compute scroll bounds, snap to start. Matches the brand-row
+        // factory so both rows feel identical.
+        setup() {
+            const viewport = this.$refs.track;
+            const list     = this.$refs.list;
+            if (! viewport || ! list) return;
+
+            const card   = list.querySelector('article');
+            const header = this.$refs.header;
+            this.cardW   = card ? card.offsetWidth : 288;
+            this.gap     = window.innerWidth >= 640 ? 20 : 16;
+            // Measure the header content column (not the full-bleed section)
+            // so the first review card lines up with the "What our customers
+            // say" title on every viewport, including mobile.
+            this.padLeft = header
+                ? Math.round(header.getBoundingClientRect().left)
+                : Math.round(this.$el.getBoundingClientRect().left);
+            list.style.paddingLeft = this.padLeft + 'px';
+            this.tx = 0;
+            this.maxTx = Math.min(0, viewport.clientWidth - list.scrollWidth);
+            list.style.transform = 'translate3d(0, 0, 0)';
+
+            // Slow the slide down on long rows so a 20-card carousel doesn't
+            // feel hurried. Base 0.6s, +0.04s per item beyond 5, capped at 1.2s.
+            const itemCount = list.children.length;
+            const duration  = Math.min(1.2, 0.6 + 0.04 * Math.max(0, itemCount - 5));
+            this.savedDuration = duration.toFixed(2) + 's';
+            list.style.transitionDuration = this.savedDuration;
         },
 
-        // Animate the scroll position to `target` over ~620ms with rAF.
-        _scrollTo(target) {
-            const track = this.$refs.track;
-            if (! track) return;
-
-            const max = track.scrollWidth - track.clientWidth;
-            const start = track.scrollLeft;
-            const end = Math.max(0, Math.min(target, max));
-            const distance = end - start;
-            if (Math.abs(distance) < 1) return;
-
-            // Respect reduced-motion — jump straight there, no animation.
-            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                track.scrollLeft = end;
-                return;
-            }
-
-            const duration = 620;
-            const startedAt = performance.now();
-            this.animating = true;
-
-            const step = (now) => {
-                const progress = Math.min(1, (now - startedAt) / duration);
-                track.scrollLeft = start + distance * this._ease(progress);
-                if (progress < 1) {
-                    requestAnimationFrame(step);
-                } else {
-                    this.animating = false;
-                }
-            };
-            requestAnimationFrame(step);
-        },
-
-        // Advance one screenful; loop back to the start once the end is reached.
+        // Advance 2 cards per click on desktop / tablet, 1 on mobile. Loops back
+        // to the start once the end is reached (the original reviews-carousel
+        // contract; lets the row run forever from a single Next button).
         next() {
-            if (this.animating) return;
-            const track = this.$refs.track;
-            if (! track) return;
+            const list = this.$refs.list;
+            if (! list) return;
 
-            const card = track.querySelector('article');
-            const cardWidth = (card ? card.offsetWidth : 288) + 20; // card + gap
-            const max = track.scrollWidth - track.clientWidth;
-
-            if (track.scrollLeft >= max - 8) {
-                this._scrollTo(0);
+            if (this.tx <= this.maxTx + 1) {
+                this.tx = 0;
+                list.style.transform = 'translate3d(0, 0, 0)';
                 return;
             }
 
-            const perView = Math.max(1, Math.floor(track.clientWidth / cardWidth));
-            this._scrollTo(track.scrollLeft + perView * cardWidth);
+            const cardsPerStep = window.innerWidth >= 640 ? 2 : 1;
+            const step = cardsPerStep * (this.cardW + this.gap);
+            this.tx = Math.max(this.maxTx, this.tx - step);
+            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
+        },
+
+        // Touch / pointer drag for mobile + trackpad. Matches the brand-row
+        // implementation so both carousels feel identical when swiped.
+        onDragStart(e) {
+            const list = this.$refs.list;
+            if (! list) return;
+            this.dragging = true;
+            this.dragStartX = e.clientX;
+            this.dragStartTx = this.tx;
+            list.style.transitionDuration = '0s';
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
+        },
+        onDragMove(e) {
+            if (! this.dragging) return;
+            const list = this.$refs.list;
+            if (! list) return;
+            const delta = e.clientX - this.dragStartX;
+            const raw = this.dragStartTx + delta;
+            const next = raw > 0
+                ? raw * 0.35
+                : (raw < this.maxTx ? this.maxTx + (raw - this.maxTx) * 0.35 : raw);
+            list.style.transform = `translate3d(${next}px, 0, 0)`;
+        },
+        onDragEnd(e) {
+            if (! this.dragging) return;
+            const list = this.$refs.list;
+            if (! list) return;
+            this.dragging = false;
+            list.style.transitionDuration = this.savedDuration;
+            const delta = e.clientX - this.dragStartX;
+            const step  = this.cardW + this.gap;
+            const projected = this.dragStartTx + delta;
+            const snapped   = Math.round(projected / step) * step;
+            this.tx = Math.max(this.maxTx, Math.min(0, snapped));
+            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
         },
     };
 };

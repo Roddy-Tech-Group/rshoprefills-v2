@@ -130,34 +130,10 @@
 
         {{-- Utility row: theme picker, version, cookie settings --}}
         <div class="mt-10 flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
-            {{-- Modern segmented theme picker — wired to the theme engine (window.setTheme). --}}
-            <div
-                x-data="{ choice: localStorage.getItem('theme') || 'system' }"
-                x-on:theme-changed.window="choice = localStorage.getItem('theme') || 'system'"
-                class="inline-flex items-center gap-2.5"
-            >
-                <span class="text-xs font-semibold uppercase tracking-wider text-zinc-600">Theme</span>
-                <div class="inline-flex items-center rounded-[10px] bg-zinc-100 p-0.5 ring-1 ring-zinc-200">
-                    @foreach ([
-                        ['value' => 'light',  'label' => 'Light',  'path' => 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z'],
-                        ['value' => 'dark',   'label' => 'Dark',   'path' => 'M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z'],
-                        ['value' => 'system', 'label' => 'Auto', 'path' => 'M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25'],
-                    ] as $opt)
-                        <button
-                            type="button"
-                            @click="choice = '{{ $opt['value'] }}'; window.setTheme && window.setTheme('{{ $opt['value'] }}')"
-                            :class="choice === '{{ $opt['value'] }}' ? 'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' : 'text-zinc-600 hover:bg-white/70 hover:text-zinc-900 hover:shadow-sm'"
-                            class="inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95"
-                            :aria-pressed="choice === '{{ $opt['value'] }}'"
-                        >
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $opt['path'] }}"/>
-                            </svg>
-                            {{ $opt['label'] }}
-                        </button>
-                    @endforeach
-                </div>
-            </div>
+            {{-- Segmented theme picker - shared component, segmented variant.
+                 `self-start` keeps it from stretching full-width inside the
+                 flex-column parent on mobile. --}}
+            <x-theme-toggle variant="segmented" class="self-start" />
 
             <span class="hidden h-4 w-px bg-zinc-200 sm:inline-block" aria-hidden="true"></span>
 

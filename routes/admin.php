@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AdminReportExportController;
 use App\Http\Controllers\Admin\AdminRewardAnalyticsController;
 use App\Http\Controllers\Admin\AdminRewardSettingsController;
 use App\Http\Controllers\Admin\AdminSreController;
+use App\Http\Controllers\Admin\AdminTransactionExportController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
 use App\Http\Controllers\ThemeController;
@@ -130,6 +131,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // prefetch) redirects to the customer page instead of 405ing.
         Route::get('customers/{user}/message', fn (User $user) => redirect()->route('admin.customer', $user));
         Route::view('transactions', 'admin.transactions')->name('transactions');
+        Route::get('transactions/export.csv', [AdminTransactionExportController::class, 'csv'])->name('transactions.export');
         Route::view('wallets', 'admin.wallets')->name('wallets');
         Volt::route('rates', 'admin.rates')->name('rates');
         Volt::route('account', 'admin.account')->name('account');

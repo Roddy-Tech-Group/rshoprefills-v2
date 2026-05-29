@@ -1,13 +1,54 @@
 {{--
-    Primary navigation row — logo · search · account/cart — plus a category
-    shortcut bar that collapses on scroll. The row is a 3-column grid so the
-    search bar is page-centred, aligned with the centred category bar below.
+    Primary navigation row - logo · search · account/cart - plus a category
+    shortcut bar. On page scroll the primary row collapses (slides up + fades)
+    so only the top bar + category strip remain pinned with the parent sticky
+    header. The row is a 3-column grid so the search bar is page-centred,
+    aligned with the centred category bar below.
 --}}
-<div class="bg-white/70 backdrop-blur-md">
+<div
+    x-data="{
+        hidden: false,
+        ticking: false,
+        init() {
+            // Desktop (lg+) keeps the full nav at all times - no collapse on
+            // scroll. Only mobile / tablet collapses the primary row to free
+            // vertical space. Position-based hysteresis (50-140px) prevents
+            // the bar from flickering near the threshold on touch scrolls.
+            const SHOW_AT = 50;
+            const HIDE_AT = 140;
+            const LG = 1024;
+            const onScroll = () => {
+                if (window.innerWidth >= LG) {
+                    if (this.hidden) { this.hidden = false; }
+                    return;
+                }
+                if (this.ticking) { return; }
+                this.ticking = true;
+                requestAnimationFrame(() => {
+                    const y = window.scrollY;
+                    if (y <= SHOW_AT)      { this.hidden = false; }
+                    else if (y >= HIDE_AT) { this.hidden = true; }
+                    this.ticking = false;
+                });
+            };
+            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('resize', onScroll, { passive: true });
+            onScroll();
+        },
+    }"
+    class="bg-white/30 backdrop-blur-sm dark:bg-[#0c1a36]/30"
+>
 
-    {{-- Nav row --}}
+    {{-- Primary nav row - collapses on scroll. Uses a wide hysteresis zone so
+         a half-scroll never lands in a position where the bar flickers between
+         collapsed and expanded. Transforms + max-height on a will-change layer
+         so the GPU handles the animation cleanly. --}}
+    <div
+        :class="hidden ? 'max-h-0 opacity-0 overflow-hidden' : 'max-h-[140px] opacity-100 overflow-visible'"
+        class="[transition:max-height_350ms_cubic-bezier(0.4,0,0.2,1),opacity_200ms_ease-out] will-change-[max-height]"
+    >
     <div class="max-w-[1350px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-[1fr_auto_1fr] items-center h-[64px] gap-4">
+        <div class="grid grid-cols-[1fr_auto_1fr] items-center h-[64px] gap-4 relative z-10">
 
             {{-- Logo (the source PNG is square with whitespace padding, so the
                  image is scaled up and clipped to its wordmark band) --}}
@@ -398,27 +439,29 @@
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-1"
                             style="display:none;"
-                            class="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-[10px] bg-white/85 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                            class="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-[10px] bg-white/70 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-2 ring-blue-400 dark:bg-[#1d3252]/70 dark:ring-blue-500/60"
                             role="menu"
                         >
-                            <a
-                                href="{{ route('login') }}"
-                                wire:navigate
-                                role="menuitem"
-                                class="flex items-center gap-3 px-4 py-3 text-base font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white"
-                            >
-                                <img src="{{ asset('assets/' . rawurlencode('Login.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
-                                Login
-                            </a>
-                            <a
-                                href="{{ route('register') }}"
-                                wire:navigate
-                                role="menuitem"
-                                class="flex items-center gap-3 border-t border-zinc-100 px-4 py-3 text-base font-medium text-zinc-800 transition-colors hover:bg-blue-600 hover:text-white"
-                            >
-                                <img src="{{ asset('assets/' . rawurlencode('create an account.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
-                                Create Account
-                            </a>
+                            <div class="p-1">
+                                <a
+                                    href="{{ route('login') }}"
+                                    wire:navigate
+                                    role="menuitem"
+                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-600 hover:text-white dark:text-zinc-100"
+                                >
+                                    <img src="{{ asset('assets/' . rawurlencode('Login.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
+                                    Login
+                                </a>
+                                <a
+                                    href="{{ route('register') }}"
+                                    wire:navigate
+                                    role="menuitem"
+                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-600 hover:text-white dark:text-zinc-100"
+                                >
+                                    <img src="{{ asset('assets/' . rawurlencode('create an account.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
+                                    Create Account
+                                </a>
+                            </div>
                         </div>
                     </div>
                 @endauth
@@ -523,13 +566,15 @@
         </div>
     </div>
 
-    {{-- Category shortcut bar — horizontal scroll on mobile, centred on desktop. --}}
+    </div>{{-- /collapsible primary row wrapper --}}
+
+    {{-- Category shortcut bar - horizontal scroll on mobile, centred on desktop. --}}
     <div>
         <nav aria-label="Product categories" class="max-w-[1350px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex h-[40px] gap-1 overflow-x-auto justify-start md:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div class="flex h-[44px] gap-1 overflow-x-auto justify-start md:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @php
-                    $catLinkClass = "group relative flex h-full shrink-0 items-center gap-2 px-3 text-sm font-medium transition-colors duration-150 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-0.5 after:w-[0.5cm] after:rounded-[10px]";
-                    $catSvgClass = "w-[25px] h-[25px] shrink-0 text-zinc-900";
+                    $catLinkClass = "group relative flex h-full shrink-0 items-center gap-2 px-3 text-sm font-medium transition-colors duration-150 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 after:content-[''] after:absolute after:bottom-1.5 after:left-3 after:right-3 after:h-0.5 after:rounded-[10px]";
+                    $catSvgClass = "w-[25px] h-[25px] shrink-0 text-zinc-900 dark:text-white";
 
                     // The active category is the OPEN page, resolved from the route —
                     // so the highlight is never statically stuck on Gift Cards.
@@ -541,12 +586,12 @@
                         default                                             => '',
                     };
                     $catLinkState = fn (string $c) => $currentCat === $c
-                        ? 'text-zinc-900 font-semibold after:bg-zinc-900'
-                        : 'text-zinc-600 hover:text-zinc-800 after:bg-transparent';
+                        ? 'text-zinc-900 dark:text-white font-semibold after:bg-zinc-900 dark:after:bg-white'
+                        : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-800 dark:hover:text-white after:bg-transparent';
                     $catIconState = fn (string $c) => $currentCat === $c ? 'opacity-100' : 'opacity-50';
                 @endphp
 
-                @php $catImgClass = 'w-[22px] h-[22px] shrink-0'; @endphp
+                @php $catImgClass = 'w-[22px] h-[22px] shrink-0 dark:[filter:brightness(0)_invert(1)]'; @endphp
 
                 {{-- Gift Cards --}}
                 <a href="{{ route('shop.gift-cards') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Gift Cards') }}">

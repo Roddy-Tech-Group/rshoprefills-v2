@@ -6,6 +6,7 @@ use App\Domain\Auth\Services\GoogleAuthService;
 use App\Http\Controllers\Controller;
 use GuzzleHttp\Client;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
@@ -28,10 +29,15 @@ class GoogleAuthController extends Controller
     ) {}
 
     /**
-     * Redirect the user to Google's OAuth consent screen.
+     * Redirect the user to Google's OAuth consent screen. When a `?popup=1`
+     * query flag is present, stash it in the session so the callback knows to
+     * route through the popup-complete page (which closes the popup and
+     * notifies the opener) instead of the full dashboard redirect.
      */
-    public function redirect(): RedirectResponse
+    public function redirect(Request $request): RedirectResponse
     {
+        session(['google_oauth_popup' => $request->boolean('popup')]);
+
         return $this->driver()->redirect();
     }
 
@@ -43,12 +49,18 @@ class GoogleAuthController extends Controller
      */
     public function callback(): RedirectResponse
     {
+        $isPopup = (bool) session()->pull('google_oauth_popup', false);
+
         try {
             $googleUser = $this->driver()->user();
         } catch (\Exception $e) {
             Log::warning('Google OAuth callback failed', [
                 'error' => $e->getMessage(),
             ]);
+
+            if ($isPopup) {
+                return redirect()->route('auth.popup-complete');
+            }
 
             return redirect()->route('login')
                 ->with('status', __('Google authentication failed. Please try again.'));
@@ -61,11 +73,19 @@ class GoogleAuthController extends Controller
             Auth::login($user, remember: true);
             session()->regenerate();
 
+            if ($isPopup) {
+                return redirect()->route('auth.popup-complete');
+            }
+
             return redirect()->intended(route('dashboard'));
         } catch (\RuntimeException $e) {
             Log::error('Google OAuth user creation failed', [
                 'error' => $e->getMessage(),
             ]);
+
+            if ($isPopup) {
+                return redirect()->route('auth.popup-complete');
+            }
 
             return redirect()->route('login')
                 ->with('status', $e->getMessage());

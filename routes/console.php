@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Domain\Notification\Jobs\RetryFailedNotificationsJob;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Jobs\ExpireStalePaymentSessionsJob;
 use App\Domain\Wallet\Jobs\ReconcilePendingFundingsJob;
@@ -21,6 +22,17 @@ Artisan::command('inspire', function () {
 
 Schedule::job(new SyncExchangeRatesJob)->hourly();
 Schedule::job(new ReconcilePendingFundingsJob)->hourly();
+
+// Auto-retry failed customer notifications. The job picks up notifications
+// that have been in the Failed state for at least 5 minutes (transient outage
+// backoff) and re-dispatches them, capped at MAX_AUTO_RETRIES per row so a
+// permanently broken recipient doesn't churn forever. Admin retains a manual
+// per-row Retry button on /admin/notifications for cases where the auto-sweep
+// has exhausted its retries.
+Schedule::job(new RetryFailedNotificationsJob)
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->name('notifications:retry-failed');
 
 // Sweep PaymentSessions past their 15-minute TTL and cancel the linked Order /
 // WalletFunding, so half-finished checkout attempts don't sit Pending on the

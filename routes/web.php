@@ -341,10 +341,26 @@ Route::post('checkout', [CheckoutController::class, 'process'])
     ->middleware(['auth', 'not-suspended'])
     ->name('checkout.process');
 
+// Flutterwave hosted-checkout return URL. Customers land here after USSD,
+// Pay With Bank, Bank QR, or Mobile Wallet payments complete (or cancel).
+// We verify by tx_ref against Flutterwave so a tampered query string can't
+// fake a success.
+Route::get('checkout/return/{session}', [CheckoutController::class, 'hostedReturn'])
+    ->middleware('auth')
+    ->name('shop.checkout.return');
+
 // Order confirmation page.
 Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])
     ->middleware('auth')
     ->name('shop.order');
+
+// Downloadable receipts for the order success view.
+Route::get('order/{orderNumber}/codes.csv', [CheckoutController::class, 'codesCsv'])
+    ->middleware('auth')
+    ->name('shop.order.codes.csv');
+Route::get('order/{orderNumber}/codes.pdf', [CheckoutController::class, 'codesPdf'])
+    ->middleware('auth')
+    ->name('shop.order.codes.pdf');
 
 // Customer dashboard - gated by web guard. Admin operators have their own area at /admin/* via routes/admin.php.
 // NOTE: 'verified' middleware intentionally NOT applied - verification stays a SOFT requirement so users

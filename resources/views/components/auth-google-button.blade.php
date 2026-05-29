@@ -10,7 +10,8 @@
     </div>
 </div>
 
-<a href="{{ route('auth.google.redirect') }}"
+<a href="{{ route('auth.google.redirect', ['popup' => 1]) }}"
+   @click.prevent="window.rshopOpenGoogleOAuth(this.href)"
    class="inline-flex w-full items-center justify-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-600 dark:hover:bg-zinc-700">
     <svg class="h-5 w-5" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
