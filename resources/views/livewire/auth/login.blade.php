@@ -70,6 +70,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     protected function validateTurnstile(): void
     {
+        if (! config('services.turnstile.enabled')) {
+            return;
+        }
+
         $enforceAuth = config('services.turnstile.enforce_auth', true);
         if (! $enforceAuth) {
             return;
