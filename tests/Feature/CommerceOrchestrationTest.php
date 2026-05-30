@@ -106,9 +106,11 @@ class CommerceOrchestrationTest extends TestCase
         ]);
     }
 
-    public function test_checkout_via_wallet_pessimistic_lock_reserves_funds_and_dispatches_fulfillment(): void
+    public function test_full_wallet_pin_authorization_reserves_funds_and_dispatches_fulfillment(): void
     {
         Queue::fake([FulfillOrderItemJob::class]);
+
+        app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($this->user, '5283');
 
         // Setup Wallet with sufficient balance
         $wallet = Wallet::create([
@@ -128,24 +130,32 @@ class CommerceOrchestrationTest extends TestCase
             ]);
 
         $response->assertStatus(201);
-        $response->assertJsonPath('message', 'Order placed successfully.');
+        $order = Order::first();
+        $this->assertEquals(OrderStatus::Pending, $order->order_status);
+
+        // Authorize with PIN
+        $verify = $this->actingAs($this->user)->postJson(route('api.wallets.pin.verify'), ['pin' => '5283'])->assertOk();
+        $token = $verify->json('auth_token');
+
+        $session = $order->paymentAttempts->first()->paymentSession;
+        $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $session->id), [
+            'method' => 'wallet',
+            'details' => ['auth_token' => $token]
+        ])->assertOk();
 
         // Verify order persistence
-        $order = Order::first();
-        $this->assertNotNull($order);
+        $order->refresh();
         $this->assertEquals(OrderStatus::Processing, $order->order_status);
         $this->assertEquals(PaymentStatus::Paid, $order->payment_status);
 
-        // Verify Cart deactivation / converted state
+        // Verify Wallet balance locks
+        $wallet->refresh();
+        $this->assertEquals(100.00, (float)$wallet->balance);
+        $this->assertEquals(11.00, (float)$wallet->locked_balance);
+
+        // Verify Cart deactivation now that payment is confirmed
         $cart = Cart::find($this->cart->id);
         $this->assertEquals('abandoned', $cart->status);
-        $this->assertEquals(0, $cart->items()->count());
-
-        // Verify Wallet balance locks
-        // Wallet is fully debited now (finalizeDebit runs in CheckoutService).
-        $wallet->refresh();
-        $this->assertEquals(89.00, (float)$wallet->balance);
-        $this->assertEquals(0.00, (float)$wallet->locked_balance);
 
         // Verify fulfillment job was dispatched immediately
         Queue::assertPushed(FulfillOrderItemJob::class, 1);
@@ -162,6 +172,8 @@ class CommerceOrchestrationTest extends TestCase
             'is_active' => true,
         ]);
 
+        app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($this->user, '5283');
+
         // Place order directly via service
         $order = app(\App\Domain\Order\Services\CheckoutService::class)->placeOrder(
             user: $this->user,
@@ -169,6 +181,10 @@ class CommerceOrchestrationTest extends TestCase
             paymentMethod: 'wallet',
             displayCurrency: 'USD'
         );
+
+        $attempt = $order->paymentAttempts->first();
+        $token = app(\App\Domain\Wallet\Services\TransactionPinService::class)->verifyPin($this->user, '5283');
+        app(\App\Domain\Payment\Providers\WalletPaymentProvider::class)->authorizeTransaction($attempt, $token);
 
         $orderItem = $order->items->first();
         $this->assertEquals(FulfillmentStatus::NotStarted, $orderItem->fulfillment_status);
