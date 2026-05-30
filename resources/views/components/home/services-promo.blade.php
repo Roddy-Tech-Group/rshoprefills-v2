@@ -19,19 +19,20 @@
     aria-label="Our services"
     class="relative overflow-hidden rounded-[40px] bg-zinc-950 text-white ring-1 ring-white/10 shadow-xl shadow-zinc-900/30"
 >
-    {{-- Ambient looping background video. Muted + playsinline so iOS won't
-         try to fullscreen it. aria-hidden so screen readers ignore. --}}
-    <video
-        class="pointer-events-none absolute inset-0 h-full w-full object-cover"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata"
-        aria-hidden="true"
-    >
-        <source src="{{ asset('assets/' . rawurlencode('Store front video 1.mp4')) }}" type="video/mp4">
-    </video>
+    {{-- Ambient looping background — YouTube embed (unlisted). The wrapper
+         covers the section; the iframe is sized 16:9 then scaled with
+         object-cover semantics via min-width/min-height so it always fills
+         the panel without letterboxing. autoplay+mute+loop+controls=0 is
+         what gives it the "ambient cinema" feel. --}}
+    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <iframe
+            class="absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[100vw] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2"
+            src="https://www.youtube-nocookie.com/embed/1DgJ-THcf-Y?autoplay=1&mute=1&loop=1&playlist=1DgJ-THcf-Y&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3"
+            title="Background video"
+            frameborder="0"
+            allow="autoplay; encrypted-media"
+        ></iframe>
+    </div>
 
     {{-- Pure-black overlay so the copy stays readable on every frame of the
          video. Solid 70% black tint plus a sideways gradient that deepens
