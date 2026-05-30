@@ -98,6 +98,7 @@ class CouponRedemptionTest extends TestCase
         ]);
 
         Queue::fake([FulfillOrderItemJob::class]);
+        app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($this->user, '5283');
     }
 
     public function test_percent_coupon_discounts_the_order_total_and_increments_used_count(): void
