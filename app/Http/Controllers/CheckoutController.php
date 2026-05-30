@@ -8,6 +8,7 @@ use App\Domain\Fraud\Services\FraudDetectionService;
 use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Http\Resources\PaymentSessionResource;
 use App\Models\Order;
@@ -159,7 +160,7 @@ class CheckoutController extends Controller
             }
 
             return redirect()->route('shop.checkout')->with('checkout_status', $message);
-        } catch (WalletOnHoldException|InsufficientBalanceException $e) {
+        } catch (WalletOnHoldException|InsufficientBalanceException|MissingTransactionPinException $e) {
             // Customer-facing wallet errors carry their own polished message —
             // surface them verbatim so the user sees the "wallet on hold /
             // contact support" copy instead of a generic checkout failure.

@@ -49,14 +49,34 @@
         {{-- Package list --}}
         <h2 class="mt-8 text-lg font-bold text-zinc-900 dark:text-white">Choose a top-up</h2>
 
-        @if ($sorted->isEmpty())
+        @if (! auth()->user()->hasTransactionPin())
+            <div class="mt-6 rounded-[10px] bg-amber-50 p-6 text-center ring-1 ring-amber-200">
+                <p class="text-base font-semibold text-amber-900">Wallet PIN Required</p>
+                <p class="mt-1 text-sm text-amber-700">You must set up a Wallet Transaction PIN before you can top up using your wallet balance.</p>
+                <a href="{{ route('dashboard.password') }}" class="mt-4 inline-flex items-center gap-1.5 rounded-[10px] bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700">
+                    Set up PIN in Settings
+                </a>
+            </div>
+        @elseif ($sorted->isEmpty())
             <div class="mt-4 rounded-[10px] bg-white px-6 py-12 text-center ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">No top-ups available right now</p>
                 <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">This eSIM either expired or the carrier doesn't offer refills. Buy a fresh one to keep going.</p>
                 <a href="{{ route('shop.esims') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Browse eSIMs</a>
             </div>
         @else
-            <div class="mt-4 space-y-3">
+            <div class="mt-4 space-y-3" x-data="{
+                pinModalOpen: false,
+                selectedPkgId: '',
+                selectedNetPrice: '',
+                walletPin: '',
+                openModal(pkgId, netPrice) {
+                    this.selectedPkgId = pkgId;
+                    this.selectedNetPrice = netPrice;
+                    this.walletPin = '';
+                    this.pinModalOpen = true;
+                    setTimeout(() => this.$refs.pinInput.focus(), 100);
+                }
+            }">
                 @foreach ($sorted as $pkg)
                     @php
                         $dataLabel = $pkg['data'] ?? null;
@@ -66,11 +86,7 @@
                         $voice = (int) ($pkg['voice'] ?? 0);
                         $sms = (int) ($pkg['text'] ?? 0);
                     @endphp
-                    <form method="POST" action="{{ route('dashboard.esim.topup.purchase', $orderItem) }}" class="block">
-                        @csrf
-                        <input type="hidden" name="package_id" value="{{ $pkg['id'] }}">
-                        <input type="hidden" name="net_price" value="{{ $netPrice }}">
-                        <button type="submit" class="group flex w-full items-center justify-between gap-4 rounded-[10px] border-2 border-transparent bg-white px-4 py-4 text-left ring-1 ring-zinc-200 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-600 hover:shadow-md dark:bg-[#1d3252] dark:ring-zinc-700/60 dark:hover:border-blue-400">
+                        <button type="button" @click="openModal('{{ $pkg['id'] }}', '{{ $netPrice }}')" class="group flex w-full items-center justify-between gap-4 rounded-[10px] border-2 border-transparent bg-white px-4 py-4 text-left ring-1 ring-zinc-200 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-600 hover:shadow-md dark:bg-[#1d3252] dark:ring-zinc-700/60 dark:hover:border-blue-400">
                             <div class="min-w-0">
                                 <p class="flex flex-wrap items-baseline gap-x-2 text-base">
                                     <span class="font-bold text-zinc-900 dark:text-white">{{ $dataLabel ?: 'Data' }}</span>
@@ -94,8 +110,33 @@
                                 <span class="block text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Pay from wallet</span>
                             </span>
                         </button>
-                    </form>
                 @endforeach
+
+                {{-- PIN Modal --}}
+                <div x-show="pinModalOpen" x-cloak class="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div x-show="pinModalOpen" x-transition.opacity class="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm transition-opacity"></div>
+                    <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+                        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                            <div x-show="pinModalOpen" x-transition.opacity.translate @click.away="pinModalOpen = false" class="relative w-full max-w-sm transform overflow-hidden rounded-[20px] bg-white p-6 text-left shadow-xl transition-all dark:bg-[#1d3252]">
+                                <h3 class="text-lg font-bold text-zinc-900 dark:text-white" id="modal-title">Authorize Payment</h3>
+                                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">Enter your 4-digit transaction PIN to debit your wallet.</p>
+                                
+                                <form method="POST" action="{{ route('dashboard.esim.topup.purchase', $orderItem) }}" class="mt-5">
+                                    @csrf
+                                    <input type="hidden" name="package_id" :value="selectedPkgId">
+                                    <input type="hidden" name="net_price" :value="selectedNetPrice">
+                                    
+                                    <input type="password" name="wallet_pin" x-model="walletPin" x-ref="pinInput" maxlength="4" required class="mt-2 block w-full rounded-[10px] border border-zinc-300 px-3 py-3 text-center text-xl tracking-[0.5em] text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-2xl" placeholder="••••">
+                                    
+                                    <div class="mt-6 flex items-center justify-end gap-3">
+                                        <button type="button" @click="pinModalOpen = false" class="rounded-[10px] bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-200">Cancel</button>
+                                        <button type="submit" :disabled="walletPin.length !== 4" class="rounded-[10px] bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50">Confirm Top-up</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <p class="mt-4 text-xs text-zinc-500 dark:text-zinc-400">Top-ups are billed from your USD wallet balance. Insufficient balance? <a href="{{ route('dashboard.wallet') }}" wire:navigate class="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Fund your wallet</a> first.</p>

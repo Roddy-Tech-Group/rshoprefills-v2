@@ -63,7 +63,7 @@
             </div>
         @endif
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
             <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white py-24 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -609,7 +609,7 @@
                     <x-close-button @click="closeModal()" class="absolute right-4 top-4" />
 
                     <!-- Active Payment Session Details & Wizard -->
-                    <div x-show="session" class="mt-2">
+                    <div x-show="session || paymentState === 'error'" class="mt-2">
                         <!-- Countdown timer banner -->
                         <div x-show="['awaiting_transfer', 'awaiting_confirmation', 'action_pin', 'action_otp', 'action_3ds'].includes(paymentState)" 
                              class="mb-5 flex items-center justify-between rounded-[10px] bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
@@ -831,7 +831,7 @@
                                 </svg>
                             </span>
                             <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
-                            <p class="mt-1.5 text-xs text-red-600 px-4" x-text="errorMessage"></p>
+                            <p class="mt-1.5 text-xs text-red-600 px-4" x-html="errorMessage"></p>
                             
                             <button type="button" @click="closeModal()" class="mt-6 rounded-[10px] bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
                                 Close &amp; Modify Details
@@ -847,7 +847,7 @@
     </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig) {
+        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin) {
             return {
                 method: 'card',
                 crypto: '',
@@ -855,6 +855,7 @@
                 cryptoRates: cryptoRates || {},
                 walletBalances: walletBalances || {},
                 isLoggedIn: isLoggedIn || false,
+                hasTransactionPin: hasTransactionPin || false,
 
                 // Rcoin redemption state — three values:
                 //   ''     = off (default)
@@ -1089,6 +1090,14 @@
                 },
 
                 async submitCheckout(e) {
+                    if (this.method === 'wallet' && !this.hasTransactionPin) {
+                        this.submitting = false;
+                        this.paymentState = 'error';
+                        this.errorMessage = 'You must set up a Wallet Transaction PIN before you can pay with your wallet. <a href="/dashboard/password" class="underline font-bold text-blue-600 hover:text-blue-700">Click here to set it up</a>.';
+                        this.open = true;
+                        return;
+                    }
+
                     this.submitting = true;
                     this.errorMessage = '';
                     try {
