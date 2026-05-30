@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
@@ -49,7 +50,7 @@ class CheckoutApiController extends Controller
                 'order' => new OrderResource($order),
                 'payment_session' => $paymentSession ? new PaymentSessionResource($paymentSession) : null,
             ], 201);
-        } catch (WalletOnHoldException|InsufficientBalanceException $e) {
+        } catch (WalletOnHoldException|InsufficientBalanceException|MissingTransactionPinException $e) {
             // Friendly wallet errors carry a customer-ready message — return
             // it verbatim instead of prefixing "Checkout failed:".
             return response()->json(['message' => $e->getMessage()], 400);

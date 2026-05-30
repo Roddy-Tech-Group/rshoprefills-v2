@@ -9,7 +9,9 @@ use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Shared\Enums\TransactionCategory;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
+use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
+use App\Domain\Wallet\Services\TransactionPinService;
 use App\Domain\Wallet\Services\WalletService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Models\Order;
@@ -92,6 +94,7 @@ class EsimTopupController extends Controller
             // Net price from Airalo (USD) — server re-validates against the
             // cached package list so a tampered form can't pay less.
             'net_price' => ['required', 'numeric', 'min:0.01'],
+            'wallet_pin' => ['required', 'string', 'size:4'],
         ]);
 
         $iccid = $this->extractIccid($orderItem);
@@ -114,6 +117,14 @@ class EsimTopupController extends Controller
         );
 
         $user = $request->user();
+
+        if (! $user->hasTransactionPin()) {
+            throw new MissingTransactionPinException('You must set up a Wallet Transaction PIN in your profile settings before you can top up with your wallet.');
+        }
+
+        // Verify the provided PIN (throws ValidationException if incorrect or locked)
+        app(TransactionPinService::class)->verifyPin($user, $validated['wallet_pin']);
+
         $wallet = $user->wallets()->where('currency', 'USD')->where('is_active', true)->first();
         abort_if(! $wallet, 422, 'You need an active USD wallet to top up.');
         abort_if((float) $wallet->balance < $retail, 422, 'Insufficient wallet balance.');
@@ -188,7 +199,7 @@ class EsimTopupController extends Controller
 
                 return $order;
             });
-        } catch (WalletOnHoldException|InsufficientBalanceException $e) {
+        } catch (WalletOnHoldException|InsufficientBalanceException|MissingTransactionPinException $e) {
             // Customer-friendly: pass the wallet message through verbatim so the
             // user sees e.g. "Your wallet is currently on hold. Please contact
             // support…" instead of the generic "Could not start the top-up".
