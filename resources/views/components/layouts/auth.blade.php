@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{ $title ?? config('app.name', 'RshopRefills') }}</title>
+        <title>{{ $title ?? 'RshopRefills' }}</title>
         <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
 
         <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
@@ -47,10 +47,10 @@
             <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         @endif
     </head>
-    <body class="min-h-screen bg-zinc-100 text-zinc-900 antialiased">
+    <body class="min-h-screen bg-zinc-100 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
 
         <div class="flex min-h-screen items-start p-4 sm:items-stretch sm:p-6 lg:p-[60px]">
-            <div class="my-auto grid w-full overflow-hidden rounded-[10px] shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-900/5 sm:my-0 lg:grid-cols-2 lg:shadow-2xl lg:shadow-zinc-900/15">
+            <div class="my-auto grid w-full overflow-hidden rounded-[10px] shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-900/5 sm:my-0 lg:grid-cols-2 lg:shadow-2xl lg:shadow-zinc-900/15 dark:ring-zinc-800">
 
             {{-- Left panel: marketing / phone mockup --}}
             <aside class="relative hidden flex-col overflow-hidden bg-blue-950 p-10 text-white lg:flex">
@@ -104,22 +104,6 @@
                             @endforeach
                         </ul>
 
-                        {{-- Trust pill --}}
-                        <div class="mt-8 inline-flex items-center gap-3 rounded-[10px] border border-white/10 bg-white/5 px-4 py-2.5">
-                            <div class="flex -space-x-2">
-                                @foreach(['bg-amber-400','bg-pink-400','bg-emerald-400'] as $c)
-                                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-[10px] border-2 border-blue-950 {{ $c }}"></span>
-                                @endforeach
-                            </div>
-                            <div class="leading-tight">
-                                <p class="text-[12px] font-semibold text-white">Trusted by 150+ users</p>
-                                <div class="mt-0.5 flex gap-0.5 text-amber-400">
-                                    @for($i = 0; $i < 5; $i++)
-                                        <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 .587l3.09 6.26 6.91 1.005-5 4.873 1.18 6.875L10 16.327l-6.18 3.273L5 13.725 0 8.852l6.91-1.005L10 .587z"/></svg>
-                                    @endfor
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     {{-- Phone mockup. Two assets stacked: the original light
@@ -160,7 +144,7 @@
                             x-transition:leave="transition ease-in duration-300"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-12"
-                            src="{{ asset('assets/auth_page_mockup_two.png') }}"
+                            src="{{ asset('assets/' . rawurlencode('auth page mockup two.png')) }}"
                             alt=""
                             fetchpriority="high"
                             class="absolute inset-0 mx-auto h-auto max-h-[560px] w-full object-contain drop-shadow-2xl"
@@ -186,7 +170,7 @@
 
             {{-- Right panel: auth form. Has its own slide-in animation so
                  login ↔ register hand off feels like a single surface. --}}
-            <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10 lg:px-16">
+            <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10 lg:px-16 dark:bg-zinc-900">
 
                 {{-- Top-right utility row: Back to website + theme toggle.
                      Pinned to the top so the form copy starts cleanly under it
@@ -214,7 +198,7 @@
                             class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
-                    <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-600">Digital Marketplace</span>
+                    <span class="mt-0.5 text-[10px] font-medium leading-none text-zinc-600 dark:text-zinc-400">Digital Marketplace</span>
                 </a>
 
                 {{-- Form details panel - this is what slides on login ↔ register --}}

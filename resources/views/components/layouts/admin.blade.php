@@ -375,11 +375,20 @@
                     Reports
                 </a>
 
-                {{-- Marketing --}}
-                @php $active = $isCurrent('admin.marketing*'); @endphp
-                <a href="#" data-tip="Marketing" class="{{ $navItemClass($active) }}">
+                {{-- Newsletter --}}
+                @php $active = $isCurrent('admin.newsletter*'); @endphp
+                <a href="{{ route('admin.newsletter') }}" data-tip="Newsletter" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('marketing.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
-                    Marketing
+                    Newsletter
+                </a>
+
+                {{-- Pricing Rules --}}
+                @php $active = $isCurrent('admin.pricing-rules*'); @endphp
+                <a href="{{ route('admin.pricing-rules') }}" data-tip="Pricing Rules" class="{{ $navItemClass($active) }}">
+                    <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                    </svg>
+                    Pricing Rules
                 </a>
 
                 {{-- Content — CMS-managed marketing copy (blog / press / reviews / FAQs).
@@ -425,16 +434,25 @@
                     </div>
                 </div>
 
+                {{-- Account Activity --}}
+                @php $active = $isCurrent('admin.account-activity*'); @endphp
+                <a href="{{ route('admin.account-activity') }}" data-tip="Account Activity" class="{{ $navItemClass($active) }}">
+                    <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>
+                    </svg>
+                    Account Activity
+                </a>
+
                 {{-- Support Tickets --}}
                 @php $active = $isCurrent('admin.support-tickets*'); @endphp
-                <a href="#" data-tip="Support Tickets" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.support-tickets') }}" data-tip="Support Tickets" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/support.svg') }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Support Tickets
                 </a>
 
                 {{-- Admins --}}
                 @php $active = $isCurrent('admin.admins*'); @endphp
-                <a href="#" data-tip="Admins" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.admins') }}" data-tip="Admins" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Admins
                 </a>
@@ -451,7 +469,7 @@
 
                 {{-- System Settings --}}
                 @php $active = $isCurrent('admin.settings*'); @endphp
-                <a href="#" data-tip="System Settings" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.settings') }}" data-tip="System Settings" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     System Settings
                 </a>
@@ -746,7 +764,7 @@
                             <img src="{{ asset('assets/' . rawurlencode('user.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Account information
                         </a>
-                        <a href="#" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('admin.account-activity') }}" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('account avtivities 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Account activity
                         </a>
@@ -818,12 +836,12 @@
                 ['label' => 'Customers',    'href' => route('admin.customers'),     'icon' => 'customer.svg',       'tone' => 'bg-emerald-500'],
                 ['label' => 'Transactions', 'href' => route('admin.transactions'),  'icon' => 'transactions.svg',   'tone' => 'bg-teal-500'],
                 ['label' => 'Wallets',      'href' => route('admin.wallets'),       'icon' => 'Wallet.svg',         'tone' => 'bg-indigo-500'],
-                ['label' => 'Reports',      'href' => '#',                          'icon' => 'report.svg',         'tone' => 'bg-violet-500'],
-                ['label' => 'Marketing',    'href' => '#',                          'icon' => 'marketing.svg',      'tone' => 'bg-fuchsia-500'],
-                ['label' => 'Support',      'href' => '#',                          'icon' => 'support.svg',        'tone' => 'bg-amber-500'],
-                ['label' => 'Admins',       'href' => '#',                          'icon' => 'admin access.svg',   'tone' => 'bg-rose-500'],
-                ['label' => 'Rates',        'href' => '#',                          'icon' => 'transactions.svg',   'tone' => 'bg-orange-500'],
-                ['label' => 'Settings',     'href' => '#',                          'icon' => 'system setting.svg', 'tone' => 'bg-cyan-500'],
+                ['label' => 'Reports',      'href' => route('admin.reports'),         'icon' => 'report.svg',         'tone' => 'bg-violet-500'],
+                ['label' => 'Newsletter',   'href' => route('admin.newsletter'),      'icon' => 'marketing.svg',      'tone' => 'bg-fuchsia-500'],
+                ['label' => 'Support',      'href' => route('admin.support-tickets'), 'icon' => 'support.svg',        'tone' => 'bg-amber-500'],
+                ['label' => 'Admins',       'href' => route('admin.admins'),          'icon' => 'admin access.svg',   'tone' => 'bg-rose-500'],
+                ['label' => 'Rates',        'href' => route('admin.rates'),           'icon' => 'transactions.svg',   'tone' => 'bg-orange-500'],
+                ['label' => 'Settings',     'href' => route('admin.settings'),        'icon' => 'system setting.svg', 'tone' => 'bg-cyan-500'],
             ];
         @endphp
         {{-- Mobile menu wrapper: `contents` removes the div from Flux's grid layout so it

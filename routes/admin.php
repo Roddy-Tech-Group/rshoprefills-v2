@@ -139,6 +139,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Volt::route('reports', 'admin.reports')->name('reports');
         Route::get('reports/export.csv', [AdminReportExportController::class, 'csv'])->name('reports.export');
 
+        Volt::route('support-tickets', 'admin.support-tickets')->name('support-tickets');
+        Volt::route('admins', 'admin.admins')->name('admins');
+        Volt::route('pricing-rules', 'admin.pricing-rules')->name('pricing-rules');
+        Volt::route('newsletter', 'admin.newsletter')->name('newsletter');
+        Volt::route('settings', 'admin.system-settings')->name('settings');
+        Volt::route('account-activity', 'admin.account-activity')->name('account-activity');
+
         // Content (CMS) - stub Volt pages that list what's in the DB today.
         // CRUD UI lands in a follow-up; for now editors confirm data is wired.
         Route::prefix('content')->name('content.')->group(function () {

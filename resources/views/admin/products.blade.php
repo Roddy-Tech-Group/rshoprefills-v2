@@ -484,9 +484,10 @@
              right to flag it as the pricing-tool zone (matches the reference). --}}
         <style>
             /* Single source of truth for column widths. Header + rows both use
-               .variant-row so any tweak here updates both. Seven columns only:
-               Region, Country, Product Type, Brand, Cost Price, Sales Price,
-               Benefits — wide enough to breathe. */
+               .variant-row so any tweak here updates both. Same 9 columns at
+               every viewport; the parent .variant-scroll wraps it in a
+               horizontal scroller so mobile gets the full table by swiping
+               sideways instead of hiding 6 columns. */
             .variant-row {
                 display: grid;
                 grid-template-columns:
@@ -501,10 +502,44 @@
                     minmax(160px, 1.4fr);   /* Benefits */
                 gap: 1.25rem;
                 align-items: center;
+                /* Keep the row wide on small screens; the parent scroller
+                   lets the user pan horizontally to reach hidden columns. */
+                min-width: 1180px;
             }
-            @media (max-width: 1024px) {
-                .variant-row { grid-template-columns: minmax(160px, 1.5fr) minmax(110px, 1fr) minmax(120px, 1fr); }
-                .variant-row > *:not(.col-brand):not(.col-cost):not(.col-price) { display: none; }
+            /* Sticky header row inside the scroller. Stays pinned to the top
+               of the scroll viewport while body rows pan vertically + the
+               whole table pans horizontally on mobile. */
+            .variant-header {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+            }
+            /* Inset divider between body rows. The line stops 1.5rem short of
+               each edge so it doesn't run into the card's rounded corners. */
+            .variant-body:not(:last-of-type)::after {
+                content: '';
+                position: absolute;
+                left: 1.5rem;
+                right: 1.5rem;
+                bottom: 0;
+                height: 1px;
+                background-color: rgb(244 244 245);
+                pointer-events: none;
+            }
+            html.dark .variant-body:not(:last-of-type)::after {
+                background-color: rgb(255 255 255 / 0.08);
+            }
+            /* Hide the divider line when hovering — otherwise it paints over
+               the bottom edge of the hover ring (ring + divider both sit at
+               y = bottom of the row, divider wins because ::after is the
+               last-painted element). */
+            .variant-body:hover::after {
+                display: none;
+            }
+            /* Match the header pill's 10px corner radius on hover so the
+               ring reads as the same shape language. */
+            .variant-body:hover {
+                border-radius: 10px;
             }
         </style>
 
@@ -512,8 +547,9 @@
             x-data="{ navigating: false }"
             x-on:livewire:navigate.window="navigating = true"
             x-on:livewire:navigated.window="navigating = false"
-            class="relative flex flex-col gap-2"
+            class="relative overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:bg-[#1d3252] dark:border-white"
         >
+          <div class="overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
 
             {{-- Header row — its own pill card. Each filterable column owns
                  its own Alpine scope with a dropdown anchored directly beneath
@@ -525,7 +561,7 @@
                 $itemBase = 'block truncate rounded-[10px] px-3 py-2 text-[12px] font-medium transition-colors';
                 $panelBase = 'absolute left-0 top-full z-40 mt-2 w-72 overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60';
             @endphp
-            <div class="variant-row hidden rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 shadow-sm shadow-zinc-900/5 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400 md:grid">
+            <div class="variant-row variant-header grid mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400">
 
                 {{-- BRAND --}}
                 <span class="col-brand relative" x-data="{ open: false, search: '' }" @click.outside="open = false" @keydown.escape.window="open = false">
@@ -859,7 +895,7 @@
                 @endphp
                 <article
                     @click="$dispatch('variant-show', @js($drawerPayload))"
-                    class="variant-row group cursor-pointer rounded-[10px] border border-zinc-100 bg-white px-6 py-3 shadow-sm shadow-zinc-900/5 transition-colors hover:border-blue-600 hover:bg-blue-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:hover:border-blue-400 dark:hover:bg-blue-600/15"
+                    class="variant-row variant-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
                 >
                     {{-- Brand (text only, no logo) --}}
                     <span class="col-brand min-w-0 truncate text-[13px] font-semibold text-zinc-900 dark:text-white">{{ $brandLabel }}</span>
@@ -904,7 +940,7 @@
                     <span class="col-benefits min-w-0 text-[13px] leading-snug text-zinc-700 line-clamp-2 dark:text-zinc-200">{{ $sentBenefits ?? '—' }}</span>
                 </article>
             @empty
-                <div class="rounded-[10px] bg-white px-5 py-20 text-center shadow-sm ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <div class="px-5 py-20 text-center">
                     <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 dark:bg-blue-600/15 dark:text-blue-300">
                         <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -920,9 +956,10 @@
                     @endif
                 </div>
             @endforelse
+          </div>
 
             @if ($variants->hasPages())
-                <div class="mt-2 rounded-[10px] bg-white px-5 py-3 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <div class="border-t border-zinc-100 px-5 py-3 dark:border-zinc-700/60">
                     {{ $variants->onEachSide(1)->links('vendor.pagination.circles') }}
                 </div>
             @endif
@@ -1186,10 +1223,10 @@
                         <div class="mt-3 space-y-2 rounded-[10px] border border-zinc-200 p-3 dark:border-zinc-700/60">
                             <div class="grid grid-cols-2 gap-2">
                                 <input type="text" x-model="couponForm.code" placeholder="CODE (e.g. SAVE10)" class="col-span-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] uppercase text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
-                                <select x-model="couponForm.discount_type" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                                <x-admin.select x-model="couponForm.discount_type" wrapper-class="" class="!py-2 !text-[12px] dark:!bg-[#26416b]">
                                     <option value="percent">Percent off</option>
                                     <option value="fixed">USD off</option>
-                                </select>
+                                </x-admin.select>
                                 <input type="number" step="0.01" min="0.01" x-model="couponForm.discount_value" :placeholder="couponForm.discount_type === 'percent' ? '10' : '5.00'" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
                                 <input type="number" min="1" x-model="couponForm.max_uses" placeholder="Max uses (blank = ∞)" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
                                 <input type="datetime-local" x-model="couponForm.valid_until" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">

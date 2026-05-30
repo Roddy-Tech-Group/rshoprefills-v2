@@ -179,9 +179,9 @@ class extends Component {
         <div class="mb-4 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">{{ session('status') }}</div>
     @endif
 
-    <div class="overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100 shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
+    <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        <div class="overflow-x-auto p-3">
+            <table class="admin-table w-full text-left text-sm">
                 <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600">
                     <tr>
                         <th class="px-5 py-3 font-semibold">Title</th>
@@ -191,7 +191,7 @@ class extends Component {
                         <th class="px-5 py-3 text-right font-semibold">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-100">
+                <tbody class="divide-inset">
                     @forelse ($this->posts as $post)
                         <tr class="hover:bg-zinc-50">
                             <td class="px-5 py-3">

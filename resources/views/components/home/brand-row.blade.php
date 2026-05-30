@@ -177,7 +177,7 @@
                 x-ref="list"
                 data-reveal-group
                 :style="`--card-w: ${cardW}px`"
-                class="carousel-list flex w-max gap-4 pr-4 sm:gap-5 sm:pr-6 lg:pr-8 [&>*]:shrink-0"
+                class="carousel-list flex w-max gap-4 pl-4 pr-4 sm:gap-5 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 [&>*]:shrink-0"
             >
                 {{ $slot }}
             </ul>

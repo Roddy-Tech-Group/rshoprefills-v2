@@ -7,6 +7,7 @@ use App\Domain\Wallet\Events\TransactionPinChanged;
 use App\Domain\Wallet\Events\TransactionPinCreated;
 use App\Domain\Wallet\Events\TransactionPinLocked;
 use App\Domain\Wallet\Events\TransactionPinVerificationFailed;
+use App\Models\Admin;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\PasswordReset;
@@ -27,11 +28,13 @@ class AuditLogListener implements ShouldQueue
         } elseif ($event instanceof TransactionPinLocked) {
             $this->auditLogService->log('transaction_pin_locked', $event->user, null, null, null, $event->user->id);
         } elseif ($event instanceof Login) {
-            $this->auditLogService->log('user_login', $event->user, null, null, null, $event->user->id);
+            $actorId = $event->user instanceof Admin ? null : $event->user->id;
+            $this->auditLogService->log('user_login', $event->user, null, null, null, $actorId);
         } elseif ($event instanceof Failed) {
             $this->auditLogService->log('user_login_failed', $event->user, null, null, ['credentials' => collect($event->credentials)->except('password')->toArray()]);
         } elseif ($event instanceof PasswordReset) {
-            $this->auditLogService->log('password_reset', $event->user, null, null, null, $event->user->id);
+            $actorId = $event->user instanceof Admin ? null : $event->user->id;
+            $this->auditLogService->log('password_reset', $event->user, null, null, null, $actorId);
         }
     }
 

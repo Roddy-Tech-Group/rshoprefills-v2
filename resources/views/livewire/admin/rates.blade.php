@@ -371,9 +371,9 @@ class extends Component {
         @endif
 
         {{-- Table card --}}
-        <div class="overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
+        <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+            <div class="overflow-x-auto p-3">
+                <table class="admin-table w-full text-left text-sm">
                     <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600 dark:bg-[#0c1a36] dark:text-zinc-400">
                         <tr>
                             <th class="px-5 py-3 font-semibold">Logo</th>
@@ -386,7 +386,7 @@ class extends Component {
                             <th class="px-5 py-3 text-right font-semibold">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-700/60">
+                    <tbody class="divide-inset">
                         @forelse ($this->rates as $rate)
                             @php
                                 $live = $this->freshness[$rate->code] ?? null;
@@ -484,10 +484,7 @@ class extends Component {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Type</label>
-                            <select wire:model="type" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#0c1a36] dark:text-white">
-                                <option value="fiat">Fiat</option>
-                                <option value="crypto">Crypto</option>
-                            </select>
+                            <x-admin.select wire:model="type" :options="['fiat' => 'Fiat', 'crypto' => 'Crypto']" />
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Rate per USD</label>

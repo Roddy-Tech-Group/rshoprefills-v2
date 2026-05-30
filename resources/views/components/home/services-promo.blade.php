@@ -59,7 +59,7 @@
         </div>
 
         {{-- Right: actions --}}
-        <div class="flex flex-col items-center gap-5">
+        <div class="flex flex-col items-stretch gap-5 sm:items-center">
 
             {{-- Referral link pill (logged-in) or guest prompt --}}
             @auth
@@ -79,12 +79,12 @@
                                 }
                             },
                         }"
-                        class="w-full max-w-md"
+                        class="w-full"
                     >
                         <div class="flex items-center gap-2 rounded-[25px] px-2 py-2 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150"
                              style="background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);"
                         >
-                            <span class="flex-1 truncate pl-3 font-mono text-sm text-white">{{ $referralUrl }}</span>
+                            <span class="min-w-0 flex-1 truncate pl-3 font-mono text-xs text-white sm:text-sm">{{ $referralUrl }}</span>
                             <button
                                 type="button"
                                 @click="copy()"
@@ -125,7 +125,7 @@
             @endauth
 
             {{-- Primary action pair --}}
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
                 <a
                     href="{{ route('shop.gift-cards') }}"
                     wire:navigate

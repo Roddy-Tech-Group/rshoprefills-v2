@@ -52,17 +52,30 @@
                 minmax(90px,  0.7fr);  /* Status pill */
             gap: 1.25rem;
             align-items: center;
+            min-width: 820px;
         }
-        @media (max-width: 1024px) {
-            .txn-row { grid-template-columns: minmax(160px, 1.5fr) minmax(110px, 1fr) minmax(90px, 0.7fr); }
-            .txn-row > *:not(.col-customer):not(.col-amount):not(.col-status) { display: none; }
+        .txn-body:not(:last-of-type)::after {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            right: 1.5rem;
+            bottom: 0;
+            height: 1px;
+            background-color: rgb(244 244 245);
+            pointer-events: none;
         }
+        html.dark .txn-body:not(:last-of-type)::after {
+            background-color: rgb(255 255 255 / 0.08);
+        }
+        .txn-body:hover::after { display: none; }
+        .txn-body:hover { border-radius: 10px; }
     </style>
 
-    <div class="flex flex-col gap-2">
-        {{-- Header pill — light-blue background, 2px blue ring, matches the
-             Products filter bar styling. --}}
-        <div class="txn-row hidden rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 shadow-sm shadow-zinc-900/5 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400 md:grid">
+    <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        <div class="overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
+
+        {{-- Header pill --}}
+        <div class="txn-row grid mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400">
             <span class="col-customer">Customer</span>
             <span>Gateway</span>
             <span>Amount</span>
@@ -77,7 +90,7 @@
                 $reference = $payment->gateway_reference ?: $payment->idempotency_key;
                 $isWalletFunding = ! $payment->order;
             @endphp
-            <article class="txn-row group cursor-pointer rounded-[10px] border border-zinc-100 bg-white px-6 py-3 shadow-sm shadow-zinc-900/5 transition-colors hover:border-blue-600 hover:bg-blue-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:hover:border-blue-400 dark:hover:bg-blue-600/15">
+            <article class="txn-row txn-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400">
 
                 {{-- Customer — name + reference / order link stacked. The
                      reference line is a click-to-copy chip; clicking it puts
@@ -141,9 +154,11 @@
                 </span>
             </article>
         @empty
-            <div class="rounded-[10px] bg-white px-5 py-12 text-center text-sm text-zinc-600 shadow-sm ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-400 dark:ring-zinc-700/60">
+            <div class="px-5 py-12 text-center text-sm text-zinc-600 dark:text-zinc-400">
                 No transactions yet.
             </div>
         @endforelse
+
+        </div>
     </div>
 </x-layouts.admin>

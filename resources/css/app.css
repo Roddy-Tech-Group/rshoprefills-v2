@@ -113,6 +113,138 @@ html.dark .nav-item-active svg {
 html.dark .nav-item-active {
     background-color: #000000 !important;
 }
+
+/* Inset row dividers — used across every admin list so the divider line
+   sits 1.5rem (matching the card's px-6) inside the card edges instead of
+   running to the corners. Apply `divide-inset` to the container that holds
+   the row elements (tbody, ul, plain div with siblings). Pseudo-element
+   pattern works on <tr>, grid items, and flex children alike. */
+.divide-inset > * {
+    position: relative;
+}
+.divide-inset > *:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 1.5rem;
+    right: 1.5rem;
+    bottom: 0;
+    height: 1px;
+    background-color: rgb(244 244 245);
+    pointer-events: none;
+}
+html.dark .divide-inset > *:not(:last-child)::after {
+    background-color: rgb(63 63 70 / 0.6);
+}
+
+/* ── Admin table pattern ───────────────────────────────────────────────
+   Mirrors the products-page variant list on every admin page that uses a
+   plain <table>. Header <thead> reads as a separate "pill" with a 2px blue
+   ring around all four sides + rounded corners, sitting inside the card
+   with margin from the edges (achieved via the .admin-table-wrap p-3
+   wrapper). The cells share a continuous border so they look like one
+   connected pill. */
+.admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.admin-table thead th {
+    background-color: rgb(239 246 255);            /* blue-50 */
+    color: rgb(29 78 216);                          /* blue-700 */
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1.25rem;
+    text-align: left;
+    border-top: 2px solid rgb(59 130 246);          /* blue-500 */
+    border-bottom: 2px solid rgb(59 130 246);
+}
+.admin-table thead th:first-child {
+    border-left: 2px solid rgb(59 130 246);
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+.admin-table thead th:last-child {
+    border-right: 2px solid rgb(59 130 246);
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+.admin-table tbody td {
+    padding: 0.75rem 1.25rem;
+    font-size: 14px;
+    color: rgb(63 63 70);                           /* zinc-700 */
+}
+.admin-table tbody tr {
+    transition: background-color 150ms;
+    border-radius: 10px;
+}
+/* Hover ring: paint the row background + a 1px blue inset ring directly on
+   the <tr>. Cells stay transparent so the row-level background + shadow
+   read through. Works because we use border-collapse: separate +
+   border-spacing: 0, which keeps each tr renderable as its own box.
+   border-radius on the tr makes the box-shadow inset ring follow the same
+   10px curve as the header pill. */
+.admin-table tbody tr:hover {
+    background-color: rgb(239 246 255) !important;          /* blue-50 */
+    box-shadow: inset 0 0 0 1px rgb(59 130 246) !important; /* blue-500 ring */
+    border-radius: 10px;
+}
+/* Cells override the inset ring with their own backgrounds + gradient
+   borders by default. On hover, switch the cell to transparent so the
+   tr's background + ring become visible. */
+.admin-table tbody tr:hover > td {
+    background-color: transparent !important;
+    background-image: none !important;
+    border-bottom-color: transparent !important;
+}
+.admin-table tbody tr:first-child td {
+    padding-top: 1rem;
+}
+/* Inset divider between body rows. Uses a border on each <td> with a
+   gradient so the line stops short of the first and last cells'
+   horizontal padding, matching the .divide-inset look on div-based lists. */
+.admin-table tbody tr:not(:last-child) td {
+    border-bottom: 1px solid rgb(244 244 245);
+}
+.admin-table tbody tr:not(:last-child) td:first-child {
+    background-image: linear-gradient(to right, transparent 1.5rem, rgb(244 244 245) 1.5rem);
+    background-position: 0 100%;
+    background-size: 100% 1px;
+    background-repeat: no-repeat;
+    border-bottom-color: transparent;
+}
+.admin-table tbody tr:not(:last-child) td:last-child {
+    background-image: linear-gradient(to left, transparent 1.5rem, rgb(244 244 245) 1.5rem);
+    background-position: 0 100%;
+    background-size: 100% 1px;
+    background-repeat: no-repeat;
+    border-bottom-color: transparent;
+}
+
+/* Dark mode overrides. Blue header tint shifts to a brighter ring; body
+   rows pick up the navy-grey palette used on the rest of the admin. */
+html.dark .admin-table thead th {
+    background-color: rgb(37 99 235 / 0.15);        /* blue-600/15 */
+    color: rgb(147 197 253);                         /* blue-300 */
+    border-color: rgb(96 165 250);                   /* blue-400 */
+}
+html.dark .admin-table tbody td {
+    color: rgb(212 212 216);                         /* zinc-300 */
+}
+html.dark .admin-table tbody tr:hover {
+    background-color: rgb(37 99 235 / 0.15) !important;     /* blue-600/15 */
+    box-shadow: inset 0 0 0 1px rgb(96 165 250) !important; /* blue-400 ring */
+}
+html.dark .admin-table tbody tr:not(:last-child) td {
+    border-bottom-color: rgb(255 255 255 / 0.08);
+}
+html.dark .admin-table tbody tr:not(:last-child) td:first-child {
+    background-image: linear-gradient(to right, transparent 1.5rem, rgb(255 255 255 / 0.08) 1.5rem);
+}
+html.dark .admin-table tbody tr:not(:last-child) td:last-child {
+    background-image: linear-gradient(to left, transparent 1.5rem, rgb(255 255 255 / 0.08) 1.5rem);
+}
 /* Mobile-only horizontal-overflow lock. Stops dropdowns / off-canvas panels
    / decorative gradients from pushing the viewport wider than the screen.
    Disabled at lg+ because the collapsed-sidebar flyout popups deliberately

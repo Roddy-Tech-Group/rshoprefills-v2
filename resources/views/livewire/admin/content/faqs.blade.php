@@ -15,6 +15,11 @@ class extends Component {
 
     public bool $showForm = false;
 
+    /** "existing" lets the admin pick from already-used topics; "new" lets
+     *  them define a brand-new topic. The form swaps the topic field below
+     *  this control. */
+    public string $topicMode = 'existing';
+
     #[Validate('required|string|max:80')]
     public string $topic = '';
 
@@ -36,10 +41,47 @@ class extends Component {
         return Faq::ordered()->get()->groupBy('topic');
     }
 
+    /** Distinct topic names already in the FAQ table, sorted alphabetically.
+     *  Powers the "Use existing" dropdown in the create/edit modal so admins
+     *  attach new questions to the topics that already exist rather than
+     *  re-typing them (and risking accidental "Orders" vs "orders" forks). */
+    #[Computed]
+    public function existingTopics(): array
+    {
+        return Faq::query()
+            ->whereNotNull('topic')
+            ->where('topic', '!=', '')
+            ->distinct()
+            ->orderBy('topic')
+            ->pluck('topic')
+            ->all();
+    }
+
     public function newFaq(): void
     {
         $this->resetForm();
+        // Default to "existing" so the dropdown is the first interaction —
+        // but fall back to "new" when no topics exist yet (first-run case).
+        $this->topicMode = ! empty($this->existingTopics) ? 'existing' : 'new';
+        if ($this->topicMode === 'existing') {
+            $this->topic = $this->existingTopics[0];
+        }
         $this->showForm = true;
+    }
+
+    /**
+     * Swap the topic source between the existing-topic dropdown and a free
+     * text input. Resets `$topic` accordingly so the new field starts in a
+     * sensible state (first existing topic, or blank for a new one).
+     */
+    public function setTopicMode(string $mode): void
+    {
+        $this->topicMode = $mode === 'new' ? 'new' : 'existing';
+        if ($this->topicMode === 'existing') {
+            $this->topic = $this->existingTopics[0] ?? '';
+        } else {
+            $this->topic = '';
+        }
     }
 
     public function edit(int $id): void
@@ -51,6 +93,8 @@ class extends Component {
         $this->answer = $faq->answer;
         $this->isPublished = $faq->is_published;
         $this->sortOrder = $faq->sort_order;
+        // On edit, default to "existing" (the topic is already in the list).
+        $this->topicMode = in_array($faq->topic, $this->existingTopics, true) ? 'existing' : 'new';
         $this->showForm = true;
     }
 
@@ -96,6 +140,7 @@ class extends Component {
     {
         $this->editingId = null;
         $this->topic = '';
+        $this->topicMode = 'existing';
         $this->question = '';
         $this->answer = '';
         $this->isPublished = true;
@@ -123,13 +168,14 @@ class extends Component {
     @endif
 
     @forelse ($this->faqs as $topic => $items)
-        <section class="mb-6 overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100 shadow-sm">
-            <div class="border-b border-zinc-100 bg-zinc-50 px-5 py-3">
-                <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-700">{{ $topic }}</h2>
+        <section class="mb-6 overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+            {{-- Header pill --}}
+            <div class="mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:ring-blue-400">
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">{{ $topic }}</h2>
             </div>
-            <ul class="divide-y divide-zinc-100">
+            <ul class="divide-inset">
                 @foreach ($items as $faq)
-                    <li class="flex items-start justify-between gap-4 px-5 py-4">
+                    <li class="group relative mx-3 flex items-start justify-between gap-4 px-5 py-4 transition-all hover:bg-blue-50 hover:rounded-[10px] hover:ring-1 hover:ring-inset hover:ring-blue-500 hover:after:hidden dark:hover:bg-blue-600/15 dark:hover:ring-blue-400">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-zinc-900">{{ $faq->question }}</p>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">{{ $faq->answer }}</p>
@@ -151,8 +197,8 @@ class extends Component {
             </ul>
         </section>
     @empty
-        <div class="rounded-[10px] bg-white p-8 text-center ring-1 ring-zinc-100 shadow-sm">
-            <p class="text-sm text-zinc-600">No FAQs yet. Click "New FAQ" to create one, or run <code class="rounded-[10px] bg-zinc-100 px-1.5 py-0.5">php artisan db:seed --class=FaqSeeder</code>.</p>
+        <div class="rounded-[10px] border-[1.5px] border-white bg-white p-8 text-center shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+            <p class="text-sm text-zinc-600 dark:text-zinc-400">No FAQs yet. Click "New FAQ" to create one, or run <code class="rounded-[10px] bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-700/50">php artisan db:seed --class=FaqSeeder</code>.</p>
         </div>
     @endforelse
 
@@ -170,7 +216,42 @@ class extends Component {
                 <div class="space-y-4 px-5 py-4">
                     <div>
                         <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Topic</label>
-                        <input wire:model="topic" type="text" placeholder="e.g. Orders and delivery" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+
+                        {{-- Mode toggle: pick an existing topic or define a new one.
+                             Disabled when there are no existing topics (first-run). --}}
+                        @if (! empty($this->existingTopics))
+                            <div class="mt-1.5 inline-flex items-center rounded-[10px] bg-zinc-100 p-1" role="tablist" aria-label="Topic source">
+                                <button
+                                    type="button"
+                                    wire:click="setTopicMode('existing')"
+                                    role="tab"
+                                    aria-selected="{{ $topicMode === 'existing' ? 'true' : 'false' }}"
+                                    @class([
+                                        'rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors',
+                                        'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' => $topicMode === 'existing',
+                                        'text-zinc-600 hover:text-zinc-900' => $topicMode !== 'existing',
+                                    ])
+                                >Use existing</button>
+                                <button
+                                    type="button"
+                                    wire:click="setTopicMode('new')"
+                                    role="tab"
+                                    aria-selected="{{ $topicMode === 'new' ? 'true' : 'false' }}"
+                                    @class([
+                                        'rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors',
+                                        'bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200' => $topicMode === 'new',
+                                        'text-zinc-600 hover:text-zinc-900' => $topicMode !== 'new',
+                                    ])
+                                >Create new</button>
+                            </div>
+                        @endif
+
+                        @if ($topicMode === 'existing' && ! empty($this->existingTopics))
+                            @php $topicChoices = array_combine($this->existingTopics, $this->existingTopics); @endphp
+                            <x-admin.select wire:model="topic" :options="$topicChoices" />
+                        @else
+                            <input wire:model="topic" type="text" placeholder="e.g. Orders and delivery" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                        @endif
                         @error('topic') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div>

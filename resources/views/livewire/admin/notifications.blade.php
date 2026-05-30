@@ -195,7 +195,7 @@ class extends Component {
                             <th class="px-5 py-3 text-right">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-zinc-100">
+                    <tbody class="divide-inset">
                         @forelse ($notifications as $n)
                             <tr class="transition-colors hover:bg-zinc-50">
                                 <td class="px-5 py-3.5">

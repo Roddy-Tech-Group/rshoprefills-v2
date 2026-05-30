@@ -183,9 +183,9 @@ class extends Component {
         </div>
     </div>
 
-    <div class="overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100 shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
+    <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        <div class="overflow-x-auto p-3">
+            <table class="admin-table w-full text-left text-sm">
                 <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600">
                     <tr>
                         <th class="px-5 py-3 font-semibold">Author</th>
@@ -197,7 +197,7 @@ class extends Component {
                         <th class="px-5 py-3 text-right font-semibold">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-100">
+                <tbody class="divide-inset">
                     @forelse ($this->reviews as $review)
                         <tr class="hover:bg-zinc-50">
                             <td class="px-5 py-3">
@@ -262,20 +262,12 @@ class extends Component {
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Rating</label>
-                            <select wire:model="rating" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                                @for ($i = 1; $i <= 5; $i++)
-                                    <option value="{{ $i }}">{{ $i }} star{{ $i > 1 ? 's' : '' }}</option>
-                                @endfor
-                            </select>
+                            <x-admin.select wire:model="rating" :options="[1 => '1 star', 2 => '2 stars', 3 => '3 stars', 4 => '4 stars', 5 => '5 stars']" />
                             @error('rating') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Source</label>
-                            <select wire:model="source" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                                <option value="Trustpilot">Trustpilot (emerald star)</option>
-                                <option value="Google">Google (multi-colour G)</option>
-                                <option value="RshopRefills">RshopRefills (our website)</option>
-                            </select>
+                            <x-admin.select wire:model="source" :options="['Trustpilot' => 'Trustpilot (emerald star)', 'Google' => 'Google (multi-colour G)', 'RshopRefills' => 'RshopRefills (our website)']" />
                             <p class="mt-1 text-[10px] text-zinc-500">Picks the brand icon and star colour on the storefront card.</p>
                             @error('source') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>

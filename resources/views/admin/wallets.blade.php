@@ -30,26 +30,22 @@
 
     <div class="flex flex-1 flex-col gap-6">
 
-        <div class="overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-[11px]">
-                    {{-- Header treatment matches the products / orders / transactions
-                         pages: light-blue surface + blue-700 caps for the column
-                         labels. Same colour, same typography, every list page now
-                         reads the same. --}}
-                    <thead class="bg-blue-50 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-600/15 dark:text-blue-300">
+        <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+            <div class="overflow-x-auto p-3">
+                <table class="admin-table w-full text-left text-[11px]">
+                    <thead>
                         <tr>
-                            <th class="px-5 py-3">Owner</th>
-                            <th class="px-5 py-3">Balance</th>
-                            <th class="px-5 py-3">Currency</th>
-                            <th class="px-5 py-3">Transactions</th>
-                            <th class="px-5 py-3">Status</th>
-                            <th class="px-5 py-3">Created</th>
+                            <th>Owner</th>
+                            <th>Balance</th>
+                            <th>Currency</th>
+                            <th>Transactions</th>
+                            <th>Status</th>
+                            <th>Created</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-700/60">
+                    <tbody>
                         @forelse ($wallets as $wallet)
-                            <tr class="transition-colors hover:bg-zinc-50 dark:hover:bg-[#26416b]/40">
+                            <tr>
                                 <td class="px-5 py-3">
                                     <div class="flex items-center gap-3">
                                         @php

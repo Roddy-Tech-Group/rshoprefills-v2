@@ -156,7 +156,7 @@ class extends Component {
         $maxRedeemed = max(1, max(array_column($series, 'redeemed')));
         $maxAny      = max($maxMinted, $maxRedeemed);
     @endphp
-    <section class="mt-5 rounded-[10px] border border-zinc-100 bg-white p-5 shadow-sm dark:border-zinc-700/60 dark:bg-[#1d3252]">
+    <section class="mt-5 rounded-[10px] border-[1.5px] border-white bg-white p-5 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-sm font-bold text-zinc-900 dark:text-white">Last 7 days</h2>
             <div class="flex items-center gap-4 text-[11px] text-zinc-600 dark:text-zinc-400">
@@ -179,17 +179,18 @@ class extends Component {
     </section>
 
     {{-- Top referrers leaderboard. --}}
-    <section class="mt-5 overflow-hidden rounded-[10px] border border-zinc-100 bg-white shadow-sm dark:border-zinc-700/60 dark:bg-[#1d3252]">
-        <header class="border-b border-zinc-100 px-5 py-3 dark:border-zinc-700/60">
-            <h2 class="text-sm font-bold text-zinc-900 dark:text-white">Top referrers</h2>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400">Customers who've earned the most Rcoin through referrals.</p>
+    <section class="mt-5 overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        {{-- Header pill --}}
+        <header class="mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:ring-blue-400">
+            <h2 class="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">Top referrers</h2>
+            <p class="mt-0.5 text-xs text-blue-700/70 dark:text-blue-300/70">Customers who've earned the most Rcoin through referrals.</p>
         </header>
         @if ($this->topReferrers->isEmpty())
             <div class="px-5 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">No referral activity yet.</div>
         @else
-            <ul class="divide-y divide-zinc-100 dark:divide-zinc-700/60">
+            <ul class="divide-inset">
                 @foreach ($this->topReferrers as $i => $row)
-                    <li class="flex items-center gap-4 px-5 py-3" wire:key="ref-{{ $row->referrer_id }}">
+                    <li class="group relative mx-3 flex items-center gap-4 px-5 py-3 transition-all hover:bg-blue-50 hover:rounded-[10px] hover:ring-1 hover:ring-inset hover:ring-blue-500 hover:after:hidden dark:hover:bg-blue-600/15 dark:hover:ring-blue-400" wire:key="ref-{{ $row->referrer_id }}">
                         <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-xs font-black text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
                             {{ $i + 1 }}
                         </span>

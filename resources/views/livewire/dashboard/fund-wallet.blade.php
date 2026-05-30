@@ -643,12 +643,17 @@ new class extends Component
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-zinc-700">Network Network</label>
-                            <select x-model="momoDetails.network" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 bg-white">
-                                <template x-for="net in selectedMethod?.supported_networks" :key="net">
-                                    <option :value="net" x-text="net"></option>
-                                </template>
-                            </select>
+                            <label class="block text-xs font-semibold text-zinc-700">Network</label>
+                            <div class="relative mt-1.5">
+                                <select x-model="momoDetails.network" class="w-full appearance-none rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-3 pr-9 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                    <template x-for="net in selectedMethod?.supported_networks" :key="net">
+                                        <option :value="net" x-text="net"></option>
+                                    </template>
+                                </select>
+                                <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
                         </div>
 
                         <button @click="paySession('mobile_money', momoDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
