@@ -164,6 +164,7 @@ class ComplianceGatesTest extends TestCase
 
     private function seedCartFor(User $user): Cart
     {
+        app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($user, '5283');
         $category = Category::create(['name' => 'Gift Cards', 'slug' => 'gift-cards', 'type' => 'digital']);
         $subcategory = Subcategory::create(['category_id' => $category->id, 'name' => 'Gaming', 'slug' => 'gaming']);
         $product = Product::create([

@@ -26,36 +26,20 @@ class WalletPaymentProvider implements PaymentProviderInterface
             throw new \Exception("Unsupported wallet currency: {$attempt->currency}");
         }
 
-        // If the user has a transaction PIN, we delay locking the funds until they authorize.
-        if ($user->hasTransactionPin()) {
-            $attempt->payment_status = PaymentStatus::Pending;
-            $attempt->gateway_reference = 'WL-AUTH-REQUIRED-'.uniqid();
-            $attempt->save();
-
-            return [
-                'payment_url' => null,
-                'gateway_reference' => $attempt->gateway_reference,
-                'status' => 'awaiting_customer_action',
-            ];
+        if (! $user->hasTransactionPin()) {
+            throw new \App\Domain\Wallet\Exceptions\MissingTransactionPinException(
+                'You must set up a Wallet Transaction PIN in your profile settings before you can pay with your wallet.'
+            );
         }
 
-        $wallet = $this->walletService->getOrCreateWallet($user, $currencyEnum);
-
-        // Run in transaction with pessimistic lock
-        DB::transaction(function () use ($wallet, $attempt) {
-            // 1. Lock funds in the wallet
-            $this->walletService->lockFunds($wallet, $attempt->amount);
-
-            // 2. Mark the payment attempt as reserved
-            $attempt->payment_status = PaymentStatus::Reserved;
-            $attempt->gateway_reference = 'WL-LOCK-'.uniqid();
-            $attempt->save();
-        });
+        $attempt->payment_status = PaymentStatus::Pending;
+        $attempt->gateway_reference = 'WL-AUTH-REQUIRED-'.uniqid();
+        $attempt->save();
 
         return [
             'payment_url' => null,
             'gateway_reference' => $attempt->gateway_reference,
-            'status' => 'reserved',
+            'status' => 'awaiting_customer_action',
         ];
     }
 

@@ -143,19 +143,13 @@ class WalletPinCheckoutTest extends TestCase
         Queue::assertNotPushed(FulfillOrderItemJob::class);
     }
 
-    public function test_wallet_checkout_without_a_pin_settles_immediately(): void
+    public function test_wallet_checkout_without_a_pin_throws_missing_pin_exception(): void
     {
         Queue::fake([FulfillOrderItemJob::class]);
         $wallet = $this->fundedWallet();
 
-        $order = $this->placeWalletOrder();
-
-        // No PIN -> the legacy synchronous path debits and dispatches fulfillment.
-        $this->assertEquals(OrderStatus::Processing, $order->order_status);
-        $this->assertEquals(PaymentStatus::Paid, $order->payment_status);
-        $wallet->refresh();
-        $this->assertEquals(89.00, (float) $wallet->balance);
-        Queue::assertPushed(FulfillOrderItemJob::class, 1);
+        $this->expectException(\App\Domain\Wallet\Exceptions\MissingTransactionPinException::class);
+        $this->placeWalletOrder();
     }
 
     public function test_full_pin_authorization_completes_the_wallet_payment(): void

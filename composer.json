@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "laravel/framework": "^12.0",
+        "laravel/horizon": "^5.47",
         "laravel/socialite": "^5.27",
         "laravel/tinker": "^2.10.1",
         "livewire/flux": "^2.0",
@@ -58,7 +59,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --queue=critical-alerts,emails,notifications,airalo,rewards,default --tries=1\" \"npm run dev\" --names='server,queue,vite'"
         ]
     },
     "extra": {
@@ -73,6 +74,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.2.0"
         }
     },
     "minimum-stability": "dev",
