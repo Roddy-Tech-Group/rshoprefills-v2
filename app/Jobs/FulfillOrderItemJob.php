@@ -25,6 +25,8 @@ class FulfillOrderItemJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $queue = 'fulfillment';
+
     public int $tries = 3;
 
     public int $backoff = 30;
