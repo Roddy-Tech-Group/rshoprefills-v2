@@ -24,6 +24,8 @@ class PollPendingFulfillmentJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $queue = 'fulfillment';
+
     public int $tries = 120; // Allow polling up to 120 times (20 minutes total)
 
     public function __construct(protected OrderItem $item) {}
