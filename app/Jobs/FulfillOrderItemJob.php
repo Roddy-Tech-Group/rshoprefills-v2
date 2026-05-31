@@ -25,13 +25,16 @@ class FulfillOrderItemJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'fulfillment';
+
 
     public int $tries = 3;
 
     public int $backoff = 30;
 
-    public function __construct(protected OrderItem $item) {}
+    public function __construct(protected OrderItem $item)
+    {
+        $this->onQueue('fulfillment');
+    }
 
     public function handle(
         FulfillmentProviderFactory $providerFactory,
