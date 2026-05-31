@@ -4,6 +4,8 @@
     use App\Models\Subcategory;
     use Illuminate\Support\Facades\DB;
 
+    abort_if(! \App\Support\FeatureFlag::on('bills'), 404);
+
     // Bill payments listing — mirrors the gift-card / top-up listings. One card
     // per BILLER brand (Products in the `bill-payments` category, grouped by
     // brand_key); the detail page reuses the shared `shop.product` view.
@@ -94,7 +96,12 @@
     // narrows to that region; the clear-X resets back to the US default.
     $countryFiltered = $country !== '' && $country !== 'US';
 
-    $filterUrl = function (array $overrides) use ($search, $country, $currency, $sub, $sort) {
+    // Route name swaps between storefront + dashboard chrome so filter, brand,
+    // and view-all links keep the user on whichever side they entered from.
+    $inDash = request()->is('dashboard/shop*') && auth()->check();
+    $shopRoute = fn (string $name, $params = []) => route(($inDash ? 'dashboard.shop.' : 'shop.').$name, $params);
+
+    $filterUrl = function (array $overrides) use ($search, $country, $currency, $sub, $sort, $shopRoute) {
         $params = array_filter([
             'q'           => $search ?: null,
             'country'     => $country ?: null,
@@ -109,7 +116,7 @@
                 $params[$k] = $v;
             }
         }
-        return route('shop.bills', $params);
+        return $shopRoute('bills', $params);
     };
 
     // Subcategory links for the shared sidebar — "All" first, then each subtype.
@@ -123,7 +130,7 @@
     );
 @endphp
 
-<x-layouts.app.header :title="'Bill Payments | RshopRefills'">
+<x-shop.layout :title="'Bill Payments | RshopRefills'">
 
     <section class="min-h-full bg-zinc-100">
         <div class="mx-auto w-full max-w-[1550px] px-4 py-8 sm:px-6 lg:px-8">
@@ -135,101 +142,24 @@
 
                 {{-- Main column --}}
                 <div>
+                    {{-- Mobile category picker (dark pill + slide-up sheet). --}}
+                    <div class="mb-4 sm:hidden">
+                        <x-shop.category-picker active="bill-payments" />
+                    </div>
+
                     {{-- Heading + search row --}}
                     <div class="mb-6 flex flex-col gap-3 sm:grid sm:grid-cols-3 sm:items-center sm:gap-4">
-                        <div>
+                        <div class="hidden sm:block">
                             <h1 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Bill Payments</h1>
                             <div class="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-zinc-700">
                                 <span class="flex items-center gap-1.5">
-                                    <img src="{{ asset('assets/' . rawurlencode('instant delivery.png')) }}" alt="" class="h-4 w-4 object-contain" style="{{ $greenTint }}" loading="lazy">
+                                    <img src="{{ asset('assets/' . rawurlencode('instant delivery.webp')) }}" alt="" class="h-4 w-4 object-contain" style="{{ $greenTint }}" loading="lazy">
                                     Instant Delivery
                                 </span>
-                                <span class="flex items-center gap-1.5">
-                                    <img src="{{ asset('assets/' . rawurlencode('Fair Redund Policy.png')) }}" alt="" class="h-4 w-4 object-contain" style="{{ $greenTint }}" loading="lazy">
+                                <a href="{{ route('shop.refund-policy') }}" wire:navigate class="flex items-center gap-1.5 underline-offset-2 transition-colors hover:text-blue-600 hover:underline">
+                                    <img src="{{ asset('assets/' . rawurlencode('Fair Redund Policy.webp')) }}" alt="" class="h-4 w-4 object-contain" style="{{ $greenTint }}" loading="lazy">
                                     Clear Refund Policy
-                                </span>
-                            </div>
-                        </div>
-
-                        {{-- Shop by country picker --}}
-                        <div
-                            x-data="{ open: false, q: '' }"
-                            @click.outside="open = false"
-                            @keydown.escape="open = false"
-                            class="relative w-full sm:w-72 sm:justify-self-center"
-                        >
-                            <div
-                                :class="open ? 'border-zinc-900 ring-1 ring-zinc-900/10' : 'border-zinc-200 hover:border-zinc-400'"
-                                class="flex w-full items-center gap-1 rounded-[10px] border bg-white py-2.5 pl-3.5 pr-2.5 text-sm text-zinc-900 transition-colors"
-                            >
-                                <button
-                                    type="button"
-                                    @click="open = !open; if (open) $nextTick(() => $refs.countryQ?.focus())"
-                                    class="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
-                                >
-                                    @if ($currentCountryName && Product::flagUrl($country))
-                                        <img src="{{ Product::flagUrl($country) }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
-                                    @else
-                                        <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
-                                    @endif
-                                    <span class="truncate {{ $currentCountryName ? 'font-medium text-zinc-900' : 'text-zinc-500' }}">{{ $currentCountryName ?? 'Shop by country' }}</span>
-                                </button>
-
-                                @if ($countryFiltered)
-                                    <a
-                                        href="{{ $filterUrl(['country' => 'US']) }}"
-                                        wire:navigate
-                                        aria-label="Clear country filter"
-                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300"
-                                    >
-                                        <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
-                                    </a>
-                                @endif
-
-                                <button
-                                    type="button"
-                                    @click="open = !open"
-                                    aria-label="Toggle country list"
-                                    class="shrink-0 outline-none"
-                                >
-                                    <svg class="h-4 w-4 text-zinc-500 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div
-                                x-show="open"
-                                x-cloak
-                                x-transition:enter="transition ease-out duration-150"
-                                x-transition:enter-start="opacity-0 -translate-y-1"
-                                x-transition:enter-end="opacity-100 translate-y-0"
-                                class="absolute left-0 right-0 z-30 mt-1 overflow-hidden rounded-[10px] bg-white/80 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 backdrop-blur-xl"
-                            >
-                                <div class="border-b border-zinc-100 p-2">
-                                    <input
-                                        x-ref="countryQ"
-                                        x-model="q"
-                                        type="text"
-                                        placeholder="Search countries"
-                                        class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900/10"
-                                    >
-                                </div>
-                                <div class="max-h-72 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                                    @foreach ($countryOptions as $opt)
-                                        <a
-                                            href="{{ $filterUrl(['country' => $opt['code']]) }}"
-                                            wire:navigate
-                                            x-show="q === '' || '{{ strtolower(addslashes($opt['name'])) }}'.includes(q.toLowerCase())"
-                                            class="flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors {{ $country === $opt['code'] ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-100' }}"
-                                        >
-                                            @if (Product::flagUrl($opt['code']))
-                                                <img src="{{ Product::flagUrl($opt['code']) }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
-                                            @endif
-                                            <span class="truncate">{{ $opt['name'] }}</span>
-                                        </a>
-                                    @endforeach
-                                </div>
+                                </a>
                             </div>
                         </div>
 
@@ -294,7 +224,7 @@
                                     @endphp
                                     <li>
                                         <a
-                                            href="{{ route('shop.bill', ['brandSlug' => Product::brandSlug($product->brand_key), 'country' => $product->country_code]) }}"
+                                            href="{{ $shopRoute('bill', ['brandSlug' => Product::brandSlug($product->brand_key), 'country' => $product->country_code]) }}"
                                             wire:navigate
                                             class="card-3d-scene group block focus:outline-none"
                                             aria-label="{{ $billerName }}"
@@ -342,11 +272,11 @@
 
                         @else
                             <div class="rounded-[10px] bg-white px-6 py-20 text-center ring-1 ring-zinc-200">
-                                <img src="{{ asset('assets/' . rawurlencode('Empty state.png')) }}" alt="" class="mx-auto block h-44 w-auto object-contain" loading="lazy">
+                                <img src="{{ asset('assets/' . rawurlencode('Empty state.webp')) }}" alt="" class="mx-auto block h-44 w-auto object-contain" loading="lazy">
                                 @if ($search !== '' || $countryFiltered || $sub !== '')
                                     <p class="mt-4 text-base font-semibold text-zinc-900">No billers match these filters</p>
                                     <p class="mt-1 text-sm text-zinc-600">Try clearing the search or pick a different country.</p>
-                                    <a href="{{ route('shop.bills') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+                                    <a href="{{ $shopRoute('bills') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700">
                                         Clear all filters
                                     </a>
                                 @else
@@ -362,4 +292,4 @@
         </div>
     </section>
 
-</x-layouts.app.header>
+</x-shop.layout>

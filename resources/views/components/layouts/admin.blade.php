@@ -206,7 +206,9 @@
             }
         }
     </style>
-    <body class="min-h-screen bg-[#eff6ff] text-zinc-900 dark:bg-[#0c1a36] dark:text-white">
+    <body data-page-transition="micro-fade-shift" class="min-h-screen bg-[#eff6ff] text-zinc-900 dark:bg-[#0c1a36] dark:text-white">
+
+        <x-ui.app-loader />
 
         <flux:sidebar sticky stashable class="relative bg-white dark:bg-[#0c1a36]">
 
@@ -221,11 +223,11 @@
                 @click="$store.adminSidebar.toggle()"
                 :aria-label="$store.adminSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.adminSidebar.collapsed.toString()"
-                class="absolute right-0 top-[88px] z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-[10px] bg-zinc-500/30 text-blue-600 ring-1 ring-zinc-400/40 backdrop-blur-xl backdrop-saturate-150 transition-all hover:bg-zinc-500/40 hover:text-blue-700 active:scale-95 lg:flex dark:bg-white/10 dark:text-blue-300 dark:ring-white/15 dark:hover:bg-white/15 dark:hover:text-blue-200"
-                style="box-shadow: 0 6px 18px -6px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);"
+                class="absolute right-0 top-[88px] z-30 hidden h-8 w-8 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
+                style="box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
             >
                 <svg
-                    class="h-3 w-3 transition-transform duration-200"
+                    class="h-4 w-4 transition-transform duration-200"
                     :class="$store.adminSidebar.collapsed ? 'rotate-180' : 'rotate-0'"
                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
                     aria-hidden="true"
@@ -237,10 +239,10 @@
             {{-- Brand. Two stacked marks: the full wordmark when expanded,
                  the square favicon when collapsed (swap is CSS-driven via the
                  admin-sidebar-collapsed class on <html>). --}}
-            <a href="{{ route('admin.dashboard') }}" class="mr-5 -ml-1 flex flex-col rounded-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+            <a href="{{ route('admin.dashboard') }}" wire:navigate class="mr-5 -ml-1 flex flex-col rounded-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                 <span class="brand-full flex h-10 items-center">
                     <img
-                        src="{{ asset('assets/Rshoprefillslogo.png') }}"
+                        src="{{ asset('assets/Rshoprefillslogo.webp') }}"
                         alt="RshopRefills"
                         class="h-full w-auto object-contain"
                     />
@@ -270,7 +272,7 @@
                 $isCurrent = fn (...$patterns) => request()->routeIs(...$patterns);
                 $navItemClass = fn (bool $active) => $active
                     ? 'group flex items-center gap-3 rounded-[10px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                    : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
+                    : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
                 $iconClass = fn (bool $active) => $active
                     ? 'h-5 w-5 shrink-0 text-black dark:text-white'
                     : 'h-5 w-5 shrink-0 text-zinc-600 transition-colors';
@@ -283,7 +285,7 @@
             <nav class="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto pb-4 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-[10px] [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-white/10" aria-label="Admin">
                 {{-- Overview --}}
                 @php $active = $isCurrent('admin.dashboard'); @endphp
-                <a href="{{ route('admin.dashboard') }}" data-tip="Overview" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.dashboard') }}" wire:navigate data-tip="Overview" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25zM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25z"/>
                     </svg>
@@ -296,7 +298,7 @@
                     $productActive = $isCurrent(...$productPatterns);
                     $subItemClass = fn (bool $active) => $active
                         ? 'flex items-center rounded-[10px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                        : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
+                        : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
                 @endphp
                 <div
                     x-data="{ expanded: {{ $productActive ? 'true' : 'false' }} }"
@@ -330,61 +332,61 @@
                         $isCategory      = fn (string $slug) => $isCurrent('admin.products') && $currentCategory === $slug;
                     @endphp
                     <div x-show="expanded" x-collapse class="nav-submenu ml-5 flex flex-col gap-1 border-l border-zinc-200 pl-4">
-                        <a href="{{ route('admin.products') }}" class="{{ $subItemClass($isProductsRoot) }}">All Products</a>
-                        <a href="{{ route('admin.products', ['category' => 'gift-cards']) }}" class="{{ $subItemClass($isCategory('gift-cards')) }}">Gift Cards</a>
-                        <a href="{{ route('admin.products', ['category' => 'esims']) }}" class="{{ $subItemClass($isCategory('esims')) }}">eSIMs</a>
-                        <a href="{{ route('admin.products', ['category' => 'mobile-airtime']) }}" class="{{ $subItemClass($isCategory('mobile-airtime')) }}">Mobile Top-ups</a>
-                        <a href="{{ route('admin.products', ['category' => 'bill-payments']) }}" class="{{ $subItemClass($isCategory('bill-payments')) }}">Bill Payments</a>
-                        <a href="{{ route('admin.products', ['category' => 'flights']) }}" class="{{ $subItemClass($isCategory('flights')) }}">Flights</a>
-                        <a href="{{ route('admin.products', ['category' => 'stays']) }}" class="{{ $subItemClass($isCategory('stays')) }}">Stays</a>
+                        <a href="{{ route('admin.products') }}" wire:navigate class="{{ $subItemClass($isProductsRoot) }}">All Products</a>
+                        <a href="{{ route('admin.products', ['category' => 'gift-cards']) }}" wire:navigate class="{{ $subItemClass($isCategory('gift-cards')) }}">Gift Cards</a>
+                        <a href="{{ route('admin.products', ['category' => 'esims']) }}" wire:navigate class="{{ $subItemClass($isCategory('esims')) }}">eSIMs</a>
+                        <a href="{{ route('admin.products', ['category' => 'mobile-airtime']) }}" wire:navigate class="{{ $subItemClass($isCategory('mobile-airtime')) }}">Mobile Top-ups</a>
+                        <a href="{{ route('admin.products', ['category' => 'bill-payments']) }}" wire:navigate class="{{ $subItemClass($isCategory('bill-payments')) }}">Bill Payments</a>
+                        <a href="{{ route('admin.products', ['category' => 'flights']) }}" wire:navigate class="{{ $subItemClass($isCategory('flights')) }}">Flights</a>
+                        <a href="{{ route('admin.products', ['category' => 'stays']) }}" wire:navigate class="{{ $subItemClass($isCategory('stays')) }}">Stays</a>
                     </div>
                 </div>
 
                 {{-- Orders --}}
                 @php $active = $isCurrent('admin.orders*'); @endphp
-                <a href="{{ route('admin.orders') }}" data-tip="Orders" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.orders') }}" wire:navigate data-tip="Orders" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('order.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Orders
                 </a>
 
                 {{-- Customers --}}
                 @php $active = $isCurrent('admin.customers*'); @endphp
-                <a href="{{ route('admin.customers') }}" data-tip="Customers" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.customers') }}" wire:navigate data-tip="Customers" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('customer.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Customers
                 </a>
 
                 {{-- Transactions --}}
                 @php $active = $isCurrent('admin.transactions*'); @endphp
-                <a href="{{ route('admin.transactions') }}" data-tip="Transactions" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.transactions') }}" wire:navigate data-tip="Transactions" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Transactions
                 </a>
 
                 {{-- Wallets --}}
                 @php $active = $isCurrent('admin.wallets*'); @endphp
-                <a href="{{ route('admin.wallets') }}" data-tip="Wallets" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.wallets') }}" wire:navigate data-tip="Wallets" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Wallets
                 </a>
 
                 {{-- Reports --}}
                 @php $active = $isCurrent('admin.reports*'); @endphp
-                <a href="{{ route('admin.reports') }}" data-tip="Reports" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.reports') }}" wire:navigate data-tip="Reports" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/report.svg') }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Reports
                 </a>
 
                 {{-- Newsletter --}}
                 @php $active = $isCurrent('admin.newsletter*'); @endphp
-                <a href="{{ route('admin.newsletter') }}" data-tip="Newsletter" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.newsletter') }}" wire:navigate data-tip="Newsletter" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('marketing.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Newsletter
                 </a>
 
                 {{-- Pricing Rules --}}
                 @php $active = $isCurrent('admin.pricing-rules*'); @endphp
-                <a href="{{ route('admin.pricing-rules') }}" data-tip="Pricing Rules" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.pricing-rules') }}" wire:navigate data-tip="Pricing Rules" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
                     </svg>
@@ -422,21 +424,21 @@
                         @php
                             $subItem = fn (bool $active) => $active
                                 ? 'block rounded-[10px] bg-zinc-200 px-3 py-2 text-xs font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                                : 'block rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
+                                : 'block rounded-[10px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
                         @endphp
-                        <a href="{{ route('admin.content.blog') }}" class="{{ $subItem($isCurrent('admin.content.blog')) }}">Blog Posts</a>
-                        <a href="{{ route('admin.content.press') }}" class="{{ $subItem($isCurrent('admin.content.press')) }}">Press Articles</a>
-                        <a href="{{ route('admin.content.reviews') }}" class="{{ $subItem($isCurrent('admin.content.reviews')) }}">Reviews</a>
-                        <a href="{{ route('admin.content.faqs') }}" class="{{ $subItem($isCurrent('admin.content.faqs')) }}">FAQs</a>
-                        <a href="{{ route('admin.content.rewards') }}" class="{{ $subItem($isCurrent('admin.content.rewards')) }}">Rcoin Rewards</a>
-                        <a href="{{ route('admin.content.rewards.analytics') }}" class="{{ $subItem($isCurrent('admin.content.rewards.analytics')) }}">Rcoin Analytics</a>
-                        <a href="{{ route('admin.content.rewards.withdrawals') }}" class="{{ $subItem($isCurrent('admin.content.rewards.withdrawals')) }}">Rcoin Withdrawals</a>
+                        <a href="{{ route('admin.content.blog') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.blog')) }}">Blog Posts</a>
+                        <a href="{{ route('admin.content.press') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.press')) }}">Press Articles</a>
+                        <a href="{{ route('admin.content.reviews') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.reviews')) }}">Reviews</a>
+                        <a href="{{ route('admin.content.faqs') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.faqs')) }}">FAQs</a>
+                        <a href="{{ route('admin.content.rewards') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.rewards')) }}">Rcoin Rewards</a>
+                        <a href="{{ route('admin.content.rewards.analytics') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.rewards.analytics')) }}">Rcoin Analytics</a>
+                        <a href="{{ route('admin.content.rewards.withdrawals') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.rewards.withdrawals')) }}">Rcoin Withdrawals</a>
                     </div>
                 </div>
 
                 {{-- Account Activity --}}
                 @php $active = $isCurrent('admin.account-activity*'); @endphp
-                <a href="{{ route('admin.account-activity') }}" data-tip="Account Activity" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.account-activity') }}" wire:navigate data-tip="Account Activity" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>
                     </svg>
@@ -445,21 +447,21 @@
 
                 {{-- Support Tickets --}}
                 @php $active = $isCurrent('admin.support-tickets*'); @endphp
-                <a href="{{ route('admin.support-tickets') }}" data-tip="Support Tickets" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.support-tickets') }}" wire:navigate data-tip="Support Tickets" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/support.svg') }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Support Tickets
                 </a>
 
                 {{-- Admins --}}
                 @php $active = $isCurrent('admin.admins*'); @endphp
-                <a href="{{ route('admin.admins') }}" data-tip="Admins" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.admins') }}" wire:navigate data-tip="Admins" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Admins
                 </a>
 
                 {{-- Rate Management --}}
                 @php $active = $isCurrent('admin.rates*'); @endphp
-                <a href="{{ route('admin.rates') }}" data-tip="Rate Management" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.rates') }}" wire:navigate data-tip="Rate Management" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="9"/>
                         <path d="M9.5 8h4.25a2 2 0 010 4H9.5m0 0h4.5a2 2 0 010 4H9.5m0-8v8m0-8h-1m1 8h-1m2-10v2m0 8v2"/>
@@ -469,9 +471,16 @@
 
                 {{-- System Settings --}}
                 @php $active = $isCurrent('admin.settings*'); @endphp
-                <a href="{{ route('admin.settings') }}" data-tip="System Settings" class="{{ $navItemClass($active) }}">
+                <a href="{{ route('admin.settings') }}" wire:navigate data-tip="System Settings" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     System Settings
+                </a>
+
+                {{-- API & Integrations - partner API keys + provider credentials --}}
+                @php $active = $isCurrent('admin.api-settings*'); @endphp
+                <a href="{{ route('admin.api-settings') }}" wire:navigate data-tip="API & Integrations" class="{{ $navItemClass($active) }}">
+                    <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
+                    API & Integrations
                 </a>
             </nav>
 
@@ -520,15 +529,19 @@
                 @keydown.window.meta.k.prevent="$refs.search.focus()"
                 class="relative hidden md:block w-[360px] lg:w-[420px]"
             >
+                {{-- Search bar — matches the user dashboard's storefront search
+                     style (heavier border, larger icon, base text size, neutral
+                     kbd chip) so admin and customer surfaces share the same
+                     search affordance. --}}
                 <form
                     role="search"
                     method="GET"
                     action="{{ route('admin.products') }}"
                     @click="$refs.search.focus()"
-                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400 dark:border-white/10'"
-                    class="group flex items-center gap-3 cursor-text rounded-[10px] border bg-white px-3.5 py-2 transition-all duration-200 dark:bg-[#162a4a]"
+                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-400 hover:border-zinc-500 dark:border-white/10 dark:hover:border-white/20'"
+                    class="group flex items-center gap-3 cursor-text rounded-[10px] border-2 bg-white px-4 py-2 transition-all duration-200 dark:bg-[#162a4a]"
                 >
-                    <svg class="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <svg class="h-5 w-5 shrink-0 text-zinc-900 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                     <input
@@ -542,13 +555,16 @@
                         aria-label="Search admin"
                         autocomplete="off"
                         spellcheck="false"
-                        class="flex-1 min-w-0 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-500 outline-none dark:text-white dark:placeholder:text-zinc-400"
+                        class="flex-1 min-w-0 bg-transparent text-base text-zinc-800 placeholder:text-zinc-600 outline-none dark:text-white dark:placeholder:text-zinc-400"
                     />
                     {{-- Ctrl+K hint chip — shown while empty, swaps to a clear
-                         button once the user starts typing. Dark-mode aware so
-                         the kbd reads as a deep navy chip on the dark header. --}}
-                    <kbd x-show="query.length === 0" class="pointer-events-none inline-flex shrink-0 items-center rounded-[5px] border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-zinc-500 dark:border-white/10 dark:bg-[#0c1a36] dark:text-zinc-400" aria-hidden="true">CTRL + K</kbd>
-                    <button type="button" x-show="query.length > 0" @click="clear()" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/15" aria-label="Clear">
+                         button once the user starts typing. Matches the dashboard
+                         search style: neutral zinc surround on light, deep navy
+                         in dark mode. --}}
+                    <span x-show="query.length === 0" class="hidden items-center gap-1 rounded-[10px] border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 sm:inline-flex dark:border-white/10 dark:bg-[#0c1a36] dark:text-zinc-400" aria-hidden="true">
+                        CTRL <span class="text-zinc-600 dark:text-zinc-500">+</span> K
+                    </span>
+                    <button type="button" x-show="query.length > 0" @click="clear()" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-transparent dark:hover:bg-white/15" aria-label="Clear">
                         <svg class="h-3 w-3 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -586,7 +602,7 @@
                                         <img :src="row.logo" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
                                     </template>
                                     <template x-if="! row.logo">
-                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-[11px] font-bold uppercase text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/20" x-text="(row.brand || row.name || row.sku || '').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase() || '—'"></span>
+                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-[11px] font-bold uppercase text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/80/20" x-text="(row.brand || row.name || row.sku || '').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase() || '—'"></span>
                                     </template>
                                     <span class="min-w-0 flex-1 leading-tight">
                                         <span class="block truncate text-[13px] font-semibold text-zinc-900 dark:text-white" x-text="row.brand || row.name || row.sku"></span>
@@ -610,7 +626,7 @@
                     </div>
 
                     <div x-show="results.length > 0" class="border-t border-zinc-200/60 px-4 py-2 text-[11px] text-zinc-500 dark:border-white/10 dark:text-zinc-400">
-                        Press <kbd class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:bg-white/10 dark:text-zinc-200">Enter</kbd> to see all matches
+                        Press <kbd class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:bg-transparent dark:text-zinc-200">Enter</kbd> to see all matches
                     </div>
                 </div>
             </div>
@@ -656,55 +672,6 @@
 
             <flux:spacer />
 
-            {{-- Language dropdown (Alpine-driven). Hover opens; click locks open. --}}
-            <div
-                x-data="{ open: false, locked: false, selected: 'English', options: ['English','French','Spanish','Portuguese','Arabic'] }"
-                @mouseenter="if (!locked) open = true"
-                @mouseleave="if (!locked) open = false"
-                @click.outside="open = false; locked = false"
-                @keydown.escape.window="open = false; locked = false"
-                class="relative hidden lg:block"
-            >
-                <button
-                    type="button"
-                    @click="locked = !locked; open = locked"
-                    :aria-expanded="open.toString()"
-                    class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                >
-                    <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-5 w-5" style="filter: brightness(0) saturate(100%);" loading="lazy">
-                    <span x-text="selected">English</span>
-                </button>
-
-                <div
-                    x-show="open"
-                    x-transition:enter="transition ease-out duration-150"
-                    x-transition:enter-start="opacity-0 -translate-y-1"
-                    x-transition:enter-end="opacity-100 translate-y-0"
-                    x-transition:leave="transition ease-in duration-100"
-                    x-transition:leave-start="opacity-100 translate-y-0"
-                    x-transition:leave-end="opacity-0 -translate-y-1"
-                    style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[200px] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
-                    role="menu"
-                >
-                    <div class="p-1.5">
-                        <template x-for="opt in options" :key="opt">
-                            <button
-                                type="button"
-                                @click="selected = opt; open = false"
-                                :class="selected === opt ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-blue-600 hover:text-white'"
-                                class="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors"
-                            >
-                                <span x-text="opt"></span>
-                                <svg x-show="selected === opt" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                </svg>
-                            </button>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
             {{-- Theme toggle — admin's own light/dark/system control, saved per
                  admin account and kept separate from the customer side. --}}
             <x-theme-toggle class="h-11 w-11 rounded-[10px] text-zinc-600 hover:bg-blue-100" />
@@ -726,8 +693,8 @@
                     // Default avatar by admin gender. Backend can add a `gender` column to admins later
                     // and the right portrait will be picked up automatically. Falls back to the male portrait.
                     $adminDefaultAvatar = asset('assets/' . rawurlencode(match (strtolower($admin?->gender ?? '')) {
-                        'female', 'f' => 'New Female Account Avatar.png',
-                        default       => 'New male account avatar.png',
+                        'female', 'f' => 'New Female Account Avatar.webp',
+                        default       => 'New male account avatar.webp',
                     }));
                 @endphp
                 <button
@@ -760,15 +727,15 @@
 
                     @php $iconBlack = 'filter: brightness(0) saturate(100%);'; @endphp
                     <div class="p-1.5">
-                        <a href="{{ route('admin.account') }}" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('admin.account') }}" wire:navigate class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('user.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Account information
                         </a>
-                        <a href="{{ route('admin.account-activity') }}" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('admin.account-activity') }}" wire:navigate class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('account avtivities 3.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Account activity
                         </a>
-                        <a href="{{ route('admin.notifications') }}" class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('admin.notifications') }}" wire:navigate class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Notifications Log
                         </a>
@@ -777,10 +744,8 @@
                     <div class="border-t border-zinc-100 p-1.5">
                         <form method="POST" action="{{ route('admin.logout') }}" class="w-full">
                             @csrf
-                            <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-                                </svg>
+                            <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">
+                                <x-ui.logout-icon class="h-5 w-5" />
                                 Log Out
                             </button>
                         </form>
@@ -863,7 +828,7 @@
                 x-transition:leave-end="opacity-0"
                 @click="menuOpen = false"
                 style="display: none;"
-                class="fixed inset-0 z-[60] bg-zinc-900/45 backdrop-blur-sm"
+                class="fixed inset-0 z-[60] bg-zinc-900/45"
                 aria-hidden="true"
             ></div>
 
@@ -911,11 +876,9 @@
                         @csrf
                         <button
                             type="submit"
-                            class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
+                            class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
                         >
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
-                            </svg>
+                            <x-ui.logout-icon class="h-4 w-4" />
                             Log out
                         </button>
                     </form>

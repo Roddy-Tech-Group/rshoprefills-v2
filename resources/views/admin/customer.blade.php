@@ -19,8 +19,8 @@
     };
 
     $avatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
-        'female', 'f' => 'New Female Account Avatar.png',
-        default       => 'New male account avatar.png',
+        'female', 'f' => 'New Female Account Avatar.webp',
+        default       => 'New male account avatar.webp',
     }));
 
     $primaryWallet = $user->wallets->first(fn ($wallet) => $wallet->currency->value === 'USD')
@@ -234,6 +234,51 @@
                         @csrf
                         <button type="submit" class="{{ $btn }} text-white {{ $isBanned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700' }}">
                             {{ $isBanned ? 'Unban' : 'Ban' }}
+                        </button>
+                    </form>
+
+                    {{-- Reset transaction PIN - only when one is set. Clears it so
+                         the customer is prompted to set a fresh PIN. --}}
+                    @if ($user->hasTransactionPin())
+                        <form method="POST" action="{{ route('admin.customer.reset-pin', $user) }}"
+                              data-confirm="Reset this customer's transaction PIN? They will be asked to set a new one before their next wallet action."
+                              data-confirm-title="Reset transaction PIN"
+                              data-confirm-text="Reset PIN"
+                              data-confirm-tone="warning">
+                            @csrf
+                            <button type="submit" class="{{ $btn }} bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100">
+                                <svg class="{{ $btnIcon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 7.5h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25H6.75a2.25 2.25 0 01-2.25-2.25v-7.5A2.25 2.25 0 016.75 7.5H7.5"/></svg>
+                                Reset PIN
+                            </button>
+                        </form>
+                    @endif
+
+                    {{-- Reset password - emails the customer a reset link (they set
+                         their own new password; the admin never sees it). --}}
+                    <form method="POST" action="{{ route('admin.customer.password-reset', $user) }}"
+                          data-confirm="Email {{ $user->name }} a password reset link? They will set a new password themselves."
+                          data-confirm-title="Send password reset"
+                          data-confirm-text="Send reset link"
+                          data-confirm-tone="warning">
+                        @csrf
+                        <button type="submit" class="{{ $btn }} bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100">
+                            <svg class="{{ $btnIcon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H9v1.5H7.5v1.5H6v1.5H3.75a.75.75 0 01-.75-.75V18.4c0-.2.08-.392.22-.531l5.43-5.43c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/></svg>
+                            Reset password
+                        </button>
+                    </form>
+
+                    {{-- Log in as this customer (impersonation). Opens their
+                         dashboard in the same browser; admin stays signed in on
+                         the admin guard and can return via the banner. --}}
+                    <form method="POST" action="{{ route('admin.customer.login-as', $user) }}"
+                          data-confirm="Log in as {{ $user->name }}? You will be switched into their account in this tab and can return to admin at any time."
+                          data-confirm-title="Log in as customer"
+                          data-confirm-text="Log in as customer"
+                          data-confirm-tone="warning">
+                        @csrf
+                        <button type="submit" class="{{ $btn }} bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100">
+                            <svg class="{{ $btnIcon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H2.25"/></svg>
+                            Log in as customer
                         </button>
                     </form>
                 </div>

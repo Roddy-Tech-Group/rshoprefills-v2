@@ -6,6 +6,7 @@ use App\Domain\Notification\Enums\DeliveryStatus;
 use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Wallet\Services\TransactionPinService;
 use App\Domain\Wallet\Services\WalletService;
 use App\Http\Controllers\Controller;
 use App\Mail\AdminDirectMessageMail;
@@ -14,8 +15,10 @@ use App\Models\NotificationDelivery;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -321,5 +324,96 @@ class AdminCustomerController extends Controller
         // the customer detail page rather than the POST endpoint - a refresh
         // after submit would otherwise GET this URL and 405.
         return redirect()->route('admin.customer', $user)->with('status', $status);
+    }
+
+    /**
+     * Reset a customer's transaction PIN. Clears the PIN entirely (no password
+     * or current PIN needed) so the customer is prompted to set a fresh one
+     * before their next wallet action. For support cases where a customer is
+     * locked out or has forgotten their PIN.
+     */
+    public function resetTransactionPin(Request $request, User $user): RedirectResponse
+    {
+        if (! $user->hasTransactionPin()) {
+            return redirect()->route('admin.customer', $user)->with('status', "{$user->name} does not have a transaction PIN set.");
+        }
+
+        app(TransactionPinService::class)->adminReset($user);
+
+        Log::info('Admin reset customer transaction PIN', [
+            'admin_id' => $request->user()?->id,
+            'user_id' => $user->id,
+        ]);
+
+        return redirect()->route('admin.customer', $user)
+            ->with('status', "Transaction PIN reset for {$user->name}. They'll be asked to set a new one.");
+    }
+
+    /**
+     * Sign in as a customer (impersonation) for support/debugging. Admins
+     * authenticate on the separate `admin` guard, so we log the customer into
+     * the `web` guard while the admin stays signed in on the admin guard. That
+     * keeps switching back clean - the admin session is never touched.
+     */
+    public function loginAsCustomer(Request $request, User $user): RedirectResponse
+    {
+        Auth::guard('web')->login($user);
+
+        Log::info('Admin impersonation started', [
+            'admin_id' => Auth::guard('admin')->id(),
+            'user_id' => $user->id,
+        ]);
+
+        return redirect()->route('dashboard')->with('status', "You are now viewing the app as {$user->name}.");
+    }
+
+    /**
+     * End an impersonation session: log the customer out of the `web` guard and
+     * return to admin. Routed OUTSIDE the admin middleware group because the
+     * active web user during impersonation is the customer. The admin guard is
+     * still authenticated, so the admin lands back in the panel.
+     */
+    public function leaveImpersonation(Request $request): RedirectResponse
+    {
+        // Only a real impersonation (admin guard still authenticated) may switch
+        // back; otherwise this is just a normal customer and we leave them be.
+        if (! Auth::guard('admin')->check()) {
+            return redirect()->route('dashboard');
+        }
+
+        $userId = Auth::guard('web')->id();
+        Auth::guard('web')->logout();
+
+        Log::info('Admin impersonation ended', [
+            'admin_id' => Auth::guard('admin')->id(),
+            'user_id' => $userId,
+        ]);
+
+        return $userId
+            ? redirect()->route('admin.customer', $userId)->with('status', 'Returned to your admin account.')
+            : redirect()->route('admin.customers');
+    }
+
+    /**
+     * Email the customer a password reset link. Uses the standard password
+     * broker, so the customer sets their own new password - the admin never
+     * sees or chooses it.
+     */
+    public function sendPasswordReset(Request $request, User $user): RedirectResponse
+    {
+        $status = Password::sendResetLink(['email' => $user->email]);
+
+        Log::info('Admin sent customer password reset link', [
+            'admin_id' => $request->user()?->id,
+            'user_id' => $user->id,
+            'result' => $status,
+        ]);
+
+        return redirect()->route('admin.customer', $user)->with(
+            'status',
+            $status === Password::RESET_LINK_SENT
+                ? "Password reset link sent to {$user->email}."
+                : 'Could not send the reset link - check the customer has a valid email and the mail driver is configured.'
+        );
     }
 }

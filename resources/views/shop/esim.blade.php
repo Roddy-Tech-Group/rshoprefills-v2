@@ -8,6 +8,11 @@
 
     /** @var \App\Models\Product $product  An `esims`-category Product = one coverage region. */
 
+    // Route name swaps between storefront + dashboard chrome so every internal
+    // shop link keeps the user on whichever side they entered from.
+    $inDash = request()->is('dashboard/shop*') && auth()->check();
+    $shopRoute = fn (string $name, $params = []) => route(($inDash ? 'dashboard.shop.' : 'shop.').$name, $params);
+
     // Variants are merged across suppliers for the country by EsimStoreController;
     // fall back to the product's own when rendered without that controller.
     $variants = $variants ?? $product->variants;
@@ -235,7 +240,7 @@
         ->values();
 @endphp
 
-<x-layouts.app.header :title="$regionLabel . ' eSIM | RshopRefills'">
+<x-shop.layout :title="$regionLabel . ' eSIM | RshopRefills'">
 
     {{-- translate="no": the page translator (Google) rewrites text nodes, which
          corrupts Alpine's reactive <template x-for> package list (it renders then
@@ -260,9 +265,9 @@
 
         {{-- ── Breadcrumb (aligned with the 800px cards) ────────────────────── --}}
         <nav class="mx-auto flex w-full max-w-[800px] flex-wrap items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400" aria-label="Breadcrumb">
-            <a href="{{ route('shop.esims') }}" wire:navigate class="font-medium transition-colors hover:text-zinc-900 dark:hover:text-white">eSIM Store</a>
+            <a href="{{ $shopRoute('esims') }}" wire:navigate class="font-medium transition-colors hover:text-zinc-900 dark:hover:text-white">eSIM Store</a>
             <span aria-hidden="true">&rsaquo;</span>
-            <a href="{{ route('shop.esims', ['scope' => strtolower($curScope)]) }}" wire:navigate class="transition-colors hover:text-zinc-900 dark:hover:text-white">{{ $curScope }} eSIMs</a>
+            <a href="{{ $shopRoute('esims', ['scope' => strtolower($curScope)]) }}" wire:navigate class="transition-colors hover:text-zinc-900 dark:hover:text-white">{{ $curScope }} eSIMs</a>
             <span aria-hidden="true">&rsaquo;</span>
             <span class="font-semibold text-zinc-900 dark:text-white">{{ $regionLabel }}</span>
         </nav>
@@ -322,7 +327,7 @@
                         @if ($anyTopUp)
                             <li class="flex items-center gap-2">
                                 <svg class="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                If you're running low, you can always&nbsp;<a href="{{ route('shop.topups') }}" wire:navigate class="font-semibold text-blue-600 underline-offset-2 transition-colors hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300">top up</a>
+                                If you're running low, you can always&nbsp;<a href="{{ $shopRoute('topups') }}" wire:navigate class="font-semibold text-blue-600 underline-offset-2 transition-colors hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300">top up</a>
                             </li>
                         @endif
                         <li class="flex items-center gap-2">
@@ -361,7 +366,7 @@
                             <div class="max-h-72 overflow-y-auto p-1">
                                 @foreach ($esimRegions as $r)
                                     <a
-                                        href="{{ route('shop.esim', $r['slug']) }}"
+                                        href="{{ $shopRoute('esim', $r['slug']) }}"
                                         wire:navigate
                                         data-name="{{ Str::lower($r['name']) }}"
                                         x-show="search === '' || $el.dataset.name.includes(search.toLowerCase())"
@@ -474,7 +479,7 @@
                             <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Explore our regional and global eSIMs. Packages start from the shown price and include coverage for the selected location.</p>
                             <div class="mt-4 space-y-3">
                                 @foreach ($broaderCoverage as $b)
-                                    <a href="{{ route('shop.esim', $b['slug']) }}" wire:navigate class="group flex items-center gap-4 rounded-[10px] bg-white px-4 py-3.5 ring-1 ring-zinc-200 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:ring-zinc-300 dark:bg-[#1d3252] dark:ring-zinc-700 dark:hover:ring-zinc-600 dark:hover:shadow-black/40">
+                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex items-center gap-4 rounded-[10px] bg-white px-4 py-3.5 ring-1 ring-zinc-200 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:ring-zinc-300 dark:bg-[#1d3252] dark:ring-zinc-700 dark:hover:ring-zinc-600 dark:hover:shadow-black/40">
                                         <span class="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[5px] bg-blue-50 ring-1 ring-zinc-200 dark:bg-blue-950/40 dark:ring-zinc-700">
                                             @if ($b['flag'])
                                                 <img src="{{ $b['flag'] }}" alt="" class="h-full w-full object-cover" loading="lazy">
@@ -580,9 +585,11 @@
                     <p class="mt-2 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">Three quick steps and you are roaming on local rates. No SIM tray, no queues at the airport kiosk.</p>
                 </div>
 
-                <ol class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+                {{-- Mobile: a smooth snap-scrolling carousel (one card at a time with
+                     a peek of the next). Desktop (lg+): the static three-column grid. --}}
+                <ol class="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth pb-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-3 lg:gap-8 lg:overflow-visible lg:pb-0">
                     @foreach ($howSteps as $i => $step)
-                        <li class="flex flex-col">
+                        <li class="flex w-[82%] shrink-0 snap-center flex-col sm:w-[55%] lg:w-auto lg:shrink">
                             <img
                                 src="{{ asset('assets/'.$step['image']) }}"
                                 alt=""
@@ -644,15 +651,15 @@
                 // mode (brightness-0 dark:invert). Used for the blue line-art icons.
                 $payMethods = [
                     ['name' => 'Mobile Money', 'icon' => 'MOMO.svg',                'kind' => 'fiat',   'mono' => true],
-                    ['name' => 'Card',         'icon' => 'credit card payment.png', 'kind' => 'fiat',   'mono' => true],
-                    ['name' => 'Apple Pay',    'icon' => 'apply pay.png',           'kind' => 'fiat',   'mono' => true],
-                    ['name' => 'Bank',         'icon' => 'Bank transfer.png',       'kind' => 'fiat',   'mono' => true],
+                    ['name' => 'Card',         'icon' => 'credit card payment.webp', 'kind' => 'fiat',   'mono' => true],
+                    ['name' => 'Apple Pay',    'icon' => 'apply pay.webp',           'kind' => 'fiat',   'mono' => true],
+                    ['name' => 'Bank',         'icon' => 'Bank transfer.webp',       'kind' => 'fiat',   'mono' => true],
                     ['name' => 'Bitcoin',      'icon' => 'BTC.svg',                 'kind' => 'crypto'],
                     ['name' => 'Ethereum',     'icon' => 'ETH.svg',                 'kind' => 'crypto'],
                     ['name' => 'Tether',       'icon' => 'USDT.svg',                'kind' => 'crypto'],
                     ['name' => 'Solana',       'icon' => 'SOLANA.svg',              'kind' => 'crypto'],
-                    ['name' => 'BNB',          'icon' => 'BNB.png',                 'kind' => 'crypto'],
-                    ['name' => 'Litecoin',     'icon' => 'LTC.png',                 'kind' => 'crypto'],
+                    ['name' => 'BNB',          'icon' => 'BNB.webp',                 'kind' => 'crypto'],
+                    ['name' => 'Litecoin',     'icon' => 'LTC.webp',                 'kind' => 'crypto'],
                 ];
             @endphp
             <section class="mx-auto mt-12 w-full max-w-[1450px]">
@@ -755,7 +762,7 @@
             <div class="mt-8 rounded-[10px] bg-zinc-50 px-4 py-10 text-center ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">No data plans available</p>
                 <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">This region has no plans in stock right now. Check back later.</p>
-                <a href="{{ route('shop.esims') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">Browse other regions</a>
+                <a href="{{ $shopRoute('esims') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">Browse other regions</a>
             </div>
         @endif
 
@@ -1008,4 +1015,4 @@
         };
     </script>
 
-</x-layouts.app.header>
+</x-shop.layout>

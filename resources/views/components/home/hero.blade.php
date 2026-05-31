@@ -1,22 +1,25 @@
 {{--
     Storefront hero. Light theme. Centered headline + CTAs + announcement
-    banner, sitting over the Roddy Custom Hero interactive dots backdrop.
+    banner, sitting over a static blue dotted backdrop.
 --}}
 <section class="relative w-full overflow-hidden">
 
-    {{-- Roddy Custom Hero animation with GSAP: dots backdrop styles --}}
+    {{-- Static dotted backdrop. Pure CSS, no JS: a single element paints the
+         whole grey dot grid via a repeating radial-gradient, so it renders
+         instantly with the page and never blocks interaction. A soft vignette
+         fades the dots out on all four edges, and a centre scrim keeps the
+         headline readable over the texture. --}}
     <style>
-        .roddy-dots-container {
-            font-size: clamp(8px, 0.9vw, 14px);
-            display: flex;
-            flex-flow: row wrap;
-            justify-content: center;
-            align-items: center;
-            gap: 2em;
+        .roddy-dots-bg {
             position: absolute;
             inset: 0;
             pointer-events: none;
-            /* Soft vignette so dots fade out on all four edges */
+            /* Larger, soft blue-200 dots in light mode. The feathered edge
+               (colour stop at 5px, transparent at 6px) keeps them gentle
+               rather than a sharp, eye-catching grid. Dark mode swaps to grey. */
+            background-image: radial-gradient(circle, rgb(191 219 254) 5px, transparent 6px);
+            background-size: 38px 38px;
+            background-position: center;
             -webkit-mask-image:
                 linear-gradient(to right,  transparent 0%, #000 12%, #000 88%, transparent 100%),
                 linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
@@ -26,22 +29,32 @@
                 linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
             mask-composite: intersect;
         }
-        .roddy-dot {
-            will-change: transform, background-color;
-            transform-origin: center;
-            background-color: rgba(113, 113, 122, 0.2);
-            border-radius: 50%;
-            width: 1em;
-            height: 1em;
-            position: relative;
-            transform: translate(0);
+        .dark .roddy-dots-bg {
+            background-image: radial-gradient(circle, rgba(161, 161, 170, 0.20) 5px, transparent 6px);
+        }
+        /* Readability scrim: a soft wash of the page background, strongest
+           behind the headline and fading to transparent at the edges so the
+           dot texture still shows around the content. */
+        .roddy-dots-scrim {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            /* Light wash kept subtle so the dots stay visible behind the text. */
+            background: radial-gradient(ellipse 65% 60% at 50% 42%,
+                rgba(239, 246, 255, 0.45) 0%,
+                rgba(239, 246, 255, 0.2) 45%,
+                rgba(239, 246, 255, 0) 75%);
+        }
+        .dark .roddy-dots-scrim {
+            background: radial-gradient(ellipse 65% 60% at 50% 42%,
+                rgba(12, 26, 54, 0.92) 0%,
+                rgba(12, 26, 54, 0.55) 45%,
+                rgba(12, 26, 54, 0) 75%);
         }
     </style>
 
-    {{-- Roddy Custom Hero animation with GSAP: dots grid backdrop (JS populates the grid) --}}
-    <div data-dots-container-init class="roddy-dots-container" aria-hidden="true">
-        <div class="roddy-dot"></div>
-    </div>
+    <div class="roddy-dots-bg" aria-hidden="true"></div>
+    <div class="roddy-dots-scrim" aria-hidden="true"></div>
 
     {{-- Content over the dots (constrained to 1200px, dots stay full-width) --}}
     <div class="relative z-10 mx-auto max-w-[1200px] px-3 pt-10 pb-14 text-center sm:px-10 sm:pt-20 sm:pb-24 lg:px-14 lg:pt-24 lg:pb-32">
@@ -149,31 +162,31 @@
             // matches the teaser, so clicking "200+ countries" lands on /esims.
             $heroChips = [
                 [
-                    'image'    => 'hero gift.png',
+                    'image'    => 'hero gift.webp',
                     'title'    => $productsRounded.'+ digital products',
                     'subtitle' => 'Gift cards, eSIMs, top-ups and bill payments worldwide',
                     'href'     => route('shop.gift-cards'),
                 ],
                 [
-                    'image'    => 'global coverage.png',
+                    'image'    => 'global coverage.webp',
                     'title'    => $countriesRounded.'+ countries covered',
                     'subtitle' => 'Travel eSIMs and local top-ups in over '.$countriesRounded.' destinations',
                     'href'     => route('shop.esims'),
                 ],
                 [
-                    'image'    => 'secured users.png',
+                    'image'    => 'secured users.webp',
                     'title'    => 'Verified customer reviews',
                     'subtitle' => 'Real feedback from buyers on Trustpilot and Google',
                     'href'     => route('shop.reviews'),
                 ],
                 [
-                    'image'    => 'compactible on all devices.png',
+                    'image'    => 'compactible on all devices.webp',
                     'title'    => 'Works on every device',
                     'subtitle' => 'Compatible with laptop, iPad and mobile',
                     'href'     => route('shop.mobile-app'),
                 ],
                 [
-                    'image'    => 'seach products.png',
+                    'image'    => 'seach products.webp',
                     'title'    => 'Find what you need fast',
                     'subtitle' => 'Search gift cards, eSIMs and top-ups in seconds',
                     'href'     => route('shop.topups'),
@@ -296,15 +309,15 @@
                                 </svg>
                             </span>
 
-                            {{-- Glass "Show more" pill slides in from the right on hover.
+                            {{-- "Show more" pill slides in from the right on hover.
                                  Pops slightly past the chip's right edge (translate-x-3 = 12px)
                                  so the chip's gap accommodates it without overlapping neighbours.
-                                 Frosted glass surface with rounded-full so it reads as a soft
-                                 floating capsule against the dark hero behind it. --}}
+                                 Solid blue capsule in light mode (chip background is white, so a
+                                 white frosted-glass pill would be invisible); frosted glass in
+                                 dark mode where the chip ring picks up the contrast. --}}
                             <span
                                 :class="(current === {{ $i }} && hovered) ? 'translate-x-3 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'"
-                                class="absolute right-0 top-1/2 z-10 inline-flex h-9 -translate-y-1/2 items-center justify-center rounded-full px-3 text-white shadow-lg shadow-zinc-900/30 ring-1 ring-white/30 backdrop-blur-xl backdrop-saturate-150 transition-all duration-400 ease-out"
-                                style="background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 100%);"
+                                class="absolute right-0 top-1/2 z-10 inline-flex h-9 -translate-y-1/2 items-center justify-center rounded-full bg-blue-600 px-3 text-white shadow-lg shadow-blue-900/30 ring-1 ring-blue-700/40 backdrop-blur-xl backdrop-saturate-150 transition-all duration-400 ease-out dark:bg-white/15 dark:shadow-zinc-900/30 dark:ring-white/30"
                             >
                                 <svg class="mr-1.5 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>

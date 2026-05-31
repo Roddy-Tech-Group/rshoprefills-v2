@@ -201,6 +201,22 @@
     </style>
     <body class="min-h-screen bg-[#eff6ff] text-zinc-900 dark:bg-[#0c1a36] dark:text-white">
 
+        <x-ui.app-loader />
+
+        {{-- Impersonation banner: shown only when an admin is signed in as this
+             customer (admin guard still authenticated). Floating bottom pill so
+             it never disrupts the layout; sits above the mobile bottom nav. --}}
+        @auth('admin')
+            <div class="fixed bottom-20 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-3 rounded-[10px] bg-amber-500 px-4 py-2.5 text-sm font-semibold text-amber-950 shadow-lg shadow-amber-900/30 lg:bottom-4">
+                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.644C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <span>Viewing as {{ Auth::user()?->name }}</span>
+                <form method="POST" action="{{ route('impersonation.leave') }}">
+                    @csrf
+                    <button type="submit" class="rounded-[5px] bg-amber-950 px-3 py-1 text-xs font-bold text-amber-50 transition-colors hover:bg-amber-900">Return to admin</button>
+                </form>
+            </div>
+        @endauth
+
         {{-- Translation engine (auto-detect + manual switching from the locale modal) --}}
         @include('partials.translate-engine')
 
@@ -215,13 +231,13 @@
             // the same shape one indent deeper.
             $navItem = fn (bool $active) => $active
                 ? 'group flex items-center justify-between gap-3 rounded-[10px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                : 'group flex items-center justify-between gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
+                : 'group flex items-center justify-between gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
             $iconCls = fn (bool $active) => $active
                 ? 'h-5 w-5 shrink-0 text-black dark:text-white'
                 : 'h-5 w-5 shrink-0 text-zinc-600 transition-colors';
             $subItem = fn (bool $active) => $active
-                ? 'flex items-center rounded-[10px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-black dark:hover:text-blue-400 dark:hover:font-semibold';
+                ? 'flex items-center gap-3 rounded-[10px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                : 'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
             // Active no longer needs a white invert filter — the soft-blue
             // tint background keeps icons readable in their natural colour.
             // Black filter for the idle state keeps mixed-source SVGs visually
@@ -237,8 +253,8 @@
             // Default avatar by gender. Backend hook: add a nullable `gender` enum (male|female|other) on users
             // and the right portrait is picked up automatically. Falls back to the male portrait until the column ships.
             $defaultAvatar = asset('assets/' . rawurlencode(match (strtolower($user?->gender ?? '')) {
-                'female', 'f' => 'New Female Account Avatar.png',
-                default       => 'New male account avatar.png',
+                'female', 'f' => 'New Female Account Avatar.webp',
+                default       => 'New male account avatar.webp',
             }));
         @endphp
 
@@ -254,11 +270,11 @@
                 @click="$store.dashboardSidebar.toggle()"
                 :aria-label="$store.dashboardSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.dashboardSidebar.collapsed.toString()"
-                class="absolute right-0 top-[88px] z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-full bg-zinc-500/30 text-blue-600 ring-1 ring-zinc-400/40 backdrop-blur-xl backdrop-saturate-150 transition-all hover:bg-zinc-500/40 hover:text-blue-700 active:scale-95 lg:flex dark:bg-white/10 dark:text-blue-300 dark:ring-white/15 dark:hover:bg-white/15 dark:hover:text-blue-200"
-                style="box-shadow: 0 6px 18px -6px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);"
+                class="absolute right-0 top-[88px] z-30 hidden h-8 w-8 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
+                style="box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
             >
                 <svg
-                    class="h-3 w-3 transition-transform duration-200"
+                    class="h-4 w-4 transition-transform duration-200"
                     :class="$store.dashboardSidebar.collapsed ? 'rotate-180' : 'rotate-0'"
                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
                     aria-hidden="true"
@@ -271,7 +287,7 @@
             <a href="{{ route('dashboard') }}" wire:navigate class="mr-5 -ml-1 flex flex-col rounded-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 shrink-0">
                 <span class="brand-full flex h-10 items-center">
                     <img
-                        src="{{ asset('assets/Rshoprefillslogo.png') }}"
+                        src="{{ asset('assets/Rshoprefillslogo.webp') }}"
                         alt="RshopRefills"
                         class="h-full w-auto object-contain"
                     />
@@ -332,16 +348,16 @@
                     </button>
 
                     <div x-show="expanded" x-collapse class="nav-submenu ml-5 flex flex-col gap-1 border-l border-zinc-200 pl-3">
-                        <a href="{{ route('home') }}" wire:navigate class="{{ $subItem(false) }}">
+                        <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="{{ $subItem(false) }}">
                             <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
                             All Categories
                         </a>
                         @foreach ([
-                            ['Gift Cards',     'gift cards.svg', route('shop.gift-cards'), true],
-                            ['eSIMs',          'esim.svg',       route('shop.esims'),      true],
-                            ['Flights',        'flight 2.svg',   route('shop.flights'),    true],
-                            ['Stays',          'stay 2.svg',     route('shop.stays'),      true],
-                            ['Topups & Bills', 'Bills 2.svg',    route('shop.topups'),     true],
+                            ['Gift Cards',     'gift cards.svg', route('dashboard.shop.gift-cards'), true],
+                            ['eSIMs',          'esim.svg',       route('dashboard.shop.esims'),      true],
+                            ['Flights',        'flight 2.svg',   route('dashboard.shop.flights'),    true],
+                            ['Stays',          'stay 2.svg',     route('dashboard.shop.stays'),      true],
+                            ['Topups & Bills', 'Bills 2.svg',    route('dashboard.shop.topups'),     true],
                         ] as [$label, $icon, $href, $live])
                             <a href="{{ $href }}" @if ($live) wire:navigate @endif class="{{ $subItem(false) }}">
                                 <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-4 w-4 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
@@ -429,7 +445,7 @@
 
                 <a href="{{ route('dashboard.rewards') }}" wire:navigate data-tip="Referrals" class="{{ $navItem(request()->routeIs('dashboard.rewards')) }}">
                     <span class="flex items-center gap-3">
-                        <img src="{{ asset('assets/referals.png') }}" alt="" class="h-5 w-5 shrink-0 object-contain" loading="lazy">
+                        <img src="{{ asset('assets/referals.webp') }}" alt="" class="h-5 w-5 shrink-0 object-contain" loading="lazy">
                         Referrals
                     </span>
                     <span class="dash-row-badge inline-flex items-center whitespace-nowrap rounded-[5px] bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">Earn</span>
@@ -442,9 +458,11 @@
                  Sticks to the bottom because the flex-1 wrapper above eats all remaining space.
                  dash-footer-card class hides the whole block in collapsed mode where there's
                  no horizontal room to render usefully. --}}
+            @feature('newsletter_signup')
             <div class="dash-footer-card shrink-0 pt-6">
                 <livewire:newsletter-card />
             </div>
+            @endfeature
 
             {{-- Need Help card. Opens a small support modal with two paths:
                  immediate WhatsApp chat, or a formal support ticket via the
@@ -484,7 +502,7 @@
                     x-transition:leave="transition-opacity duration-150"
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
-                    class="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-900/55 p-4 backdrop-blur-sm"
+                    class="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-900/45 p-4"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="support-modal-title"
@@ -771,7 +789,7 @@
                     {{-- Empty state --}}
                     <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
                         <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
-                        <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
                         <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
                     </div>
 
@@ -822,6 +840,40 @@
                 </div>
             </div>
 
+            {{-- Visible desktop locale switcher (country + language). Mobile has
+                 its own floating bar, so this is lg-only. Both buttons open the
+                 shared locale modal via the 'open-locale-modal' event the layout
+                 already listens for; the chip values stay in sync through the
+                 'locale-updated' event the modal dispatches. --}}
+            <div
+                x-data="{ country: 'United States', countryCode: 'US', language: 'English' }"
+                @locale-updated.window="country = $event.detail.country; countryCode = $event.detail.countryCode; language = $event.detail.language"
+                class="hidden items-center gap-1 lg:flex"
+            >
+                <button
+                    type="button"
+                    @click="$dispatch('open-locale-modal')"
+                    class="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-200/70 dark:text-white dark:hover:bg-white/10"
+                    aria-label="Change country"
+                >
+                    <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3 w-[18px] shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200 dark:ring-white/20">
+                    <span class="hidden max-w-[110px] truncate xl:inline" x-text="country">United States</span>
+                </button>
+
+                <button
+                    type="button"
+                    @click="$dispatch('open-locale-modal')"
+                    class="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-200/70 dark:text-white dark:hover:bg-white/10"
+                    aria-label="Change language"
+                >
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>
+                    </svg>
+                    <span class="hidden xl:inline" x-text="language">English</span>
+                </button>
+            </div>
+
             {{-- Notification bell (desktop) — hidden lg:block so it never doubles
                  up with the mobile hero bell on small screens. --}}
             <div class="hidden lg:block">
@@ -858,6 +910,11 @@
                 <button type="button" @click="locked = !locked; open = locked" :aria-expanded="open.toString()" aria-label="{{ $user?->name ?? 'Account' }}" class="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                     <img src="{{ $user?->avatar_url ?: $defaultAvatar }}" alt="{{ $user?->name ?? 'Account' }}" class="h-full w-full object-cover">
                 </button>
+
+                {{-- KYC verified tick on the desktop header avatar. --}}
+                @if (($user?->kyc_status ?? null) === 'verified')
+                    <x-ui.verified-badge class="pointer-events-none absolute -bottom-1 -right-1 h-3.5 w-3.5 drop-shadow-sm" />
+                @endif
 
                 <div
                     x-show="open"
@@ -943,8 +1000,8 @@
                     <div class="border-t border-zinc-100 p-1.5">
                         <form method="POST" action="{{ route('logout') }}" class="w-full">
                             @csrf
-                            <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700">
-                                <img src="{{ asset('assets/Logout.svg') }}" alt="" class="h-5 w-5 shrink-0" style="filter: brightness(0) saturate(100%) invert(20%) sepia(98%) saturate(7468%) hue-rotate(355deg) brightness(94%) contrast(101%);" loading="lazy">
+                            <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">
+                                <x-ui.logout-icon class="h-5 w-5" />
                                 Log out
                             </button>
                         </form>
@@ -970,25 +1027,39 @@
              (e.g. wallet card on the overview). Inner pages with their own sticky header
              (settings, password, appearance) skip this hero entirely. --}}
         @unless ($skipMobileHero)
-        {{-- Blue hero — overview only, and sticky there. --}}
-        <header class="sticky top-0 z-30 rounded-b-[20px] bg-blue-600 px-5 pb-6 lg:hidden" style="padding-top: max(1.25rem, env(safe-area-inset-top));">
-            {{-- Greeting + notifications on one row. --}}
-            <div class="flex items-start justify-between gap-3 text-white">
-                <div class="min-w-0">
-                    <h1 class="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-3xl">
-                        <span class="truncate">Hello {{ $user?->name ? str($user->name)->before(' ') : 'there' }}</span>
-                        <svg class="h-6 w-6 shrink-0 text-white sm:h-7 sm:w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15"/>
-                        </svg>
-                    </h1>
-                    <p class="mt-1 text-sm text-blue-100/85">Welcome back</p>
-                </div>
+        {{-- Blue hero — overview only. Scrolls away with the page; the floating
+             wallet chip + Top Up button inside <x-slot:mobileHero> take over once
+             the hero leaves the viewport. --}}
+        <header class="relative z-10 rounded-b-[20px] bg-blue-600 px-5 pb-6 lg:hidden" style="padding-top: max(1rem, env(safe-area-inset-top));">
+            {{-- Compact identity strip - avatar + small online dot on the left,
+                 notification bell on the right. Replaces the old "Hello /
+                 Welcome back" greeting so the wallet card sits closer to the
+                 top and the product categories get more vertical room. --}}
+            <div class="flex items-center justify-between gap-3 text-white">
+                <a href="{{ route('dashboard.profile') }}" wire:navigate aria-label="Open profile" class="relative inline-flex shrink-0 items-center">
+                    <span class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/15 text-sm font-bold uppercase ring-2 ring-white/30">
+                        @if ($user?->avatar_url)
+                            <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" class="h-full w-full object-cover" loading="lazy">
+                        @else
+                            {{ str($user?->name ?? '?')->substr(0, 1) }}
+                        @endif
+                    </span>
+                    @if (($user?->kyc_status ?? null) === 'verified')
+                        {{-- KYC verified: small blue tick over the avatar. The badge
+                             has its own white edge so it pops on the blue hero. --}}
+                        <x-ui.verified-badge class="absolute -bottom-0.5 -right-0.5 h-4 w-4 drop-shadow-sm" />
+                    @else
+                        <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-blue-600" aria-label="Online"></span>
+                    @endif
+                </a>
                 <livewire:notifications-menu tone="light" />
             </div>
 
-            {{-- Optional mobile hero content rendered inside the blue area --}}
+            {{-- Wallet card slot - sits directly under the compact identity strip
+                 so the wallet info hits the customer immediately on page load,
+                 leaving the rest of the viewport for product categories. --}}
             @isset($mobileHero)
-                <div class="mt-5">
+                <div class="mt-3">
                     {{ $mobileHero }}
                 </div>
             @endisset
@@ -1013,7 +1084,10 @@
                     default                                       => 'Settings',
                 };
             @endphp
-            <div class="sticky top-0 z-40 flex items-center justify-between gap-2 border-b border-zinc-100 bg-white px-3 py-2.5 lg:hidden">
+            {{-- Inner-page top bar. NOT sticky - scrolls away with the page; the
+                 floating hamburger + locale chip + bell below pin to the viewport
+                 once the user scrolls past, keeping the essentials always reachable. --}}
+            <div class="relative z-10 flex items-center justify-between gap-2 border-b border-white/30 bg-white/40 backdrop-blur-xl backdrop-saturate-150 px-3 py-2.5 lg:hidden dark:border-white/10 dark:bg-white/5">
                 {{-- Hamburger opens the Connect panel (social + contact channels).
                      The app menu itself is the bottom-bar centre FAB. --}}
                 <button
@@ -1021,17 +1095,78 @@
                     x-data
                     x-on:click="$dispatch('open-connect-panel')"
                     aria-label="Connect with us"
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-zinc-100 active:scale-95"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-white/40 active:scale-95 dark:hover:bg-white/10"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5" style="filter: brightness(0) saturate(100%);" loading="lazy">
+                    <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
-                <h1 class="truncate text-base font-bold text-zinc-900">{{ $innerTitle }}</h1>
                 <livewire:notifications-menu tone="dark" />
+            </div>
+
+            {{-- ─────────────────────────────────────────────────────── --}}
+            {{-- FLOATING INNER-PAGE CHROME (mobile, inner pages only)   --}}
+            {{-- Hamburger | locale switcher | bell. Slides in once the   --}}
+            {{-- regular top bar leaves the viewport.                     --}}
+            {{-- ─────────────────────────────────────────────────────── --}}
+            <div
+                x-data="{
+                    scrolled: false,
+                    country: 'United States',
+                    countryCode: 'US',
+                    language: 'English',
+                    onScroll() { this.scrolled = window.scrollY > 80; },
+                    init() {
+                        this.onScroll();
+                        window.addEventListener('scroll', () => this.onScroll(), { passive: true });
+                    },
+                }"
+                @locale-updated.window="country = $event.detail.country; countryCode = $event.detail.countryCode; language = $event.detail.language"
+                x-show="scrolled"
+                x-cloak
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 -translate-y-2"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-2"
+                class="pointer-events-none fixed inset-x-0 z-[55] flex items-center justify-between gap-2 px-3 lg:hidden"
+                style="top: max(0.5rem, env(safe-area-inset-top));"
+            >
+                {{-- Hamburger chip (left) - glass treatment so the page bleeds
+                     through (works on light + dark surfaces). --}}
+                <button
+                    type="button"
+                    @click="$dispatch('open-connect-panel')"
+                    aria-label="Connect with us"
+                    class="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                >
+                    <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
+                </button>
+
+                {{-- Locale switcher chip (center) - flag + country, taps open the
+                     shared slide-up locale/language modal so users can switch fast
+                     while scrolling through any inner page. Same glass treatment. --}}
+                <button
+                    type="button"
+                    @click="$dispatch('open-locale-modal')"
+                    aria-label="Change language and region"
+                    class="pointer-events-auto inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/40 px-3 text-sm font-semibold text-zinc-900 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/15"
+                >
+                    <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-white/40">
+                    <span class="max-w-[90px] truncate" x-text="country">United States</span>
+                    <svg class="h-3.5 w-3.5 text-zinc-700 dark:text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                {{-- Notification chip (right) - same glass treatment. --}}
+                <div class="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-white/10 dark:ring-white/20">
+                    <livewire:notifications-menu tone="dark" wire:key="floating-notif-inner" />
+                </div>
             </div>
         @endif
 
-            <div class="flex min-h-full flex-col bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:px-10 lg:py-8 dark:bg-[#0c1a36]">
-                <div class="w-full flex-1">
+            <div class="flex flex-col bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:min-h-full lg:px-10 lg:py-8 dark:bg-[#0c1a36]">
+                <div class="w-full lg:flex-1">
                     {{-- Suspension banner: visible on every dashboard page when the
                          account is suspended. Carries the admin-authored reason +
                          the Request Review button (idempotent — re-clicks are safe). --}}
@@ -1047,7 +1182,7 @@
                 {{-- Footer — Privacy Policy + version + copyright. Mirrors the
                      admin layout. Full-width so the legal line sits flush with
                      the page edges. `mt-auto` pins it to the bottom. --}}
-                <footer class="mt-auto w-full pt-12 flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
+                <footer class="mt-auto hidden w-full pt-12 flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[11px] font-semibold text-zinc-600 lg:flex dark:text-zinc-300">
                     <a href="{{ route('shop.privacy') }}" wire:navigate class="hover:text-zinc-900 dark:hover:text-white">Privacy Policy</a>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
                     <span>version 2.0.0</span>
@@ -1138,13 +1273,16 @@
                 {{-- Safe-area spacer for iOS home indicator. White bg continues seamlessly below the nav. --}}
                 <div class="bg-white" style="height: env(safe-area-inset-bottom);"></div>
 
-                {{-- Floating Menu FAB centered above the tab bar — opens the menu popup --}}
+                {{-- Floating Menu FAB centered above the tab bar - opens the menu popup.
+                     z-20 puts it above the tab bar items (which have `relative z-10`)
+                     so the FAB itself catches the click instead of the tab nav item
+                     that sits underneath it at the same screen coordinate. --}}
                 <button
                     type="button"
                     x-data
                     x-on:click="$dispatch('open-mobile-menu')"
                     aria-label="Open menu"
-                    class="absolute left-1/2 top-0 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-blue-600 shadow-lg shadow-blue-600/40 ring-4 ring-white transition-transform hover:scale-105 active:scale-95 dark:ring-[#0c1a36]"
+                    class="absolute left-1/2 top-0 z-20 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-blue-600 shadow-lg shadow-blue-600/40 ring-4 ring-white transition-transform hover:scale-105 active:scale-95 dark:ring-[#0c1a36]"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-7 w-7 brightness-0 invert" loading="lazy">
                 </button>
@@ -1175,7 +1313,7 @@
         @php
             $mobileMenuItems = [
                 ['label' => 'Home',          'href' => route('dashboard'),           'icon' => 'Home.svg',           'tone' => 'bg-blue-500',     'nav' => true],
-                ['label' => 'Shop',          'href' => route('home'),                'icon' => 'Shop.svg',           'tone' => 'bg-pink-500',     'nav' => true],
+                ['label' => 'Shop',          'href' => route('dashboard.shop.gift-cards'), 'icon' => 'Shop.svg',           'tone' => 'bg-pink-500',     'nav' => true],
                 ['label' => 'Orders',        'href' => route('dashboard.orders'),    'icon' => 'order.svg',          'tone' => 'bg-sky-500',      'nav' => true],
                 ['label' => 'Wallet',        'href' => route('dashboard.wallet'),    'icon' => 'Wallet.svg',         'tone' => 'bg-emerald-500',  'nav' => true],
                 ['label' => 'Transactions',  'href' => route('dashboard.transactions'), 'icon' => 'transactions 1.svg', 'tone' => 'bg-teal-500',  'nav' => true],
@@ -1185,7 +1323,7 @@
                 ['label' => 'Appearance',    'href' => route('dashboard.appearance'),'icon' => 'Appearance.svg',     'tone' => 'bg-fuchsia-500',  'nav' => true],
                 ['label' => 'Notifications', 'href' => route('dashboard.notifications'), 'icon' => 'notification 2.svg', 'tone' => 'bg-amber-500',    'nav' => true],
                 ['label' => 'Saved Cards',   'href' => route('dashboard.saved-cards'),   'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => true],
-                ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.png',       'tone' => 'bg-orange-500',   'nav' => true],
+                ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.webp',       'tone' => 'bg-orange-500',   'nav' => true],
                 ['label' => 'Support',       'href' => 'https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'icon' => 'support.svg', 'tone' => 'bg-cyan-500', 'nav' => false],
             ];
         @endphp
@@ -1195,6 +1333,7 @@
             x-data="{ menuOpen: false }"
             x-on:open-mobile-menu.window="$nextTick(() => menuOpen = true)"
             x-on:keydown.escape.window="menuOpen = false"
+            x-effect="menuOpen ? window.rshopScrollLock?.lock() : window.rshopScrollLock?.unlock()"
             class="contents lg:hidden"
         >
             {{-- Backdrop --}}
@@ -1208,7 +1347,7 @@
                 x-transition:leave-end="opacity-0"
                 @click="menuOpen = false"
                 style="display: none;"
-                class="fixed inset-0 z-[60] bg-zinc-900/45 backdrop-blur-sm"
+                class="fixed inset-0 z-[60] bg-zinc-900/45"
                 aria-hidden="true"
             ></div>
 
@@ -1222,20 +1361,20 @@
                 x-transition:leave-start="translate-y-0"
                 x-transition:leave-end="translate-y-full"
                 style="display: none;"
-                class="modal-norise fixed inset-x-0 bottom-0 z-[70] rounded-t-3xl bg-white shadow-2xl shadow-zinc-900/25"
+                class="modal-norise fixed inset-x-0 bottom-0 z-[70] rounded-t-3xl bg-white/70 ring-1 ring-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl shadow-zinc-900/25 dark:bg-[#0c1a36]/70 dark:ring-white/10"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="mobile-menu-title"
             >
                 {{-- Drag handle (visual affordance) --}}
                 <div class="flex justify-center pt-3">
-                    <span class="h-1.5 w-10 rounded-[10px] bg-zinc-300"></span>
+                    <span class="h-1.5 w-10 rounded-[10px] bg-zinc-300 dark:bg-white/25"></span>
                 </div>
 
                 <div class="px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4">
                     {{-- Header — app-native pattern: title alone, no X button. Dismissed
                          via tap-outside (backdrop), Esc key, or the drag handle above. --}}
-                    <h2 id="mobile-menu-title" class="mb-5 text-lg font-bold text-zinc-900">Menu</h2>
+                    <h2 id="mobile-menu-title" class="mb-5 text-lg font-bold text-zinc-900 dark:text-white">Menu</h2>
 
                     {{-- Card grid, staggered entrance --}}
                     <div class="skeleton-stagger-fast grid grid-cols-4 gap-3">
@@ -1245,12 +1384,12 @@
                                 @if ($item['nav'] && $item['href'] !== '#') wire:navigate @endif
                                 @click="menuOpen = false"
                                 style="--i: {{ $i }}"
-                                class="group flex flex-col items-center justify-center gap-2 rounded-[6px] bg-zinc-100 px-2 py-3 text-center transition-transform duration-200 active:scale-95"
+                                class="group flex flex-col items-center justify-center gap-2 rounded-[6px] px-2 py-3 text-center transition-transform duration-200 active:scale-95"
                             >
                                 <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $item['tone'] }} shadow-sm transition-transform duration-200 group-hover:scale-105">
                                     <img src="{{ asset('assets/' . rawurlencode($item['icon'])) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                                 </span>
-                                <span class="text-[11px] font-semibold leading-tight text-zinc-900">{{ $item['label'] }}</span>
+                                <span class="text-[11px] font-semibold leading-tight text-zinc-900 dark:text-white">{{ $item['label'] }}</span>
                             </a>
                         @endforeach
                     </div>
@@ -1260,11 +1399,9 @@
                         @csrf
                         <button
                             type="submit"
-                            class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100"
+                            class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
                         >
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
-                            </svg>
+                            <x-ui.logout-icon class="h-4 w-4" />
                             Log out
                         </button>
                     </form>
@@ -1282,13 +1419,13 @@
             // invite link is a placeholder until the real one lands.
             $connectChannels = [
                 [
-                    'type' => 'instagram', 'url' => 'https://instagram.com/rshoprefills', 'bg' => 'bg-pink-500', 'external' => true,
+                    'type' => 'instagram', 'url' => \App\Models\SiteSetting::get('social.instagram', 'https://instagram.com/rshoprefills'), 'bg' => 'bg-pink-500', 'external' => true,
                     'heading' => 'Follow us on Instagram',
                     'tagline' => 'Reels, behind-the-scenes, and weekly deal drops.',
                     'cta' => 'Follow on Instagram',
                 ],
                 [
-                    'type' => 'tiktok', 'url' => 'https://tiktok.com/@rshoprefills', 'bg' => 'bg-zinc-800', 'external' => true,
+                    'type' => 'tiktok', 'url' => \App\Models\SiteSetting::get('social.tiktok', 'https://tiktok.com/@rshoprefills'), 'bg' => 'bg-zinc-800', 'external' => true,
                     'badge' => 'New',
                     'heading' => 'Follow us on TikTok',
                     'tagline' => 'Daily drops, how-tos, and giveaway alerts. Straight from @rshoprefills.',
@@ -1307,7 +1444,7 @@
                     'cta' => 'Open WhatsApp',
                 ],
                 [
-                    'type' => 'facebook', 'url' => 'https://facebook.com/rshoprefills', 'bg' => 'bg-blue-500', 'external' => true,
+                    'type' => 'facebook', 'url' => \App\Models\SiteSetting::get('social.facebook', 'https://facebook.com/rshoprefills'), 'bg' => 'bg-blue-500', 'external' => true,
                     'heading' => 'Like us on Facebook',
                     'tagline' => 'News, deals, and community posts at /rshoprefills.',
                     'cta' => 'Open Facebook',
@@ -1343,7 +1480,7 @@
                 x-transition:leave-end="opacity-0"
                 @click="connectOpen = false"
                 style="display: none;"
-                class="fixed inset-0 z-[60] bg-zinc-900/45 backdrop-blur-sm"
+                class="fixed inset-0 z-[60] bg-zinc-900/45"
                 aria-hidden="true"
             ></div>
 
@@ -1377,7 +1514,7 @@
                             type="button"
                             @click="connectOpen = false"
                             aria-label="Close"
-                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-500/30 text-zinc-700 ring-1 ring-zinc-400/40 backdrop-blur-xl backdrop-saturate-150 transition-all hover:bg-zinc-500/40 hover:text-zinc-900 active:scale-95 dark:bg-white/10 dark:text-white dark:ring-white/15 dark:hover:bg-white/15"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-500/30 text-zinc-700 ring-1 ring-zinc-400/40 backdrop-blur-xl backdrop-saturate-150 transition-all hover:bg-zinc-500/40 hover:text-zinc-900 active:scale-95 dark:bg-transparent dark:text-white dark:ring-white/15 dark:hover:bg-white/15"
                             style="box-shadow: 0 6px 18px -6px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);"
                         >
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">

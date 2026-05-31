@@ -167,6 +167,23 @@ class TransactionPinService
     }
 
     /**
+     * Admin-initiated reset: clears the customer's PIN entirely without needing
+     * their password or current PIN. The customer is prompted to set a fresh PIN
+     * before their next wallet action. Use only from authorised admin flows.
+     */
+    public function adminReset(User $user): void
+    {
+        $user->transaction_pin = null;
+        $user->transaction_pin_set_at = null;
+        $user->transaction_pin_attempts = 0;
+        $user->transaction_pin_locked_until = null;
+        $user->last_transaction_pin_used_at = null;
+        $user->save();
+
+        event(new TransactionPinChanged($user));
+    }
+
+    /**
      * Validate PIN strength rules.
      */
     public function validateStrength(string $pin): void

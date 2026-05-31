@@ -2,6 +2,8 @@
 
 use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
+use App\Domain\Notification\Services\AdminNotificationService;
+use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartWebController;
 use App\Http\Controllers\CheckoutController;
@@ -69,7 +71,7 @@ Route::get('api/search/brands', function (Request $request) {
 // locked to ONE country - whichever the user selected in the locale modal, passed
 // through as `?country=XX`. If the brand isn't sold in that country the page 404s
 // (the listing already only links to countries that have stock).
-Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
+$resolveGiftCardBrand = function (string $brandSlug) {
     $brandSlug = strtolower($brandSlug);
 
     $brandKey = TaggedCache::for(['catalog'])->remember("brand_slug_{$brandSlug}", 3600, function () use ($brandSlug) {
@@ -116,7 +118,9 @@ Route::get('gift-cards/{brandSlug}', function (string $brandSlug) {
     abort_if(! $product, 404);
 
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
-})->name('shop.brand');
+};
+
+Route::get('gift-cards/{brandSlug}', $resolveGiftCardBrand)->name('shop.brand');
 
 // eSIM storefront - a single store page per country. Each Product in the `esims`
 // category is one supplier's coverage for a region; the controller MERGES all
@@ -132,7 +136,7 @@ Route::get('esims/{slug}', [EsimStoreController::class, 'show'])->name('shop.esi
 // shared `shop.product` view.
 Route::view('topups', 'shop.topups')->name('shop.topups');
 
-Route::get('topups/{brandSlug}', function (string $brandSlug) {
+$resolveTopupBrand = function (string $brandSlug) {
     $brandSlug = strtolower($brandSlug);
 
     // Resolve the kebab-cased URL slug back to the actual brand_key, scoped to
@@ -169,7 +173,9 @@ Route::get('topups/{brandSlug}', function (string $brandSlug) {
     abort_if(! $product, 404);
 
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
-})->name('shop.topup');
+};
+
+Route::get('topups/{brandSlug}', $resolveTopupBrand)->name('shop.topup');
 
 // Bill payments - prepaid utilities (electricity, water, etc.). These ride
 // Zendit's /vouchers/offers feed and are split into the `bill-payments`
@@ -177,7 +183,7 @@ Route::get('topups/{brandSlug}', function (string $brandSlug) {
 // a brand-level detail page reusing the shared `shop.product` view.
 Route::view('bills', 'shop.bills')->name('shop.bills');
 
-Route::get('bills/{brandSlug}', function (string $brandSlug) {
+$resolveBillBrand = function (string $brandSlug) {
     $brandSlug = strtolower($brandSlug);
 
     $brandKey = TaggedCache::for(['catalog'])->remember("bill_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
@@ -212,7 +218,9 @@ Route::get('bills/{brandSlug}', function (string $brandSlug) {
     abort_if(! $product, 404);
 
     return view('shop.product', ['product' => $product, 'brandKey' => $brandKey]);
-})->name('shop.bill');
+};
+
+Route::get('bills/{brandSlug}', $resolveBillBrand)->name('shop.bill');
 
 // Flights & Stays - branded "coming soon" pages until the booking catalog ships.
 // One shared view, the `service` data flag drives the per-service copy + art.
@@ -227,7 +235,23 @@ Route::view('how-it-works', 'shop.how-it-works')->name('shop.how-it-works');
 
 // Contact - storefront contact page + message submission (stored + admin-notified).
 Route::get('contact', [ContactController::class, 'index'])->name('shop.contact');
-Route::post('contact', [ContactController::class, 'store'])->middleware('throttle:5,1')->name('contact.send');
+Route::post('contact', [ContactController::class, 'store'])
+    ->middleware(['throttle:5,1', 'verify-turnstile:contact'])
+    ->name('contact.send');
+
+// Partnerships + Suppliers - dedicated inquiry forms that funnel into the
+// same ContactMessage / admin notification flow with a category-tagged
+// subject. The contact.url_partnerships_form / contact.url_suppliers_form
+// SiteSettings default to these routes when an admin hasn't set a URL.
+Route::get('partnerships', [ContactController::class, 'partnerships'])->name('shop.partnerships');
+Route::post('partnerships', fn (Request $r, AdminNotificationService $a) => app(ContactController::class)->storeInquiry($r, $a, 'partnership'))
+    ->middleware(['throttle:5,1', 'verify-turnstile:contact'])
+    ->name('partnerships.send');
+
+Route::get('suppliers', [ContactController::class, 'suppliers'])->name('shop.suppliers');
+Route::post('suppliers', fn (Request $r, AdminNotificationService $a) => app(ContactController::class)->storeInquiry($r, $a, 'supplier'))
+    ->middleware(['throttle:5,1', 'verify-turnstile:contact'])
+    ->name('suppliers.send');
 
 // Refund and Cancellation Policy.
 Route::view('refund-policy', 'shop.refund-policy')->name('shop.refund-policy');
@@ -300,9 +324,9 @@ Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 Route::prefix('cart')->name('cart.')->group(function () {
     Route::get('data', [CartWebController::class, 'show'])->name('data');
     // not-suspended is a no-op for guests; only kicks in for an authenticated suspended user.
-    Route::post('items', [CartWebController::class, 'add'])->middleware('not-suspended')->name('items.add');
-    Route::patch('items/{item}', [CartWebController::class, 'update'])->middleware('not-suspended')->name('items.update');
-    Route::delete('items/{item}', [CartWebController::class, 'remove'])->middleware('not-suspended')->name('items.remove');
+    Route::post('items', [CartWebController::class, 'add'])->middleware(['not-suspended', 'maintenance-guard'])->name('items.add');
+    Route::patch('items/{item}', [CartWebController::class, 'update'])->middleware(['not-suspended', 'maintenance-guard'])->name('items.update');
+    Route::delete('items/{item}', [CartWebController::class, 'remove'])->middleware(['not-suspended', 'maintenance-guard'])->name('items.remove');
 });
 
 // Checkout. Resolves the active cart (CartManager - same path the global CartComposer uses)
@@ -338,7 +362,7 @@ Route::get('checkout', function (CartManager $cartManager, CartPricingService $p
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
 // the controller. Requires auth: an Order needs a user_id.
 Route::post('checkout', [CheckoutController::class, 'process'])
-    ->middleware(['auth', 'not-suspended', 'throttle:10,1'])
+    ->middleware(['auth', 'not-suspended', 'maintenance-guard', 'throttle:10,1'])
     ->name('checkout.process');
 
 // Flutterwave hosted-checkout return URL. Customers land here after USSD,
@@ -362,6 +386,14 @@ Route::get('order/{orderNumber}/codes.pdf', [CheckoutController::class, 'codesPd
     ->middleware('auth')
     ->name('shop.order.codes.pdf');
 
+// End an admin impersonation ("login as customer") session. Lives here, not in
+// routes/admin.php, because the active web user during impersonation is the
+// customer; the admin guard stays authenticated so the operator lands back in
+// the panel. See AdminCustomerController::leaveImpersonation.
+Route::post('impersonation/leave', [AdminCustomerController::class, 'leaveImpersonation'])
+    ->middleware('auth')
+    ->name('impersonation.leave');
+
 // Customer dashboard - gated by web guard. Admin operators have their own area at /admin/* via routes/admin.php.
 // NOTE: 'verified' middleware intentionally NOT applied - verification stays a SOFT requirement so users
 // can use the app immediately after registration. The profile page surfaces the verification status badge
@@ -374,11 +406,13 @@ Route::middleware(['auth'])->group(function () {
 
     // Rcoin withdrawal request - posts from the form on the rewards page.
     // Admins review at /admin/content/rewards-withdrawals.
-    Route::post('dashboard/rewards/withdraw', [RcoinWithdrawalController::class, 'store'])->name('dashboard.rewards.withdraw');
+    Route::post('dashboard/rewards/withdraw', [RcoinWithdrawalController::class, 'store'])
+        ->middleware('maintenance-guard')->name('dashboard.rewards.withdraw');
 
     // Instant Rcoin → wallet (USD) conversion. No admin approval. Capped by
     // wallet_conversion_min_usd setting (default $2.00).
-    Route::post('dashboard/rewards/convert-to-wallet', [RcoinConvertController::class, 'toWallet'])->name('dashboard.rewards.convert-to-wallet');
+    Route::post('dashboard/rewards/convert-to-wallet', [RcoinConvertController::class, 'toWallet'])
+        ->middleware('maintenance-guard')->name('dashboard.rewards.convert-to-wallet');
 
     Route::view('dashboard/kyc', 'dashboard.kyc')->name('dashboard.kyc');
 
@@ -390,7 +424,7 @@ Route::middleware(['auth'])->group(function () {
     // the standard fulfilment job which routes to /orders/topups via the
     // parent_iccid metadata flag.
     Route::get('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'show'])->name('dashboard.esim.topup');
-    Route::post('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'purchase'])->middleware('not-suspended')->name('dashboard.esim.topup.purchase');
+    Route::post('dashboard/esims/{orderItem}/top-up', [EsimTopupController::class, 'purchase'])->middleware(['not-suspended', 'maintenance-guard'])->name('dashboard.esim.topup.purchase');
 
     Volt::route('dashboard/transactions', 'dashboard.transactions')->name('dashboard.transactions');
 
@@ -416,6 +450,32 @@ Route::middleware(['auth'])->group(function () {
     Route::post('dashboard/suspension/request-review', [SuspensionController::class, 'requestReview'])
         ->name('suspension.request-review');
 });
+
+// Dashboard shop chrome - mirrors the public storefront URLs under /dashboard/shop/*
+// so logged-in users can browse the catalog without leaving their dashboard. The
+// catalog views auto-detect this prefix via <x-shop.layout> and render the
+// dashboard sidebar + header instead of the storefront chrome. Same Blade files,
+// same controllers, same query-string filters - only the surrounding chrome
+// differs. The public storefront URLs above stay open to everyone (guests AND
+// authed users), so users can shop on either side.
+Route::middleware(['auth'])->prefix('dashboard/shop')->name('dashboard.shop.')
+    ->group(function () use ($resolveGiftCardBrand, $resolveTopupBrand, $resolveBillBrand) {
+        Route::view('gift-cards', 'shop.gift-cards')->name('gift-cards');
+        Route::get('gift-cards/{brandSlug}', $resolveGiftCardBrand)->name('brand');
+
+        Route::get('esims', [EsimStoreController::class, 'index'])->name('esims');
+        Route::get('esims/country/{code}', [EsimStoreController::class, 'country'])->name('esim.country');
+        Route::get('esims/{slug}', [EsimStoreController::class, 'show'])->name('esim');
+
+        Route::view('topups', 'shop.topups')->name('topups');
+        Route::get('topups/{brandSlug}', $resolveTopupBrand)->name('topup');
+
+        Route::view('bills', 'shop.bills')->name('bills');
+        Route::get('bills/{brandSlug}', $resolveBillBrand)->name('bill');
+
+        Route::view('flights', 'shop.coming-soon', ['service' => 'flights'])->name('flights');
+        Route::view('stays', 'shop.coming-soon', ['service' => 'stays'])->name('stays');
+    });
 
 // Legacy /settings/* URLs redirect to the new /dashboard/* paths so old bookmarks keep working.
 Route::middleware(['auth'])->group(function () {

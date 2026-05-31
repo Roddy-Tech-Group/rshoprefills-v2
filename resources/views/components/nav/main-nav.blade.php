@@ -60,7 +60,7 @@
             >
                 <span class="flex items-center h-10 md:h-12">
                     <img
-                        src="{{ asset('assets/Rshoprefillslogo.png') }}"
+                        src="{{ asset('assets/Rshoprefillslogo.webp') }}"
                         alt="RshopRefills"
                         fetchpriority="high"
                         class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
@@ -109,7 +109,7 @@
                     {{-- Ctrl+K hint — shown while the field is empty; the clear button takes its place once typing starts. --}}
                     <kbd x-show="query.length === 0" class="pointer-events-none inline-flex shrink-0 items-center rounded-[5px] border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-zinc-500" aria-hidden="true">Ctrl K</kbd>
                     <button type="button" x-show="query.length > 0" @click="clear()" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300 focus:outline-none" aria-label="Clear">
-                        <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="w-4 h-4 object-contain" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode('x button.webp')) }}" alt="" class="w-4 h-4 object-contain" loading="lazy">
                     </button>
                 </form>
 
@@ -206,7 +206,7 @@
                         x-transition:enter-start="opacity-0"
                         x-transition:enter-end="opacity-100"
                         @click="mobileSearchOpen = false"
-                        class="fixed inset-0 z-[55] bg-zinc-900/40 backdrop-blur-sm"
+                        class="fixed inset-0 z-[55] bg-zinc-900/40"
                         aria-hidden="true"
                     ></div>
 
@@ -308,23 +308,31 @@
                     // portrait shows up everywhere the user's avatar is rendered until they upload one.
                     $authUser = auth()->user();
                     $accountAvatar = $authUser?->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($authUser?->gender ?? '')) {
-                        'female', 'f' => 'New Female Account Avatar.png',
-                        default       => 'New male account avatar.png',
+                        'female', 'f' => 'New Female Account Avatar.webp',
+                        default       => 'New male account avatar.webp',
                     }));
                 @endphp
-                <a
-                    href="{{ auth()->check() ? route('dashboard') : route('login') }}"
-                    wire:navigate
-                    class="hidden md:inline-flex h-10 items-center gap-2 rounded-[8px] bg-zinc-200 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
-                    aria-label="{{ auth()->check() ? 'Wallet balance' : 'Wallet — sign in to view balance' }}"
-                >
-                    <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
-                    @auth
+                @auth
+                    <a
+                        href="{{ route('dashboard') }}"
+                        wire:navigate
+                        class="hidden md:inline-flex h-10 items-center gap-2 rounded-[8px] bg-zinc-200 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                        aria-label="Wallet balance"
+                    >
+                        <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
                         {{ $currencySymbol }}{{ number_format($walletBalance, 2) }}
-                    @else
+                    </a>
+                @else
+                    <button
+                        type="button"
+                        @click="$dispatch('open-auth-modal', { mode: 'login' })"
+                        class="hidden md:inline-flex h-10 items-center gap-2 rounded-[8px] bg-zinc-200 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                        aria-label="Wallet - sign in to view balance"
+                    >
+                        <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
                         Wallet
-                    @endauth
-                </a>
+                    </button>
+                @endauth
 
                 {{-- Account --}}
                 @auth
@@ -348,6 +356,11 @@
                         >
                             <img src="{{ $accountAvatar }}" alt="{{ $authUser?->name ?? 'Account' }}" class="h-full w-full object-cover" loading="lazy">
                         </button>
+
+                        {{-- KYC verified tick over the storefront account avatar. --}}
+                        @if (($authUser?->kyc_status ?? null) === 'verified')
+                            <x-ui.verified-badge class="pointer-events-none absolute -bottom-1 -right-1 h-4 w-4 drop-shadow-sm" />
+                        @endif
 
                         <div
                             x-show="open"
@@ -398,10 +411,8 @@
                             <div class="border-t border-zinc-100 p-1.5">
                                 <form method="POST" action="{{ route('logout') }}" class="w-full">
                                     @csrf
-                                    <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
-                                        <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
-                                        </svg>
+                                    <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/15">
+                                        <x-ui.logout-icon class="h-5 w-5" />
                                         Logout
                                     </button>
                                 </form>
@@ -443,24 +454,24 @@
                             role="menu"
                         >
                             <div class="p-1">
-                                <a
-                                    href="{{ route('login') }}"
-                                    wire:navigate
+                                <button
+                                    type="button"
+                                    @click="$dispatch('open-auth-modal', { mode: 'login' })"
                                     role="menuitem"
-                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-600 hover:text-white dark:text-zinc-100"
+                                    class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-600 hover:text-white dark:text-zinc-100"
                                 >
                                     <img src="{{ asset('assets/' . rawurlencode('Login.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
                                     Login
-                                </a>
-                                <a
-                                    href="{{ route('register') }}"
-                                    wire:navigate
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="$dispatch('open-auth-modal', { mode: 'register' })"
                                     role="menuitem"
-                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-600 hover:text-white dark:text-zinc-100"
+                                    class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-600 hover:text-white dark:text-zinc-100"
                                 >
                                     <img src="{{ asset('assets/' . rawurlencode('create an account.svg')) }}" alt="" class="h-5 w-5 shrink-0" loading="lazy">
                                     Create Account
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -509,7 +520,7 @@
                         {{-- Empty state --}}
                         <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
                             <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
-                            <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
+                            <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
                             <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
                         </div>
 
@@ -587,35 +598,43 @@
                     };
                     $catLinkState = fn (string $c) => $currentCat === $c
                         ? 'text-zinc-900 dark:text-white font-semibold after:bg-zinc-900 dark:after:bg-white'
-                        : 'text-zinc-600 dark:text-zinc-300 hover:text-zinc-800 dark:hover:text-white after:bg-transparent';
+                        : 'text-zinc-800 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white after:bg-transparent';
                     $catIconState = fn (string $c) => $currentCat === $c ? 'opacity-100' : 'opacity-50';
                 @endphp
 
                 @php $catImgClass = 'w-[22px] h-[22px] shrink-0 dark:[filter:brightness(0)_invert(1)]'; @endphp
 
                 {{-- Gift Cards --}}
+                @feature('gift_cards')
                 <a href="{{ route('shop.gift-cards') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Gift Cards') }}">
                     <img src="{{ asset('assets/' . rawurlencode('gift cards.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('Gift Cards') }}" loading="lazy">
                     Gift Cards
                 </a>
+                @endfeature
 
                 {{-- eSIMs --}}
+                @feature('esims')
                 <a href="{{ route('shop.esims') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('eSIMs') }}">
                     <img src="{{ asset('assets/' . rawurlencode('esim.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('eSIMs') }}" loading="lazy">
                     eSIMs
                 </a>
+                @endfeature
 
                 {{-- Mobile top up --}}
+                @feature('topups')
                 <a href="{{ route('shop.topups') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Mobile top up') }}">
                     <img src="{{ asset('assets/' . rawurlencode('topup1.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('Mobile top up') }}" loading="lazy">
                     Mobile top up
                 </a>
+                @endfeature
 
                 {{-- Bill payments --}}
+                @feature('bills')
                 <a href="{{ route('shop.bills') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Bill payments') }}">
                     <img src="{{ $currentCat === 'Bill payments' ? asset('assets/' . rawurlencode('bill payment.svg')) : asset('assets/' . rawurlencode('Bills 2.svg')) }}" alt="" class="{{ $catImgClass }} {{ $catIconState('Bill payments') }}" loading="lazy">
                     Bill payments
                 </a>
+                @endfeature
 
                 {{-- Flights --}}
                 <a href="{{ route('shop.flights') }}" wire:navigate class="{{ $catLinkClass }} {{ $catLinkState('Flights') }}">
