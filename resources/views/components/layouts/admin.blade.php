@@ -210,6 +210,9 @@
 
         <x-ui.app-loader />
 
+        {{-- Floating "Install app" dock (PWA). iOS-aware; hides when installed. --}}
+        <x-ui.install-app />
+
         <flux:sidebar sticky stashable class="relative bg-white dark:bg-[#0c1a36]">
 
             {{-- Collapse toggle attached to the right edge of the sidebar.

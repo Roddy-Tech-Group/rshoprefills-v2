@@ -1,0 +1,32 @@
+{
+    "name": "RshopRefills",
+    "short_name": "RshopRefills",
+    "description": "Buy gift cards, eSIMs, mobile top-ups and bill payments. Fast delivery, great prices, 24/7 support.",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "categories": ["shopping", "finance"],
+    "icons": [
+        {
+            "src": "/assets/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

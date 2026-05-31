@@ -84,7 +84,40 @@
 <title>{{ $title ?? 'RshopRefills' }}</title>
 
 <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
-<link rel="apple-touch-icon" href="{{ asset('assets/PWAicon.webp') }}">
+
+{{-- ───────────────────────── PWA / installable app ─────────────────────────
+     iOS does not read most manifest fields, so the Apple-specific meta + a
+     square, OPAQUE apple-touch-icon (transparency would be black-filled on the
+     home screen) are required for a clean "Add to Home Screen" result. --}}
+<link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+<meta name="theme-color" content="#2563eb">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/apple-touch-icon-180.png') }}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="RshopRefills">
+<meta name="application-name" content="RshopRefills">
+<script>
+    // Capture the install prompt as early as possible (it fires before Alpine
+    // boots) and stash it so the floating Install button can replay it on tap.
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__rshopInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent('rshop:installable'));
+    });
+    window.addEventListener('appinstalled', function () {
+        window.__rshopInstallPrompt = null;
+        window.dispatchEvent(new CustomEvent('rshop:installed'));
+    });
+
+    // Register the service worker once the page has loaded so it never competes
+    // with first paint. Failures are swallowed - the site works without it.
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+    }
+</script>
 
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />

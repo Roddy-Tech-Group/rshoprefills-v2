@@ -203,6 +203,9 @@
 
         <x-ui.app-loader />
 
+        {{-- Floating "Install app" dock (PWA). iOS-aware; hides when installed. --}}
+        <x-ui.install-app />
+
         {{-- Impersonation banner: shown only when an admin is signed in as this
              customer (admin guard still authenticated). Floating bottom pill so
              it never disrupts the layout; sits above the mobile bottom nav. --}}
