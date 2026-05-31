@@ -17,6 +17,8 @@ use Illuminate\Support\Carbon;
  * @property string $title
  * @property string $excerpt
  * @property string $image
+ * @property string|null $attachment_path
+ * @property string|null $attachment_label
  * @property array<int, string> $body
  * @property string $author
  * @property string|null $read_time
@@ -37,6 +39,8 @@ class BlogPost extends Model
         'title',
         'excerpt',
         'image',
+        'attachment_path',
+        'attachment_label',
         'body',
         'author',
         'read_time',

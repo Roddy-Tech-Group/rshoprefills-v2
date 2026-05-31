@@ -9,12 +9,14 @@ use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Payment\Providers\FlutterwavePaymentProvider;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Security\Services\TurnstileService;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Http\Resources\PaymentSessionResource;
 use App\Models\Order;
 use App\Models\PaymentSession;
 use App\Models\Setting;
+use App\Support\FeatureFlag;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Throwable;
@@ -34,6 +36,10 @@ class CheckoutController extends Controller
 
     public function process(Request $request)
     {
+        // features.checkout_enabled kill-switch. Admin can pause new orders
+        // (e.g. during a supplier outage) without taking the storefront down.
+        abort_if(! FeatureFlag::on('checkout'), 503, 'Checkout is temporarily unavailable.');
+
         $data = $request->validate([
             'delivery_email' => ['required', 'email'],
             'payment_method' => ['required', 'in:card,mobile_money,crypto,wallet,bank_transfer,apple_pay,ussd,pay_with_bank,bank_qr,mobile_wallet'],
@@ -69,24 +75,26 @@ class CheckoutController extends Controller
 
         // Turnstile Validation
         if (config('services.turnstile.enabled') && config('services.turnstile.enforce_checkout', true)) {
-            $service = \App\Domain\Security\Services\TurnstileService::make();
+            $service = TurnstileService::make();
             $result = $service->validateToken($request->input('cf-turnstile-response'), $request->ip());
 
-            if ($result['status'] === \App\Domain\Security\Services\TurnstileService::STATUS_TIMEOUT) {
+            if ($result['status'] === TurnstileService::STATUS_TIMEOUT) {
                 // Fail OPEN conditionally: block if fraud risk is elevated
                 if ($fraudService->isSuspiciousCheckout($user, $amount, $request->ip())) {
                     $msg = 'Security verification service is temporarily unavailable and transaction risk is elevated. Please try again later.';
                     if ($request->expectsJson() || $request->ajax()) {
                         return response()->json(['message' => $msg], 403);
                     }
+
                     return redirect()->route('shop.checkout')->with('checkout_status', $msg);
                 }
-            } elseif ($result['status'] !== \App\Domain\Security\Services\TurnstileService::STATUS_SUCCESS && $result['status'] !== \App\Domain\Security\Services\TurnstileService::STATUS_BYPASSED) {
+            } elseif ($result['status'] !== TurnstileService::STATUS_SUCCESS && $result['status'] !== TurnstileService::STATUS_BYPASSED) {
                 $fraudService->recordTurnstileFailure($request->ip());
                 $msg = 'Security verification failed. Please refresh the page and try again.';
                 if ($request->expectsJson() || $request->ajax()) {
                     return response()->json(['message' => $msg], 422);
                 }
+
                 return redirect()->route('shop.checkout')->with('checkout_status', $msg);
             }
         }

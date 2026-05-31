@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class AdminRewardSettingsController extends Controller
 {
     public function index()
     {
-        $settings = \App\Models\Setting::all()->mapWithKeys(function ($setting) {
+        $settings = Setting::all()->mapWithKeys(function ($setting) {
             return [$setting->key => $setting->value];
         });
 
@@ -18,14 +19,14 @@ class AdminRewardSettingsController extends Controller
         ]);
     }
 
-    public function update(\Illuminate\Http\Request $request)
+    public function update(Request $request)
     {
         $validated = $request->validate([
             'settings' => ['required', 'array'],
         ]);
 
         foreach ($validated['settings'] as $key => $value) {
-            $setting = \App\Models\Setting::where('key', $key)->first();
+            $setting = Setting::where('key', $key)->first();
             if ($setting) {
                 // Ensure correct type cast
                 if ($setting->type === 'boolean') {
@@ -36,7 +37,7 @@ class AdminRewardSettingsController extends Controller
                     $value = (float) $value;
                 }
 
-                \App\Models\Setting::set($key, $value, $setting->type, $setting->description);
+                Setting::set($key, $value, $setting->type, $setting->description);
             }
         }
 

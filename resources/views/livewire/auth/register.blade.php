@@ -123,13 +123,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {{-- Centered form --}}
     <div class="mx-auto flex w-full max-w-md flex-col py-3 sm:flex-1 sm:justify-center sm:py-8">
 
-        <h1 class="flex items-center justify-center gap-2 text-3xl font-bold tracking-tight text-zinc-900">
-            <span>Create an account</span>
-            <svg class="h-7 w-7 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-            </svg>
-        </h1>
-        <p class="mt-2 text-center text-base text-zinc-600">Join RshopRefills and start shopping today</p>
+        <p class="text-center text-base text-zinc-600">Join RshopRefills and start shopping today</p>
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 

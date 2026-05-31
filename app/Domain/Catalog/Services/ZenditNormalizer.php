@@ -65,13 +65,18 @@ class ZenditNormalizer implements CatalogNormalizerInterface
                 'slug' => $productSlug,
             ],
             [
-                'category_id' => $category->id,
-                'subcategory_id' => $subcategory->id,
+                // Preserve admin-arranged categories on existing rows so the 6h
+                // re-sync doesn't wipe manual organisation. Only set the
+                // supplier-derived value when the product is brand new.
+                'category_id' => $existing?->category_id ?? $category->id,
+                'subcategory_id' => $existing?->subcategory_id ?? $subcategory->id,
                 'provider_reference' => null,
-                'brand_key' => $brandKey,
-                'country_code' => $countryCode,
+                // brand_key, country_code and name are admin-editable in the
+                // catalog UI. Preserve any edits so re-sync does not revert them.
+                'brand_key' => $existing?->brand_key ?? $brandKey,
+                'country_code' => $existing?->country_code ?? $countryCode,
                 'currency_code' => $currencyCode,
-                'name' => "{$brandLabel} ({$countryCode})",
+                'name' => $existing?->name ?? "{$brandLabel} ({$countryCode})",
                 'description' => $existing?->description
                     ?: ($rawItem['shortNotes'] ?? $rawItem['notes'] ?? $rawItem['description'] ?? "{$brandLabel} Gift Card for {$countryCode}"),
                 'redeem_instructions' => $existing?->redeem_instructions ?: ($rawItem['redeem_instructions'] ?? null),
@@ -109,7 +114,10 @@ class ZenditNormalizer implements CatalogNormalizerInterface
             ['provider_offer_id' => $offerId],
             [
                 'product_id' => $product->id,
-                'subcategory_id' => $subcategory->id,
+                // Mirror whatever subcategory the product is currently on (which
+                // may have been moved by an admin) instead of re-applying the
+                // raw provider subcategory.
+                'subcategory_id' => $product->subcategory_id,
                 'sku' => $rawItem['sku'] ?? $offerId,
                 'currency' => $currencyCode,
                 'face_value' => $faceValue,

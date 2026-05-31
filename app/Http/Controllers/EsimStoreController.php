@@ -137,7 +137,7 @@ class EsimStoreController extends Controller
     /** Flag image used for non-country (regional / global) eSIMs. */
     public static function globalFlag(): string
     {
-        return asset('assets/'.rawurlencode('Global png 11.png'));
+        return asset('assets/'.rawurlencode('Global png 11.webp'));
     }
 
     /** A specific region by slug; still merges by country so every supplier shows. */

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Webhooks;
 
 use App\Http\Controllers\Controller;
-use App\Models\PaymentAttempt;
 use App\Jobs\VerifyPaymentJob;
+use App\Models\PaymentAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -23,6 +23,7 @@ class FlutterwaveWebhookController extends Controller
                 'received' => $signature,
                 'expected' => $expectedSignature,
             ]);
+
             return response()->json(['message' => 'Unauthorized signature'], 401);
         }
 
@@ -31,15 +32,16 @@ class FlutterwaveWebhookController extends Controller
         $status = $payload['status'] ?? ($payload['data']['status'] ?? null);
         $id = $payload['id'] ?? ($payload['data']['id'] ?? null);
 
-        if (!$txRef) {
+        if (! $txRef) {
             return response()->json(['message' => 'Missing transaction reference'], 400);
         }
 
         // Locate correct PaymentAttempt
         $attempt = PaymentAttempt::where('idempotency_key', $txRef)->first();
 
-        if (!$attempt) {
+        if (! $attempt) {
             Log::warning("Flutterwave webhook: payment attempt not found for reference {$txRef}");
+
             return response()->json(['message' => 'Payment attempt not found'], 404);
         }
 

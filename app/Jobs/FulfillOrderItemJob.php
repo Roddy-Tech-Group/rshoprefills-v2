@@ -111,7 +111,7 @@ class FulfillOrderItemJob implements ShouldQueue
 
                     // Handle wallet reversal if wallet checkout and all items failed
                     $this->handleFailureReversal($item, $walletProvider);
-                    
+
                     $this->checkOrderCompletion($item->order_id, $orderService);
                 }
             });
@@ -158,7 +158,7 @@ class FulfillOrderItemJob implements ShouldQueue
 
             FulfillmentFailed::dispatch($item, 'Job permanently failed: '.$e->getMessage());
             $this->handleFailureReversal($item, $walletProvider);
-            
+
             $this->checkOrderCompletion($item->order_id, app(OrderService::class));
         });
     }
@@ -209,17 +209,19 @@ class FulfillOrderItemJob implements ShouldQueue
     private function checkOrderCompletion(string $orderId, OrderService $orderService): void
     {
         $order = Order::where('id', $orderId)->lockForUpdate()->first();
-        if (! $order) return;
+        if (! $order) {
+            return;
+        }
 
         $isOrderFinished = $order->items->every(fn ($i) => in_array($i->fulfillment_status, [
             FulfillmentStatus::Fulfilled,
-            FulfillmentStatus::Failed
+            FulfillmentStatus::Failed,
         ]));
 
         if ($isOrderFinished) {
             $allFailed = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Failed);
             $allFulfilled = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Fulfilled);
-            
+
             if ($allFailed) {
                 $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Failed);
             } elseif ($allFulfilled) {

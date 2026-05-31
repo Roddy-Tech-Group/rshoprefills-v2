@@ -2,21 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Notification\Channels\DatabaseChannel;
+use App\Domain\Notification\Channels\EmailChannel;
 use App\Domain\Notification\Enums\NotificationPriority;
-use App\Domain\Notification\Enums\DeliveryStatus;
 use App\Domain\Notification\Jobs\SendAsynchronousNotificationJob;
 use App\Domain\Notification\Mail\WelcomeMail;
 use App\Domain\Notification\Services\NotificationDispatcher;
-use App\Models\User;
 use App\Models\Notification;
+use App\Models\NotificationDelivery;
 use App\Models\NotificationPreference;
-use App\Models\NewsletterSubscriber;
+use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class NotificationSystemTest extends TestCase
@@ -45,7 +43,7 @@ class NotificationSystemTest extends TestCase
         ]);
 
         // 2. Verify Welcome Job was pushed to queue
-        Queue::assertPushed(SendAsynchronousNotificationJob::class, function ($job) use ($user) {
+        Queue::assertPushed(SendAsynchronousNotificationJob::class, function ($job) {
             return $job->queue === 'notifications';
         });
     }
@@ -58,7 +56,7 @@ class NotificationSystemTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        
+
         // Disable email notifications
         NotificationPreference::create([
             'user_id' => $user->id,
@@ -107,8 +105,8 @@ class NotificationSystemTest extends TestCase
         );
 
         $job->handle(
-            app(\App\Domain\Notification\Channels\EmailChannel::class),
-            app(\App\Domain\Notification\Channels\DatabaseChannel::class)
+            app(EmailChannel::class),
+            app(DatabaseChannel::class)
         );
 
         // Verify notification saved in database
@@ -150,11 +148,11 @@ class NotificationSystemTest extends TestCase
             idempotencyKey: 'event_12345_key'
         );
         $job1->handle(
-            app(\App\Domain\Notification\Channels\EmailChannel::class),
-            app(\App\Domain\Notification\Channels\DatabaseChannel::class)
+            app(EmailChannel::class),
+            app(DatabaseChannel::class)
         );
 
-        $initialDeliveryCount = \App\Models\NotificationDelivery::count();
+        $initialDeliveryCount = NotificationDelivery::count();
 
         // 2. Process duplicate time
         $job2 = new SendAsynchronousNotificationJob(
@@ -166,12 +164,12 @@ class NotificationSystemTest extends TestCase
             idempotencyKey: 'event_12345_key'
         );
         $job2->handle(
-            app(\App\Domain\Notification\Channels\EmailChannel::class),
-            app(\App\Domain\Notification\Channels\DatabaseChannel::class)
+            app(EmailChannel::class),
+            app(DatabaseChannel::class)
         );
 
         // Verify no extra deliveries recorded
-        $this->assertEquals($initialDeliveryCount, \App\Models\NotificationDelivery::count());
+        $this->assertEquals($initialDeliveryCount, NotificationDelivery::count());
     }
 
     /**
@@ -200,7 +198,7 @@ class NotificationSystemTest extends TestCase
         $this->assertNotNull($unsubscribeUrl);
 
         // 2. Try unsubscribing with INVALID signature (tampered)
-        $tamperedUrl = $unsubscribeUrl . 'tamper';
+        $tamperedUrl = $unsubscribeUrl.'tamper';
         $unsubResponse1 = $this->getJson($tamperedUrl);
         $unsubResponse1->assertStatus(403);
 
@@ -224,7 +222,7 @@ class NotificationSystemTest extends TestCase
     public function test_storefront_notification_apis(): void
     {
         $user = User::factory()->create();
-        
+
         // Seed some notifications
         $n1 = Notification::create([
             'user_id' => $user->id,

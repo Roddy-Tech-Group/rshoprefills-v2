@@ -8,7 +8,7 @@
             'name'     => 'Stays',
             'tagline'  => 'Book stays anywhere. Pay your way.',
             'blurb'    => "Hotels, apartments and getaways are coming to RshopRefills. Soon you'll book a place to stay anywhere in the world and settle with your wallet, card or crypto, all from one account.",
-            'image'    => 'stay2.jpg',
+            'image'    => 'stay2.webp',
             'icon'     => 'stay 2.svg',
             'accent'   => 'bg-orange-500',
             'features' => [
@@ -21,7 +21,7 @@
             'name'     => 'Flights',
             'tagline'  => 'Book flights. Pay with crypto or wallet.',
             'blurb'    => "Flight booking is landing on RshopRefills soon. Search routes worldwide and pay with your wallet, card or crypto, all from one place, no card borders, no stress.",
-            'image'    => 'flight2.jpg',
+            'image'    => 'flight2.webp',
             'icon'     => 'flight 2.svg',
             'accent'   => 'bg-indigo-500',
             'features' => [
@@ -31,9 +31,21 @@
             ],
         ],
     };
+
+    // Route name swaps between storefront + dashboard chrome so the CTA keeps
+    // the user on whichever side they entered from.
+    $inDash = request()->is('dashboard/shop*') && auth()->check();
+    $shopRoute = fn (string $name, $params = []) => route(($inDash ? 'dashboard.shop.' : 'shop.').$name, $params);
 @endphp
 
-<x-layouts.app.header :title="$m['name'] . ' — Coming Soon | RshopRefills'">
+<x-shop.layout :title="$m['name'] . ' - Coming Soon | RshopRefills'">
+
+    {{-- Mobile category picker (dark pill + slide-up sheet) so customers can
+         hop to a live category from the coming-soon page. `$service` matches
+         the category slug ('flights' / 'stays'). --}}
+    <div class="mx-auto w-full max-w-[1140px] px-4 pt-4 sm:hidden">
+        <x-shop.category-picker :active="$service" />
+    </div>
 
     <section class="mx-auto w-full max-w-[1140px] px-4 py-12 sm:px-6 sm:py-16 lg:py-24">
         <div class="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
@@ -71,7 +83,7 @@
 
                 {{-- CTAs — point at what is live today --}}
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-                    <a href="{{ route('shop.gift-cards') }}" wire:navigate
+                    <a href="{{ $shopRoute('gift-cards') }}" wire:navigate
                         class="inline-flex items-center justify-center gap-2 rounded-[6px] bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                         Shop what's available
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -111,4 +123,4 @@
         </div>
     </section>
 
-</x-layouts.app.header>
+</x-shop.layout>

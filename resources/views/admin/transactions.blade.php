@@ -1,10 +1,44 @@
 @php
     use App\Models\PaymentAttempt;
+    use Illuminate\Support\Facades\DB;
+
+    // URL-driven status filter. Chip labels map to the real PaymentStatus
+    // enum values: "Completed" = paid, "Pending" = pending+processing+
+    // reserved (in-flight), "Cancelled" = expired (timed-out checkout),
+    // "Failed" = failed.
+    $statusFilter = strtolower((string) request()->query('status', 'all'));
+    $allowedStatuses = ['all', 'completed', 'pending', 'cancelled', 'failed', 'refunded'];
+    if (! in_array($statusFilter, $allowedStatuses, true)) {
+        $statusFilter = 'all';
+    }
+
+    $statusMap = [
+        'completed' => ['paid'],
+        'pending'   => ['pending', 'processing', 'reserved', 'unpaid'],
+        'cancelled' => ['expired'],
+        'failed'    => ['failed'],
+        'refunded'  => ['refunded', 'partially_refunded'],
+    ];
 
     // The pre-merge `payments` table was dropped and replaced by `payment_attempts`
     // (polymorphic — an attempt belongs to an Order or a WalletFunding).
-    $payments = PaymentAttempt::with(['user', 'order'])->latest()->limit(50)->get();
+    $paymentsQuery = PaymentAttempt::with(['user', 'order'])->latest();
+    if ($statusFilter !== 'all' && isset($statusMap[$statusFilter])) {
+        $paymentsQuery->whereIn('payment_status', $statusMap[$statusFilter]);
+    }
+    $payments = $paymentsQuery->limit(50)->get();
     $totalPayments = PaymentAttempt::count();
+
+    // KPI counts — full table totals so the strip stays stable as the
+    // admin scrubs the filter chips. Same status buckets as the chips.
+    $kpis = PaymentAttempt::query()
+        ->selectRaw("
+            SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) AS completed,
+            SUM(CASE WHEN payment_status IN ('pending', 'processing', 'reserved', 'unpaid') THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN payment_status = 'expired' THEN 1 ELSE 0 END) AS cancelled,
+            SUM(CASE WHEN payment_status = 'failed' THEN 1 ELSE 0 END) AS failed
+        ")
+        ->first();
 
     // Status pill tone — maps PaymentAttempt status onto the canonical
     // x-admin.badge tone palette.
@@ -17,6 +51,11 @@
             default => 'amber',
         };
     };
+
+    // Preserve other query params when toggling the status filter chips.
+    $filterUrl = fn (string $status) => route('admin.transactions', array_filter([
+        'status' => $status === 'all' ? null : $status,
+    ]));
 @endphp
 
 <x-layouts.admin>
@@ -36,7 +75,45 @@
             </a>
         </div>
     </x-slot:heading>
-    <x-slot:subheading>{{ number_format($totalPayments) }} payment attempts total. Showing the latest 50.</x-slot:subheading>
+    <x-slot:subheading>{{ number_format($totalPayments) }} payment attempts total. Showing the latest 50 matching the filter.</x-slot:subheading>
+
+    {{-- KPI strip — same look as every other admin page. --}}
+    <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        @foreach ([
+            ['label' => 'Completed', 'value' => (int) $kpis->completed, 'dot' => 'bg-emerald-500'],
+            ['label' => 'Pending',   'value' => (int) $kpis->pending,   'dot' => 'bg-amber-500'],
+            ['label' => 'Cancelled', 'value' => (int) $kpis->cancelled, 'dot' => 'bg-zinc-500'],
+            ['label' => 'Failed',    'value' => (int) $kpis->failed,    'dot' => 'bg-red-500'],
+        ] as $stat)
+            <div class="rounded-[10px] border-[1.5px] border-white bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+                <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full {{ $stat['dot'] }}"></span>
+                    {{ $stat['label'] }}
+                </p>
+                <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ number_format($stat['value']) }}</p>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- Status filter chips. Pressing a chip reloads the page with the
+         filter applied via query string so admins can share / bookmark
+         the URL ("send me /admin/transactions?status=failed"). --}}
+    <div class="mb-4 flex flex-wrap items-center gap-1.5">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</span>
+        @foreach ([
+            'all' => 'All', 'completed' => 'Completed', 'pending' => 'Pending', 'cancelled' => 'Cancelled', 'failed' => 'Failed', 'refunded' => 'Refunded',
+        ] as $value => $label)
+            <a
+                href="{{ $filterUrl($value) }}"
+                wire:navigate
+                @class([
+                    'rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors',
+                    'bg-blue-600 text-white' => $statusFilter === $value,
+                    'bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-[#1d3252] dark:text-zinc-300 dark:ring-zinc-700/60 dark:hover:bg-[#26416b]' => $statusFilter !== $value,
+                ])
+            >{{ $label }}</a>
+        @endforeach
+    </div>
 
     {{-- Grid template shared between the header pill and every data row so
          columns line up exactly. Same pattern as the Products page's
@@ -154,8 +231,19 @@
                 </span>
             </article>
         @empty
-            <div class="px-5 py-12 text-center text-sm text-zinc-600 dark:text-zinc-400">
-                No transactions yet.
+            <div class="px-5 py-12 text-center">
+                <p class="text-base font-semibold text-zinc-900 dark:text-white">
+                    @if ($statusFilter === 'all')
+                        No transactions yet
+                    @else
+                        No {{ $statusFilter }} transactions
+                    @endif
+                </p>
+                @if ($statusFilter !== 'all')
+                    <a href="{{ $filterUrl('all') }}" wire:navigate class="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200">
+                        Show all transactions
+                    </a>
+                @endif
             </div>
         @endforelse
 

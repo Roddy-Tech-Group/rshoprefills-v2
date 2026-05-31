@@ -13,7 +13,7 @@
             everything right here on the web, including your wallet, orders and rewards.
         </p>
 
-        <img src="{{ $img('Development Mood.png') }}" alt="Our mobile app is in development" class="mx-auto mt-10 w-full max-w-md" loading="lazy">
+        <img src="{{ $img('Development Mood.webp') }}" alt="Our mobile app is in development" class="mx-auto mt-10 w-full max-w-md" loading="lazy">
 
         {{-- Coming-soon store badges (visual) --}}
         <p class="mt-10 text-xs font-semibold uppercase tracking-wider text-zinc-500">Coming soon to</p>
@@ -26,7 +26,7 @@
                 </span>
             </span>
             <span class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2 text-white opacity-90" style="background-color: #18181b;">
-                <img src="{{ asset('assets/'.rawurlencode('Playstore 2.png')) }}" alt="" width="24" height="24" class="block h-6 w-6 shrink-0 object-contain" loading="lazy">
+                <img src="{{ asset('assets/'.rawurlencode('Playstore 2.webp')) }}" alt="" width="24" height="24" class="block h-6 w-6 shrink-0 object-contain" loading="lazy">
                 <span class="text-left leading-none">
                     <span class="block text-xs">Download on</span>
                     <span class="block text-sm font-semibold">Google Play</span>

@@ -2,10 +2,9 @@
 
 namespace App\Domain\Wallet\Services;
 
-use App\Models\ExchangeRate;
-use App\Models\CurrencyRate;
 use App\Domain\Wallet\Exceptions\StaleRateException;
-use Illuminate\Support\Carbon;
+use App\Models\CurrencyRate;
+use App\Models\ExchangeRate;
 use Illuminate\Support\Facades\Log;
 
 class CurrencyRateService
@@ -34,6 +33,7 @@ class CurrencyRateService
 
         if ($rateRow) {
             $this->validateRateFreshness($rateRow);
+
             return (float) $rateRow->rate;
         }
 
@@ -47,6 +47,7 @@ class CurrencyRateService
         if ($inverseRateRow) {
             $this->validateRateFreshness($inverseRateRow);
             $rate = (float) $inverseRateRow->rate;
+
             return $rate > 0 ? (1.0 / $rate) : 0.0;
         }
 
@@ -60,6 +61,7 @@ class CurrencyRateService
     public function convert(float $amount, string $from, string $to): float
     {
         $rate = $this->resolveRate($from, $to);
+
         return round($amount * $rate, 4);
     }
 
@@ -91,6 +93,7 @@ class CurrencyRateService
 
         // Fallback
         $rate = $this->resolveFallbackRate($base, $target);
+
         return [
             'base' => $base,
             'target' => $target,
@@ -110,7 +113,7 @@ class CurrencyRateService
     protected function validateRateFreshness(ExchangeRate $rateRow): void
     {
         $ageHours = $rateRow->fetched_at->diffInHours(now());
-        
+
         // Stale rate threshold: 24 hours
         if ($ageHours > 24) {
             Log::warning('Stale exchange rate detected in registry.', [

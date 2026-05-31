@@ -186,11 +186,11 @@ class extends Component {
                             @endunless
                         </div>
                         <div class="flex shrink-0 items-center gap-1.5">
-                            <button wire:click="togglePublish({{ $faq->id }})" type="button" class="rounded-[10px] bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-200" title="Toggle publish">
+                            <button wire:click="togglePublish({{ $faq->id }})" type="button" class="rounded-[5px] bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-200" title="Toggle publish">
                                 {{ $faq->is_published ? 'Unpublish' : 'Publish' }}
                             </button>
-                            <button wire:click="edit({{ $faq->id }})" type="button" class="rounded-[10px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100">Edit</button>
-                            <button wire:click="delete({{ $faq->id }})" wire:confirm="Delete this FAQ permanently?" type="button" class="rounded-[10px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100">Delete</button>
+                            <button wire:click="edit({{ $faq->id }})" type="button" class="rounded-[5px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100">Edit</button>
+                            <button wire:click="delete({{ $faq->id }})" wire:confirm="Delete this FAQ permanently?" type="button" class="rounded-[5px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100">Delete</button>
                         </div>
                     </li>
                 @endforeach

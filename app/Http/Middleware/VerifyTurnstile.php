@@ -15,6 +15,7 @@ class VerifyTurnstile
         // Enforce based on config
         $enforceAuth = config('services.turnstile.enforce_auth', true);
         $enforceCheckout = config('services.turnstile.enforce_checkout', true);
+        $enforceContact = config('services.turnstile.enforce_contact', true);
 
         if ($context === 'auth' && ! $enforceAuth) {
             return $next($request);
@@ -24,12 +25,18 @@ class VerifyTurnstile
             return $request->attributes->set('turnstile_status', TurnstileService::STATUS_BYPASSED) ? $next($request) : $next($request);
         }
 
+        if ($context === 'contact' && ! $enforceContact) {
+            $request->attributes->set('turnstile_status', TurnstileService::STATUS_BYPASSED);
+
+            return $next($request);
+        }
+
         $service = TurnstileService::make();
         $token = $request->input('cf-turnstile-response');
         $ip = $request->ip();
 
         $result = $service->validateToken($token, $ip);
-        
+
         $request->attributes->set('turnstile_status', $result['status']);
 
         if ($result['status'] === TurnstileService::STATUS_SUCCESS || $result['status'] === TurnstileService::STATUS_BYPASSED) {
@@ -37,12 +44,14 @@ class VerifyTurnstile
         }
 
         if ($result['status'] === TurnstileService::STATUS_TIMEOUT) {
-            if ($context === 'checkout') {
-                Log::warning('Turnstile timeout during checkout. Failing OPEN temporarily.', ['ip' => $ip]);
+            if ($context === 'checkout' || $context === 'contact') {
+                Log::warning("Turnstile timeout during {$context}. Failing OPEN temporarily.", ['ip' => $ip]);
+
                 return $next($request);
             }
             // Auth fails CLOSED
             Log::warning('Turnstile timeout during auth. Failing CLOSED.', ['ip' => $ip]);
+
             return $this->reject($request, 'Security verification service is temporarily unavailable. Please try again later.');
         }
 

@@ -77,7 +77,7 @@ new class extends Component
             x-on:keydown.escape.window="open = false"
             class="fixed inset-0 z-[80] flex items-center justify-center p-4"
         >
-            <div x-transition.opacity @click="open = false" class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm" aria-hidden="true"></div>
+            <div x-transition.opacity @click="open = false" class="absolute inset-0 bg-zinc-900/45" aria-hidden="true"></div>
 
             <div
                 x-transition

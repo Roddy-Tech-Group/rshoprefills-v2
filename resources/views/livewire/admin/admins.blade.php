@@ -217,7 +217,7 @@ class extends Component {
                                     <button
                                         wire:click="edit({{ $admin->id }})"
                                         type="button"
-                                        class="rounded-[10px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25"
+                                        class="rounded-[5px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25"
                                     >Edit</button>
                                 </td>
                             </tr>

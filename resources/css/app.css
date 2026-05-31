@@ -109,9 +109,11 @@ html.dark .nav-item-active svg {
 /* The active class also carries `bg-blue-50` for light mode. In dark mode that
    utility is globally remapped to navy (#15273f) further down the stylesheet,
    which wins over the inline `dark:bg-black` utility due to source order. Pin
-   the active background to pure black here so the dark sidebar reads correctly. */
+   the active background to a deep navy here — slightly darker than the
+   sidebar surface so the active state still pops, but tinted toward the
+   brand palette instead of stark pure black. */
 html.dark .nav-item-active {
-    background-color: #000000 !important;
+    background-color: #0a1729 !important;
 }
 
 /* Inset row dividers — used across every admin list so the divider line
@@ -146,8 +148,19 @@ html.dark .divide-inset > *:not(:last-child)::after {
 .admin-table {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0;
+    /* Vertical gap between rows so the blue header pill doesn't sit flush
+       against the first data row, and so consecutive body rows get a tiny
+       breathing room. Horizontal stays 0 so adjacent cells in the same row
+       remain visually connected. */
+    border-spacing: 0 6px;
 }
+/* Pull the table up by the leading border-spacing so the first row still
+   aligns with the wrapper's top padding (otherwise the 6px row gap stacks
+   on top of the p-3 wrapper and the whole table looks misaligned). */
+.admin-table thead tr th {
+    padding-top: 0.75rem;
+}
+.admin-table { margin-top: -6px; margin-bottom: -6px; }
 .admin-table thead th {
     background-color: rgb(239 246 255);            /* blue-50 */
     color: rgb(29 78 216);                          /* blue-700 */
@@ -685,20 +698,20 @@ select:focus[data-flux-control] {
 }
 /* PNG coin icons (BNB, LTC) can't be recoloured by CSS — sit them on a light
    disc so a dark logo stays visible against the dark surface. */
-.dark img[src*="BNB.png"],
-.dark img[src*="LTC.png"] {
+.dark img[src*="BNB.webp"],
+.dark img[src*="LTC.webp"] {
     background-color: #f4f4f5;
     border-radius: 9999px;
 }
-/* referals.png is a monochrome dark icon PNG — the SVG invert above misses
+/* referals.webp is a monochrome dark icon PNG — the SVG invert above misses
    PNGs, so invert it to white explicitly for the dark surface. */
-.dark img[src*="referals.png"] {
+.dark img[src*="referals.webp"] {
     filter: brightness(0) invert(1) !important;
 }
 /* RShopRefills brand logo PNG renders as dark wordmark on transparent — flip it
    to white in dark mode so it reads on the navy chrome (nav, footer, auth, admin
    sidebar). */
-.dark img[src*="Rshoprefillslogo.png"] {
+.dark img[src*="Rshoprefillslogo.webp"] {
     filter: brightness(0) invert(1) !important;
 }
 

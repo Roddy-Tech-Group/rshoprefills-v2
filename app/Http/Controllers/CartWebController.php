@@ -9,6 +9,7 @@ use App\Domain\Wallet\Services\CurrencyRateService;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\FeatureFlag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -50,6 +51,15 @@ class CartWebController extends Controller
 
     public function add(Request $request)
     {
+        // features.guest_cart_enabled kill-switch. Off = guests get a 401
+        // and must sign in before adding to cart. Authed users always pass.
+        if (! $request->user() && ! FeatureFlag::on('guest_cart')) {
+            return response()->json([
+                'message' => 'Please sign in to add items to your cart.',
+                'auth_required' => true,
+            ], 401);
+        }
+
         $data = $request->validate([
             'product_variant_id' => ['required', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1'],

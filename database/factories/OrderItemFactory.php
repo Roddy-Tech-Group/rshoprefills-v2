@@ -2,7 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,8 +21,8 @@ class OrderItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'order_id' => \App\Models\Order::factory(),
-            'product_id' => \App\Models\Product::factory(),
+            'order_id' => Order::factory(),
+            'product_id' => Product::factory(),
             'provider_name' => 'test_provider',
             'quantity' => 1,
             'display_currency' => 'USD',
@@ -27,7 +30,7 @@ class OrderItemFactory extends Factory
             'provider_cost_usd' => 8.00,
             'markup_amount' => 2.00,
             'subtotal_amount' => 10.00,
-            'fulfillment_status' => \App\Domain\Fulfillment\Enums\FulfillmentStatus::Pending,
+            'fulfillment_status' => FulfillmentStatus::Pending,
         ];
     }
 }

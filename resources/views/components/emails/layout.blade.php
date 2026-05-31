@@ -45,7 +45,7 @@
                     {{-- Logo header --}}
                     <tr>
                         <td align="center" class="em-pad" style="padding:32px 40px 4px;">
-                            <img src="{{ asset('assets/Rshoprefillslogo.png') }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block;">
+                            <img src="{{ asset('assets/Rshoprefillslogo.webp') }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block;">
                         </td>
                     </tr>
 
@@ -62,10 +62,10 @@
                     <tr>
                         <td class="em-pad" style="padding:24px 40px 8px; text-align:center; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; color:#71717a; font-size:12px; line-height:1.7;">
                             <p style="margin:0 0 12px;">
-                                <a href="https://facebook.com/rshoprefills" style="color:#2563eb; text-decoration:none; margin:0 7px;">Facebook</a>
-                                <a href="https://x.com/rshoprefills" style="color:#2563eb; text-decoration:none; margin:0 7px;">X</a>
-                                <a href="https://tiktok.com/@rshoprefills" style="color:#2563eb; text-decoration:none; margin:0 7px;">TikTok</a>
-                                <a href="https://instagram.com/rshoprefills" style="color:#2563eb; text-decoration:none; margin:0 7px;">Instagram</a>
+                                <a href="{{ \App\Models\SiteSetting::get('social.facebook', 'https://facebook.com/rshoprefills') }}" style="color:#2563eb; text-decoration:none; margin:0 7px;">Facebook</a>
+                                <a href="{{ \App\Models\SiteSetting::get('social.x', 'https://x.com/rshoprefills') }}" style="color:#2563eb; text-decoration:none; margin:0 7px;">X</a>
+                                <a href="{{ \App\Models\SiteSetting::get('social.tiktok', 'https://tiktok.com/@rshoprefills') }}" style="color:#2563eb; text-decoration:none; margin:0 7px;">TikTok</a>
+                                <a href="{{ \App\Models\SiteSetting::get('social.instagram', 'https://instagram.com/rshoprefills') }}" style="color:#2563eb; text-decoration:none; margin:0 7px;">Instagram</a>
                             </p>
                             <p style="margin:0 0 6px; color:#a1a1aa;">RshopRefills, your digital marketplace for gift cards, eSIMs, top-ups and bills.</p>
                             <p style="margin:0 0 6px;">Need a hand? <a href="https://wa.me/237676700173" style="color:#2563eb; text-decoration:none;">Chat with support</a></p>

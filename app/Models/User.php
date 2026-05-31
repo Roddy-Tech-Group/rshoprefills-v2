@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Shared\Enums\Currency;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -160,7 +161,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $walletCurrency = $this->wallets()->orderBy('id')->value('currency');
 
         // Eloquent returns the Enum instance, so use ->value if it's an Enum, or cast if string
-        $currencyString = $walletCurrency instanceof \App\Domain\Shared\Enums\Currency ? $walletCurrency->value : (string) $walletCurrency;
+        $currencyString = $walletCurrency instanceof Currency ? $walletCurrency->value : (string) $walletCurrency;
 
         return $currencyString ? strtoupper($currencyString) : 'USD';
     }

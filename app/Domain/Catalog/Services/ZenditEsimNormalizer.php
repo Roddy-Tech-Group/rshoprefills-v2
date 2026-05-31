@@ -39,21 +39,26 @@ class ZenditEsimNormalizer implements CatalogNormalizerInterface
         $productSlug = Str::slug("esim-{$countryCode}-{$regionName}");
         $productName = $countryCode === 'WW' ? 'Global Data eSIM' : "{$regionName} Data eSIM";
 
+        // Preserve admin-arranged categories on existing rows so the 6h re-sync
+        // doesn't wipe manual organisation.
+        $existing = Product::where('slug', $productSlug)->first();
+
         $product = Product::updateOrCreate(
             [
                 'provider_name' => $providerName,
                 'slug' => $productSlug,
             ],
             [
-                'category_id' => $category->id,
-                'subcategory_id' => $subcategory->id,
-                'country_code' => $countryCode,
+                'category_id' => $existing?->category_id ?? $category->id,
+                'subcategory_id' => $existing?->subcategory_id ?? $subcategory->id,
+                // country_code and name are admin-editable; preserve any edits.
+                'country_code' => $existing?->country_code ?? $countryCode,
                 'currency_code' => $currencyCode,
-                'name' => $productName,
+                'name' => $existing?->name ?? $productName,
                 'description' => "High-speed data eSIM for {$regionName}. Scan QR code to activate.",
                 'redeem_instructions' => 'Go to Settings > Cellular > Add Cellular Plan and scan the QR Code.',
                 // Keep existing logo if we already processed it, otherwise take the raw one
-                'logo_url' => Product::where('slug', $productSlug)->value('logo_url') ?? ($rawItem['logoUrl'] ?? null),
+                'logo_url' => $existing?->logo_url ?? ($rawItem['logoUrl'] ?? null),
             ]
         );
 
@@ -92,7 +97,9 @@ class ZenditEsimNormalizer implements CatalogNormalizerInterface
             ['provider_offer_id' => $offerId],
             [
                 'product_id' => $product->id,
-                'subcategory_id' => $subcategory->id,
+                // Mirror whatever subcategory the product is currently on so an
+                // admin-moved product propagates to its variants too.
+                'subcategory_id' => $product->subcategory_id,
                 'sku' => $rawItem['sku'] ?? $offerId,
                 'currency' => $currencyCode,
                 'face_value' => $faceValue,

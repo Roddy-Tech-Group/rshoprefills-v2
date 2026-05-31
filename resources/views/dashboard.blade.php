@@ -44,8 +44,8 @@
             'USDT' => 'USDT.svg',
             'BUSD' => 'USDT.svg',
             'SOL'  => 'SOLANA.svg',
-            'BNB'  => 'BNB.png',
-            'LTC'  => 'LTC.png',
+            'BNB'  => 'BNB.webp',
+            'LTC'  => 'LTC.webp',
             default => null,
         };
     };
@@ -142,6 +142,62 @@
                     @endforeach
                 </div>
             @endif
+        </div>
+
+        {{-- ─────────────────────────────────────────────────────── --}}
+        {{-- FLOATING MINI CHROME (mobile only)                      --}}
+        {{-- Appears once the user scrolls past the blue hero so they --}}
+        {{-- always have wallet balance + fast top-up while browsing. --}}
+        {{-- Fixed-positioned, so it escapes the hero's stacking ctx. --}}
+        {{-- ─────────────────────────────────────────────────────── --}}
+        <div
+            x-data="{
+                scrolled: false,
+                wallets: @js($walletsPayload),
+                get active() { return this.wallets[this.$store.wallet.active] || this.wallets[0]; },
+                onScroll() { this.scrolled = window.scrollY > 140; },
+                init() {
+                    this.onScroll();
+                    window.addEventListener('scroll', () => this.onScroll(), { passive: true });
+                },
+            }"
+            x-show="scrolled"
+            x-cloak
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-2"
+            class="pointer-events-none fixed inset-x-0 z-[55] flex items-center justify-between px-3 lg:hidden"
+            style="top: max(0.5rem, env(safe-area-inset-top));"
+            aria-hidden="false"
+        >
+            {{-- Left: wallet balance chip — glass pill, taps open the wallet page.
+                 Dark glass on light mode so it reads on the pale page bg; the
+                 lighter translucent variant kicks in for dark mode. --}}
+            <a
+                href="{{ route('dashboard.wallet') }}"
+                wire:navigate
+                class="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#0a1729]/80 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 ring-1 ring-white/15 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-[#0a1729]/90 dark:bg-white/15 dark:ring-white/30 dark:hover:bg-white/25"
+            >
+                <img src="{{ asset('assets/' . rawurlencode('mobile wallet.webp')) }}" alt="" class="h-5 w-5 shrink-0 object-contain invert dark:invert-0" loading="lazy">
+                <span class="max-w-[140px] truncate" x-text="active.formatted">$0.00</span>
+            </a>
+
+            {{-- Right: floating "+" — glass circle, dispatches open event to the
+                 active wallet's fund modal so users can top up without scrolling.
+                 Same dark/light glass treatment as the wallet chip. --}}
+            <button
+                type="button"
+                @click="$dispatch('open-fund-wallet', { code: active.code })"
+                aria-label="Top up wallet"
+                class="pointer-events-auto inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0a1729]/80 text-white shadow-lg shadow-blue-900/30 ring-1 ring-white/15 backdrop-blur-xl backdrop-saturate-150 transition-transform hover:bg-[#0a1729]/90 active:scale-95 dark:bg-white/15 dark:ring-white/30 dark:hover:bg-white/25"
+            >
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                </svg>
+            </button>
         </div>
     </x-slot>
 

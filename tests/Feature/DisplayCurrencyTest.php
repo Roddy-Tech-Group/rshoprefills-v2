@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Shared\Enums\Currency;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +22,7 @@ class DisplayCurrencyTest extends TestCase
     public function test_user_without_preference_falls_back_to_first_wallet_currency(): void
     {
         $user = User::factory()->create(['display_currency' => null]);
-        Wallet::factory()->create(['user_id' => $user->id, 'currency' => \App\Domain\Shared\Enums\Currency::GHS, 'balance' => 0]);
+        Wallet::factory()->create(['user_id' => $user->id, 'currency' => Currency::GHS, 'balance' => 0]);
 
         $this->assertSame('GHS', $user->displayCurrency());
     }

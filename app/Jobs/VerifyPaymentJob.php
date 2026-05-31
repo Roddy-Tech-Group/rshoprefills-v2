@@ -51,8 +51,9 @@ class VerifyPaymentJob implements ShouldQueue
                     Log::warning("VerifyPaymentJob: Duplicate payment detected. Order {$order->id} is already Paid. Dispatching refund for attempt {$attempt->id}");
                     $attempt->payment_status = PaymentStatus::Paid;
                     $attempt->save();
-                    
-                    \App\Jobs\RefundPaymentJob::dispatch($attempt);
+
+                    RefundPaymentJob::dispatch($attempt);
+
                     return;
                 }
 

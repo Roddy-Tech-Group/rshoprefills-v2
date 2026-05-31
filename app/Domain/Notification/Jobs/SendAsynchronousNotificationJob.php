@@ -5,17 +5,17 @@ namespace App\Domain\Notification\Jobs;
 use App\Domain\Notification\Channels\DatabaseChannel;
 use App\Domain\Notification\Channels\EmailChannel;
 use App\Domain\Notification\DTOs\NotificationPayload;
+use App\Domain\Notification\Enums\DeliveryStatus;
 use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Notification\Enums\NotificationPriority;
-use App\Domain\Notification\Enums\DeliveryStatus;
-use App\Models\User;
 use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
 
 class SendAsynchronousNotificationJob implements ShouldQueue
@@ -35,7 +35,7 @@ class SendAsynchronousNotificationJob implements ShouldQueue
     /**
      * Create a new job instance.
      *
-     * @param array<NotificationChannel> $channels
+     * @param  array<NotificationChannel>  $channels
      */
     public function __construct(
         private readonly User $user,
@@ -70,6 +70,7 @@ class SendAsynchronousNotificationJob implements ShouldQueue
                 Log::info('Duplicate notification blocked by idempotency key.', [
                     'key' => $this->idempotencyKey,
                 ]);
+
                 return;
             }
         }

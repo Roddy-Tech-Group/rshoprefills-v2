@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property int $id
@@ -13,8 +14,8 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $provider
  * @property string $source
  * @property bool $is_active
- * @property \Carbon\Carbon $fetched_at
- * @property \Carbon\Carbon|null $expires_at
+ * @property Carbon $fetched_at
+ * @property Carbon|null $expires_at
  */
 class ExchangeRate extends Model
 {

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Models\PaymentAttempt;
 use Illuminate\Bus\Queueable;
@@ -16,6 +17,7 @@ class RefundPaymentJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $backoff = 30;
 
     public function __construct(protected PaymentAttempt $attempt) {}
@@ -25,20 +27,20 @@ class RefundPaymentJob implements ShouldQueue
         Log::info("RefundPaymentJob: Dispatching refund for duplicate/excess payment attempt {$this->attempt->id}");
 
         $provider = $gatewayFactory->getProvider($this->attempt->gateway);
-        
+
         try {
             $success = $provider->refundPayment($this->attempt, (float) $this->attempt->amount);
 
             if ($success) {
                 Log::info("RefundPaymentJob: Successfully refunded attempt {$this->attempt->id}");
-                $this->attempt->payment_status = \App\Domain\Payment\Enums\PaymentStatus::Refunded;
+                $this->attempt->payment_status = PaymentStatus::Refunded;
                 $this->attempt->save();
             } else {
                 Log::error("RefundPaymentJob: Provider returned false for refunding attempt {$this->attempt->id}");
-                $this->fail(new \Exception("Provider returned false for refund"));
+                $this->fail(new \Exception('Provider returned false for refund'));
             }
         } catch (\Exception $e) {
-            Log::error("RefundPaymentJob: Exception while refunding attempt {$this->attempt->id}: " . $e->getMessage());
+            Log::error("RefundPaymentJob: Exception while refunding attempt {$this->attempt->id}: ".$e->getMessage());
             throw $e;
         }
     }

@@ -130,13 +130,13 @@ class extends Component {
                 @endphp
                 <div wire:key="order-{{ $order->id }}">
                     {{-- Header (always visible). Toggling sets openId to this order or null. --}}
-                    <button type="button" @click="openId = openId === {{ $order->id }} ? null : {{ $order->id }}" class="flex w-full items-center gap-3 px-5 pt-4 text-left">
+                    <button type="button" @click="openId = openId === @js((string) $order->id) ? null : @js((string) $order->id)" class="flex w-full items-center gap-3 px-5 pt-4 text-left">
                         <span class="min-w-0 flex-1 truncate text-sm text-zinc-400">
                             {{ ($order->placed_at ?? $order->created_at)->format('d/m/Y') }}
                             <span class="px-1">|</span>
                             <span class="text-zinc-500">{{ $order->id }}</span>
                         </span>
-                        <svg class="h-5 w-5 shrink-0 text-zinc-500 transition-transform duration-200" :class="openId === {{ $order->id }} && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <svg class="h-5 w-5 shrink-0 text-zinc-500 transition-transform duration-200" :class="openId === @js((string) $order->id) && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
@@ -184,7 +184,7 @@ class extends Component {
                     </div>
 
                     {{-- Expanded detail --}}
-                    <div x-show="openId === {{ $order->id }}" x-collapse x-cloak class="px-5 pb-5">
+                    <div x-show="openId === @js((string) $order->id)" style="display: none;" class="px-5 pb-5">
 
                         {{-- Meta rows --}}
                         <dl class="space-y-3 text-sm">
@@ -228,9 +228,8 @@ class extends Component {
                         </dl>
 
                         <a
-                            href="https://wa.me/237676700173?text={{ rawurlencode('Hi Rshoprefill, I need help with order ' . $order->id) }}"
-                            target="_blank"
-                            rel="noopener"
+                            href="{{ route('shop.contact') }}?subject={{ rawurlencode('Help with order ' . $order->id) }}"
+                            wire:navigate
                             class="mt-4 inline-flex items-center gap-2 text-sm text-zinc-600 underline underline-offset-2 transition-colors hover:text-blue-700"
                         >
                             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">

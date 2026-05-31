@@ -63,15 +63,16 @@
         {{-- Transform-based carousel viewport (overflow-hidden). The inner
              carousel-list ul is translated via translate3d from JS, exactly
              like the home brand rows, so the slide is GPU-composited and feels
-             identical across the homepage. py-2 keeps the card ring/shadow
-             from being clipped. --}}
+             identical across the homepage. py-6 gives the card ring/shadow
+             room to breathe so the top and bottom edges of each card aren't
+             clipped by the overflow-hidden viewport. --}}
         <div
             x-ref="track"
             @pointerdown="onDragStart($event)"
             @pointermove="onDragMove($event)"
             @pointerup="onDragEnd($event)"
             @pointercancel="onDragEnd($event)"
-            class="overflow-hidden py-2 touch-pan-y select-none"
+            class="overflow-x-hidden overflow-y-visible py-6 touch-pan-y select-none"
             style="cursor: grab;"
         >
             <div x-ref="list" class="carousel-list flex w-max gap-4 sm:gap-5">
@@ -206,7 +207,7 @@
             x-cloak
             x-transition.opacity.duration.200ms
             aria-hidden="true"
-            class="skeleton-stagger-fast pointer-events-none absolute inset-0 z-10 flex gap-4 overflow-hidden bg-zinc-100 px-4 py-2 sm:gap-5 sm:px-6 lg:px-8"
+            class="skeleton-stagger-fast pointer-events-none absolute inset-0 z-10 flex gap-4 overflow-hidden bg-zinc-100 px-4 py-6 sm:gap-5 sm:px-6 lg:px-8"
         >
             @for ($i = 0; $i < 6; $i++)
                 <div class="flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm" style="--i: {{ $i }}">

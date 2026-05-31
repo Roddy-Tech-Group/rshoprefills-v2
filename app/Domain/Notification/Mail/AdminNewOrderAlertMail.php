@@ -20,8 +20,8 @@ class AdminNewOrderAlertMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $subject = $this->isLargeTransaction 
-            ? 'CRITICAL ALERT: Large order placed!' 
+        $subject = $this->isLargeTransaction
+            ? 'CRITICAL ALERT: Large order placed!'
             : 'Notification: New digital order placed!';
 
         return new Envelope(

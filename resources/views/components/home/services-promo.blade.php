@@ -22,16 +22,22 @@
     {{-- Ambient looping background — YouTube embed (unlisted). The wrapper
          covers the section; the iframe is sized 16:9 then scaled with
          object-cover semantics via min-width/min-height so it always fills
-         the panel without letterboxing. autoplay+mute+loop+controls=0 is
-         what gives it the "ambient cinema" feel. --}}
-    <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+         the panel without letterboxing. A transparent click-shield sits ON
+         TOP of the iframe to fully block hover/click so YouTube never pops
+         its overlay controls (controls=0 alone isn't enough — Chrome still
+         renders hover buttons over the player surface). --}}
+    <div class="absolute inset-0 overflow-hidden" aria-hidden="true">
         <iframe
             class="absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[100vw] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2"
-            src="https://www.youtube-nocookie.com/embed/1DgJ-THcf-Y?autoplay=1&mute=1&loop=1&playlist=1DgJ-THcf-Y&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3"
+            src="https://www.youtube-nocookie.com/embed/1DgJ-THcf-Y?autoplay=1&mute=1&loop=1&playlist=1DgJ-THcf-Y&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0&cc_load_policy=0&hd=1&vq=hd1080"
             title="Background video"
             frameborder="0"
             allow="autoplay; encrypted-media"
         ></iframe>
+        {{-- Transparent shield — captures every mouse / touch event so the
+             YouTube player below never receives hover state. Same trick used
+             by every "ambient video background" pattern online. --}}
+        <div class="absolute inset-0 z-10"></div>
     </div>
 
     {{-- Pure-black overlay so the copy stays readable on every frame of the
@@ -40,7 +46,7 @@
     <div class="pointer-events-none absolute inset-0 bg-black/70" aria-hidden="true"></div>
     <div class="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40" aria-hidden="true"></div>
 
-    <div class="relative grid gap-10 px-6 py-10 sm:px-10 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-14 lg:py-16">
+    <div class="relative z-20 grid gap-10 px-6 py-10 sm:px-10 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-14 lg:py-16">
 
         {{-- Left: section heading + pitch copy --}}
         <div class="max-w-xl">
@@ -68,24 +74,45 @@
                     <div
                         x-data="{
                             copied: false,
-                            copy() {
-                                const url = '{{ $referralUrl }}';
+                            async copy() {
+                                const url = this.$refs.linkAnchor?.href || this.$refs.linkAnchor?.dataset.url || '';
+                                if (! url) { return; }
                                 const done = () => { this.copied = true; setTimeout(() => this.copied = false, 1800); };
                                 if (navigator.clipboard?.writeText) {
-                                    navigator.clipboard.writeText(url).then(done);
-                                } else {
-                                    const ta = document.createElement('textarea');
-                                    ta.value = url; document.body.appendChild(ta); ta.select();
-                                    try { document.execCommand('copy'); done(); } finally { document.body.removeChild(ta); }
+                                    try { await navigator.clipboard.writeText(url); done(); return; }
+                                    catch (e) { /* fall through to execCommand */ }
                                 }
+                                const ta = document.createElement('textarea');
+                                ta.value = url;
+                                ta.setAttribute('readonly', '');
+                                ta.style.position = 'fixed';
+                                ta.style.top = '0';
+                                ta.style.left = '0';
+                                ta.style.opacity = '0';
+                                document.body.appendChild(ta);
+                                ta.focus();
+                                ta.select();
+                                ta.setSelectionRange(0, ta.value.length);
+                                let ok = false;
+                                try { ok = document.execCommand('copy'); } catch (e) {}
+                                document.body.removeChild(ta);
+                                if (ok) { done(); }
+                                else { window.prompt('Copy this referral link manually:', url); }
                             },
                         }"
-                        class="w-full"
+                        class="w-full sm:w-auto"
                     >
-                        <div class="flex items-center gap-2 rounded-[25px] px-2 py-2 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150"
+                        <div class="inline-flex w-full items-center gap-2 rounded-[25px] px-2 py-2 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150 sm:w-auto"
                              style="background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);"
                         >
-                            <span class="min-w-0 flex-1 truncate pl-3 font-mono text-xs text-white sm:text-sm">{{ $referralUrl }}</span>
+                            <a
+                                x-ref="linkAnchor"
+                                href="{{ $referralUrl }}"
+                                data-url="{{ $referralUrl }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="min-w-0 flex-1 truncate pl-3 font-mono text-xs text-blue-300 underline-offset-4 transition-colors hover:text-blue-200 hover:underline sm:flex-initial sm:text-sm"
+                            >{{ $referralUrl }}</a>
                             <button
                                 type="button"
                                 @click="copy()"
@@ -117,11 +144,11 @@
                     style="background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);"
                 >
                     <p class="text-sm font-semibold text-white">Set up your account to start earning RCoin</p>
-                    <a
-                        href="{{ route('register') }}"
-                        wire:navigate
+                    <button
+                        type="button"
+                        @click="$dispatch('open-auth-modal', { mode: 'register' })"
                         class="mt-1 inline-block text-xs font-medium text-blue-300 underline underline-offset-2 hover:text-blue-200"
-                    >Create a free account</a>
+                    >Create a free account</button>
                 </div>
             @endauth
 

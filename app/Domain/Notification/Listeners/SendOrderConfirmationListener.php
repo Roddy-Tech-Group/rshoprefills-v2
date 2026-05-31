@@ -2,14 +2,14 @@
 
 namespace App\Domain\Notification\Listeners;
 
-use App\Domain\Order\Events\OrderPlaced;
-use App\Domain\Order\Events\RefundIssued;
+use App\Domain\Notification\Mail\AdminNewOrderAlertMail;
 use App\Domain\Notification\Mail\OrderPlacedMail;
 use App\Domain\Notification\Mail\RefundProcessedMail;
-use App\Domain\Notification\Mail\AdminNewOrderAlertMail;
 use App\Domain\Notification\Services\NotificationDispatcher;
+use App\Domain\Order\Events\OrderPlaced;
+use App\Domain\Order\Events\RefundIssued;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SendOrderConfirmationListener
 {
@@ -44,14 +44,14 @@ class SendOrderConfirmationListener
             ['email' => $adminEmail],
             [
                 'name' => 'System Admin',
-                'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                'password' => bcrypt(Str::random(16)),
             ]
         );
 
         $this->dispatcher->dispatch(
             user: $adminUser,
             title: $isLargeTransaction ? 'CRITICAL: Large Transaction Alert' : 'New Order Notification',
-            message: $isLargeTransaction 
+            message: $isLargeTransaction
                 ? "An exceptionally large order #{$order->order_number} of {$order->total_amount} {$order->currency->value} was placed."
                 : "A new order #{$order->order_number} was placed.",
             category: 'security',

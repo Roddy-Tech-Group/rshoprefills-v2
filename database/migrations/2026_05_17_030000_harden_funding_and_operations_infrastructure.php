@@ -32,7 +32,7 @@ return new class extends Migration
             $table->uuid('order_id')->nullable()->change();
             $table->string('payable_type')->nullable()->after('user_id');
             $table->string('payable_id', 50)->nullable()->after('payable_type');
-            
+
             $table->index(['payable_type', 'payable_id']);
         });
 

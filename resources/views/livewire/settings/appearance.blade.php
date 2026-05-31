@@ -33,9 +33,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             class="grid grid-cols-3 gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#0c1a36]"
         >
             @foreach ([
-                ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.png'],
-                ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.png'],
-                ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.png'],
+                ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.webp'],
+                ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.webp'],
+                ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.webp'],
             ] as $opt)
                 <button
                     type="button"

@@ -2,29 +2,33 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Shared\Enums\Currency;
+use App\Domain\Shared\Enums\TransactionCategory;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Referral;
+use App\Models\WalletTransaction;
+use Illuminate\Support\Facades\DB;
 
 class AdminRewardAnalyticsController extends Controller
 {
     public function metrics()
     {
-        $totalMinted = \App\Models\WalletTransaction::where('currency', \App\Domain\Shared\Enums\Currency::RCOIN->value)
+        $totalMinted = WalletTransaction::where('currency', Currency::RCOIN->value)
             ->whereIn('transaction_category', [
-                \App\Domain\Shared\Enums\TransactionCategory::RewardCashback->value,
-                \App\Domain\Shared\Enums\TransactionCategory::RewardReferral->value
+                TransactionCategory::RewardCashback->value,
+                TransactionCategory::RewardReferral->value,
             ])
             ->sum('amount');
 
-        $totalRedeemed = \App\Models\WalletTransaction::where('currency', \App\Domain\Shared\Enums\Currency::RCOIN->value)
-            ->where('transaction_category', \App\Domain\Shared\Enums\TransactionCategory::RewardRedemption->value)
-            ->sum('amount');
-            
-        $totalReversed = \App\Models\WalletTransaction::where('currency', \App\Domain\Shared\Enums\Currency::RCOIN->value)
-            ->where('transaction_category', \App\Domain\Shared\Enums\TransactionCategory::RewardReversal->value)
+        $totalRedeemed = WalletTransaction::where('currency', Currency::RCOIN->value)
+            ->where('transaction_category', TransactionCategory::RewardRedemption->value)
             ->sum('amount');
 
-        $topReferrers = \App\Models\Referral::select('referrer_id', \Illuminate\Support\Facades\DB::raw('COUNT(*) as total_referrals'), \Illuminate\Support\Facades\DB::raw('SUM(total_rewards_generated) as total_earned'))
+        $totalReversed = WalletTransaction::where('currency', Currency::RCOIN->value)
+            ->where('transaction_category', TransactionCategory::RewardReversal->value)
+            ->sum('amount');
+
+        $topReferrers = Referral::select('referrer_id', DB::raw('COUNT(*) as total_referrals'), DB::raw('SUM(total_rewards_generated) as total_earned'))
             ->groupBy('referrer_id')
             ->orderByDesc('total_earned')
             ->with('referrer:id,first_name,last_name,email')

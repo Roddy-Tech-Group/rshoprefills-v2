@@ -22,9 +22,9 @@
     // rawurlencode handles the spaces / mixed casing at render time. The
     // segmented + dropdown variants both consume this array.
     $themeChoices = [
-        ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.png'],
-        ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.png'],
-        ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.png'],
+        ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.webp'],
+        ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.webp'],
+        ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.webp'],
     ];
 @endphp
 
@@ -106,7 +106,7 @@
                  legible on whichever chrome it sits on. --}}
             <img
                 x-show="choice === 'light'"
-                src="{{ asset('assets/' . rawurlencode('Light mode respects theme.png')) }}"
+                src="{{ asset('assets/' . rawurlencode('Light mode respects theme.webp')) }}"
                 alt=""
                 class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
@@ -114,7 +114,7 @@
             <img
                 x-show="choice === 'dark'"
                 x-cloak
-                src="{{ asset('assets/' . rawurlencode('Dark mode respects light and dark mode.png')) }}"
+                src="{{ asset('assets/' . rawurlencode('Dark mode respects light and dark mode.webp')) }}"
                 alt=""
                 class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
@@ -122,7 +122,7 @@
             <img
                 x-show="choice === 'system'"
                 x-cloak
-                src="{{ asset('assets/' . rawurlencode('Auto Mode.png')) }}"
+                src="{{ asset('assets/' . rawurlencode('Auto Mode.webp')) }}"
                 alt=""
                 class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"

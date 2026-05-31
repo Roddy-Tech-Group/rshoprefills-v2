@@ -22,6 +22,7 @@ class Setting extends Model
     {
         return cache()->rememberForever("settings.{$key}", function () use ($key, $default) {
             $setting = static::where('key', $key)->first();
+
             return $setting ? $setting->value : $default;
         });
     }
@@ -29,7 +30,7 @@ class Setting extends Model
     /**
      * Set a setting value and clear its cache.
      */
-    public static function set(string $key, mixed $value, string $type = 'string', string $description = null): void
+    public static function set(string $key, mixed $value, string $type = 'string', ?string $description = null): void
     {
         static::updateOrCreate(
             ['key' => $key],

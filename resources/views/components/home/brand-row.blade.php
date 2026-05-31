@@ -10,6 +10,9 @@
     // single toggle button (next at start -> back once scrolled). Use for rows
     // that have more brands than fit in a single grid view.
     'carousel' => false,
+    // 'link' (default) renders an underlined "See all" text link. 'plus' swaps it
+    // for a small rounded "+" pill that matches the dashboard's see-more pattern.
+    'viewAllVariant' => 'link',
 ])
 
 @php
@@ -36,7 +39,12 @@
         tx: 0,
         maxTx: 0,
         savedDuration: '0.6s',
+        // dragArmed: pointerdown fired but threshold not yet crossed.
+        // dragging:  threshold crossed - we own the gesture, click is killed.
+        dragArmed: false,
         dragging: false,
+        dragTarget: null,
+        dragPointerId: null,
         dragStartX: 0,
         dragStartTx: 0,
         setup() {
@@ -75,30 +83,61 @@
         // Touch / pointer drag for mobile + trackpad. Disables the CSS
         // transition while dragging so the finger tracks 1:1, then re-enables
         // it on release and snaps to the nearest card boundary.
+        //
+        // A movement THRESHOLD (8px) gates the actual drag. Below that, the
+        // gesture is treated as a click - we do not capture the pointer,
+        // do not move the list, and do not snap on release. This is what
+        // makes the brand card links inside the carousel actually clickable
+        // (previously a 1-2px finger wiggle would shift the carousel and
+        // the click would land on a different element or be swallowed
+        // entirely by the pointer-capture call).
         onDragStart(e) {
             const list = this.$refs.list;
             if (! list) { return; }
-            this.dragging = true;
+            // Don't engage drag on right-clicks or middle-clicks.
+            if (e.button !== undefined && e.button !== 0) { return; }
+            this.dragArmed = true;
+            this.dragging = false;
+            this.dragTarget = e.currentTarget;
+            this.dragPointerId = e.pointerId;
             this.dragStartX = e.clientX;
             this.dragStartTx = this.tx;
-            list.style.transitionDuration = '0s';
-            try { e.currentTarget.setPointerCapture(e.pointerId); } catch (_) {}
         },
         onDragMove(e) {
-            if (! this.dragging) { return; }
+            if (! this.dragArmed) { return; }
             const list = this.$refs.list;
             if (! list) { return; }
             const delta = e.clientX - this.dragStartX;
+
+            // Below the threshold this is still a click candidate - bail out
+            // without touching the list so the underlying <a> can receive
+            // the click cleanly on pointerup.
+            if (! this.dragging && Math.abs(delta) < 8) { return; }
+
+            // Crossed the threshold: commit to a drag from here on.
+            if (! this.dragging) {
+                this.dragging = true;
+                list.style.transitionDuration = '0s';
+                try { this.dragTarget?.setPointerCapture(this.dragPointerId); } catch (_) {}
+            }
+
             const raw = this.dragStartTx + delta;
             // Soft clamp so the user feels the edges instead of hitting a wall.
             const next = raw > 0 ? raw * 0.35 : (raw < this.maxTx ? this.maxTx + (raw - this.maxTx) * 0.35 : raw);
             list.style.transform = `translate3d(${next}px, 0, 0)`;
         },
         onDragEnd(e) {
-            if (! this.dragging) { return; }
+            if (! this.dragArmed) { return; }
+            const wasDragging = this.dragging;
+            this.dragArmed = false;
+            this.dragging = false;
+
+            // No drag actually happened - leave everything alone so the
+            // click event that follows pointerup hits its <a> target.
+            if (! wasDragging) { return; }
+
             const list = this.$refs.list;
             if (! list) { return; }
-            this.dragging = false;
             list.style.transitionDuration = this.savedDuration;
             const delta = e.clientX - this.dragStartX;
             const step  = this.cardW + this.gap;
@@ -125,9 +164,17 @@
         </div>
 
         <div class="flex shrink-0 items-center gap-2">
-            <a href="{{ $viewAllHref }}" class="shrink-0 text-base font-medium text-zinc-700 underline underline-offset-4 transition-colors hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white">
-                See all
-            </a>
+            @if ($viewAllVariant === 'plus')
+                <a href="{{ $viewAllHref }}" wire:navigate aria-label="See more {{ $title }}" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                </a>
+            @else
+                <a href="{{ $viewAllHref }}" class="shrink-0 text-base font-medium text-zinc-700 underline underline-offset-4 transition-colors hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white">
+                    See all
+                </a>
+            @endif
 
             @if ($carousel)
                 <button

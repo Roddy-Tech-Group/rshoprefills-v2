@@ -54,8 +54,8 @@ class AdminContentSectionTest extends TestCase
         $this->get(route('admin.content.reviews'))
             ->assertOk()
             ->assertSee('Reviews')
-            ->assertSee('Harshit Garg')
-            ->assertSeeText('4.4 / 5');
+            ->assertSee('Adaeze O.')
+            ->assertSeeText('4.5 / 5');
     }
 
     public function test_faq_admin_page_lists_seeded_questions_grouped_by_topic(): void

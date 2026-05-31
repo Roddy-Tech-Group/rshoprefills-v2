@@ -3,7 +3,6 @@
 namespace App\Domain\Notification\Services;
 
 use App\Models\NewsletterSubscriber;
-use Illuminate\Support\Carbon;
 
 class NotificationService
 {
@@ -13,7 +12,7 @@ class NotificationService
     public function subscribeNewsletter(string $email, ?string $source = null): NewsletterSubscriber
     {
         $subscriber = NewsletterSubscriber::firstOrNew(['email' => $email]);
-        
+
         $subscriber->status = 'active';
         $subscriber->subscribed_at = now();
         $subscriber->unsubscribed_at = null;

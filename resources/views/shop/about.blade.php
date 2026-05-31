@@ -89,7 +89,7 @@
                     </div>
                 @endforeach
                 </dl>
-                <img src="{{ $img('about 2.png') }}" alt="" class="hidden h-24 w-auto shrink-0 lg:block" loading="lazy">
+                <img src="{{ $img('about 2.webp') }}" alt="" class="hidden h-24 w-auto shrink-0 lg:block" loading="lazy">
             </div>
         </div>
     </section>
@@ -125,7 +125,7 @@
 
                 {{-- Right: image (full-bleed photo filling the panel) --}}
                 <div class="relative order-first bg-blue-50 lg:order-none" style="min-height: 20rem;">
-                    <img src="{{ $img('About Us.jpg') }}" alt="The people behind RshopRefills" class="object-cover" style="position: absolute; inset: 0; height: 100%; width: 100%;" loading="lazy">
+                    <img src="{{ $img('About Us.webp') }}" alt="The people behind RshopRefills" class="object-cover" style="position: absolute; inset: 0; height: 100%; width: 100%;" loading="lazy">
                 </div>
             </div>
         </div>

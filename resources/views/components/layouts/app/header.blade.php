@@ -1,40 +1,23 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="csrf-token" content="{{ csrf_token() }}" />
-        <title>{{ $title ?? 'RshopRefills' }}</title>
+        @include('partials.head')
+
+        {{-- Storefront-only head additions (description, extra display font,
+             Turnstile loader). Everything shared with dashboard + admin
+             (theme engine, page transition, vite, scroll-lock, dark-mode
+             meta + html bg) lives in partials/head so there is one source
+             of truth for the theme and no race between competing layouts. --}}
         <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:700|urbanist:800" rel="stylesheet" />
 
-        <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ asset('assets/PWAicon.png') }}">
-
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700|urbanist:800" rel="stylesheet" />
-
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-        {{-- Page transition — the incoming page slides up from the bottom on navigation. --}}
-        <style>
-            main { transition: opacity 700ms ease, transform 1200ms cubic-bezier(0.22, 1, 0.36, 1); }
-            main.page-entering { opacity: 0; transform: translateY(40px); transition: none; }
-
-            /* Every page rises into view on load; page-entering handles SPA swaps. */
-            @keyframes pageRise { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-            main { animation: pageRise 600ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-
-            /* Modals/dialogs rise instead of flashing open. */
-            @keyframes modalRise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-            [role="dialog"]:not(.modal-norise) { animation: modalRise 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-
-            @media (prefers-reduced-motion: reduce) {
-                main, [role="dialog"] { animation: none; }
-            }
-        </style>
-
-        {{-- Theme engine (light / dark / system) — same as admin/dashboard so dark mode works storefront-wide. --}}
-        @include('partials.theme-engine')
+        @if(config('services.turnstile.enabled') && (config('services.turnstile.enforce_auth') || config('services.turnstile.enforce_contact') || config('services.turnstile.enforce_checkout')))
+            {{-- Cloudflare Turnstile (explicit render mode) - loaded once per
+                 page so any form that needs the widget can call into
+                 window.turnstile.render(...). Auth modal, contact forms,
+                 feedback widget, and checkout all share this single loader. --}}
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+        @endif
     </head>
     <body class="flex min-h-screen flex-col bg-white text-zinc-900 antialiased">
 
@@ -45,9 +28,13 @@
             x-data="storefrontLocale()"
             x-init="init()"
             @keydown.escape.window="localeModalOpen = false"
-            x-effect="document.body.classList.toggle('overflow-hidden', localeModalOpen)"
+            x-effect="localeModalOpen ? window.rshopScrollLock?.lock() : window.rshopScrollLock?.unlock()"
             class="flex flex-1 flex-col"
         >
+            {{-- Maintenance banner - amber strip when system.maintenance_mode is on.
+                 Sits above the sticky header so it announces itself first. --}}
+            @include('partials.maintenance-banner')
+
             {{-- The whole header is sticky as one block (sticky needs a tall
                  containing block, the body provides that here). main-nav's
                  own Alpine then collapses the primary row on scroll, leaving
@@ -76,25 +63,21 @@
 
             {{-- Global confirm modal — intercepts any form/button with `data-confirm`. --}}
             <x-confirm-modal />
+
+            {{-- Global auth modal — login slides in from the right, register from
+                 the left. Any `<button @click="$dispatch('open-auth-modal', { mode: '…' })">`
+                 across the storefront pops this open instead of redirecting. --}}
+            @guest
+                <livewire:auth.auth-modal />
+            @endguest
+
+            {{-- Storefront feedback tab. Gated by the features.feedback_widget_enabled
+                 admin toggle so it can be hidden without redeploying. --}}
+            @feature('feedback_widget')
+                <livewire:feedback-widget />
+            @endfeature
         </div>
 
         @fluxScripts
-
-        <script>
-            (function () {
-                let firstLoad = true;
-                function playPageTransition() {
-                    const main = document.querySelector('main');
-                    if (! main) return;
-                    main.classList.add('page-entering');
-                    void main.offsetWidth; // commit the offset before transitioning back
-                    main.classList.remove('page-entering');
-                }
-                document.addEventListener('livewire:navigated', () => {
-                    if (firstLoad) { firstLoad = false; return; }
-                    playPageTransition();
-                });
-            })();
-        </script>
     </body>
 </html>

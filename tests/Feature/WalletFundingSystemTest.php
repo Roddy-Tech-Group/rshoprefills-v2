@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\FundingStatus;
-use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Wallet\Events\FundingCompleted;
 use App\Domain\Wallet\Jobs\ProcessFundingWebhookJob;
-use App\Domain\Wallet\Jobs\ReconcilePendingFundingsJob;
 use App\Domain\Wallet\Jobs\SyncExchangeRatesJob;
+use App\Domain\Wallet\Services\WalletFundingService;
 use App\Models\CurrencyRate;
-use App\Models\ExchangeRate;
 use App\Models\PaymentAttempt;
 use App\Models\PaymentWebhook;
 use App\Models\User;
@@ -17,7 +17,6 @@ use App\Models\Wallet;
 use App\Models\WalletFunding;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -35,15 +34,15 @@ class WalletFundingSystemTest extends TestCase
             'name' => 'United States Dollar',
             'type' => 'fiat',
             'rate_per_usd' => 1.0,
-            'is_active' => true
+            'is_active' => true,
         ]);
-        
+
         CurrencyRate::create([
             'code' => 'NGN',
             'name' => 'Nigerian Naira',
             'type' => 'fiat',
             'rate_per_usd' => 1400.0,
-            'is_active' => true
+            'is_active' => true,
         ]);
     }
 
@@ -56,13 +55,13 @@ class WalletFundingSystemTest extends TestCase
         $wallet = Wallet::create([
             'user_id' => $user->id,
             'currency' => Currency::USD,
-            'balance' => 100.0
+            'balance' => 100.0,
         ]);
 
         $response = $this->actingAs($user)->postJson(route('api.wallets.fund.initiate'), [
             'currency' => 'USD',
             'amount' => 50.0,
-            'display_currency' => 'NGN' // Option to pay in alternate currency
+            'display_currency' => 'NGN', // Option to pay in alternate currency
         ]);
 
         $response->assertStatus(200)
@@ -72,7 +71,7 @@ class WalletFundingSystemTest extends TestCase
                 'reference',
                 'requested_amount',
                 'display_currency',
-                'exchange_rate'
+                'exchange_rate',
             ]);
 
         $this->assertDatabaseHas('wallet_fundings', [
@@ -82,7 +81,7 @@ class WalletFundingSystemTest extends TestCase
             'amount' => 50.0,
             'requested_amount' => 70000.0, // 50 * 1400 NGN
             'exchange_rate_snapshot' => 1400.0,
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $funding = WalletFunding::where('user_id', $user->id)->first();
@@ -95,7 +94,7 @@ class WalletFundingSystemTest extends TestCase
             'currency' => 'NGN',
             'amount' => 70000.0,
             'exchange_rate_snapshot' => 1400.0,
-            'payment_status' => 'pending'
+            'payment_status' => 'pending',
         ]);
     }
 
@@ -114,18 +113,18 @@ class WalletFundingSystemTest extends TestCase
                 'tx_ref' => 'FUND-USD-12345',
                 'amount' => 50.0,
                 'currency' => 'USD',
-                'status' => 'successful'
-            ]
+                'status' => 'successful',
+            ],
         ];
 
         // Send with CORRECT signature hash
         $response = $this->withHeaders([
-            'verif-hash' => 'FLW_SECURE_HASH'
+            'verif-hash' => 'FLW_SECURE_HASH',
         ])->postJson(route('api.webhooks.flutterwave'), $payload);
 
         $response->assertStatus(200)
             ->assertJson([
-                'status' => 'success'
+                'status' => 'success',
             ]);
 
         // Verify webhook immediately saved in raw registry
@@ -134,7 +133,7 @@ class WalletFundingSystemTest extends TestCase
             'event_type' => 'charge.completed',
             'reference' => 'FUND-USD-12345',
             'processed' => false,
-            'processing_status' => 'pending'
+            'processing_status' => 'pending',
         ]);
 
         $webhook = PaymentWebhook::where('reference', 'FUND-USD-12345')->first();
@@ -143,6 +142,7 @@ class WalletFundingSystemTest extends TestCase
         Queue::assertPushed(ProcessFundingWebhookJob::class, function ($job) use ($webhook) {
             $reflector = new \ReflectionProperty(ProcessFundingWebhookJob::class, 'paymentWebhookId');
             $reflector->setAccessible(true);
+
             return $reflector->getValue($job) === $webhook->id;
         });
     }
@@ -161,20 +161,20 @@ class WalletFundingSystemTest extends TestCase
                 'id' => 123456,
                 'tx_ref' => 'FUND-USD-54321',
                 'amount' => 50.0,
-                'status' => 'successful'
-            ]
+                'status' => 'successful',
+            ],
         ];
 
         // Send with WRONG signature hash
         $response = $this->withHeaders([
-            'verif-hash' => 'BAD_HASH'
+            'verif-hash' => 'BAD_HASH',
         ])->postJson(route('api.webhooks.flutterwave'), $payload);
 
         $response->assertStatus(401);
 
         $this->assertDatabaseHas('payment_webhooks', [
             'reference' => 'FUND-USD-54321',
-            'processing_status' => 'failed'
+            'processing_status' => 'failed',
         ]);
 
         Queue::assertNotPushed(ProcessFundingWebhookJob::class);
@@ -186,14 +186,14 @@ class WalletFundingSystemTest extends TestCase
     public function test_webhook_job_credits_wallet_idempotently(): void
     {
         Event::fake([
-            \App\Domain\Wallet\Events\FundingCompleted::class
+            FundingCompleted::class,
         ]);
 
         $user = User::factory()->create();
         $wallet = Wallet::create([
             'user_id' => $user->id,
             'currency' => Currency::USD,
-            'balance' => 10.0
+            'balance' => 10.0,
         ]);
 
         // Initiate a pending funding
@@ -204,7 +204,7 @@ class WalletFundingSystemTest extends TestCase
             'currency' => 'USD',
             'amount' => 50.0,
             'gateway' => 'flutterwave',
-            'status' => FundingStatus::Pending
+            'status' => FundingStatus::Pending,
         ]);
 
         $attempt = PaymentAttempt::create([
@@ -215,7 +215,7 @@ class WalletFundingSystemTest extends TestCase
             'idempotency_key' => 'FUND-USD-777',
             'currency' => 'USD',
             'amount' => 50.0,
-            'payment_status' => PaymentStatus::Pending
+            'payment_status' => PaymentStatus::Pending,
         ]);
 
         // Prepare raw webhook log
@@ -230,16 +230,16 @@ class WalletFundingSystemTest extends TestCase
                     'tx_ref' => 'FUND-USD-777',
                     'amount' => 50.0,
                     'currency' => 'USD',
-                    'status' => 'successful'
-                ]
+                    'status' => 'successful',
+                ],
             ],
             'processed' => false,
-            'processing_status' => 'pending'
+            'processing_status' => 'pending',
         ]);
 
         // Execute processing job
         $job = new ProcessFundingWebhookJob($webhook->id);
-        $job->handle(app(\App\Domain\Wallet\Services\WalletFundingService::class));
+        $job->handle(app(WalletFundingService::class));
 
         // 1. Verify webhook status updated
         $this->assertTrue($webhook->refresh()->processed);
@@ -256,7 +256,7 @@ class WalletFundingSystemTest extends TestCase
         $this->assertEquals(PaymentStatus::Paid, $attempt->refresh()->payment_status);
 
         // 5. Verify Event Fired
-        Event::assertDispatched(\App\Domain\Wallet\Events\FundingCompleted::class);
+        Event::assertDispatched(FundingCompleted::class);
     }
 
     /**
@@ -268,7 +268,7 @@ class WalletFundingSystemTest extends TestCase
         $wallet = Wallet::create([
             'user_id' => $user->id,
             'currency' => Currency::USD,
-            'balance' => 10.0
+            'balance' => 10.0,
         ]);
 
         // Initiate a pending funding for $500.00 (triggers mock verified lower amount check)
@@ -279,7 +279,7 @@ class WalletFundingSystemTest extends TestCase
             'currency' => 'USD',
             'amount' => 500.0,
             'gateway' => 'flutterwave',
-            'status' => FundingStatus::Pending
+            'status' => FundingStatus::Pending,
         ]);
 
         // Webhook fires with altered/lower amount ($10.00)
@@ -294,17 +294,17 @@ class WalletFundingSystemTest extends TestCase
                     'tx_ref' => 'FUND-USD-888',
                     'amount' => 10.0, // TAMPERED!
                     'currency' => 'USD',
-                    'status' => 'successful'
-                ]
+                    'status' => 'successful',
+                ],
             ],
             'processed' => false,
-            'processing_status' => 'pending'
+            'processing_status' => 'pending',
         ]);
 
         // Execute processing job
         try {
             $job = new ProcessFundingWebhookJob($webhook->id);
-            $job->handle(app(\App\Domain\Wallet\Services\WalletFundingService::class));
+            $job->handle(app(WalletFundingService::class));
         } catch (\Throwable $e) {
             // Expect verification exception
         }
@@ -325,20 +325,20 @@ class WalletFundingSystemTest extends TestCase
      */
     public function test_exchange_rate_sync_job_populates_registry(): void
     {
-        $job = new SyncExchangeRatesJob();
+        $job = new SyncExchangeRatesJob;
         $job->handle();
 
         $this->assertDatabaseHas('exchange_rates', [
             'base_currency' => 'USD',
             'target_currency' => 'NGN',
             'rate' => 1400.0,
-            'provider' => 'system_sync'
+            'provider' => 'system_sync',
         ]);
 
         $this->assertDatabaseHas('exchange_rates', [
             'base_currency' => 'NGN',
             'target_currency' => 'USD',
-            'provider' => 'system_sync'
+            'provider' => 'system_sync',
         ]);
     }
 }

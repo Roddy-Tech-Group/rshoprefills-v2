@@ -89,7 +89,7 @@ return [
         'review_url' => env('GOOGLE_REVIEW_URL', 'https://g.page/r/CZeYrL5rBXvuEAE/review'),
         // QR code rendered next to the CTA so desktop visitors can scan with
         // their phone. File lives in public/assets.
-        'qr_asset' => env('GOOGLE_REVIEW_QR_ASSET', 'google reviews qr cord.png'),
+        'qr_asset' => env('GOOGLE_REVIEW_QR_ASSET', 'google reviews qr cord.webp'),
         // Optional: Place ID + Places API key for fetching live Google reviews
         // (paths 2/3 in the integration plan). Leave null until set up.
         'place_id' => env('GOOGLE_PLACE_ID'),
@@ -102,6 +102,7 @@ return [
         'secret_key' => env('TURNSTILE_SECRET_KEY'),
         'enforce_checkout' => env('TURNSTILE_ENFORCE_CHECKOUT', true),
         'enforce_auth' => env('TURNSTILE_ENFORCE_AUTH', true),
+        'enforce_contact' => env('TURNSTILE_ENFORCE_CONTACT', true),
         'bypass_local' => env('TURNSTILE_BYPASS_LOCAL', true),
     ],
 

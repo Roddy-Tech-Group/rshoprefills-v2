@@ -2,9 +2,9 @@
 
 namespace App\Domain\Notification\Listeners;
 
-use App\Domain\Wallet\Events\WalletDebited;
 use App\Domain\Notification\Mail\WalletDebitedMail;
 use App\Domain\Notification\Services\NotificationDispatcher;
+use App\Domain\Wallet\Events\WalletDebited;
 
 class SendWalletDebitNotificationListener
 {

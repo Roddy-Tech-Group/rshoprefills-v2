@@ -2,15 +2,16 @@
 
 namespace App\Domain\Payment\Providers;
 
-use App\Models\PaymentAttempt;
-use App\Domain\Payment\Interfaces\PaymentProviderInterface;
 use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Interfaces\PaymentProviderInterface;
+use App\Models\PaymentAttempt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class NowPaymentsProvider implements PaymentProviderInterface
 {
     private string $apiKey;
+
     private string $baseUrl;
 
     public function __construct()
@@ -25,7 +26,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
 
         // If mock key, return simulated crypto invoice
         if (str_contains($this->apiKey, 'MOCK')) {
-            $gatewayRef = 'NP-MOCK-' . uniqid();
+            $gatewayRef = 'NP-MOCK-'.uniqid();
             $payAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
             $payAmount = round($attempt->amount * 0.000015, 6);
             $payCurrency = 'btc';
@@ -41,7 +42,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'mode' => 'embedded_crypto',
                 'invoice_id' => $gatewayRef,
                 'pay_address' => $payAddress,
-                'pay_amount' => (string)$payAmount,
+                'pay_amount' => (string) $payAmount,
                 'pay_currency' => strtolower($payCurrency),
                 'network' => $network,
                 'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
@@ -89,7 +90,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'mode' => 'embedded_crypto',
                 'invoice_id' => $gatewayRef,
                 'pay_address' => $payAddress,
-                'pay_amount' => (string)$payAmount,
+                'pay_amount' => (string) $payAmount,
                 'pay_currency' => strtolower($payCurrency),
                 'network' => $network,
                 'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
@@ -98,7 +99,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'gateway_reference' => $gatewayRef,
             ];
         } catch (\Exception $e) {
-            Log::error('NowPayments API error: ' . $e->getMessage());
+            Log::error('NowPayments API error: '.$e->getMessage());
             throw $e;
         }
     }
@@ -120,9 +121,9 @@ class NowPaymentsProvider implements PaymentProviderInterface
         $txRef = $attempt->idempotency_key;
 
         if (str_contains($this->apiKey, 'MOCK')) {
-            $gatewayRef = 'NP-MOCK-' . uniqid();
+            $gatewayRef = 'NP-MOCK-'.uniqid();
             $payAddress = $this->resolveMockAddress($payCurrency);
-            $rate = match($payCurrency) {
+            $rate = match ($payCurrency) {
                 'btc' => 0.000015,
                 'eth' => 0.0003,
                 'usdt' => 1.0,
@@ -140,7 +141,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'status' => 'awaiting_transfer',
                 'invoice_id' => $gatewayRef,
                 'pay_address' => $payAddress,
-                'pay_amount' => (string)$payAmount,
+                'pay_amount' => (string) $payAmount,
                 'pay_currency' => $payCurrency,
                 'network' => $network,
                 'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
@@ -173,9 +174,10 @@ class NowPaymentsProvider implements PaymentProviderInterface
                     'status' => $response->status(),
                     'body' => $response->json(),
                 ]);
+
                 return [
                     'status' => 'failed',
-                    'message' => 'Failed to initialize NowPayments billing: ' . ($response->json('message') ?? 'Unknown error')
+                    'message' => 'Failed to initialize NowPayments billing: '.($response->json('message') ?? 'Unknown error'),
                 ];
             }
 
@@ -193,17 +195,18 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'status' => 'awaiting_transfer',
                 'invoice_id' => $gatewayRef,
                 'pay_address' => $payAddress,
-                'pay_amount' => (string)$payAmount,
+                'pay_amount' => (string) $payAmount,
                 'pay_currency' => $payCurrency,
                 'network' => $network,
                 'qr_payload' => "{$network}:{$payAddress}?amount={$payAmount}",
                 'expires_at' => $expiresAt,
             ];
         } catch (\Exception $e) {
-            Log::error('NowPayments chargeCrypto API error: ' . $e->getMessage());
+            Log::error('NowPayments chargeCrypto API error: '.$e->getMessage());
+
             return [
                 'status' => 'failed',
-                'message' => 'Crypto initiation failed: ' . $e->getMessage()
+                'message' => 'Crypto initiation failed: '.$e->getMessage(),
             ];
         }
     }
@@ -225,6 +228,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
             $attempt->payment_status = PaymentStatus::Paid;
             $attempt->confirmed_at = now();
             $attempt->save();
+
             return true;
         }
 
@@ -236,6 +240,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
 
             if ($response->failed()) {
                 Log::error("NowPayments verify failed for invoice: {$invoiceId}");
+
                 return false;
             }
 
@@ -247,12 +252,14 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 $attempt->confirmed_at = now();
                 $attempt->verification_payload = $body;
                 $attempt->save();
+
                 return true;
             }
 
             return false;
         } catch (\Exception $e) {
-            Log::error('NowPayments verify error: ' . $e->getMessage());
+            Log::error('NowPayments verify error: '.$e->getMessage());
+
             return false;
         }
     }
@@ -263,6 +270,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
         // We will mark it as refunded locally for audit compliance.
         $attempt->payment_status = PaymentStatus::Refunded;
         $attempt->save();
+
         return true;
     }
 

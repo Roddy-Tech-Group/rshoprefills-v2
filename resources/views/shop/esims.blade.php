@@ -1,9 +1,11 @@
 @php
+    abort_if(! \App\Support\FeatureFlag::on('esims'), 404);
+
     /** @var \Illuminate\Support\Collection<int, array<string, mixed>> $catalog */
     $catalog = $catalog ?? collect();
 @endphp
 
-<x-layouts.app.header :title="'eSIMs | RshopRefills'">
+<x-shop.layout :title="'eSIMs | RshopRefills'">
 
     <div
         x-data="{
@@ -36,8 +38,13 @@
         class="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:py-12"
     >
 
+        {{-- Mobile category picker (dark pill + slide-up sheet). --}}
+        <div class="mb-4 sm:hidden">
+            <x-shop.category-picker active="esims" />
+        </div>
+
         {{-- ── Hero ───────────────────────────────────────────────────────────
-             Photo-led variant: the "united states esim picture.jpg" sits as
+             Photo-led variant: the "united states esim picture.webp" sits as
              the background, with a pure-black overlay + side gradient so the
              copy stays readable on any frame. Same pattern as the home
              services-promo (Store front video 1.mp4). --}}
@@ -45,7 +52,7 @@
             {{-- Background photo. Object-cover fills the section regardless of
                  aspect ratio; aria-hidden so screen readers skip it. --}}
             <img
-                src="{{ asset('assets/'.rawurlencode('united states esim picture.jpg')) }}"
+                src="{{ asset('assets/'.rawurlencode('united states esim picture.webp')) }}"
                 alt=""
                 aria-hidden="true"
                 loading="eager"
@@ -93,7 +100,7 @@
 
             <div class="relative flex flex-col items-center gap-6 lg:flex-row lg:justify-between lg:gap-8">
                 {{-- Desktop: both illustrations sit either side of the heading. --}}
-                <img src="{{ asset('assets/'.rawurlencode('Esim stay connectd.png')) }}" alt="" class="hidden w-64 shrink-0 object-contain lg:block xl:w-80" loading="eager">
+                <img src="{{ asset('assets/'.rawurlencode('Esim stay connectd.webp')) }}" alt="" class="hidden w-64 shrink-0 object-contain lg:block xl:w-80" loading="eager">
 
                 <div class="max-w-xl text-center">
                     <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Feel the freedom of unlimited data</h1>
@@ -106,8 +113,8 @@
                 <div
                     x-data="{
                         slides: [
-                            '{{ asset('assets/'.rawurlencode('Esim 1.png')) }}',
-                            '{{ asset('assets/'.rawurlencode('Esim stay connectd.png')) }}',
+                            '{{ asset('assets/'.rawurlencode('Esim 1.webp')) }}',
+                            '{{ asset('assets/'.rawurlencode('Esim stay connectd.webp')) }}',
                         ],
                         idx: 0,
                         timer: null,
@@ -134,7 +141,7 @@
                     </template>
                 </div>
 
-                <img src="{{ asset('assets/'.rawurlencode('Esim 1.png')) }}" alt="" class="hidden shrink-0 object-contain lg:block lg:w-64 xl:w-80" loading="eager">
+                <img src="{{ asset('assets/'.rawurlencode('Esim 1.webp')) }}" alt="" class="hidden shrink-0 object-contain lg:block lg:w-64 xl:w-80" loading="eager">
             </div>
         </section>
 
@@ -163,4 +170,4 @@
 
     </div>
 
-</x-layouts.app.header>
+</x-shop.layout>

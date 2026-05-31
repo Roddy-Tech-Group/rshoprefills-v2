@@ -19,7 +19,7 @@ class extends Component {
     public string $scope = 'category';
     public string $categoryId = '';
     public string $subcategoryId = '';
-    public string $markupType = 'percent';
+    public string $markupType = 'percentage';
     public string $markupValue = '';
     public bool $isActive = true;
 
@@ -69,7 +69,7 @@ class extends Component {
             'scope'          => 'required|in:category,subcategory',
             'categoryId'     => 'required|exists:categories,id',
             'subcategoryId'  => $this->scope === 'subcategory' ? 'required|exists:subcategories,id' : 'nullable',
-            'markupType'     => 'required|in:percent,flat',
+            'markupType'     => 'required|in:percentage,fixed',
             'markupValue'    => 'required|numeric|min:0',
             'isActive'       => 'boolean',
         ];
@@ -152,7 +152,7 @@ class extends Component {
         $this->scope         = 'category';
         $this->categoryId    = '';
         $this->subcategoryId = '';
-        $this->markupType    = 'percent';
+        $this->markupType    = 'percentage';
         $this->markupValue   = '';
         $this->isActive      = true;
         $this->showForm      = false;
@@ -171,14 +171,39 @@ class extends Component {
             <div class="rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">{{ session('status') }}</div>
         @endif
 
-        {{-- Cascade explanation banner --}}
-        <div class="flex items-start gap-3 rounded-[10px] bg-blue-50 px-4 py-3 text-sm text-blue-800 ring-1 ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30">
-            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
-            </svg>
-            <p class="text-xs leading-relaxed">
-                <strong>Cascade order:</strong> product rule &gt; subcategory rule &gt; category rule. The most specific active rule wins. A product with no product rule falls back to its subcategory, then its category.
-            </p>
+        {{-- Cascade explanation — a quick rules-of-the-road for admins so
+             they don't have to guess which rule wins. --}}
+        <div class="rounded-[10px] border-[1.5px] border-white bg-white p-5 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+            <div class="flex items-start gap-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 dark:bg-blue-600/15 dark:text-blue-300">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                    </svg>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-bold text-zinc-900 dark:text-white">How pricing rules work</p>
+                    <p class="mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+                        Each rule adds markup on top of the supplier cost. The pricing engine resolves the markup in this order, stopping at the first match:
+                    </p>
+                    <ol class="mt-2 grid gap-2 text-xs text-zinc-700 dark:text-zinc-300 sm:grid-cols-3">
+                        <li class="flex items-center gap-2 rounded-[8px] bg-zinc-50 px-3 py-2 dark:bg-[#0c1a36]/50">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">1</span>
+                            <span><strong>Product</strong> rule (most specific)</span>
+                        </li>
+                        <li class="flex items-center gap-2 rounded-[8px] bg-zinc-50 px-3 py-2 dark:bg-[#0c1a36]/50">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">2</span>
+                            <span><strong>Subcategory</strong> rule</span>
+                        </li>
+                        <li class="flex items-center gap-2 rounded-[8px] bg-zinc-50 px-3 py-2 dark:bg-[#0c1a36]/50">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">3</span>
+                            <span><strong>Category</strong> rule (broadest)</span>
+                        </li>
+                    </ol>
+                    <p class="mt-3 text-[11px] leading-relaxed text-zinc-500">
+                        <strong>Percent</strong> scales with cost (use for variable-priced eSIMs / variable gift cards). <strong>Flat</strong> adds a fixed USD amount (use for fixed denominations where you want predictable margin per sale). Existing orders keep their original markup. Rule changes only affect new orders.
+                    </p>
+                </div>
+            </div>
         </div>
 
         {{-- KPI strip --}}
@@ -189,7 +214,7 @@ class extends Component {
                 ['label' => 'Category rules',     'value' => $this->summary['categories'],   'dot' => 'bg-amber-500'],
                 ['label' => 'Subcategory rules',  'value' => $this->summary['subcategories'],'dot' => 'bg-purple-500'],
             ] as $stat)
-                <div class="rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <div class="rounded-[10px] border-[1.5px] border-white bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
                     <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
                         <span class="inline-block h-1.5 w-1.5 rounded-full {{ $stat['dot'] }}"></span>
                         {{ $stat['label'] }}
@@ -217,48 +242,48 @@ class extends Component {
         <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
             <div class="overflow-x-auto p-3">
                 <table class="admin-table w-full text-left text-sm">
-                    <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600 dark:bg-[#0c1a36] dark:text-zinc-400">
+                    <thead>
                         <tr>
-                            <th class="px-5 py-3 font-semibold">Scope</th>
-                            <th class="px-5 py-3 font-semibold">Category</th>
-                            <th class="hidden px-5 py-3 font-semibold md:table-cell">Subcategory</th>
-                            <th class="px-5 py-3 font-semibold">Markup</th>
-                            <th class="px-5 py-3 font-semibold">Status</th>
-                            <th class="px-5 py-3 text-right font-semibold">Actions</th>
+                            <th>Scope</th>
+                            <th>Category</th>
+                            <th class="hidden md:table-cell">Subcategory</th>
+                            <th>Markup</th>
+                            <th>Status</th>
+                            <th class="text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-inset">
+                    <tbody>
                         @forelse ($this->pricingRules as $rule)
-                            <tr class="transition-colors hover:bg-zinc-50 dark:hover:bg-[#26416b]/40">
-                                <td class="px-5 py-3">
+                            <tr>
+                                <td>
                                     <x-admin.badge :tone="$rule->subcategory_id ? 'amber' : 'blue'">
                                         {{ $rule->subcategory_id ? 'Subcategory' : 'Category' }}
                                     </x-admin.badge>
                                 </td>
-                                <td class="px-5 py-3 font-medium text-zinc-900 dark:text-white">
+                                <td class="font-medium text-zinc-900 dark:text-white">
                                     {{ $rule->category?->name ?? '-' }}
                                 </td>
-                                <td class="hidden px-5 py-3 text-zinc-600 dark:text-zinc-400 md:table-cell">
+                                <td class="hidden md:table-cell">
                                     {{ $rule->subcategory?->name ?? '-' }}
                                 </td>
-                                <td class="whitespace-nowrap px-5 py-3 tabular-nums text-zinc-700 dark:text-zinc-300">
-                                    @if ($rule->markup_type === 'percent')
+                                <td class="whitespace-nowrap tabular-nums">
+                                    @if ($rule->markup_type === 'percentage')
                                         +{{ rtrim(rtrim(number_format((float) $rule->markup_value, 4), '0'), '.') }}%
                                     @else
                                         +${{ rtrim(rtrim(number_format((float) $rule->markup_value, 4), '0'), '.') }} flat
                                     @endif
                                 </td>
-                                <td class="px-5 py-3">
+                                <td>
                                     <button wire:click="toggleActive({{ $rule->id }})" type="button" class="cursor-pointer">
                                         <x-admin.badge :tone="$rule->is_active ? 'emerald' : 'zinc'">
                                             {{ $rule->is_active ? 'Active' : 'Inactive' }}
                                         </x-admin.badge>
                                     </button>
                                 </td>
-                                <td class="whitespace-nowrap px-5 py-3 text-right">
+                                <td class="whitespace-nowrap text-right">
                                     <div class="inline-flex items-center gap-1.5">
-                                        <button wire:click="edit({{ $rule->id }})" type="button" class="rounded-[10px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25">Edit</button>
-                                        <button wire:click="delete({{ $rule->id }})" wire:confirm="Delete this pricing rule? This cannot be undone." type="button" class="rounded-[10px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25">Delete</button>
+                                        <button wire:click="edit({{ $rule->id }})" type="button" class="rounded-[5px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25">Edit</button>
+                                        <button wire:click="delete({{ $rule->id }})" wire:confirm="Delete this pricing rule? This cannot be undone." type="button" class="rounded-[5px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25">Delete</button>
                                     </div>
                                 </td>
                             </tr>
@@ -334,12 +359,12 @@ class extends Component {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Markup type</label>
-                            <x-admin.select wire:model="markupType" :options="['percent' => 'Percent (%)', 'flat' => 'Flat ($)']" />
+                            <x-admin.select wire:model="markupType" :options="['percentage' => 'Percent (%)', 'fixed' => 'Flat ($)']" />
                             @error('markupType') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
-                                Value {{ $markupType === 'percent' ? '(%)' : '($)' }}
+                                Value {{ $markupType === 'percentage' ? '(%)' : '($)' }}
                             </label>
                             <input wire:model="markupValue" type="number" step="0.0001" min="0" placeholder="0.00" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm tabular-nums text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#0c1a36] dark:text-white">
                             @error('markupValue') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror

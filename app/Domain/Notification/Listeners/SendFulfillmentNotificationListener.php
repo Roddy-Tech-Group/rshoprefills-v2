@@ -2,12 +2,12 @@
 
 namespace App\Domain\Notification\Listeners;
 
-use App\Domain\Order\Events\FulfillmentSucceeded;
-use App\Domain\Order\Events\FulfillmentFailed;
 use App\Domain\Notification\Mail\OrderFulfilledMail;
 use App\Domain\Notification\Services\NotificationDispatcher;
+use App\Domain\Order\Events\FulfillmentFailed;
+use App\Domain\Order\Events\FulfillmentSucceeded;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SendFulfillmentNotificationListener
 {
@@ -56,7 +56,7 @@ class SendFulfillmentNotificationListener
             ['email' => $adminEmail],
             [
                 'name' => 'System Admin',
-                'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                'password' => bcrypt(Str::random(16)),
             ]
         );
 

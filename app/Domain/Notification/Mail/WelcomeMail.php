@@ -21,8 +21,8 @@ class WelcomeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->isGoogleAuth 
-                ? 'Welcome to RshopRefills via Google!' 
+            subject: $this->isGoogleAuth
+                ? 'Welcome to RshopRefills via Google!'
                 : 'Welcome to RshopRefills!',
         );
     }

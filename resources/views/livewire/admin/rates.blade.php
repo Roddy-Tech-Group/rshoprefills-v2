@@ -210,12 +210,18 @@ class extends Component {
         $data = $this->validate();
 
         if ($this->editingId) {
-            CurrencyRate::findOrFail($this->editingId)->update($data);
+            $rate = CurrencyRate::findOrFail($this->editingId);
+            $rate->update($data);
             session()->flash('status', $this->code.' updated.');
         } else {
-            CurrencyRate::create($data);
+            $rate = CurrencyRate::create($data);
             session()->flash('status', $this->code.' added.');
         }
+
+        // End-to-end: push the saved rate through to exchange_rates immediately
+        // so the runtime CurrencyRateService picks it up on the very next
+        // request - no waiting for a scheduled sync, no clicking "Run sync".
+        $this->syncSingleRate($rate);
 
         $this->closeForm();
         unset($this->allRates, $this->rates, $this->freshness, $this->summary);
@@ -225,6 +231,16 @@ class extends Component {
     {
         $rate = CurrencyRate::findOrFail($id);
         $code = $rate->code;
+
+        // Drop the matching exchange_rates rows (USD <-> code) so the runtime
+        // doesn't keep serving a deleted definition's stale numbers.
+        ExchangeRate::query()
+            ->where(function ($q) use ($code) {
+                $q->where(fn ($qq) => $qq->where('base_currency', 'USD')->where('target_currency', $code))
+                  ->orWhere(fn ($qq) => $qq->where('base_currency', $code)->where('target_currency', 'USD'));
+            })
+            ->delete();
+
         $rate->delete();
         session()->flash('status', $code.' deleted.');
         unset($this->allRates, $this->rates, $this->freshness, $this->summary);
@@ -234,18 +250,53 @@ class extends Component {
     {
         $rate = CurrencyRate::findOrFail($id);
         $rate->update(['is_active' => ! $rate->is_active]);
-        unset($this->allRates, $this->rates);
+
+        // Mirror the active flag onto the live exchange_rates rows. Inactive
+        // currencies stop being served by CurrencyRateService::resolveRate().
+        ExchangeRate::query()
+            ->where(function ($q) use ($rate) {
+                $q->where(fn ($qq) => $qq->where('base_currency', 'USD')->where('target_currency', $rate->code))
+                  ->orWhere(fn ($qq) => $qq->where('base_currency', $rate->code)->where('target_currency', 'USD'));
+            })
+            ->update(['is_active' => $rate->is_active]);
+
+        unset($this->allRates, $this->rates, $this->freshness, $this->summary);
     }
 
     /**
-     * Run the sync job synchronously so the admin sees the result immediately.
-     * The job copies CurrencyRate (definitions) -> ExchangeRate (live, with
-     * fetched_at) so the runtime CurrencyRateService freshness check passes.
+     * Push a single CurrencyRate definition into exchange_rates (USD <-> code).
+     * Mirrors the bulk SyncExchangeRatesJob but scoped to one row so a single
+     * admin edit takes effect immediately.
+     */
+    protected function syncSingleRate(CurrencyRate $rate): void
+    {
+        $now = now();
+        $expires = $now->copy()->addHours(24);
+
+        // USD -> target
+        ExchangeRate::updateOrCreate(
+            ['base_currency' => 'USD', 'target_currency' => $rate->code, 'provider' => 'system_sync'],
+            ['rate' => $rate->rate_per_usd, 'source' => 'currency_rates_db', 'is_active' => (bool) $rate->is_active, 'fetched_at' => $now, 'expires_at' => $expires],
+        );
+
+        // target -> USD inverse (skip when the rate is USD itself or zero)
+        if ($rate->code !== 'USD' && (float) $rate->rate_per_usd > 0) {
+            ExchangeRate::updateOrCreate(
+                ['base_currency' => $rate->code, 'target_currency' => 'USD', 'provider' => 'system_sync'],
+                ['rate' => round(1.0 / (float) $rate->rate_per_usd, 8), 'source' => 'currency_rates_db', 'is_active' => (bool) $rate->is_active, 'fetched_at' => $now, 'expires_at' => $expires],
+            );
+        }
+    }
+
+    /**
+     * Run the full bulk sync (every active CurrencyRate -> ExchangeRate).
+     * Useful after a bulk seeder run or when freshness clocks have all aged
+     * past 24h and the admin wants one click to reset everything.
      */
     public function runSync(): void
     {
         SyncExchangeRatesJob::dispatchSync();
-        session()->flash('status', 'Rates synced. All freshness clocks reset.');
+        session()->flash('status', 'All rates synced. Freshness clocks reset.');
         unset($this->freshness, $this->summary);
     }
 }; ?>
@@ -283,7 +334,7 @@ class extends Component {
                 ['label' => 'Fresh',    'value' => $this->summary['fresh'],    'dot' => 'bg-blue-500'],
                 ['label' => 'Stale + critical', 'value' => $this->summary['stale'] + $this->summary['critical'], 'dot' => $this->summary['critical'] > 0 ? 'bg-red-500' : 'bg-amber-500'],
             ] as $stat)
-                <div class="rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <div class="rounded-[10px] border-[1.5px] border-white bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
                     <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
                         <span class="inline-block h-1.5 w-1.5 rounded-full {{ $stat['dot'] }}"></span>
                         {{ $stat['label'] }}
@@ -374,19 +425,19 @@ class extends Component {
         <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
             <div class="overflow-x-auto p-3">
                 <table class="admin-table w-full text-left text-sm">
-                    <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600 dark:bg-[#0c1a36] dark:text-zinc-400">
+                    <thead>
                         <tr>
-                            <th class="px-5 py-3 font-semibold">Logo</th>
-                            <th class="px-5 py-3 font-semibold">Currency</th>
-                            <th class="hidden px-5 py-3 font-semibold lg:table-cell">Name</th>
-                            <th class="hidden px-5 py-3 font-semibold md:table-cell">Type</th>
-                            <th class="px-5 py-3 font-semibold">Rate / USD</th>
-                            <th class="hidden px-5 py-3 font-semibold sm:table-cell">Live freshness</th>
-                            <th class="px-5 py-3 font-semibold">Status</th>
-                            <th class="px-5 py-3 text-right font-semibold">Actions</th>
+                            <th>Logo</th>
+                            <th>Currency</th>
+                            <th class="hidden lg:table-cell">Name</th>
+                            <th class="hidden md:table-cell">Type</th>
+                            <th>Rate / USD</th>
+                            <th class="hidden sm:table-cell">Live freshness</th>
+                            <th>Status</th>
+                            <th class="text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-inset">
+                    <tbody>
                         @forelse ($this->rates as $rate)
                             @php
                                 $live = $this->freshness[$rate->code] ?? null;
@@ -405,41 +456,64 @@ class extends Component {
                                     default        => round($age).'h ago · critical',
                                 };
                             @endphp
-                            <tr class="transition-colors hover:bg-zinc-50 dark:hover:bg-[#26416b]/40">
-                                <td class="px-5 py-3">
-                                    @if ($rate->icon_path)
-                                        <img src="{{ asset('assets/' . $rate->icon_path) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
-                                    @elseif ($rate->type === 'fiat' && $this->flagUrl($rate->code))
-                                        <img src="{{ $this->flagUrl($rate->code) }}" alt="{{ $rate->code }}" class="h-9 w-9 rounded-[10px] object-cover bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
+                            @php
+                                // Icon resolution chain:
+                                //  - Fiat → prefer the country flag PNG (works in dark mode; the
+                                //    global SVG invert filter mangles colored currency SVGs).
+                                //  - Crypto → use the icon_path SVG (BTC/ETH/SOLANA/USDT are in
+                                //    the dark-invert exception list so they keep their hues).
+                                //  - Fallback chip on any error.
+                                $iconUrl = $rate->icon_path ? asset('assets/'.$rate->icon_path) : null;
+                                $flagUrl = $rate->type === 'fiat' ? $this->flagUrl($rate->code) : null;
+                                $primaryIcon = $rate->type === 'fiat'
+                                    ? ($flagUrl ?: $iconUrl)
+                                    : ($iconUrl ?: $flagUrl);
+                                $isFlag = $primaryIcon === $flagUrl;
+                            @endphp
+                            <tr>
+                                <td>
+                                    @if ($primaryIcon)
+                                        <span class="relative inline-flex h-9 w-9">
+                                            <img
+                                                src="{{ $primaryIcon }}"
+                                                alt="{{ $rate->code }}"
+                                                class="h-9 w-9 rounded-[10px] {{ $isFlag ? 'object-cover' : 'object-contain' }} bg-zinc-50 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-white/10"
+                                                loading="lazy"
+                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                            >
+                                            <span class="hidden h-9 w-9 items-center justify-center rounded-[10px] {{ $rate->type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500' }} text-xs font-bold text-white">
+                                                {{ substr($rate->code, 0, 1) }}
+                                            </span>
+                                        </span>
                                     @else
                                         <span class="flex h-9 w-9 items-center justify-center rounded-[10px] {{ $rate->type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500' }} text-xs font-bold text-white">
                                             {{ substr($rate->code, 0, 1) }}
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-5 py-3">
+                                <td>
                                     <span class="font-bold tabular-nums text-zinc-900 dark:text-white">{{ $rate->code }}</span>
                                     <span class="mt-1 block md:hidden">
                                         <x-admin.badge :tone="$rate->type === 'crypto' ? 'amber' : 'emerald'">{{ $rate->type }}</x-admin.badge>
                                     </span>
                                 </td>
-                                <td class="hidden px-5 py-3 text-zinc-700 dark:text-zinc-300 lg:table-cell">{{ $rate->name }}</td>
-                                <td class="hidden px-5 py-3 md:table-cell">
+                                <td class="hidden lg:table-cell">{{ $rate->name }}</td>
+                                <td class="hidden md:table-cell">
                                     <x-admin.badge :tone="$rate->type === 'crypto' ? 'amber' : 'emerald'">{{ $rate->type }}</x-admin.badge>
                                 </td>
-                                <td class="whitespace-nowrap px-5 py-3 tabular-nums text-zinc-900 dark:text-white">{{ rtrim(rtrim(number_format((float) $rate->rate_per_usd, 8), '0'), '.') }}</td>
-                                <td class="hidden px-5 py-3 sm:table-cell">
+                                <td class="whitespace-nowrap tabular-nums font-semibold text-zinc-900 dark:text-white">{{ rtrim(rtrim(number_format((float) $rate->rate_per_usd, 8), '0'), '.') }}</td>
+                                <td class="hidden sm:table-cell">
                                     <x-admin.badge :tone="$freshnessTone">{{ $freshnessLabel }}</x-admin.badge>
                                 </td>
-                                <td class="px-5 py-3">
+                                <td>
                                     <button wire:click="toggleActive({{ $rate->id }})" type="button" class="cursor-pointer">
                                         <x-admin.badge :tone="$rate->is_active ? 'emerald' : 'zinc'">{{ $rate->is_active ? 'Active' : 'Inactive' }}</x-admin.badge>
                                     </button>
                                 </td>
-                                <td class="whitespace-nowrap px-5 py-3 text-right">
+                                <td class="whitespace-nowrap text-right">
                                     <div class="inline-flex items-center gap-1.5">
-                                        <button wire:click="edit({{ $rate->id }})" type="button" class="rounded-[10px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25">Edit</button>
-                                        <button wire:click="delete({{ $rate->id }})" wire:confirm="Delete {{ $rate->code }} permanently? This can't be undone." type="button" class="rounded-[10px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25">Delete</button>
+                                        <button wire:click="edit({{ $rate->id }})" type="button" class="rounded-[5px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25">Edit</button>
+                                        <button wire:click="delete({{ $rate->id }})" wire:confirm="Delete {{ $rate->code }} permanently? This can't be undone." type="button" class="rounded-[5px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25">Delete</button>
                                     </div>
                                 </td>
                             </tr>

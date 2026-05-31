@@ -74,8 +74,8 @@
             @php
                 $status = $statusFor($user);
                 $rowAvatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
-                    'female', 'f' => 'New Female Account Avatar.png',
-                    default       => 'New male account avatar.png',
+                    'female', 'f' => 'New Female Account Avatar.webp',
+                    default       => 'New male account avatar.webp',
                 }));
             @endphp
             <a

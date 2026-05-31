@@ -33,17 +33,22 @@ class AiraloEsimNormalizer implements CatalogNormalizerInterface
         $productSlug = Str::slug("esim-{$countryCode}-{$regionName}");
         $productName = $countryCode === 'WW' ? 'Global eSIM' : "{$regionName} eSIM";
 
+        // Preserve admin-arranged categories on existing rows so the hourly
+        // re-sync doesn't wipe manual organisation.
+        $existing = Product::where('slug', $productSlug)->first();
+
         $product = Product::updateOrCreate(
             [
                 'provider_name' => $providerName,
                 'slug' => $productSlug,
             ],
             [
-                'category_id' => $category->id,
-                'subcategory_id' => $subcategory->id,
-                'country_code' => $countryCode,
+                'category_id' => $existing?->category_id ?? $category->id,
+                'subcategory_id' => $existing?->subcategory_id ?? $subcategory->id,
+                // country_code and name are admin-editable; preserve any edits.
+                'country_code' => $existing?->country_code ?? $countryCode,
                 'currency_code' => 'USD', // Airalo defaults to USD
-                'name' => $productName,
+                'name' => $existing?->name ?? $productName,
                 // Update description generically to accommodate both data and voice
                 'description' => "High-speed eSIM for {$regionName}. Scan QR code to activate.",
                 'redeem_instructions' => 'Go to Settings > Cellular > Add Cellular Plan and scan the QR Code.',
@@ -124,7 +129,9 @@ class AiraloEsimNormalizer implements CatalogNormalizerInterface
                     ['provider_offer_id' => "airalo_{$offerId}"], // Namespace to avoid ID collisions
                     [
                         'product_id' => $product->id,
-                        'subcategory_id' => $subcategory->id,
+                        // Mirror whatever subcategory the product is currently on so an
+                        // admin-moved product propagates to its variants too.
+                        'subcategory_id' => $product->subcategory_id,
                         'sku' => "AIRALO-{$offerId}",
                         'currency' => 'USD',
                         'face_value' => $faceValue,

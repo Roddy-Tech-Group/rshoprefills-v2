@@ -2,9 +2,9 @@
 
 namespace App\Domain\Wallet\Services;
 
-use App\Models\WalletFunding;
-use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Domain\Payment\Providers\FlutterwavePaymentProvider;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Models\WalletFunding;
 use Illuminate\Support\Facades\Log;
 
 class FundingVerificationService
@@ -26,8 +26,9 @@ class FundingVerificationService
             Log::error('Unsupported payment provider resolved for wallet funding.', [
                 'reference' => $funding->reference,
                 'gateway' => $providerName,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
 
@@ -36,8 +37,9 @@ class FundingVerificationService
 
             if (! $verification) {
                 Log::warning('Flutterwave verification failed - no transaction data returned', [
-                    'reference' => $funding->reference
+                    'reference' => $funding->reference,
                 ]);
+
                 return false;
             }
 
@@ -51,8 +53,9 @@ class FundingVerificationService
             if ($flwStatus !== 'successful' && $flwStatus !== 'success') {
                 Log::warning('Flutterwave verification failed - status is not successful', [
                     'reference' => $funding->reference,
-                    'status' => $flwStatus
+                    'status' => $flwStatus,
                 ]);
+
                 return false;
             }
 
@@ -62,8 +65,9 @@ class FundingVerificationService
                 Log::error('TAMPER DETECTED: Flutterwave verified amount is lower than requested', [
                     'reference' => $funding->reference,
                     'expected' => $expectedAmount,
-                    'received' => $flwAmount
+                    'received' => $flwAmount,
                 ]);
+
                 return false;
             }
 
@@ -73,8 +77,9 @@ class FundingVerificationService
                 Log::error('TAMPER DETECTED: Flutterwave verified currency mismatch', [
                     'reference' => $funding->reference,
                     'expected' => $expectedCurrency,
-                    'received' => $flwCurrency
+                    'received' => $flwCurrency,
                 ]);
+
                 return false;
             }
 
@@ -89,7 +94,7 @@ class FundingVerificationService
 
         Log::error('Verification not implemented for provider', [
             'reference' => $funding->reference,
-            'gateway' => $providerName
+            'gateway' => $providerName,
         ]);
 
         return false;

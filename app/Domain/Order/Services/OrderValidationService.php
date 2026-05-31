@@ -2,9 +2,9 @@
 
 namespace App\Domain\Order\Services;
 
-use App\Models\Cart;
 use App\Domain\Cart\Services\CartPricingService;
 use App\Domain\Cart\Services\CartValidationService;
+use App\Models\Cart;
 
 class OrderValidationService
 {
@@ -28,14 +28,14 @@ class OrderValidationService
         // 1. Validate availability & min/max using the CartValidationService
         $issues = $this->cartValidationService->validateCart($cart);
 
-        if (!empty($issues)) {
+        if (! empty($issues)) {
             // Flatten issues
             $allIssues = [];
             foreach ($issues as $itemId => $itemIssues) {
                 $allIssues = array_merge($allIssues, $itemIssues);
             }
-            if (!empty($allIssues)) {
-                throw new \Exception('Cart contains invalid or unavailable items: ' . implode(', ', array_unique($allIssues)));
+            if (! empty($allIssues)) {
+                throw new \Exception('Cart contains invalid or unavailable items: '.implode(', ', array_unique($allIssues)));
             }
         }
 

@@ -7,11 +7,13 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware(['guest', 'throttle:10,1'])->group(function () {
-    Volt::route('login', 'auth.login')
-        ->name('login');
-
-    Volt::route('register', 'auth.register')
-        ->name('register');
+    // Direct hits to /login and /register bounce to the home page with an
+    // ?auth= query param. The global <livewire:auth.auth-modal> mounted in the
+    // storefront layout sees the param on boot and pops the modal open over
+    // the home page so the user gets the new slide-up modal experience even
+    // when they land on the legacy auth URLs (bookmarks, email links, etc.).
+    Route::get('login', fn () => redirect()->to('/?auth=login'))->name('login');
+    Route::get('register', fn () => redirect()->to('/?auth=register'))->name('register');
 
     Volt::route('forgot-password', 'auth.forgot-password')
         ->name('password.request');

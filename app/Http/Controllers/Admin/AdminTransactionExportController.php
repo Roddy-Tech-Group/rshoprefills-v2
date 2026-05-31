@@ -18,13 +18,26 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class AdminTransactionExportController extends Controller
 {
+    /**
+     * Friendly filter labels used by the admin chips ("completed", "pending",
+     * "cancelled", "failed") and the underlying PaymentStatus enum values
+     * they group. Keep in sync with resources/views/admin/transactions.blade.php.
+     */
+    private const STATUS_BUCKETS = [
+        'completed' => ['paid'],
+        'pending' => ['pending', 'processing', 'reserved', 'unpaid'],
+        'cancelled' => ['expired'],
+        'failed' => ['failed'],
+        'refunded' => ['refunded', 'partially_refunded'],
+    ];
+
     public function csv(Request $request): StreamedResponse
     {
-        $status = $request->string('status')->toString();
+        $status = strtolower((string) $request->string('status')->toString());
         $gateway = $request->string('gateway')->toString();
         $search = trim((string) $request->string('q')->toString());
 
-        $filename = 'transactions-'.now()->format('Y-m-d-His').'.csv';
+        $filename = 'transactions-'.($status !== '' && $status !== 'all' ? $status.'-' : '').now()->format('Y-m-d-His').'.csv';
 
         return response()->streamDownload(function () use ($status, $gateway, $search) {
             $out = fopen('php://output', 'w');
@@ -45,8 +58,11 @@ class AdminTransactionExportController extends Controller
                 ->with(['user', 'order'])
                 ->latest();
 
-            if ($status !== '') {
-                $query->where('payment_status', $status);
+            if ($status !== '' && $status !== 'all') {
+                // Map friendly filter labels to underlying enum buckets.
+                // Falls back to a literal match for direct ?status=paid usage.
+                $values = self::STATUS_BUCKETS[$status] ?? [$status];
+                $query->whereIn('payment_status', $values);
             }
             if ($gateway !== '') {
                 $query->where('gateway', $gateway);

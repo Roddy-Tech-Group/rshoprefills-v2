@@ -14,7 +14,7 @@
     $isGoogle = $sourceKey === 'google';
 @endphp
 
-<article class="flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm sm:w-80">
+<article class="flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-lg shadow-zinc-900/10 sm:w-80">
 
     <div class="flex items-start justify-between gap-3">
         <div class="flex min-w-0 items-start gap-3">
@@ -43,16 +43,56 @@
         </div>
     </div>
 
-    <div class="mt-3 flex gap-0.5">
-        @for ($i = 0; $i < max(0, min(5, $review->rating)); $i++)
+    @php
+        // Half-star bucketing: 3.5 renders as 3 full + 1 half + 1 empty.
+        $r        = max(0, min(5, (float) $review->rating));
+        $full     = (int) floor($r);
+        $hasHalf  = ($r - $full) >= 0.25 && ($r - $full) < 0.75;
+        if (($r - $full) >= 0.75) { $full++; $hasHalf = false; }
+        $empty    = 5 - $full - ($hasHalf ? 1 : 0);
+    @endphp
+
+    <div class="mt-3 flex gap-0.5" aria-label="{{ number_format($r, 1) }} out of 5 stars">
+        @for ($i = 0; $i < $full; $i++)
             @if ($isGoogle)
-                {{-- Google-style gold filled star (no square background) --}}
                 <svg class="h-4 w-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                 </svg>
             @else
-                {{-- Trustpilot-style emerald square with white star inside --}}
                 <span class="flex h-4 w-4 items-center justify-center bg-emerald-500">
+                    <svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                    </svg>
+                </span>
+            @endif
+        @endfor
+
+        @if ($hasHalf)
+            @if ($isGoogle)
+                {{-- Half gold star: SVG with a left-half fill clip --}}
+                <svg class="h-4 w-4 text-amber-400" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z" fill="currentColor" fill-opacity="0.25"/>
+                    <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897V.587z" fill="currentColor" transform="scale(-1, 1) translate(-24, 0)"/>
+                </svg>
+            @else
+                {{-- Half emerald square: left half emerald, right half neutral grey --}}
+                <span class="relative flex h-4 w-4 overflow-hidden">
+                    <span class="absolute inset-y-0 left-0 w-1/2 bg-emerald-500"></span>
+                    <span class="absolute inset-y-0 right-0 w-1/2 bg-zinc-300"></span>
+                    <svg class="relative z-10 m-auto h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                    </svg>
+                </span>
+            @endif
+        @endif
+
+        @for ($i = 0; $i < $empty; $i++)
+            @if ($isGoogle)
+                <svg class="h-4 w-4 text-amber-400/30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                </svg>
+            @else
+                <span class="flex h-4 w-4 items-center justify-center bg-zinc-300">
                     <svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                     </svg>

@@ -1,9 +1,16 @@
 @props(['item'])
 
+@php
+    // Card is reused by storefront + dashboard shop chrome; pick the matching
+    // detail route based on which surface we're rendered on.
+    $inDash = request()->is('dashboard/shop*') && auth()->check();
+    $detailRoute = $inDash ? 'dashboard.shop.esim' : 'shop.esim';
+@endphp
+
 {{-- One eSIM location card for the browse grid. Filtered client-side via the parent
      Alpine scope's locTab/locSearch. Shared by the landing and the country store. --}}
 <a
-    href="{{ route('shop.esim', $item['slug']) }}"
+    href="{{ route($detailRoute, $item['slug']) }}"
     wire:navigate
     data-name="{{ \Illuminate\Support\Str::lower($item['name']) }}"
     data-scope="{{ $item['scope'] }}"

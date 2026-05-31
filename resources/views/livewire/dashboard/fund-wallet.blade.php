@@ -26,8 +26,27 @@ new class extends Component
 
     public function mount(string $currency = 'USD', string $variant = 'full'): void
     {
-        $this->currency = Currency::tryFrom(strtoupper($currency))?->value ?? 'USD';
+        // RCOIN is a reward ledger - it's earned, not topped up. If the parent
+        // accidentally passes RCOIN (e.g. the active wallet in the mobile
+        // carousel happens to be the Rcoin tab), fall back to USD so the modal
+        // still opens to a fundable currency.
+        $resolved = Currency::tryFrom(strtoupper($currency))?->value ?? 'USD';
+        $this->currency = $resolved === 'RCOIN' ? 'USD' : $resolved;
         $this->variant = $variant;
+    }
+
+    /**
+     * The currencies a customer can actually fund. Excludes RCOIN (reward
+     * ledger, credited via the engine - not purchasable).
+     *
+     * @return array<int, Currency>
+     */
+    public static function fundableCurrencies(): array
+    {
+        return array_values(array_filter(
+            Currency::cases(),
+            fn (Currency $c) => $c->value !== 'RCOIN',
+        ));
     }
 
     /** Selected currency, as the enum. */
@@ -53,8 +72,15 @@ new class extends Component
      */
     public function fund(WalletService $wallets, WalletFundingService $funding)
     {
+        // features.wallet_funding_enabled kill-switch. Existing balance can
+        // still spend; only NEW top-ups are blocked.
+        if (! \App\Support\FeatureFlag::on('wallet_funding')) {
+            $this->addError('amount', 'Wallet funding is temporarily disabled.');
+            return;
+        }
+
         $this->validate([
-            'currency' => ['required', 'in:'.implode(',', array_column(Currency::cases(), 'value'))],
+            'currency' => ['required', 'in:'.implode(',', array_map(fn ($c) => $c->value, self::fundableCurrencies()))],
             'amount' => ['required', 'numeric', 'gt:0'],
         ]);
 
@@ -327,9 +353,9 @@ new class extends Component
         /** Icon URL for a payment-method type. Null = no icon, render letter fallback. */
         methodIcon(type) {
             const icons = {
-                card: '/assets/credit%20card%20payment.png',
-                apple_pay: '/assets/apply%20pay.png',
-                bank_transfer: '/assets/Bank%20transfer.png',
+                card: '/assets/credit%20card%20payment.webp',
+                apple_pay: '/assets/apply%20pay.webp',
+                bank_transfer: '/assets/Bank%20transfer.webp',
                 mobile_money: '/assets/mobile.svg',
                 crypto: '/assets/USDT.svg',
                 wallet: '/assets/Wallet.svg',
@@ -370,6 +396,7 @@ new class extends Component
         }
     }"
     @payment-session-initialized.window="initPayment($event.detail.session)"
+    @open-fund-wallet.window="if (($event.detail?.code || '').toUpperCase() === '{{ strtoupper($this->currency) }}') open = true"
     class="shrink-0"
 >
     {{-- Trigger. `full` = desktop wallet-card button; `compact` = mobile hero "Top Up". --}}
@@ -394,20 +421,23 @@ new class extends Component
         </button>
     @endif
 
-    {{-- Fund modal — wrapped in <template x-if> so the entire modal subtree only
-         exists in the DOM when `open === true`. This is more defensive than the
-         previous `x-show` approach: if Alpine init fails for any reason, the
-         modal markup isn't on the page at all (can't render in a stuck-open
-         state, can't intercept clicks). --}}
-    <template x-if="open">
+    {{-- Fund modal teleported to <body> so it escapes any parent stacking
+         context (the wallet carousel / mobile hero create new contexts that
+         cap z-index, letting page elements like the "Shop Now" promo bleed
+         through). `x-show + x-cloak` keeps the close handlers wired up since
+         the markup always exists in the DOM after Alpine boots. --}}
+    <template x-teleport="body">
     <div
-        x-on:keydown.escape.window="closeModal()"
-        class="fixed inset-0 z-[80] flex items-center justify-center p-4"
+        x-show="open"
+        x-cloak
+        x-on:keydown.escape.window="open && closeModal()"
+        x-effect="open ? window.rshopScrollLock?.lock() : window.rshopScrollLock?.unlock()"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
     >
         <div
             x-transition.opacity
             @click="closeModal()"
-            class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm"
+            class="absolute inset-0 bg-zinc-900/45"
             aria-hidden="true"
         ></div>
 
@@ -455,7 +485,7 @@ new class extends Component
                         class="absolute left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10"
                         role="listbox"
                     >
-                        @foreach (\App\Domain\Shared\Enums\Currency::cases() as $c)
+                        @foreach (self::fundableCurrencies() as $c)
                             <button
                                 type="button"
                                 wire:click="$set('currency', '{{ $c->value }}')"
@@ -524,13 +554,16 @@ new class extends Component
                                 @click="selectPaymentMethod(method)"
                                 class="flex items-center gap-3 w-full p-4 border border-zinc-200 rounded-[10px] hover:border-blue-500 hover:bg-blue-50/30 text-left transition duration-150"
                             >
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200">
-                                    {{-- Icon by method.type. Falls back to first 2 letters when no icon. --}}
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 dark:bg-white/5 dark:ring-white/15">
+                                    {{-- Icon by method.type. Falls back to first 2 letters when no icon.
+                                         Card + Apple Pay are monochrome: force black in light, white in dark. --}}
                                     <template x-if="methodIcon(method.type)">
-                                        <img :src="methodIcon(method.type)" alt="" class="h-6 w-6 object-contain" loading="lazy">
+                                        <img :src="methodIcon(method.type)" alt=""
+                                             :class="['h-6 w-6 object-contain', (method.type === 'card' || method.type === 'apple_pay') ? 'brightness-0 dark:invert' : '']"
+                                             loading="lazy">
                                     </template>
                                     <template x-if="! methodIcon(method.type)">
-                                        <span class="text-zinc-900 font-bold text-xs uppercase" x-text="method.type.substring(0,2)"></span>
+                                        <span class="text-zinc-900 font-bold text-xs uppercase dark:text-white" x-text="method.type.substring(0,2)"></span>
                                     </template>
                                 </span>
                                 <div class="min-w-0 flex-1">

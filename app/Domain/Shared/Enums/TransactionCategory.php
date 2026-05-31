@@ -14,7 +14,7 @@ enum TransactionCategory: string
     case Withdrawal = 'withdrawal';
     case Reversal = 'reversal';
     case Transfer = 'transfer';
-    
+
     // Reward Engine specific categories
     case RewardCashback = 'reward_cashback';
     case RewardReferral = 'reward_referral';

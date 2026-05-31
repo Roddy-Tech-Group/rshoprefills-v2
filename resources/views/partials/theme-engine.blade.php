@@ -55,8 +55,44 @@
             if (choice === 'light') return false;
             return prefersDark();
         }
+        // Mirror the resolved dark/light decision into a cookie so the
+        // server can render the next request with the right .dark class +
+        // color-scheme meta from the very first byte. Two cookies (web and
+        // admin) so the customer side never leaks the admin's preference.
+        function writeCookie(isDark) {
+            const name = location.pathname.startsWith('/admin')
+                ? 'theme_admin_dark'
+                : 'theme_web_dark';
+            // 1 year, root path, lax so it travels on top-level navigations
+            // but not third-party iframes. Not HttpOnly - JS writes it.
+            document.cookie = `${name}=${isDark ? '1' : '0'}; path=/; max-age=31536000; SameSite=Lax`;
+        }
+
+        // Flux UI ships its own theme engine (loaded by the appearance
+        // directive in the head) that runs AFTER our script. It reads
+        // `flux.appearance` from localStorage and falls back to OS
+        // preference - so if our app is set to LIGHT but the OS is dark,
+        // Flux would flip the page to dark on every load, then our next
+        // applyTheme would flip it back. The visible result is a
+        // dark-then-light blink on hard refresh. Writing our choice into
+        // Flux's own storage key keeps both engines reading the same
+        // value and stops the war.
+        //
+        // NOTE: do not mention the literal Blade directive name (with the
+        // leading at-sign) inside this script body. Blade's tokenizer
+        // still matches @-prefixed directives inside HTML script blocks
+        // and will splice the directive's output right in the middle of
+        // this comment, breaking the surrounding script tag.
+        function syncFlux(choice) {
+            try { localStorage.setItem('flux.appearance', choice); } catch (_) {}
+        }
+
         function applyTheme() {
-            root.classList.toggle('dark', resolveDark());
+            const choice = themeChoice();
+            const isDark = resolveDark();
+            root.classList.toggle('dark', isDark);
+            writeCookie(isDark);
+            syncFlux(choice);
         }
 
         // Persist the choice to the signed-in account so it follows them across
@@ -103,19 +139,10 @@
             }
         });
 
-        // Page transition — the incoming page slides up on navigation.
-        let firstLoad = true;
-        function playPageTransition() {
-            const main = document.querySelector('main');
-            if (! main) return;
-            main.classList.add('page-entering');
-            void main.offsetWidth; // commit the offset before transitioning back
-            main.classList.remove('page-entering');
-        }
-        document.addEventListener('livewire:navigated', function () {
-            applyTheme(); // re-assert after the DOM swap
-            if (firstLoad) { firstLoad = false; return; }
-            playPageTransition();
-        });
+        // Re-assert the theme after every wire:navigate DOM swap. The
+        // page-transition animation is owned by partials/head.blade.php
+        // (one source of truth so it never races with itself); we only
+        // touch `.dark` here so theme + transition stay decoupled.
+        document.addEventListener('livewire:navigated', applyTheme);
     })();
 </script>

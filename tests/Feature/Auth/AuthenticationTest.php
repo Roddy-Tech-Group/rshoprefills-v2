@@ -13,9 +13,9 @@ class AuthenticationTest extends TestCase
 
     public function test_login_screen_can_be_rendered(): void
     {
-        $response = $this->get('/login');
-
-        $response->assertStatus(200);
+        // Login is no longer a dedicated page; /login redirects to the home
+        // page with ?auth=login which triggers the global auth modal.
+        $this->get('/login')->assertRedirect('/?auth=login');
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void

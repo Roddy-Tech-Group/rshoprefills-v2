@@ -1,28 +1,16 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{ $title ?? 'RshopRefills' }}</title>
+        @include('partials.head')
+
+        {{-- Auth-page-only extras. Shared bits (theme engine, page transition,
+             vite, scroll-lock, dark-mode bg) come from partials/head. --}}
         <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
-
-        <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ asset('assets/PWAicon.png') }}">
-
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
-
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-        {{-- Theme engine: defines window.setTheme + window.themeChoice +
-             window.themeIsDark that <x-theme-toggle /> calls. Without this
-             include the auth-page toggle is a no-op (the buttons fire but
-             there is no function to receive them). --}}
-        @include('partials.theme-engine')
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:700" rel="stylesheet" />
 
         {{-- .auth-form-slide scopes a slide-from-right animation to the form
              panel only. The script below re-applies it on every Livewire
-             navigation so login ↔ register feels like a single surface
+             navigation so login -> register feels like a single surface
              swapping its details, not a full-page reload. --}}
         <style>
             @keyframes authFormSlide {
@@ -59,7 +47,7 @@
                 <a href="{{ route('home') }}" wire:navigate class="relative z-10 flex flex-col rounded-[10px] group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/40">
                     <span class="flex h-12 items-center">
                         <img
-                            src="{{ asset('assets/Rshoprefillslogo.png') }}"
+                            src="{{ asset('assets/Rshoprefillslogo.webp') }}"
                             alt="RshopRefills"
                             fetchpriority="high"
                             class="h-full w-auto object-contain brightness-0 invert transition-opacity duration-200 group-hover:opacity-90"
@@ -83,7 +71,7 @@
                         <ul class="mt-8 space-y-4">
                             @foreach([
                                 ['Secure & Trusted', 'Your data and transactions are 100% secure', 'secure payments.svg'],
-                                ['Instant Delivery', 'Get your digital products in seconds',       'fast.png'],
+                                ['Instant Delivery', 'Get your digital products in seconds',       'fast.webp'],
                                 ['Global Access',    'Access products and services worldwide',    'global svg.svg'],
                                 ['24/7 Support',     'We\'re here to help anytime, anywhere',     'support.svg'],
                             ] as [$title, $desc, $icon])
@@ -128,7 +116,7 @@
                             x-transition:leave="transition ease-in duration-300"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-12"
-                            src="{{ asset('assets/graphic_rshoprefill.png') }}"
+                            src="{{ asset('assets/graphic_rshoprefill.webp') }}"
                             alt=""
                             fetchpriority="high"
                             class="absolute inset-0 mx-auto h-auto max-h-[560px] w-full object-contain drop-shadow-2xl"
@@ -144,7 +132,7 @@
                             x-transition:leave="transition ease-in duration-300"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-12"
-                            src="{{ asset('assets/' . rawurlencode('auth page mockup two.png')) }}"
+                            src="{{ asset('assets/' . rawurlencode('auth page mockup two.webp')) }}"
                             alt=""
                             fetchpriority="high"
                             class="absolute inset-0 mx-auto h-auto max-h-[560px] w-full object-contain drop-shadow-2xl"
@@ -193,7 +181,7 @@
                 <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-[10px] group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden">
                     <span class="flex h-10 items-center">
                         <img
-                            src="{{ asset('assets/Rshoprefillslogo.png') }}"
+                            src="{{ asset('assets/Rshoprefillslogo.webp') }}"
                             alt="RshopRefills"
                             class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                         />
