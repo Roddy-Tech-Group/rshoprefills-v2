@@ -346,8 +346,6 @@ new class extends Component
          */
         closeModal() {
             const inFlight = [
-                'card_input',
-                'momo_input',
                 'action_pin',
                 'action_otp',
                 'action_3ds',
@@ -579,7 +577,7 @@ new class extends Component
                             </div>
                         </div>
 
-                        <button @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-2">
+                        <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-2">
                             Pay <span x-text="session?.display_currency + ' ' + Number(session?.amount).toFixed(2)"></span>
                         </button>
                     </div>
@@ -591,7 +589,7 @@ new class extends Component
                     <p class="text-xs text-zinc-600 mb-4">Enter your card 4-digit security PIN to authorize payment.</p>
                     <div class="space-y-4">
                         <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900">
-                        <button @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                        <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                             Confirm PIN
                         </button>
                     </div>
@@ -603,7 +601,7 @@ new class extends Component
                     <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
                     <div class="space-y-4">
                         <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900">
-                        <button @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                        <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                             Verify OTP
                         </button>
                     </div>
@@ -651,7 +649,7 @@ new class extends Component
                             </select>
                         </div>
 
-                        <button @click="paySession('mobile_money', momoDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
+                        <button type="button" @click="paySession('mobile_money', momoDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                             Pay <span x-text="session?.display_currency + ' ' + Number(session?.amount).toFixed(2)"></span>
                         </button>
                     </div>
