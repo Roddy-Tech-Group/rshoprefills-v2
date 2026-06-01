@@ -693,12 +693,8 @@
                 class="relative"
             >
                 @php
-                    // Default avatar by admin gender. Backend can add a `gender` column to admins later
-                    // and the right portrait will be picked up automatically. Falls back to the male portrait.
-                    $adminDefaultAvatar = asset('assets/' . rawurlencode(match (strtolower($admin?->gender ?? '')) {
-                        'female', 'f' => 'New Female Account Avatar.webp',
-                        default       => 'New male account avatar.webp',
-                    }));
+                    // Initials avatar fallback when the admin hasn't uploaded a photo.
+                    $adminDefaultAvatar = $admin?->initialsAvatar() ?? '';
                 @endphp
                 <button
                     type="button"

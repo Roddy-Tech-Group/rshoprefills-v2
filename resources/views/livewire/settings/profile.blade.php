@@ -187,12 +187,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     $googleConnected = !empty($authUser?->google_id);
     $lastLoginAt = $authUser?->updated_at;
     $firstName = $authUser?->name ? str($authUser->name)->before(' ') : 'there';
-    // Gender-aware default avatar. Resolves on every page render so changing gender in settings
-    // updates every place this is read.
-    $defaultAvatar = asset('assets/' . rawurlencode(match (strtolower($authUser?->gender ?? '')) {
-        'female', 'f' => 'New Female Account Avatar.webp',
-        default       => 'New male account avatar.webp',
-    }));
+    // Initials avatar fallback when no real photo is set. Deterministic per
+    // user, so it stays stable across renders.
+    $defaultAvatar = $authUser?->initialsAvatar() ?? '';
 @endphp
 
 <div

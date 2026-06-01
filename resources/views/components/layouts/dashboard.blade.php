@@ -253,12 +253,10 @@
             // The bell dropdown (<livewire:notifications-menu />) computes its own.
             $notificationCount = $user?->notifications()->whereNull('read_at')->count() ?? 0;
 
-            // Default avatar by gender. Backend hook: add a nullable `gender` enum (male|female|other) on users
-            // and the right portrait is picked up automatically. Falls back to the male portrait until the column ships.
-            $defaultAvatar = asset('assets/' . rawurlencode(match (strtolower($user?->gender ?? '')) {
-                'female', 'f' => 'New Female Account Avatar.webp',
-                default       => 'New male account avatar.webp',
-            }));
+            // Initials avatar fallback when the user has no real photo (Google
+            // picture / uploaded avatar). Deterministic per user, works for
+            // everyone - no gender needed.
+            $defaultAvatar = $user?->initialsAvatar() ?? '';
         @endphp
 
         <flux:sidebar sticky stashable class="relative hidden w-[256px] bg-white dark:bg-[#0c1a36] lg:flex">

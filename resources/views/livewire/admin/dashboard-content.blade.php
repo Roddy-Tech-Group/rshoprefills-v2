@@ -566,10 +566,7 @@
                                     <td class="px-5 py-3">
                                         <div class="flex items-center gap-3">
                                             @php
-                                                $rowAvatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
-                                                    'female', 'f' => 'New Female Account Avatar.webp',
-                                                    default       => 'New male account avatar.webp',
-                                                }));
+                                                $rowAvatar = $user->avatar_url ?: $user->initialsAvatar();
                                             @endphp
                                             <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100">
                                             <div class="leading-tight">

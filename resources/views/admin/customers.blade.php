@@ -73,10 +73,7 @@
         @forelse ($customers as $user)
             @php
                 $status = $statusFor($user);
-                $rowAvatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
-                    'female', 'f' => 'New Female Account Avatar.webp',
-                    default       => 'New male account avatar.webp',
-                }));
+                $rowAvatar = $user->avatar_url ?: $user->initialsAvatar();
             @endphp
             <a
                 href="{{ route('admin.customer', $user) }}"

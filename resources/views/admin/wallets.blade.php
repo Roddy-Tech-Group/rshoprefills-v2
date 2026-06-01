@@ -49,10 +49,7 @@
                                 <td>
                                     <div class="flex items-center gap-3">
                                         @php
-                                            $rowAvatar = $wallet->user?->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($wallet->user?->gender ?? '')) {
-                                                'female', 'f' => 'New Female Account Avatar.webp',
-                                                default       => 'New male account avatar.webp',
-                                            }));
+                                            $rowAvatar = $wallet->user?->avatar_url ?: ($wallet->user?->initialsAvatar() ?? '');
                                         @endphp
                                         <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100 dark:ring-blue-500/30">
                                         <div class="leading-tight">

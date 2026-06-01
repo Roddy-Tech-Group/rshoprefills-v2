@@ -119,6 +119,30 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * A deterministic SVG initials avatar returned as a base64 data URI, used
+     * wherever the user hasn't set a real photo (Google `picture` or an
+     * uploaded avatar). The background colour is hashed from the name/email so
+     * the same user always gets the same swatch, and the initials come from
+     * {@see initials()}. Drops straight into an <img src>.
+     */
+    public function initialsAvatar(int $size = 128): string
+    {
+        $initials = Str::of($this->initials())->upper()->substr(0, 2)->value() ?: 'U';
+        $initials = htmlspecialchars($initials, ENT_QUOTES);
+
+        $palette = ['#2563eb', '#7c3aed', '#0d9488', '#dc2626', '#ea580c', '#0891b2', '#4f46e5', '#db2777', '#16a34a', '#d97706'];
+        $bg = $palette[crc32((string) ($this->name ?: $this->email ?: 'user')) % count($palette)];
+        $fontSize = (int) round($size * 0.42);
+
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'.$size.'" height="'.$size.'" viewBox="0 0 '.$size.' '.$size.'">'
+            .'<rect width="'.$size.'" height="'.$size.'" fill="'.$bg.'"/>'
+            .'<text x="50%" y="50%" dy=".05em" fill="#ffffff" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="'.$fontSize.'" font-weight="600" text-anchor="middle" dominant-baseline="central">'.$initials.'</text>'
+            .'</svg>';
+
+        return 'data:image/svg+xml;base64,'.base64_encode($svg);
+    }
+
+    /**
      * Whether the account is banned. A banned user is forced out of the session
      * by EnsureAccountActive middleware and blocked from signing in again.
      */

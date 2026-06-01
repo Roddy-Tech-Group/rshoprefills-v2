@@ -23,7 +23,19 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     public string $password_confirmation = '';
 
+    public string $referral = '';
+
     public ?string $turnstileToken = null;
+
+    /**
+     * Prefill the referral code from the CaptureReferralCookie so a customer
+     * who arrived via a `?ref=CODE` link sees their friend's code already
+     * filled in (still editable). Falls back to an empty, optional field.
+     */
+    public function mount(): void
+    {
+        $this->referral = trim((string) request()->cookie(CaptureReferralCookie::COOKIE_NAME, ''));
+    }
 
     /**
      * Handle an incoming registration request.
@@ -43,36 +55,21 @@ new #[Layout('components.layouts.auth')] class extends Component {
         event(new Registered(($user = User::create($validated))));
 
         // ── Referral attribution ────────────────────────────────────────
-        // CaptureReferralCookie stashes `?ref=CODE` into a 90-day cookie on
-        // the storefront. On signup we look that code up against
-        // users.referral_code and, if it matches a DIFFERENT real user,
-        // create the Referral row that the RewardEngine reads when this
-        // user's first order completes. Silently skips when there's no
-        // cookie / no match / self-referral.
-        $referralCode = trim((string) request()->cookie(CaptureReferralCookie::COOKIE_NAME, ''));
-        if ($referralCode !== '') {
-            $referrer = User::query()
-                ->where('referral_code', $referralCode)
-                ->where('id', '!=', $user->id)
-                ->first();
+        // Prefer the code the customer typed on the form; fall back to the
+        // `?ref=CODE` value CaptureReferralCookie stashed for 90 days. Either
+        // way Referral::attribute matches it against users.referral_code and,
+        // if it points at a DIFFERENT real user, creates the Referral row the
+        // RewardEngine reads when this user's first order completes. It
+        // silently no-ops on blank / no-match / self-referral.
+        $referralCode = $this->referral !== ''
+            ? $this->referral
+            : (string) request()->cookie(CaptureReferralCookie::COOKIE_NAME, '');
 
-            if ($referrer) {
-                Referral::firstOrCreate(
-                    ['referred_user_id' => $user->id],
-                    [
-                        'referrer_id' => $referrer->id,
-                        'status' => 'active',
-                        'total_rewards_generated' => 0,
-                        'total_orders_completed' => 0,
-                    ],
-                );
-            }
+        Referral::attribute($user, $referralCode);
 
-            // Clear the cookie - it's done its job and a future signup on
-            // the same browser shouldn't accidentally attribute to the
-            // same referrer.
-            Cookie::queue(Cookie::forget(CaptureReferralCookie::COOKIE_NAME));
-        }
+        // Clear the cookie - it's done its job and a future signup on the same
+        // browser shouldn't accidentally attribute to the same referrer.
+        Cookie::queue(Cookie::forget(CaptureReferralCookie::COOKIE_NAME));
 
         Auth::login($user);
 
@@ -273,6 +270,32 @@ new #[Layout('components.layouts.auth')] class extends Component {
                     </button>
                 </div>
                 @error('password_confirmation') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Referral code (optional). Prefilled from the ?ref=CODE cookie
+                 when the customer arrived through a friend's invite link, but
+                 always editable so anyone can paste a code in by hand. --}}
+            <div>
+                <label for="referral" class="mb-1.5 block text-base font-medium text-zinc-700">
+                    Referral code <span class="font-normal text-zinc-500">(optional)</span>
+                </label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                        </svg>
+                    </span>
+                    <input
+                        wire:model="referral"
+                        id="referral"
+                        name="referral"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="Enter a friend's referral code"
+                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                    />
+                </div>
+                @error('referral') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- Submit --}}

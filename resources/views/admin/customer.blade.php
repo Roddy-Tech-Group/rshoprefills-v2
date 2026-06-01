@@ -18,10 +18,7 @@
         };
     };
 
-    $avatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
-        'female', 'f' => 'New Female Account Avatar.webp',
-        default       => 'New male account avatar.webp',
-    }));
+    $avatar = $user->avatar_url ?: $user->initialsAvatar();
 
     $primaryWallet = $user->wallets->first(fn ($wallet) => $wallet->currency->value === 'USD')
         ?? $user->wallets->first();

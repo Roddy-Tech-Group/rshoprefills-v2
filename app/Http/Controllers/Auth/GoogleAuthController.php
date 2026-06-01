@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Domain\Auth\Services\GoogleAuthService;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\CaptureReferralCookie;
+use App\Models\Referral;
 use GuzzleHttp\Client;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\AbstractProvider;
@@ -69,6 +72,15 @@ class GoogleAuthController extends Controller
         try {
             $result = $this->googleAuthService->findOrCreateUser($googleUser);
             $user = $result['user'];
+
+            // Referral attribution for brand-new Google signups: match the
+            // 90-day ?ref cookie against a referrer and create the Referral
+            // row, mirroring the credentials register flow. Existing users
+            // (linking / returning) are never re-attributed.
+            if ($result['is_new']) {
+                Referral::attribute($user, request()->cookie(CaptureReferralCookie::COOKIE_NAME));
+                Cookie::queue(Cookie::forget(CaptureReferralCookie::COOKIE_NAME));
+            }
 
             Auth::login($user, remember: true);
             session()->regenerate();

@@ -304,13 +304,9 @@
                     $currencyCase = auth()->check() ? (auth()->user()->wallet?->currency ?? Currency::USD) : null;
                     $currencySymbol = $currencyCase?->symbol() ?? '';
 
-                    // Gender-aware default avatar for authed users. Resolved at render time so the right
-                    // portrait shows up everywhere the user's avatar is rendered until they upload one.
+                    // Real photo if set, otherwise a deterministic initials avatar.
                     $authUser = auth()->user();
-                    $accountAvatar = $authUser?->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($authUser?->gender ?? '')) {
-                        'female', 'f' => 'New Female Account Avatar.webp',
-                        default       => 'New male account avatar.webp',
-                    }));
+                    $accountAvatar = $authUser?->avatar_url ?: ($authUser?->initialsAvatar() ?? '');
                 @endphp
                 @auth
                     <a
