@@ -1173,7 +1173,7 @@
                     type="button"
                     @click="$dispatch('open-connect-panel')"
                     aria-label="Connect with us"
-                    class="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                    class="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
@@ -1185,7 +1185,7 @@
                     type="button"
                     @click="$dispatch('open-locale-modal')"
                     aria-label="Change language and region"
-                    class="pointer-events-auto inline-flex h-11 items-center gap-2 rounded-[10px] bg-white/40 px-3 text-sm font-semibold text-zinc-900 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/15"
+                    class="pointer-events-auto inline-flex h-11 items-center gap-2 rounded-full bg-white/40 px-4 text-sm font-semibold text-zinc-900 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/15"
                 >
                     <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-white/40">
                     <span class="max-w-[90px] truncate" x-text="country">United States</span>
@@ -1194,9 +1194,25 @@
                     </svg>
                 </button>
 
-                {{-- Notification chip (right) - same glass treatment. --}}
-                <div class="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-white/10 dark:ring-white/20">
-                    <livewire:notifications-menu tone="dark" wire:key="floating-notif-inner" />
+                {{-- Cart + notification chips (right) - same glass treatment, pinned. --}}
+                <div class="pointer-events-auto flex items-center gap-2" x-data>
+                    <a
+                        href="{{ route('shop.cart') }}"
+                        wire:navigate
+                        aria-label="Cart"
+                        class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                    >
+                        <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
+                        <span
+                            x-show="$store.cart && $store.cart.count > 0"
+                            x-text="$store.cart ? $store.cart.count : ''"
+                            x-cloak
+                            class="absolute -top-1 -right-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white/60 dark:ring-[#0c1a36]"
+                        ></span>
+                    </a>
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-white/10 dark:ring-white/20">
+                        <livewire:notifications-menu tone="dark" wire:key="floating-notif-inner" />
+                    </div>
                 </div>
             </div>
         @endif
