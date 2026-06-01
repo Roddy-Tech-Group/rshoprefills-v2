@@ -28,9 +28,13 @@ class TurnstileService
     public static function make(): self
     {
         return new self(
-            secretKey: config('services.turnstile.secret_key', ''),
-            enabled: config('services.turnstile.enabled', false),
-            bypassLocal: config('services.turnstile.bypass_local', true)
+            // Cast to string: config returns null (not the '' default) when the
+            // TURNSTILE_SECRET_KEY env var is unset, e.g. in CI. The constructor
+            // type-hints a non-null string, so a null would TypeError before the
+            // enabled/bypass checks in validateToken ever run.
+            secretKey: (string) config('services.turnstile.secret_key', ''),
+            enabled: (bool) config('services.turnstile.enabled', false),
+            bypassLocal: (bool) config('services.turnstile.bypass_local', true)
         );
     }
 
