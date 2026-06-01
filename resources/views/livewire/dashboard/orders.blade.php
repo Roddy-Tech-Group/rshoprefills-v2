@@ -545,25 +545,25 @@ class extends Component {
                         'label'   => 'Gift Cards',
                         'caption' => 'Pay anyone, anywhere',
                         'icon'    => 'gift cards.svg',
-                        'href'    => route('shop.gift-cards'),
+                        'href'    => route('dashboard.shop.gift-cards'),
                     ],
                     [
                         'label'   => 'eSIMs',
                         'caption' => 'Travel data in 190+ countries',
                         'icon'    => 'esim.svg',
-                        'href'    => route('shop.esims'),
+                        'href'    => route('dashboard.shop.esims'),
                     ],
                     [
                         'label'   => 'Mobile Top-ups',
                         'caption' => 'Recharge any number worldwide',
                         'icon'    => 'topup1.svg',
-                        'href'    => route('shop.topups'),
+                        'href'    => route('dashboard.shop.topups'),
                     ],
                     [
                         'label'   => 'Bill Payments',
                         'caption' => 'Settle utility bills instantly',
                         'icon'    => 'Bills 2.svg',
-                        'href'    => route('shop.bills'),
+                        'href'    => route('dashboard.shop.bills'),
                     ],
                 ];
             @endphp
@@ -600,7 +600,7 @@ class extends Component {
                 </div>
 
                 <a
-                    href="{{ route('home') }}"
+                    href="{{ route('dashboard.shop.gift-cards') }}"
                     wire:navigate
                     class="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
                 >

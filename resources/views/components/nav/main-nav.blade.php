@@ -477,15 +477,12 @@
                      drops open automatically when an item is added (store.add sets open = true). --}}
                 <div
                     x-data="{ locked: false }"
-                    @mouseenter="if (!locked) $store.cart.open = true"
-                    @mouseleave="if (!locked) $store.cart.open = false"
-                    @click.outside="$store.cart.open = false; locked = false"
                     @keydown.escape.window="$store.cart.open = false; locked = false"
                     class="relative"
                 >
                     <button
                         type="button"
-                        @click="locked = !locked; $store.cart.open = locked"
+                        @click="$store.cart.open = ! $store.cart.open; locked = $store.cart.open"
                         :aria-expanded="$store.cart.open.toString()"
                         aria-haspopup="menu"
                         class="relative flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-[8px] bg-zinc-200 text-zinc-900 hover:bg-zinc-300 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
@@ -500,19 +497,32 @@
                         ></span>
                     </button>
 
-                    {{-- Cart popup --}}
-                    <div
-                        x-show="$store.cart.open"
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0 -translate-y-1"
-                        x-transition:enter-end="opacity-100 translate-y-0"
-                        x-transition:leave="transition ease-in duration-100"
-                        x-transition:leave-start="opacity-100 translate-y-0"
-                        x-transition:leave-end="opacity-0 -translate-y-1"
-                        style="display:none;"
-                        class="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-[10px] bg-white/80 px-3 py-2 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
-                        role="menu"
-                    >
+                    {{-- Cart popup. Teleported to <body> and fixed top-right so it
+                         pops up on its own even when the primary nav row is
+                         collapsed on scroll (that row goes opacity-0/overflow-hidden,
+                         which would otherwise hide the popup). A transparent
+                         full-screen layer behind it closes it on an outside tap. --}}
+                    <template x-teleport="body">
+                        <div>
+                            <div
+                                x-show="$store.cart.open"
+                                x-transition.opacity.duration.150ms
+                                @click="$store.cart.open = false; locked = false"
+                                style="display:none;"
+                                class="fixed inset-0 z-[55]"
+                            ></div>
+                            <div
+                                x-show="$store.cart.open"
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 -translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-start="opacity-100 translate-y-0"
+                                x-transition:leave-end="opacity-0 -translate-y-1"
+                                style="display:none;"
+                                class="fixed right-3 top-[84px] z-[56] w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[10px] bg-white/80 px-3 py-2 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 sm:right-4"
+                                role="menu"
+                            >
                         {{-- Empty state --}}
                         <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
                             <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
@@ -566,6 +576,8 @@
                             </div>
                         </div>
                     </div>
+                        </div>
+                    </template>
                 </div>
 
             </div>

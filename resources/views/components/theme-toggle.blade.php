@@ -107,7 +107,7 @@
                 x-show="choice === 'light'"
                 src="{{ asset('assets/' . rawurlencode('Light mode respects theme.webp')) }}"
                 alt=""
-                class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert"
+                class="h-5 w-5 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
             <img
@@ -115,7 +115,7 @@
                 x-cloak
                 src="{{ asset('assets/' . rawurlencode('Dark mode respects light and dark mode.webp')) }}"
                 alt=""
-                class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert"
+                class="h-5 w-5 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
             <img
@@ -123,7 +123,7 @@
                 x-cloak
                 src="{{ asset('assets/' . rawurlencode('Auto Mode.webp')) }}"
                 alt=""
-                class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert"
+                class="h-5 w-5 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
         </button>
