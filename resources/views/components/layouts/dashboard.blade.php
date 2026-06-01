@@ -1053,7 +1053,25 @@
                         <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-blue-600" aria-label="Online"></span>
                     @endif
                 </a>
-                <livewire:notifications-menu tone="light" />
+                <div class="flex items-center gap-2" x-data>
+                    {{-- Cart — links to the cart page with a live count from the
+                         global $store.cart (kept in sync with the shop pages). --}}
+                    <a
+                        href="{{ route('shop.cart') }}"
+                        wire:navigate
+                        aria-label="Cart"
+                        class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 transition-colors hover:bg-white/25"
+                    >
+                        <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 brightness-0 invert" loading="lazy">
+                        <span
+                            x-show="$store.cart && $store.cart.count > 0"
+                            x-text="$store.cart ? $store.cart.count : ''"
+                            x-cloak
+                            class="absolute -top-1 -right-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-blue-700"
+                        ></span>
+                    </a>
+                    <livewire:notifications-menu tone="light" />
+                </div>
             </div>
 
             {{-- Wallet card slot - sits directly under the compact identity strip
@@ -1100,7 +1118,24 @@
                 >
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
-                <livewire:notifications-menu tone="dark" />
+                <div class="flex items-center gap-1" x-data>
+                    {{-- Cart — live count from the global $store.cart, taps through to the cart page. --}}
+                    <a
+                        href="{{ route('shop.cart') }}"
+                        wire:navigate
+                        aria-label="Cart"
+                        class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-white/40 active:scale-95 dark:hover:bg-white/10"
+                    >
+                        <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
+                        <span
+                            x-show="$store.cart && $store.cart.count > 0"
+                            x-text="$store.cart ? $store.cart.count : ''"
+                            x-cloak
+                            class="absolute -top-0.5 -right-0.5 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold leading-none text-white"
+                        ></span>
+                    </a>
+                    <livewire:notifications-menu tone="dark" />
+                </div>
             </div>
 
             {{-- ─────────────────────────────────────────────────────── --}}
