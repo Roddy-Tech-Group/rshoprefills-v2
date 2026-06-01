@@ -293,7 +293,7 @@
                                 class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-[10px] border border-zinc-200 bg-white/80 p-1 shadow-xl shadow-zinc-900/10 backdrop-blur-xl"
                                 role="listbox"
                             >
-                                @foreach (\App\Domain\Shared\Enums\Currency::cases() as $c)
+                                @foreach (array_filter(\App\Domain\Shared\Enums\Currency::cases(), fn ($c) => $c->value !== 'RCOIN') as $c)
                                     <button
                                         type="button"
                                         @click="

@@ -99,16 +99,15 @@
             title="Theme"
             {{ $attributes->class('inline-flex items-center justify-center transition-colors') }}
         >
-            {{-- Trigger shows the PNG that matches the user's CHOICE (not the
-                 resolved theme). That means the Auto icon is visible when
-                 system mode is selected - same surface area for all three
-                 modes. brightness-0 + dark:invert keeps the monochrome icon
+            {{-- Trigger shows the icon that matches the user's CHOICE (not the
+                 resolved theme), so the Auto icon is visible while in system
+                 mode. brightness-0 + dark:invert keeps the monochrome webp
                  legible on whichever chrome it sits on. --}}
             <img
                 x-show="choice === 'light'"
                 src="{{ asset('assets/' . rawurlencode('Light mode respects theme.webp')) }}"
                 alt=""
-                class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert"
+                class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
             <img
@@ -116,7 +115,7 @@
                 x-cloak
                 src="{{ asset('assets/' . rawurlencode('Dark mode respects light and dark mode.webp')) }}"
                 alt=""
-                class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert"
+                class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
             <img
@@ -124,7 +123,7 @@
                 x-cloak
                 src="{{ asset('assets/' . rawurlencode('Auto Mode.webp')) }}"
                 alt=""
-                class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert"
+                class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
         </button>
@@ -154,7 +153,7 @@
                         role="menuitemradio"
                         :aria-checked="(choice === '{{ $opt['value'] }}').toString()"
                     >
-                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert sm:h-6 sm:w-6" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert sm:h-6 sm:w-6" loading="lazy">
                         <span class="hidden sm:inline">{{ $opt['label'] }}</span>
                     </button>
                 @endforeach

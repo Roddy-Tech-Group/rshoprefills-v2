@@ -33,9 +33,11 @@ new class extends Component
             ->map(fn ($c) => $c instanceof Currency ? $c->value : (string) $c)
             ->all();
 
+        // RCOIN is a rewards balance, not a fundable wallet - it can never be
+        // topped up, so it must never appear in the "open a wallet" list.
         return array_values(array_filter(
             Currency::cases(),
-            fn (Currency $c) => ! in_array($c->value, $held, true),
+            fn (Currency $c) => $c->value !== 'RCOIN' && ! in_array($c->value, $held, true),
         ));
     }
 
@@ -45,7 +47,7 @@ new class extends Component
     public function create(WalletService $wallets)
     {
         $this->validate([
-            'currency' => ['required', 'in:'.implode(',', array_column(Currency::cases(), 'value'))],
+            'currency' => ['required', 'in:'.implode(',', array_values(array_filter(array_column(Currency::cases(), 'value'), fn ($v) => $v !== 'RCOIN')))],
         ]);
 
         $currency = Currency::from($this->currency);

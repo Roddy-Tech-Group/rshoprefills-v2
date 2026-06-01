@@ -200,7 +200,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-white/40 bg-white/70 backdrop-blur-2xl backdrop-saturate-150 shadow-xl shadow-zinc-900/15 dark:border-white/15 dark:bg-[#0c1a36]/75"
+                    class="relative z-20 mt-2 overflow-hidden rounded-[10px] border border-white/40 bg-white/70 backdrop-blur-2xl backdrop-saturate-150 shadow-xl shadow-zinc-900/15 dark:border-white/15 dark:bg-[#0c1a36]/75"
                     role="listbox"
                 >
                     {{-- Search --}}
@@ -282,7 +282,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-white/40 bg-white/70 backdrop-blur-2xl backdrop-saturate-150 shadow-xl shadow-zinc-900/15 dark:border-white/15 dark:bg-[#0c1a36]/75"
+                    class="relative z-20 mt-2 overflow-hidden rounded-[10px] border border-white/40 bg-white/70 backdrop-blur-2xl backdrop-saturate-150 shadow-xl shadow-zinc-900/15 dark:border-white/15 dark:bg-[#0c1a36]/75"
                     role="listbox"
                 >
                     {{-- Search --}}

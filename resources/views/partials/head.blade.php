@@ -94,7 +94,7 @@
 @php
     $siteName = 'RshopRefills';
 
-    $defaultDescription = 'Buy gift cards, eSIMs, mobile top-ups and bill payments worldwide. Built in Cameroon by CEO Divine Ofeh and CTO Johnpaul, RshopRefills is bringing Africa\'s digital ecosystem to the world - instant delivery, great prices and 24/7 support.';
+    $defaultDescription = 'Buy gift cards, eSIMs, mobile top-ups and bill payments worldwide - instantly. RshopRefills removes the friction of regional restrictions, slow delivery and limited payment options, with instant digital delivery, great prices, crypto and mobile-money checkout, and 24/7 support.';
     $defaultKeywords = 'RshopRefills, gift cards, buy gift cards online, eSIM, travel eSIM, mobile top up, airtime recharge, bill payments, crypto gift cards, Amazon gift card, Apple gift card, Google Play, Steam, Netflix, PlayStation, Xbox, Cameroon, Africa fintech, Divine Ofeh, Johnpaul';
 
     $seoTitle       = ! empty($title) ? $title : $siteName.' - Gift Cards, eSIMs, Top-ups & Bill Payments';

@@ -35,7 +35,10 @@ new #[Lazy] class extends Component
         $walletCurrencyCase = Currency::tryFrom($walletCurrencyCode);
         $walletSymbol = $walletCurrencyCase?->symbol() ?? '$';
 
-        $allWallets = $user->wallets()->where('is_active', true)->get();
+        // Exclude RCOIN: it's a rewards balance shown via the loyalty/tier
+        // section below ($rcoinWallet), not a fundable wallet, so it must not
+        // appear as a top-up-able wallet card.
+        $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get();
 
         // Recent wallet ledger movements - covers both top-ups (credits) and
         // purchases (debits) since they both write WalletTransaction rows. Latest 8
