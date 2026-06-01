@@ -3,7 +3,13 @@
     $img = fn (string $file) => asset('assets/'.rawurlencode($file));
 @endphp
 
-<x-layouts.app.header :title="$post->title.' | RshopRefills'">
+<x-layouts.app.header
+    :title="$post->title.' | RshopRefills'"
+    :description="$post->excerpt"
+    :keywords="$post->title.', '.$post->category.', RshopRefills blog'"
+    :og-image="$post->image ? asset('assets/'.rawurlencode($post->image)) : asset('assets/og-image.png')"
+    og-type="article"
+>
 
     <article class="mx-auto w-full max-w-[820px] px-4 py-12 sm:px-6 sm:py-16">
         <a href="{{ route('shop.blog') }}" wire:navigate class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline">

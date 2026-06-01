@@ -81,7 +81,82 @@
     html.dark { background-color: #0c1a36; }
 </style>
 
-<title>{{ $title ?? 'RshopRefills' }}</title>
+{{-- ─────────────────────────────── SEO ───────────────────────────────────
+     Single source of truth for the whole site. Pages override per-page by
+     passing $title / $description / $ogImage / $ogType / $keywords through the
+     layout (see x-shop.layout + x-layouts.app.header), e.g. product pages set
+     the brand name + logo so a shared link previews as that product. --}}
+@php
+    $siteName = 'RshopRefills';
+
+    $defaultDescription = 'Buy gift cards, eSIMs, mobile top-ups and bill payments worldwide. Built in Cameroon by CEO Divine Ofeh and CTO Johnpaul, RshopRefills is bringing Africa\'s digital ecosystem to the world - instant delivery, great prices and 24/7 support.';
+    $defaultKeywords = 'RshopRefills, gift cards, buy gift cards online, eSIM, travel eSIM, mobile top up, airtime recharge, bill payments, crypto gift cards, Amazon gift card, Apple gift card, Google Play, Steam, Netflix, PlayStation, Xbox, Cameroon, Africa fintech, Divine Ofeh, Johnpaul';
+
+    $seoTitle       = ! empty($title) ? $title : $siteName.' - Gift Cards, eSIMs, Top-ups & Bill Payments';
+    $seoDescription = ! empty($description) ? $description : $defaultDescription;
+    $seoKeywords    = ! empty($keywords) ? $keywords : $defaultKeywords;
+    $seoType        = ! empty($ogType) ? $ogType : 'website';
+    $seoImage       = ! empty($ogImage) ? $ogImage : asset('assets/og-image.png');
+    $seoUrl         = url()->current();
+
+    // Organization schema: the brand, the founders, and the mission - written so
+    // search engines and AI crawlers can pick up who built RshopRefills and why.
+    $orgJsonLd = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        'name' => $siteName,
+        'url' => url('/'),
+        'logo' => asset('assets/icon-512.png'),
+        'image' => asset('assets/og-image.png'),
+        'description' => 'RshopRefills is the first product of Roddy Technologies. It makes gift cards, eSIMs, mobile top-ups and bill payments instant and affordable. Founded and built in Cameroon by CEO Divine Ofeh and CTO Johnpaul, the team keeps shipping updates and solving problems for the community while building an Africa-to-international digital ecosystem - from Cameroon to the world.',
+        'slogan' => 'From Cameroon to the world.',
+        'foundingLocation' => [
+            '@type' => 'Place',
+            'address' => ['@type' => 'PostalAddress', 'addressCountry' => 'CM'],
+        ],
+        'areaServed' => 'Worldwide',
+        'parentOrganization' => [
+            '@type' => 'Organization',
+            'name' => 'Roddy Technologies',
+        ],
+        'founder' => [
+            ['@type' => 'Person', 'name' => 'Divine Ofeh', 'jobTitle' => 'Chief Executive Officer (CEO)'],
+            ['@type' => 'Person', 'name' => 'Johnpaul', 'jobTitle' => 'Chief Technology Officer (CTO)'],
+        ],
+    ];
+    $siteJsonLd = [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebSite',
+        'name' => $siteName,
+        'url' => url('/'),
+    ];
+@endphp
+
+<title>{{ $seoTitle }}</title>
+<meta name="description" content="{{ $seoDescription }}">
+<meta name="keywords" content="{{ $seoKeywords }}">
+<meta name="author" content="Divine Ofeh (CEO) and Johnpaul (CTO) - RshopRefills">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ $seoUrl }}">
+
+{{-- Open Graph: link previews on Facebook, WhatsApp, LinkedIn, iMessage, etc. --}}
+<meta property="og:site_name" content="{{ $siteName }}">
+<meta property="og:type" content="{{ $seoType }}">
+<meta property="og:title" content="{{ $seoTitle }}">
+<meta property="og:description" content="{{ $seoDescription }}">
+<meta property="og:url" content="{{ $seoUrl }}">
+<meta property="og:image" content="{{ $seoImage }}">
+<meta property="og:locale" content="{{ str_replace('-', '_', app()->getLocale()) }}">
+
+{{-- Twitter / X card --}}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $seoTitle }}">
+<meta name="twitter:description" content="{{ $seoDescription }}">
+<meta name="twitter:image" content="{{ $seoImage }}">
+
+{{-- Structured data (founders + mission for bots/AI crawlers) --}}
+<script type="application/ld+json">{!! json_encode($orgJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+<script type="application/ld+json">{!! json_encode($siteJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
 <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
 

@@ -297,21 +297,91 @@ Route::view('accessibility', 'shop.accessibility')->name('shop.accessibility');
 // HTML sitemap - a human-friendly index of every section.
 Route::view('sitemap', 'shop.sitemap')->name('shop.sitemap');
 
-// XML sitemap for search engines (lists public pages only).
-Route::get('sitemap.xml', function () {
-    $names = [
-        'home', 'shop.gift-cards', 'shop.esims', 'shop.topups', 'shop.bills',
-        'shop.flights', 'shop.stays', 'shop.cart', 'shop.help', 'shop.how-it-works',
-        'shop.contact', 'shop.about', 'shop.privacy', 'shop.terms', 'shop.cookie-policy',
-        'shop.refund-policy', 'shop.compliance', 'shop.accessibility', 'shop.sitemap',
+// robots.txt (dynamic so the Sitemap line uses the correct host on any domain).
+// Crawlers may index the whole public storefront; private surfaces are blocked.
+Route::get('robots.txt', function () {
+    $lines = [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /admin',
+        'Disallow: /dashboard',
+        'Disallow: /api',
+        'Disallow: /cart',
+        'Disallow: /checkout',
+        'Disallow: /order',
+        '',
+        'Sitemap: '.url('/sitemap.xml'),
+        '',
     ];
 
-    $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-    $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
-    foreach ($names as $name) {
-        $xml .= '  <url><loc>'.e(route($name)).'</loc></url>'."\n";
-    }
-    $xml .= '</urlset>';
+    return response(implode("\n", $lines), 200, ['Content-Type' => 'text/plain']);
+})->name('robots');
+
+// XML sitemap for search engines. Lists every public, rankable page: marketing
+// pages + one URL per product brand (gift cards / top-ups / bill payments).
+// Cached for 6 hours so the brand query never runs on a hot crawl.
+Route::get('sitemap.xml', function () {
+    $xml = \Illuminate\Support\Facades\Cache::remember('sitemap.xml.v2', now()->addHours(6), function () {
+        $urls = [];
+        $push = function (string $loc, string $priority = '0.7', string $freq = 'weekly') use (&$urls) {
+            $urls[$loc] = ['loc' => $loc, 'priority' => $priority, 'freq' => $freq];
+        };
+
+        $push(route('home'), '1.0', 'daily');
+
+        $staticNames = [
+            'shop.gift-cards' => '0.9', 'shop.esims' => '0.9', 'shop.topups' => '0.9', 'shop.bills' => '0.9',
+            'shop.flights' => '0.6', 'shop.stays' => '0.6', 'shop.reviews' => '0.6', 'shop.blog' => '0.6',
+            'shop.how-it-works' => '0.5', 'shop.help' => '0.5', 'shop.faq' => '0.5', 'shop.contact' => '0.5',
+            'shop.about' => '0.5', 'shop.mobile-app' => '0.5', 'shop.earn-points' => '0.5',
+            'shop.partnerships' => '0.4', 'shop.suppliers' => '0.4', 'shop.press' => '0.4',
+            'shop.privacy' => '0.3', 'shop.terms' => '0.3', 'shop.cookie-policy' => '0.3',
+            'shop.refund-policy' => '0.3', 'shop.compliance' => '0.3', 'shop.accessibility' => '0.3',
+            'shop.sitemap' => '0.3',
+        ];
+        foreach ($staticNames as $name => $priority) {
+            if (\Illuminate\Support\Facades\Route::has($name)) {
+                $push(route($name), $priority);
+            }
+        }
+
+        // One URL per brand_key, routed by its category.
+        $routeByCategory = [
+            'gift-cards' => 'shop.brand',
+            'mobile-airtime' => 'shop.topup',
+            'bill-payments' => 'shop.bill',
+        ];
+        Product::query()
+            ->where('products.is_active', true)
+            ->whereNotNull('products.brand_key')
+            ->join('categories', 'categories.id', '=', 'products.category_id')
+            ->select('products.brand_key', 'categories.slug as category_slug')
+            ->distinct()
+            ->get()
+            ->each(function ($row) use ($push, $routeByCategory) {
+                $name = $routeByCategory[$row->category_slug] ?? null;
+                if ($name && \Illuminate\Support\Facades\Route::has($name)) {
+                    $push(route($name, ['brandSlug' => Product::brandSlug($row->brand_key)]), '0.8');
+                }
+            });
+
+        // Blog posts + press releases: prime content for organic ranking, so
+        // every published article gets its own sitemap entry.
+        \App\Models\BlogPost::published()->get(['slug'])->each(function ($post) use ($push) {
+            $push(route('shop.blog.show', $post->slug), '0.7', 'monthly');
+        });
+        \App\Models\PressArticle::published()->get(['slug'])->each(function ($article) use ($push) {
+            $push(route('shop.press.show', $article->slug), '0.6', 'monthly');
+        });
+
+        $out = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+        $out .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+        foreach ($urls as $u) {
+            $out .= '  <url><loc>'.e($u['loc']).'</loc><changefreq>'.$u['freq'].'</changefreq><priority>'.$u['priority'].'</priority></url>'."\n";
+        }
+
+        return $out.'</urlset>';
+    });
 
     return response($xml, 200, ['Content-Type' => 'application/xml']);
 })->name('sitemap.xml');

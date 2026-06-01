@@ -227,7 +227,13 @@
         ->get(['id', 'name', 'slug', 'brand_key', 'country_code', 'logo_url', 'featured_image', 'brand_color']);
 @endphp
 
-<x-shop.layout :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'">
+<x-shop.layout
+    :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'"
+    :description="'Buy a ' . $brandName . ' ' . strtolower($kindTitle) . ' on RshopRefills - instant delivery, great prices and 24/7 support. Pay with cards, mobile money, crypto and more.'"
+    :keywords="$brandName . ', ' . $brandName . ' ' . strtolower($kindTitle) . ', buy ' . $brandName . ' ' . strtolower($kindTitle) . ' online, RshopRefills'"
+    :og-image="$logoSrc ?: asset('assets/og-image.png')"
+    og-type="product"
+>
 
     <div
         @php

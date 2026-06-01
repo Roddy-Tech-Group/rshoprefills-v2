@@ -3,7 +3,6 @@
     <head>
         @include('partials.head')
 
-        <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:700" rel="stylesheet" />
 
         {{-- App-style slide-up sheet entrance - same animation pattern as the split auth layout. --}}

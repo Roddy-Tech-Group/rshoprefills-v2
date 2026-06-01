@@ -1,4 +1,10 @@
-@props(['title' => null])
+@props([
+    'title' => null,
+    'description' => null,
+    'ogImage' => null,
+    'ogType' => null,
+    'keywords' => null,
+])
 
 @php
     // Auto-detects context: any URL under /dashboard/shop/* renders in the
@@ -34,7 +40,7 @@
         {{ $slot }}
     </x-layouts.dashboard>
 @else
-    <x-layouts.app.header :title="$title">
+    <x-layouts.app.header :title="$title" :description="$description" :og-image="$ogImage" :og-type="$ogType" :keywords="$keywords">
         {{ $slot }}
     </x-layouts.app.header>
 @endif

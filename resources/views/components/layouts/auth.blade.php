@@ -3,9 +3,8 @@
     <head>
         @include('partials.head')
 
-        {{-- Auth-page-only extras. Shared bits (theme engine, page transition,
-             vite, scroll-lock, dark-mode bg) come from partials/head. --}}
-        <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
+        {{-- Auth-page-only extras. Shared bits (SEO meta, theme engine, page
+             transition, vite, scroll-lock, dark-mode bg) come from partials/head. --}}
         <link href="https://fonts.bunny.net/css?family=instrument-sans:700" rel="stylesheet" />
 
         {{-- .auth-form-slide scopes a slide-from-right animation to the form

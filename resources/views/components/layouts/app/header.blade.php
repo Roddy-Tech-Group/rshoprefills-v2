@@ -1,14 +1,18 @@
+@props([
+    'title' => null,
+    'description' => null,
+    'ogImage' => null,
+    'ogType' => null,
+    'keywords' => null,
+])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
 
-        {{-- Storefront-only head additions (description, extra display font,
-             Turnstile loader). Everything shared with dashboard + admin
-             (theme engine, page transition, vite, scroll-lock, dark-mode
-             meta + html bg) lives in partials/head so there is one source
-             of truth for the theme and no race between competing layouts. --}}
-        <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
+        {{-- Storefront-only head additions (extra display font, Turnstile loader).
+             All SEO (title, description, OG, Twitter, JSON-LD) lives in one place
+             in partials/head, overridable per page via the props above. --}}
         <link href="https://fonts.bunny.net/css?family=instrument-sans:700|urbanist:800" rel="stylesheet" />
 
         @if(config('services.turnstile.enabled') && (config('services.turnstile.enforce_auth') || config('services.turnstile.enforce_contact') || config('services.turnstile.enforce_checkout')))
