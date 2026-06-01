@@ -138,7 +138,7 @@
             x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 {{ $offStart }}"
-            class="absolute right-0 {{ $panelPos }} z-50 overflow-hidden rounded-[5px] bg-white/70 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-2 ring-blue-400 dark:bg-[#1d3252]/70 dark:ring-blue-500/60"
+            class="absolute right-0 {{ $panelPos }} z-50 min-w-[150px] overflow-hidden rounded-[5px] bg-white/70 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-2 ring-blue-400 dark:bg-[#1d3252]/70 dark:ring-blue-500/60"
             role="menu"
             aria-label="Theme"
         >
@@ -150,7 +150,7 @@
                         :class="choice === '{{ $opt['value'] }}'
                             ? 'bg-blue-600 text-white'
                             : 'text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-[#26416b]'"
-                        class="flex w-full items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-left text-sm font-medium transition-colors"
+                        class="flex w-full items-center gap-2.5 whitespace-nowrap rounded-[5px] px-3 py-1.5 text-left text-sm font-medium transition-colors"
                         role="menuitemradio"
                         :aria-checked="(choice === '{{ $opt['value'] }}').toString()"
                     >
