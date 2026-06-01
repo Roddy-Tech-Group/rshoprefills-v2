@@ -24,6 +24,13 @@
         default          => ['gift card', 'Gift Card', 'shop.gift-cards', 'shop.brand'],
     };
 
+    // Inside the dashboard chrome, swap to the dashboard.shop.* equivalents so
+    // the "see more" + similar-brand links keep the user in the dashboard.
+    if (request()->is('dashboard/shop*') && auth()->check()) {
+        $listingRoute = 'dashboard.'.$listingRoute;
+        $detailRoute  = 'dashboard.'.$detailRoute;
+    }
+
     $variants    = $product->variants;
     $fixedDenoms = $variants->where('is_variable', false)->sortBy('retail_price')->values();
     $variable    = $variants->where('is_variable', true)->first();
@@ -220,7 +227,13 @@
         ->get(['id', 'name', 'slug', 'brand_key', 'country_code', 'logo_url', 'featured_image', 'brand_color']);
 @endphp
 
-<x-layouts.app.header :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'">
+<x-shop.layout
+    :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'"
+    :description="'Buy a ' . $brandName . ' ' . strtolower($kindTitle) . ' on RshopRefills - instant delivery, great prices and 24/7 support. Pay with cards, mobile money, crypto and more.'"
+    :keywords="$brandName . ', ' . $brandName . ' ' . strtolower($kindTitle) . ', buy ' . $brandName . ' ' . strtolower($kindTitle) . ' online, RshopRefills'"
+    :og-image="$logoSrc ?: asset('assets/og-image.png')"
+    og-type="product"
+>
 
     <div
         @php
@@ -375,7 +388,7 @@
                                         aria-label="Clear selected amount"
                                         class="flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300"
                                     >
-                                        <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
+                                        <img src="{{ asset('assets/' . rawurlencode('x button.webp')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                                     </span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -1075,4 +1088,4 @@
          interrupt browsing with a modal here. Customers see the warning at the point
          it matters most — right before paying. --}}
 
-</x-layouts.app.header>
+</x-shop.layout>

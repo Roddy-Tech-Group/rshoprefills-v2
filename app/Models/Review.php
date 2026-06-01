@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string $initials
  * @property string $author_name
  * @property string $body
- * @property int $rating
+ * @property float $rating
  * @property string $source
  * @property Carbon $reviewed_at
  * @property bool $is_published
@@ -44,6 +44,7 @@ class Review extends Model
         return [
             'reviewed_at' => 'date',
             'is_published' => 'boolean',
+            'rating' => 'float',
         ];
     }
 

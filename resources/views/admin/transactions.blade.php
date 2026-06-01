@@ -1,27 +1,119 @@
 @php
     use App\Models\PaymentAttempt;
+    use Illuminate\Support\Facades\DB;
+
+    // URL-driven status filter. Chip labels map to the real PaymentStatus
+    // enum values: "Completed" = paid, "Pending" = pending+processing+
+    // reserved (in-flight), "Cancelled" = expired (timed-out checkout),
+    // "Failed" = failed.
+    $statusFilter = strtolower((string) request()->query('status', 'all'));
+    $allowedStatuses = ['all', 'completed', 'pending', 'cancelled', 'failed', 'refunded'];
+    if (! in_array($statusFilter, $allowedStatuses, true)) {
+        $statusFilter = 'all';
+    }
+
+    $statusMap = [
+        'completed' => ['paid'],
+        'pending'   => ['pending', 'processing', 'reserved', 'unpaid'],
+        'cancelled' => ['expired'],
+        'failed'    => ['failed'],
+        'refunded'  => ['refunded', 'partially_refunded'],
+    ];
 
     // The pre-merge `payments` table was dropped and replaced by `payment_attempts`
     // (polymorphic — an attempt belongs to an Order or a WalletFunding).
-    $payments = PaymentAttempt::with(['user', 'order'])->latest()->limit(50)->get();
+    $paymentsQuery = PaymentAttempt::with(['user', 'order'])->latest();
+    if ($statusFilter !== 'all' && isset($statusMap[$statusFilter])) {
+        $paymentsQuery->whereIn('payment_status', $statusMap[$statusFilter]);
+    }
+    $payments = $paymentsQuery->limit(50)->get();
     $totalPayments = PaymentAttempt::count();
 
-    // Status pill tone — one set of classes per known status. Drives the
-    // right-side status chip on every row.
+    // KPI counts — full table totals so the strip stays stable as the
+    // admin scrubs the filter chips. Same status buckets as the chips.
+    $kpis = PaymentAttempt::query()
+        ->selectRaw("
+            SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) AS completed,
+            SUM(CASE WHEN payment_status IN ('pending', 'processing', 'reserved', 'unpaid') THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN payment_status = 'expired' THEN 1 ELSE 0 END) AS cancelled,
+            SUM(CASE WHEN payment_status = 'failed' THEN 1 ELSE 0 END) AS failed
+        ")
+        ->first();
+
+    // Status pill tone — maps PaymentAttempt status onto the canonical
+    // x-admin.badge tone palette.
     $statusPillFor = function (?string $status): string {
         return match ($status) {
-            'paid' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30',
-            'failed', 'expired' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30',
-            'refunded', 'partially_refunded' => 'bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-zinc-700/60',
-            'processing', 'reserved' => 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30',
-            default => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30',
+            'paid' => 'emerald',
+            'failed', 'expired' => 'red',
+            'refunded', 'partially_refunded' => 'zinc',
+            'processing', 'reserved' => 'blue',
+            default => 'amber',
         };
     };
+
+    // Preserve other query params when toggling the status filter chips.
+    $filterUrl = fn (string $status) => route('admin.transactions', array_filter([
+        'status' => $status === 'all' ? null : $status,
+    ]));
 @endphp
 
 <x-layouts.admin>
-    <x-slot:heading>Transactions</x-slot:heading>
-    <x-slot:subheading>{{ number_format($totalPayments) }} payment attempts total. Showing the latest 50.</x-slot:subheading>
+    <x-slot:heading>
+        <div class="flex items-end justify-between gap-3">
+            <span>Transactions</span>
+            {{-- CSV export. Forwards any active filter query params so an admin
+                 can scope the file to whatever they were just looking at. --}}
+            <a
+                href="{{ route('admin.transactions.export', request()->query()) }}"
+                class="inline-flex items-center gap-1.5 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-zinc-300 dark:hover:bg-[#26416b]"
+            >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                </svg>
+                Export CSV
+            </a>
+        </div>
+    </x-slot:heading>
+    <x-slot:subheading>{{ number_format($totalPayments) }} payment attempts total. Showing the latest 50 matching the filter.</x-slot:subheading>
+
+    {{-- KPI strip — same look as every other admin page. --}}
+    <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        @foreach ([
+            ['label' => 'Completed', 'value' => (int) $kpis->completed, 'dot' => 'bg-emerald-500'],
+            ['label' => 'Pending',   'value' => (int) $kpis->pending,   'dot' => 'bg-amber-500'],
+            ['label' => 'Cancelled', 'value' => (int) $kpis->cancelled, 'dot' => 'bg-zinc-500'],
+            ['label' => 'Failed',    'value' => (int) $kpis->failed,    'dot' => 'bg-red-500'],
+        ] as $stat)
+            <div class="rounded-[10px] border-[1.5px] border-white bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+                <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full {{ $stat['dot'] }}"></span>
+                    {{ $stat['label'] }}
+                </p>
+                <p class="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ number_format($stat['value']) }}</p>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- Status filter chips. Pressing a chip reloads the page with the
+         filter applied via query string so admins can share / bookmark
+         the URL ("send me /admin/transactions?status=failed"). --}}
+    <div class="mb-4 flex flex-wrap items-center gap-1.5">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Status</span>
+        @foreach ([
+            'all' => 'All', 'completed' => 'Completed', 'pending' => 'Pending', 'cancelled' => 'Cancelled', 'failed' => 'Failed', 'refunded' => 'Refunded',
+        ] as $value => $label)
+            <a
+                href="{{ $filterUrl($value) }}"
+                wire:navigate
+                @class([
+                    'rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors',
+                    'bg-blue-600 text-white' => $statusFilter === $value,
+                    'bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-[#1d3252] dark:text-zinc-300 dark:ring-zinc-700/60 dark:hover:bg-[#26416b]' => $statusFilter !== $value,
+                ])
+            >{{ $label }}</a>
+        @endforeach
+    </div>
 
     {{-- Grid template shared between the header pill and every data row so
          columns line up exactly. Same pattern as the Products page's
@@ -37,17 +129,30 @@
                 minmax(90px,  0.7fr);  /* Status pill */
             gap: 1.25rem;
             align-items: center;
+            min-width: 820px;
         }
-        @media (max-width: 1024px) {
-            .txn-row { grid-template-columns: minmax(160px, 1.5fr) minmax(110px, 1fr) minmax(90px, 0.7fr); }
-            .txn-row > *:not(.col-customer):not(.col-amount):not(.col-status) { display: none; }
+        .txn-body:not(:last-of-type)::after {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            right: 1.5rem;
+            bottom: 0;
+            height: 1px;
+            background-color: rgb(244 244 245);
+            pointer-events: none;
         }
+        html.dark .txn-body:not(:last-of-type)::after {
+            background-color: rgb(255 255 255 / 0.08);
+        }
+        .txn-body:hover::after { display: none; }
+        .txn-body:hover { border-radius: 10px; }
     </style>
 
-    <div class="flex flex-col gap-2">
-        {{-- Header pill — light-blue background, 2px blue ring, matches the
-             Products filter bar styling. --}}
-        <div class="txn-row hidden rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 shadow-sm shadow-zinc-900/5 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400 md:grid">
+    <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        <div class="overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
+
+        {{-- Header pill --}}
+        <div class="txn-row grid mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400">
             <span class="col-customer">Customer</span>
             <span>Gateway</span>
             <span>Amount</span>
@@ -58,11 +163,11 @@
         @forelse ($payments as $payment)
             @php
                 $statusValue = $payment->payment_status?->value ?? 'pending';
-                $pillClass = $statusPillFor($statusValue);
+                $pillTone = $statusPillFor($statusValue);
                 $reference = $payment->gateway_reference ?: $payment->idempotency_key;
                 $isWalletFunding = ! $payment->order;
             @endphp
-            <article class="txn-row group cursor-pointer rounded-[10px] border border-zinc-100 bg-white px-6 py-3 shadow-sm shadow-zinc-900/5 transition-colors hover:border-blue-600 hover:bg-blue-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:hover:border-blue-400 dark:hover:bg-blue-600/15">
+            <article class="txn-row txn-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400">
 
                 {{-- Customer — name + reference / order link stacked. The
                      reference line is a click-to-copy chip; clicking it puts
@@ -122,15 +227,26 @@
 
                 {{-- Status pill --}}
                 <span class="col-status">
-                    <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $pillClass }}">
-                        {{ $payment->payment_status?->label() ?? 'Pending' }}
-                    </span>
+                    <x-admin.badge :tone="$pillTone">{{ $payment->payment_status?->label() ?? 'Pending' }}</x-admin.badge>
                 </span>
             </article>
         @empty
-            <div class="rounded-[10px] bg-white px-5 py-12 text-center text-sm text-zinc-600 shadow-sm ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-400 dark:ring-zinc-700/60">
-                No transactions yet.
+            <div class="px-5 py-12 text-center">
+                <p class="text-base font-semibold text-zinc-900 dark:text-white">
+                    @if ($statusFilter === 'all')
+                        No transactions yet
+                    @else
+                        No {{ $statusFilter }} transactions
+                    @endif
+                </p>
+                @if ($statusFilter !== 'all')
+                    <a href="{{ $filterUrl('all') }}" wire:navigate class="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200">
+                        Show all transactions
+                    </a>
+                @endif
             </div>
         @endforelse
+
+        </div>
     </div>
 </x-layouts.admin>

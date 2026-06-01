@@ -13,21 +13,21 @@
 
 return [
     'logos' => [
-        'Apple' => 'apple.png',
-        'Amazon' => 'amazon.png',
-        'AmazonPrime' => 'amazon.png',
-        'GooglePlay' => 'googleplay.png',
+        'Apple' => 'apple.webp',
+        'Amazon' => 'amazon.webp',
+        'AmazonPrime' => 'amazon.webp',
+        'GooglePlay' => 'googleplay.webp',
         'Netflix' => 'netflix.webp',
         'Nintendo' => 'nintendo.webp',
         'NintendoSwitch' => 'nintendo.webp',
-        'Playstation' => 'playstation.png',
+        'Playstation' => 'playstation.webp',
         'Spotify' => 'spotify.webp',
-        'Steam' => 'steam.png',
+        'Steam' => 'steam.webp',
         'HuluPlus' => 'hulu.webp',
         'Twitch' => 'twitch.webp',
-        'Xbox' => 'x-box_300x190.png',
-        'XboxGamePass' => 'x-box_300x190.png',
-        'XboxLiveGold' => 'x-box_300x190.png',
+        'Xbox' => 'x-box_300x190.webp',
+        'XboxGamePass' => 'x-box_300x190.webp',
+        'XboxLiveGold' => 'x-box_300x190.webp',
 
         // Mobile network operators (mobile top-up / airtime products). Keyed by
         // brand_key, so each logo shows for that operator in every country it
@@ -43,7 +43,7 @@ return [
         'MetroPCS' => 'metro-pcs_300x190.webp',
         'Net10' => 'net10parent_300x190.webp',
         'PagePlus' => 'pageplus-wireless_300x190.webp',
-        'StraightTalk' => 'images.png',
+        'StraightTalk' => 'images.webp',
         'Tmobile' => 't-mobile_300x190.webp',
         'TotalbyVerizon' => 'totalbyverizonusa_300x190.webp',
         'UltraMobile' => 'ultra-mobile_300x190.webp',

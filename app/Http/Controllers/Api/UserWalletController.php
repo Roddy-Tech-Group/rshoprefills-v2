@@ -7,6 +7,8 @@ use App\Domain\Wallet\Resources\WalletResource;
 use App\Domain\Wallet\Services\WalletFundingService;
 use App\Domain\Wallet\Services\WalletService;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PaymentSessionResource;
+use App\Models\WalletFunding;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Enum;
 
@@ -60,7 +62,7 @@ class UserWalletController extends Controller
             return response()->json([
                 'message' => 'Funding initialized successfully.',
                 'payment_link' => null,
-                'payment_session' => new \App\Http\Resources\PaymentSessionResource($result['payment_session']),
+                'payment_session' => new PaymentSessionResource($result['payment_session']),
                 'reference' => $result['funding']->reference,
                 'requested_amount' => $result['funding']->requested_amount,
                 'display_currency' => $result['funding']->display_currency,
@@ -73,7 +75,7 @@ class UserWalletController extends Controller
 
     public function fundings(Request $request)
     {
-        $fundings = \App\Models\WalletFunding::where('user_id', $request->user()->id)
+        $fundings = WalletFunding::where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
@@ -82,7 +84,7 @@ class UserWalletController extends Controller
 
     public function fundingDetails(Request $request, string $reference)
     {
-        $funding = \App\Models\WalletFunding::where('user_id', $request->user()->id)
+        $funding = WalletFunding::where('user_id', $request->user()->id)
             ->where('reference', $reference)
             ->firstOrFail();
 

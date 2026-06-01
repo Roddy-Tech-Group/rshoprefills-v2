@@ -18,7 +18,7 @@ class NotificationDeliveryResource extends JsonResource
             'status' => $this->status->value,
             'error_message' => $this->error_message,
             'attempted_at' => $this->attempted_at->toIso8601String(),
-            'user' => $this->relationLoaded('notification') && $this->notification->relationLoaded('user') 
+            'user' => $this->relationLoaded('notification') && $this->notification->relationLoaded('user')
                 ? [
                     'id' => $this->notification->user->id,
                     'name' => $this->notification->user->name,

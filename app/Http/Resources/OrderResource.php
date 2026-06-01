@@ -15,9 +15,9 @@ class OrderResource extends JsonResource
             'id' => $this->id,
             'order_number' => $this->order_number,
             'display_currency' => $this->display_currency,
-            'subtotal_amount' => (float)$this->subtotal_amount,
-            'markup_amount' => (float)$this->markup_amount,
-            'total_amount' => (float)$this->total_amount,
+            'subtotal_amount' => (float) $this->subtotal_amount,
+            'markup_amount' => (float) $this->markup_amount,
+            'total_amount' => (float) $this->total_amount,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status->value,
             'fulfillment_status' => $this->fulfillment_status->value,
@@ -26,7 +26,7 @@ class OrderResource extends JsonResource
             'completed_at' => $this->completed_at?->toIso8601String(),
             'failed_at' => $this->failed_at?->toIso8601String(),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
-            
+
             // Payment context
             'checkout_url' => $latestAttempt?->payment_url,
             'payment_expires_at' => $latestAttempt?->expires_at?->toIso8601String(),

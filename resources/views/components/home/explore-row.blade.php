@@ -14,10 +14,10 @@
 
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
 
-        {{-- eSIM (auto-fades between Esim.png and Esim2.png every 4 seconds, pauses on hover) --}}
+        {{-- eSIM (auto-fades between Esim.webp and Esim2.webp every 4 seconds, pauses on hover) --}}
         <article
             x-data="{
-                images: ['{{ asset('assets/Esim.png') }}', '{{ asset('assets/Esim2.png') }}'],
+                images: ['{{ asset('assets/Esim.webp') }}', '{{ asset('assets/Esim2.webp') }}'],
                 current: 0,
                 paused: false,
                 init() {
@@ -51,10 +51,10 @@
             <a href="{{ route('shop.esims') }}" wire:navigate class="absolute inset-0 z-20" aria-label="Browse eSIMs"></a>
         </article>
 
-        {{-- Flights (auto-fades between travel.png and flight2.jpg every 4 seconds, pauses on hover) --}}
+        {{-- Flights (auto-fades between travel.webp and flight2.webp every 4 seconds, pauses on hover) --}}
         <article
             x-data="{
-                images: ['{{ asset('assets/travel.png') }}', '{{ asset('assets/flight2.jpg') }}'],
+                images: ['{{ asset('assets/travel.webp') }}', '{{ asset('assets/flight2.webp') }}'],
                 current: 0,
                 paused: false,
                 init() {
@@ -83,14 +83,14 @@
                     <img src="{{ asset('assets/' . rawurlencode('flight 2.svg')) }}" alt="" class="h-5 w-5 shrink-0 brightness-0 invert" loading="lazy">
                     <h3 class="text-xl font-bold leading-tight">Flights</h3>
                 </div>
-                <p class="mt-1 text-sm leading-snug text-white/90">Book flights effortlessly and pay with crypto from anywhere in the world.</p>
+                <p class="mt-1 text-sm leading-snug text-white/90">Travel smarter with secure bookings, fast confirmations, and global access from anywhere in the world.</p>
             </div>
         </article>
 
-        {{-- Stays (auto-fades between stay.png and stay2.jpg every 4 seconds, pauses on hover) --}}
+        {{-- Stays (auto-fades between stay.webp and stay2.webp every 4 seconds, pauses on hover) --}}
         <article
             x-data="{
-                images: ['{{ asset('assets/stay.png') }}', '{{ asset('assets/stay2.jpg') }}'],
+                images: ['{{ asset('assets/stay.webp') }}', '{{ asset('assets/stay2.webp') }}'],
                 current: 0,
                 paused: false,
                 init() {

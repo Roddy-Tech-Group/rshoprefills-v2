@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
-use App\Models\PaymentAttempt;
-use App\Models\Order;
-use App\Domain\Payment\Providers\WalletPaymentProvider;
 use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Providers\WalletPaymentProvider;
+use App\Models\Order;
+use App\Models\PaymentAttempt;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,7 +25,7 @@ class ReleaseReservedFundsJob implements ShouldQueue
         OrderService $orderService
     ): void {
         $attempt = PaymentAttempt::find($this->attempt->id);
-        if (!$attempt || $attempt->payment_status !== PaymentStatus::Reserved) {
+        if (! $attempt || $attempt->payment_status !== PaymentStatus::Reserved) {
             return;
         }
 
@@ -39,7 +39,7 @@ class ReleaseReservedFundsJob implements ShouldQueue
             $order = $attempt->order;
             $orderService->transitionPaymentStatus($order, PaymentStatus::Failed, ['reason' => 'Reserved funds released manually/automatically on timeout']);
         } catch (\Exception $e) {
-            Log::error("ReleaseReservedFundsJob failed: " . $e->getMessage());
+            Log::error('ReleaseReservedFundsJob failed: '.$e->getMessage());
         }
     }
 }

@@ -6,6 +6,9 @@ use App\Domain\Payment\Events\PaymentSessionConfirmed;
 use App\Domain\Payment\Events\PaymentSessionCreated;
 use App\Domain\Payment\Events\PaymentSessionExpired;
 use App\Domain\Payment\Events\PaymentSessionFailed;
+use App\Domain\Shared\Enums\Currency;
+use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Wallet\Services\WalletService;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
@@ -152,15 +155,15 @@ class PaymentSessionService
             if ($order) {
                 $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
                 if ($rcoinApplied > 0) {
-                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
-                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
-                    
+                    $walletService = app(WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, Currency::RCOIN);
+
                     // Unlock and debit
                     $walletService->unlockFunds($wallet, $rcoinApplied);
                     $walletService->debit(
                         wallet: $wallet,
                         amount: $rcoinApplied,
-                        category: \App\Domain\Shared\Enums\TransactionCategory::RewardRedemption,
+                        category: TransactionCategory::RewardRedemption,
                         description: "RCOIN redeemed on Order #{$order->order_number}",
                         metadata: [
                             'order_id' => $order->id,
@@ -214,8 +217,8 @@ class PaymentSessionService
             if ($order) {
                 $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
                 if ($rcoinApplied > 0) {
-                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
-                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    $walletService = app(WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, Currency::RCOIN);
                     $walletService->unlockFunds($wallet, $rcoinApplied);
                 }
             }
@@ -243,8 +246,8 @@ class PaymentSessionService
             if ($order) {
                 $rcoinApplied = $order->metadata['rcoin_applied'] ?? 0;
                 if ($rcoinApplied > 0) {
-                    $walletService = app(\App\Domain\Wallet\Services\WalletService::class);
-                    $wallet = $walletService->getOrCreateWallet($order->user, \App\Domain\Shared\Enums\Currency::RCOIN);
+                    $walletService = app(WalletService::class);
+                    $wallet = $walletService->getOrCreateWallet($order->user, Currency::RCOIN);
                     $walletService->unlockFunds($wallet, $rcoinApplied);
                 }
             }

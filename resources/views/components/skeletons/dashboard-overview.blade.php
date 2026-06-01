@@ -25,14 +25,14 @@
         {{-- Rcoin card --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-start gap-3">
-                <x-skeleton class="h-10 w-10 shrink-0" rounded-[10px]="rounded-[10px]" />
+                <x-skeleton class="h-10 w-10 shrink-0" rounded="rounded-[10px]" />
                 <div class="flex-1 space-y-2">
                     <x-skeleton class="h-3.5 w-24" />
                     <x-skeleton class="h-6 w-28" />
                 </div>
             </div>
             <x-skeleton class="mt-4 h-3 w-56" />
-            <x-skeleton class="mt-4 h-10 w-full" rounded-[10px]="rounded-[10px]" />
+            <x-skeleton class="mt-4 h-10 w-full" rounded="rounded-[10px]" />
         </div>
 
         {{-- Recent Orders card --}}
@@ -44,7 +44,7 @@
             <div class="skeleton-stagger-fast mt-4 space-y-3">
                 @for ($i = 0; $i < 3; $i++)
                     <div class="flex items-center gap-3" style="--i: {{ $i }}">
-                        <x-skeleton class="h-12 w-12 shrink-0" rounded-[10px]="rounded-[10px]" />
+                        <x-skeleton class="h-12 w-12 shrink-0" rounded="rounded-[10px]" />
                         <div class="min-w-0 flex-1 space-y-2">
                             <x-skeleton class="h-3.5 w-40 max-w-[70%]" />
                             <x-skeleton class="h-3 w-24 max-w-[45%]" />
@@ -70,25 +70,30 @@
             </div>
         </div>
 
-        {{-- Popular Gift Cards card --}}
+        {{-- Popular Gift Cards card. Mirrors the real <x-home.brand-row>
+             mobile layout: title block, then a horizontal row of 16:10 cards
+             with their name + price-range underneath. --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <div class="flex items-center justify-between">
-                <x-skeleton class="h-5 w-44" />
-                <x-skeleton class="h-3.5 w-12" />
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 flex-1 space-y-2">
+                    <x-skeleton class="h-5 w-44" />
+                    <x-skeleton class="h-3.5 w-32" />
+                </div>
+                <x-skeleton shape="circle" class="h-8 w-8 shrink-0" />
             </div>
-            {{-- Horizontal scroll row on mobile, matches the brand-row layout. --}}
             <div class="mt-4 -mx-1 flex gap-3 overflow-hidden">
                 @for ($i = 0; $i < 4; $i++)
-                    <div class="w-32 shrink-0">
-                        <x-skeleton class="aspect-[16/10] w-full" rounded-[10px]="rounded-[15px]" />
-                        <x-skeleton class="mt-2 h-3.5 w-3/4" />
+                    <div class="w-32 shrink-0 px-1">
+                        <x-skeleton class="aspect-[16/10] w-full" rounded="rounded-[15px]" />
+                        <x-skeleton class="mt-2 h-4 w-3/4" />
+                        <x-skeleton class="mt-1.5 h-3 w-1/2" />
                     </div>
                 @endfor
             </div>
         </div>
 
         {{-- Promo block --}}
-        <x-skeleton class="h-[148px] w-full" rounded-[10px]="rounded-[10px]" />
+        <x-skeleton class="h-[148px] w-full" rounded="rounded-[10px]" />
 
         {{-- Recent Transactions card --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -99,7 +104,7 @@
             <div class="skeleton-stagger-fast mt-4 space-y-3">
                 @for ($i = 0; $i < 4; $i++)
                     <div class="flex items-center gap-3" style="--i: {{ $i }}">
-                        <x-skeleton class="h-11 w-11 shrink-0" rounded-[10px]="rounded-[10px]" />
+                        <x-skeleton class="h-11 w-11 shrink-0" rounded="rounded-[10px]" />
                         <div class="min-w-0 flex-1 space-y-2">
                             <x-skeleton class="h-3.5 w-36 max-w-[70%]" />
                             <x-skeleton class="h-3 w-20 max-w-[45%]" />
@@ -127,7 +132,7 @@
                         <x-skeleton class="h-8 w-72" />
                         <x-skeleton class="h-4 w-60" />
                     </div>
-                    <x-skeleton class="h-9 w-28" rounded-[10px]="rounded-[10px]" />
+                    <x-skeleton class="h-9 w-28" rounded="rounded-[10px]" />
                 </div>
 
                 {{-- Wallet / Quick Actions / Recent Order row --}}
@@ -147,7 +152,7 @@
 
                 {{-- Trust strip --}}
                 <div class="flex items-center gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                    <x-skeleton class="h-12 w-12 shrink-0" rounded-[10px]="rounded-[10px]" />
+                    <x-skeleton class="h-12 w-12 shrink-0" rounded="rounded-[10px]" />
                     <div class="flex-1 space-y-2">
                         <x-skeleton class="h-4 w-48" />
                         <x-skeleton class="h-3 w-72" />
@@ -180,7 +185,7 @@
                         <div class="grid grid-cols-5 gap-5">
                             @for ($i = 0; $i < 5; $i++)
                                 <div class="rounded-[10px] bg-white p-3 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
-                                    <x-skeleton class="aspect-[16/10] w-full" rounded-[10px]="rounded-[15px]" />
+                                    <x-skeleton class="aspect-[16/10] w-full" rounded="rounded-[15px]" />
                                     <x-skeleton class="mt-3 h-4 w-3/4" />
                                 </div>
                             @endfor
@@ -195,18 +200,18 @@
                 {{-- Rcoin card --}}
                 <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-start gap-3">
-                        <x-skeleton class="h-10 w-10 shrink-0" rounded-[10px]="rounded-[10px]" />
+                        <x-skeleton class="h-10 w-10 shrink-0" rounded="rounded-[10px]" />
                         <div class="flex-1 space-y-2">
                             <x-skeleton class="h-3.5 w-24" />
                             <x-skeleton class="h-6 w-28" />
                         </div>
                     </div>
                     <x-skeleton class="mt-4 h-3 w-56" />
-                    <x-skeleton class="mt-4 h-10 w-full" rounded-[10px]="rounded-[10px]" />
+                    <x-skeleton class="mt-4 h-10 w-full" rounded="rounded-[10px]" />
                 </div>
 
                 {{-- Promo block --}}
-                <x-skeleton class="h-44 w-full" rounded-[10px]="rounded-[10px]" />
+                <x-skeleton class="h-44 w-full" rounded="rounded-[10px]" />
 
                 {{-- Recent Transactions card --}}
                 <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -217,7 +222,7 @@
                     <div class="skeleton-stagger-fast mt-4 space-y-3">
                         @for ($i = 0; $i < 4; $i++)
                             <div class="flex items-center gap-3" style="--i: {{ $i }}">
-                                <x-skeleton class="h-11 w-11 shrink-0" rounded-[10px]="rounded-[10px]" />
+                                <x-skeleton class="h-11 w-11 shrink-0" rounded="rounded-[10px]" />
                                 <div class="min-w-0 flex-1 space-y-2">
                                     <x-skeleton class="h-3.5 w-36 max-w-[70%]" />
                                     <x-skeleton class="h-3 w-20 max-w-[45%]" />

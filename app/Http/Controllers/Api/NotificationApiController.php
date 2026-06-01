@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Http\Resources\NotificationResource;
-use App\Http\Resources\NotificationPreferenceResource;
 use App\Domain\Notification\Services\NotificationPreferenceService;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\NotificationPreferenceResource;
+use App\Http\Resources\NotificationResource;
 use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

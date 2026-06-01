@@ -2,10 +2,10 @@
 
 namespace App\Domain\Notification\Listeners;
 
-use App\Domain\Shared\Enums\TransactionCategory;
-use App\Domain\Wallet\Events\WalletCredited;
 use App\Domain\Notification\Mail\WalletFundedMail;
 use App\Domain\Notification\Services\NotificationDispatcher;
+use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Wallet\Events\WalletCredited;
 
 class SendWalletCreditNotificationListener
 {

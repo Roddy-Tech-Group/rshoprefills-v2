@@ -35,14 +35,14 @@ class NotificationDispatcher
         if ($this->preferenceService->isAllowed($user, $category, 'email')) {
             $channels[] = NotificationChannel::Email;
         } else {
-            Log::info("Email notification skipped due to user preference settings.", [
+            Log::info('Email notification skipped due to user preference settings.', [
                 'user_id' => $user->id,
                 'category' => $category,
             ]);
         }
 
         // Generate a safety fallback idempotency key if not supplied
-        $key = $idempotencyKey ?? md5($user->id . '_' . $category . '_' . get_class($mailable ?? $this) . '_' . substr($message, 0, 100));
+        $key = $idempotencyKey ?? md5($user->id.'_'.$category.'_'.get_class($mailable ?? $this).'_'.substr($message, 0, 100));
 
         // Queue the asynchronous delivery job
         SendAsynchronousNotificationJob::dispatch(

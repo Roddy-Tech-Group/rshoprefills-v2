@@ -109,59 +109,122 @@
         </div>
     </section>
 
-    {{-- Curated reviews --}}
-    <section class="mx-auto w-full max-w-[1140px] px-4 py-14 sm:px-6 sm:py-16">
-        <div class="mb-8 flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Recent reviews</h2>
-                <p class="mt-1 text-sm text-zinc-600">A curated selection from our customers.</p>
+    {{-- Reviews carousel - two full-bleed rows scrolling in opposite directions
+         so curated entries + future Trustpilot + Google reviews all blend in
+         one continuous wall. Pause on hover. CSS-only marquee (no JS). --}}
+    @php
+        // Even indices feed the top row, odd indices feed the bottom row, so
+        // the two rows always look distinct even when the list is small.
+        $row1 = $reviews->values()->filter(fn ($_, $i) => $i % 2 === 0)->values();
+        $row2 = $reviews->values()->filter(fn ($_, $i) => $i % 2 === 1)->values();
+        // If the bottom row is empty (1 review case), mirror the top into both.
+        if ($row2->isEmpty() && $row1->isNotEmpty()) {
+            $row2 = $row1;
+        }
+
+        // Stretch each row so it fills a wide screen even when the review
+        // count is small. 14 cards x ~320px ≈ 4480px which covers 4K monitors.
+        // The translateX(-50%) loop seam stays clean because we then double
+        // the stretched row in the template - so a -50% shift always lands on
+        // the start of an identical copy.
+        $minCardsPerRow = 14;
+        $stretch = function ($collection) use ($minCardsPerRow) {
+            if ($collection->isEmpty()) {
+                return $collection;
+            }
+            $copies = (int) ceil($minCardsPerRow / $collection->count());
+            $out = collect();
+            for ($i = 0; $i < $copies; $i++) {
+                $out = $out->concat($collection);
+            }
+            return $out;
+        };
+        $row1 = $stretch($row1);
+        $row2 = $stretch($row2);
+    @endphp
+
+    {{-- Marquee CSS - kept before the carousels so the animations are
+         registered before the elements need them. Hover on a row pauses both
+         rows so a buyer can read a card without losing it. --}}
+    <style>
+        @keyframes rshop-marquee-left {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+        @keyframes rshop-marquee-right {
+            from { transform: translateX(-50%); }
+            to   { transform: translateX(0); }
+        }
+        .rshop-marquee-track {
+            display: flex;
+            width: max-content;
+            gap: 1rem;
+            will-change: transform;
+        }
+        @media (min-width: 640px) {
+            .rshop-marquee-track { gap: 1.25rem; }
+        }
+        .rshop-marquee-left  { animation: rshop-marquee-left 140s linear infinite; }
+        .rshop-marquee-right { animation: rshop-marquee-right 170s linear infinite; }
+        .rshop-marquee-row:hover .rshop-marquee-track {
+            animation-play-state: paused;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .rshop-marquee-left, .rshop-marquee-right { animation: none; }
+        }
+    </style>
+
+    <section class="w-full overflow-hidden bg-zinc-50 py-14 sm:py-16">
+        <div class="mx-auto mb-8 w-full max-w-[1140px] px-4 sm:px-6">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Recent reviews</h2>
+                    <p class="mt-1 text-sm text-zinc-600">Collected from {{ $aggregate['source'] }}, Google, and our own customers. Hover any card to pause.</p>
+                </div>
+                <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800">
+                    View all on {{ $aggregate['source'] }}
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                </a>
             </div>
-            <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800">
-                View all on {{ $aggregate['source'] }}
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
-            </a>
         </div>
 
         @if ($reviews->isNotEmpty())
-            {{-- Card shape mirrors components/home/customer-reviews so curated
-                 reviews and future Trustpilot-sourced reviews render identically
-                 on both the homepage carousel and this dedicated /reviews page. --}}
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($reviews as $review)
-                    <article class="flex flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm">
+            {{-- Helper to render one review card - kept inline so both rows
+                 stay in sync visually. Card shape mirrors the homepage carousel. --}}
+            @php
+                $renderCard = function ($review) {
+                    return view('shop._review-card', ['review' => $review])->render();
+                };
+            @endphp
 
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="flex min-w-0 items-start gap-3">
-                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-100 text-sm font-bold text-zinc-600">{{ $review->initials }}</span>
-                                <div class="min-w-0 leading-tight">
-                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $review->author_name }}</p>
-                                    <p class="text-xs text-zinc-600">{{ $review->reviewed_at->format('M j, Y') }}</p>
-                                </div>
-                            </div>
-                            <div class="flex shrink-0 items-center gap-1">
-                                <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
-                                </svg>
-                                <span class="text-[10px] font-bold text-zinc-900">{{ $review->source }}</span>
-                            </div>
-                        </div>
+            <div class="space-y-4">
+                {{-- Top row: scrolls left --}}
+                <div class="rshop-marquee-row w-full overflow-hidden">
+                    <div class="rshop-marquee-track rshop-marquee-left">
+                        @foreach ($row1 as $review)
+                            @include('shop._review-card', ['review' => $review])
+                        @endforeach
+                        {{-- Duplicate so the loop appears seamless (-50% translation lands on the start of the second copy) --}}
+                        @foreach ($row1 as $review)
+                            @include('shop._review-card', ['review' => $review])
+                        @endforeach
+                    </div>
+                </div>
 
-                        <div class="mt-3 flex gap-0.5">
-                            @for ($i = 0; $i < max(0, min(5, $review->rating)); $i++)
-                                <span class="flex h-4 w-4 items-center justify-center bg-emerald-500">
-                                    <svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                        <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
-                                    </svg>
-                                </span>
-                            @endfor
-                        </div>
-
-                        <p class="mt-3 text-sm leading-relaxed text-zinc-700">{{ $review->body }}</p>
-                    </article>
-                @endforeach
+                {{-- Bottom row: scrolls right --}}
+                <div class="rshop-marquee-row w-full overflow-hidden">
+                    <div class="rshop-marquee-track rshop-marquee-right">
+                        @foreach ($row2 as $review)
+                            @include('shop._review-card', ['review' => $review])
+                        @endforeach
+                        @foreach ($row2 as $review)
+                            @include('shop._review-card', ['review' => $review])
+                        @endforeach
+                    </div>
+                </div>
             </div>
         @else
-            <div class="rounded-[10px] bg-white p-10 text-center ring-1 ring-zinc-100 shadow-sm">
+            <div class="mx-auto max-w-2xl rounded-[10px] bg-white p-10 text-center ring-1 ring-zinc-100 shadow-sm">
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
                     <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
                 </div>
@@ -174,6 +237,7 @@
             </div>
         @endif
     </section>
+
 
     {{-- Final CTA --}}
     <section class="bg-blue-600">

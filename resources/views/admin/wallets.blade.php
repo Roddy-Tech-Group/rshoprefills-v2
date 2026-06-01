@@ -30,52 +30,50 @@
 
     <div class="flex flex-1 flex-col gap-6">
 
-        <div class="overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-[11px]">
-                    <thead class="bg-zinc-50 text-[10px] uppercase tracking-wider text-zinc-600">
+        <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+            <div class="overflow-x-auto p-3">
+                <table class="admin-table w-full text-left text-sm">
+                    <thead>
                         <tr>
-                            <th class="px-5 py-3 font-semibold">Owner</th>
-                            <th class="px-5 py-3 font-semibold">Balance</th>
-                            <th class="px-5 py-3 font-semibold">Currency</th>
-                            <th class="px-5 py-3 font-semibold">Transactions</th>
-                            <th class="px-5 py-3 font-semibold">Status</th>
-                            <th class="px-5 py-3 font-semibold">Created</th>
+                            <th>Owner</th>
+                            <th>Balance</th>
+                            <th>Currency</th>
+                            <th>Transactions</th>
+                            <th>Status</th>
+                            <th>Created</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-zinc-100">
+                    <tbody>
                         @forelse ($wallets as $wallet)
                             <tr>
-                                <td class="px-5 py-3">
+                                <td>
                                     <div class="flex items-center gap-3">
                                         @php
                                             $rowAvatar = $wallet->user?->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($wallet->user?->gender ?? '')) {
-                                                'female', 'f' => 'New Female Account Avatar.png',
-                                                default       => 'New male account avatar.png',
+                                                'female', 'f' => 'New Female Account Avatar.webp',
+                                                default       => 'New male account avatar.webp',
                                             }));
                                         @endphp
-                                        <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100">
+                                        <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100 dark:ring-blue-500/30">
                                         <div class="leading-tight">
-                                            <p class="text-[11px] font-semibold text-zinc-900">{{ $wallet->user?->name ?? '—' }}</p>
-                                            <p class="text-[10px] text-zinc-600">{{ $wallet->user?->email ?? '—' }}</p>
+                                            <p class="text-[12px] font-semibold text-zinc-900 dark:text-white">{{ $wallet->user?->name ?? '—' }}</p>
+                                            <p class="text-[11px] text-zinc-600 dark:text-zinc-400">{{ $wallet->user?->email ?? '—' }}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-5 py-3 font-semibold text-zinc-900">@money((float) $wallet->balance, $wallet->currency->value)</td>
-                                <td class="px-5 py-3 text-zinc-600">{{ $wallet->currency }}</td>
-                                <td class="px-5 py-3 text-zinc-600">{{ $wallet->transactions->count() }}</td>
-                                <td class="px-5 py-3">
-                                    @if ($wallet->is_active)
-                                        <span class="inline-flex items-center rounded-[5px] bg-emerald-400 px-2.5 py-0.5 text-xs font-semibold text-white">Active</span>
-                                    @else
-                                        <span class="inline-flex items-center rounded-[10px] bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-700">Inactive</span>
-                                    @endif
+                                <td class="font-semibold tabular-nums text-zinc-900 dark:text-white">@money((float) $wallet->balance, $wallet->currency->value)</td>
+                                <td class="font-medium uppercase">{{ $wallet->currency }}</td>
+                                <td class="tabular-nums">{{ $wallet->transactions->count() }}</td>
+                                <td>
+                                    <x-admin.badge :tone="$wallet->is_active ? 'emerald' : 'zinc'">
+                                        {{ $wallet->is_active ? 'Active' : 'Inactive' }}
+                                    </x-admin.badge>
                                 </td>
-                                <td class="px-5 py-3 text-zinc-600">{{ $wallet->created_at->format('M j, Y') }}</td>
+                                <td class="whitespace-nowrap">{{ $wallet->created_at->format('M j, Y') }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-5 py-12 text-center text-sm text-zinc-600">No wallets yet.</td>
+                                <td colspan="6" class="px-5 py-12 text-center text-sm text-zinc-600 dark:text-zinc-400">No wallets yet.</td>
                             </tr>
                         @endforelse
                     </tbody>

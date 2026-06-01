@@ -20,8 +20,8 @@ class SendWelcomeEmailListener
         $this->dispatcher->dispatch(
             user: $user,
             title: 'Welcome to RshopRefills!',
-            message: $isGoogleAuth 
-                ? 'Welcome! Your account has been registered successfully via Google.' 
+            message: $isGoogleAuth
+                ? 'Welcome! Your account has been registered successfully via Google.'
                 : 'Welcome! Your account has been registered successfully.',
             category: 'security',
             mailable: new WelcomeMail($user, $isGoogleAuth)

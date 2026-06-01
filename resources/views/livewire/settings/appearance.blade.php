@@ -14,25 +14,43 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         <p class="mt-1 text-sm text-zinc-600">Choose how RshopRefills looks for you. System matches your device setting.</p>
     </div>
 
-    {{-- Theme picker --}}
+    {{-- Theme picker. Hand-rolled segmented control instead of flux:radio.group
+         so the active-pill colour matches the rest of the project: zinc-200 in
+         light mode, pure black in dark mode (same palette the sidebar active
+         link uses). The radio group is bound to window.setTheme via Alpine so
+         it persists through reloads, exactly like the old flux variant did. --}}
     <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
         <div class="mb-5">
             <h2 class="text-base font-semibold text-black">Theme</h2>
             <p class="mt-0.5 text-xs text-zinc-600">Switch between light and dark mode, or follow your system.</p>
         </div>
 
-        {{-- Bound to the project theme engine (window.setTheme / localStorage['theme'])
-             so the choice persists across reloads and navigation. Flux's own
-             $flux.appearance is NOT used — the head engine would overwrite it. --}}
-        <flux:radio.group
+        <div
             x-data="{ theme: localStorage.getItem('theme') || 'system' }"
             x-init="$watch('theme', v => window.setTheme(v))"
-            x-model="theme"
-            variant="segmented"
+            role="radiogroup"
+            aria-label="Theme"
+            class="grid grid-cols-3 gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#0c1a36]"
         >
-            <flux:radio value="light" icon="sun">Light</flux:radio>
-            <flux:radio value="dark" icon="moon">Dark</flux:radio>
-            <flux:radio value="system" icon="computer-desktop">Auto</flux:radio>
-        </flux:radio.group>
+            @foreach ([
+                ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.webp'],
+                ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.webp'],
+                ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.webp'],
+            ] as $opt)
+                <button
+                    type="button"
+                    role="radio"
+                    @click="theme = '{{ $opt['value'] }}'"
+                    :aria-checked="(theme === '{{ $opt['value'] }}').toString()"
+                    :class="theme === '{{ $opt['value'] }}'
+                        ? 'bg-zinc-200 text-black shadow-sm dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10'
+                        : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'"
+                    class="inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold transition-colors"
+                >
+                    <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-4 w-4 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
+                    {{ $opt['label'] }}
+                </button>
+            @endforeach
+        </div>
     </div>
 </div>

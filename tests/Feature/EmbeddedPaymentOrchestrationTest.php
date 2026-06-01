@@ -2,25 +2,21 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Shared\Enums\Currency;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
+use App\Models\CurrencyRate;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\PaymentAttempt;
 use App\Models\PaymentSession;
+use App\Models\PricingRule;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Subcategory;
 use App\Models\User;
 use App\Models\Wallet;
-use App\Models\WalletFunding;
-use App\Models\CurrencyRate;
-use App\Domain\Shared\Enums\Currency;
-use App\Domain\Shared\Enums\FundingStatus;
-use App\Domain\Payment\Enums\PaymentStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class EmbeddedPaymentOrchestrationTest extends TestCase
@@ -28,6 +24,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Wallet $wallet;
 
     protected function setUp(): void
@@ -44,7 +41,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
         ]);
 
         $this->user = User::factory()->create();
-        
+
         $this->wallet = Wallet::create([
             'user_id' => $this->user->id,
             'currency' => Currency::USD,
@@ -58,7 +55,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'rate_per_usd' => 1.0,
             'is_active' => true,
         ]);
-        
+
         CurrencyRate::create([
             'code' => 'NGN',
             'name' => 'Nigerian Naira',
@@ -226,9 +223,9 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'is_available' => true,
         ]);
 
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
 
-        \App\Models\PricingRule::create([
+        PricingRule::create([
             'markup_type' => 'fixed',
             'markup_value' => 1.00,
             'is_active' => true,
@@ -294,7 +291,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                 'cvv' => '123',
                 'expiry_month' => '12',
                 'expiry_year' => '28',
-            ]
+            ],
         ]);
 
         $payResponse->assertStatus(200)
@@ -327,7 +324,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                 'cvv' => '123',
                 'expiry_month' => '12',
                 'expiry_year' => '28',
-            ]
+            ],
         ]);
 
         $payResponse->assertStatus(200)
@@ -343,7 +340,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                 'cvv' => '123',
                 'expiry_month' => '12',
                 'expiry_year' => '28',
-            ]
+            ],
         ]);
 
         $pinResponse->assertStatus(200)
@@ -371,7 +368,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                 'cvv' => '123',
                 'expiry_month' => '12',
                 'expiry_year' => '28',
-            ]
+            ],
         ]);
 
         $payResponse->assertStatus(200)
@@ -418,9 +415,9 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                             'account_number',
                             'account_name',
                             'amount',
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ]);
     }
 
@@ -442,7 +439,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'details' => [
                 'phone_number' => '237671234567',
                 'network' => 'mtn',
-            ]
+            ],
         ]);
 
         $payResponse->assertStatus(200)
@@ -452,8 +449,8 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                     'payment_payload' => [
                         'status',
                         'message',
-                    ]
-                ]
+                    ],
+                ],
             ]);
     }
 
@@ -479,7 +476,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'method' => 'crypto',
             'details' => [
                 'pay_currency' => 'USDT',
-            ]
+            ],
         ]);
 
         $payResponse->assertStatus(200)
@@ -492,8 +489,8 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                         'pay_amount',
                         'pay_currency',
                         'network',
-                    ]
-                ]
+                    ],
+                ],
             ]);
     }
 
@@ -536,7 +533,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'details' => [
                 'phone_number' => '237671234567',
                 'network' => 'mtn',
-            ]
+            ],
         ]);
         $payMobileMoney->assertStatus(422)
             ->assertJsonFragment(['message' => 'The payment method mobile_money is not available for currency USD.']);
@@ -554,7 +551,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'details' => [
                 'phone_number' => '237671234567',
                 'network' => 'mtn',
-            ]
+            ],
         ]);
         $payMobileMoneyNgn->assertStatus(422)
             ->assertJsonFragment(['message' => 'The payment method mobile_money is not available for currency NGN.']);
@@ -590,7 +587,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'method' => 'crypto',
             'details' => [
                 'pay_currency' => 'USDT',
-            ]
+            ],
         ]);
         $payCrypto->assertStatus(200)
             ->assertJsonPath('data.status', 'awaiting_transfer');

@@ -140,7 +140,7 @@ class extends Component {
     @endphp
 
     {{-- ── Filter card ─────────────────────────────────────────── --}}
-    <section class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+    <section class="rounded-[10px] border-[1.5px] border-white bg-white p-5 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
         <header class="mb-4 flex items-center justify-between gap-3">
             <h2 class="text-sm font-bold text-zinc-900 dark:text-white">Sales Overview by Date</h2>
             <a href="{{ $this->exportUrl() }}" class="inline-flex items-center gap-1.5 rounded-[10px] bg-blue-50 px-3 py-1.5 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30 dark:hover:bg-blue-600/25">
@@ -228,11 +228,11 @@ class extends Component {
              Label sits inline with the icon, value sits on the row below. --}}
         @php
             $kpis = [
-                ['label' => 'Transactions',  'value' => number_format($this->totals['transactions']), 'icon' => 'transactions.png'],
-                ['label' => 'Total sales',   'value' => '@money', 'money' => $this->totals['sales'],   'icon' => 'total sales.png'],
-                ['label' => 'Profit',        'value' => '@money', 'money' => $this->totals['profit'],  'icon' => 'profit.png'],
-                ['label' => 'Profit Margin', 'value' => number_format($this->totals['profit_margin'], 2) . '%', 'icon' => 'Profit margin.png'],
-                ['label' => 'Avg $ per Tx',  'value' => '@money', 'money' => $this->totals['avg_per_tx'], 'icon' => 'avg $ per tx.png'],
+                ['label' => 'Transactions',  'value' => number_format($this->totals['transactions']), 'icon' => 'transactions.webp'],
+                ['label' => 'Total sales',   'value' => '@money', 'money' => $this->totals['sales'],   'icon' => 'total sales.webp'],
+                ['label' => 'Profit',        'value' => '@money', 'money' => $this->totals['profit'],  'icon' => 'profit.webp'],
+                ['label' => 'Profit Margin', 'value' => number_format($this->totals['profit_margin'], 2) . '%', 'icon' => 'Profit margin.webp'],
+                ['label' => 'Avg $ per Tx',  'value' => '@money', 'money' => $this->totals['avg_per_tx'], 'icon' => 'avg $ per tx.webp'],
             ];
         @endphp
         <div class="mt-5 flex flex-wrap items-start gap-x-10 gap-y-4">
@@ -315,21 +315,21 @@ class extends Component {
     </section>
 
     {{-- ── Data table ──────────────────────────────────────────── --}}
-    <section class="mt-4 overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-[11px]">
-                <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600 dark:bg-[#162a4a] dark:text-zinc-400">
+    <section class="mt-4 overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        <div class="overflow-x-auto p-3">
+            <table class="admin-table w-full text-left text-[12px]">
+                <thead>
                     <tr>
-                        <th class="px-5 py-3 font-semibold">Date</th>
-                        <th class="px-5 py-3 font-semibold">Transactions</th>
-                        <th class="px-5 py-3 font-semibold">Cost</th>
-                        <th class="px-5 py-3 font-semibold">Total Sales</th>
-                        <th class="px-5 py-3 font-semibold">Profit</th>
-                        <th class="px-5 py-3 font-semibold">Profit Margin</th>
-                        <th class="px-5 py-3 font-semibold">Avg $ per Tx</th>
+                        <th>Date</th>
+                        <th>Transactions</th>
+                        <th>Cost</th>
+                        <th>Total Sales</th>
+                        <th>Profit</th>
+                        <th>Profit Margin</th>
+                        <th>Avg $ per Tx</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-700/60">
+                <tbody>
                     @forelse ($this->series as $row)
                         @php
                             $rowDate = \Illuminate\Support\Carbon::parse($row['date']);
@@ -339,14 +339,14 @@ class extends Component {
                                 default => $rowDate->format('M j, D'),
                             };
                         @endphp
-                        <tr class="text-zinc-700 dark:text-zinc-200">
-                            <td class="px-5 py-3 font-medium text-zinc-900 dark:text-white">{{ $label }}</td>
-                            <td class="px-5 py-3 tabular-nums">{{ number_format($row['transactions']) }}</td>
-                            <td class="px-5 py-3 tabular-nums">@moneyCode((float) $row['cost_usd'], 'USD')</td>
-                            <td class="px-5 py-3 tabular-nums">@moneyCode((float) $row['sales_usd'], 'USD')</td>
-                            <td class="px-5 py-3 tabular-nums">@moneyCode((float) $row['profit_usd'], 'USD')</td>
-                            <td class="px-5 py-3 tabular-nums">{{ number_format($row['profit_margin'], 2) }}%</td>
-                            <td class="px-5 py-3 tabular-nums">@moneyCode((float) $row['avg_per_tx_usd'], 'USD')</td>
+                        <tr>
+                            <td class="font-medium text-zinc-900 dark:text-white">{{ $label }}</td>
+                            <td class="tabular-nums">{{ number_format($row['transactions']) }}</td>
+                            <td class="tabular-nums">@moneyCode((float) $row['cost_usd'], 'USD')</td>
+                            <td class="tabular-nums">@moneyCode((float) $row['sales_usd'], 'USD')</td>
+                            <td class="tabular-nums">@moneyCode((float) $row['profit_usd'], 'USD')</td>
+                            <td class="tabular-nums">{{ number_format($row['profit_margin'], 2) }}%</td>
+                            <td class="tabular-nums">@moneyCode((float) $row['avg_per_tx_usd'], 'USD')</td>
                         </tr>
                     @empty
                         <tr>

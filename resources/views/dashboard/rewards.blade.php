@@ -99,6 +99,14 @@
 <x-layouts.dashboard>
     <div class="flex w-full flex-col gap-8">
 
+        {{-- features.wallet_withdraw_enabled kill-switch banner. Customers
+             can still earn / spend Rcoin; only cash-out withdrawals are paused. --}}
+        <x-paused-banner
+            flag="wallet_withdraw"
+            title="Withdrawals are temporarily paused"
+            message="You can still earn and spend Rcoin on the storefront. Cash-out withdrawals will be back online shortly."
+        />
+
         {{-- ─── Rcoin balance card ─── --}}
         <section>
             <div class="hidden items-center gap-3 lg:flex">
@@ -155,7 +163,7 @@
             <div class="mt-3 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
                 <div class="flex items-start gap-4">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 dark:bg-blue-500/15">
-                        <img src="{{ asset('assets/referals.png') }}" alt="" class="no-dark-invert h-5 w-5 object-contain" loading="lazy">
+                        <img src="{{ asset('assets/referals.webp') }}" alt="" class="no-dark-invert h-5 w-5 object-contain" loading="lazy">
                     </span>
                     <div class="min-w-0">
                         <p class="text-base font-bold text-black">Refer friends, earn Rcoin</p>
@@ -291,11 +299,16 @@
                                 placeholder="Rcoin to withdraw"
                                 class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                             >
-                            <select name="withdraw_method" x-model="method" class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                                <option value="wallet">RShop wallet</option>
-                                <option value="bank">Bank transfer</option>
-                                <option value="mobile_money">Mobile money</option>
-                            </select>
+                            <div class="relative">
+                                <select name="withdraw_method" x-model="method" class="w-full appearance-none rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-3 pr-9 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                    <option value="wallet">RShop wallet</option>
+                                    <option value="bank">Bank transfer</option>
+                                    <option value="mobile_money">Mobile money</option>
+                                </select>
+                                <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
                             <button type="submit" class="mt-1 w-full rounded-[10px] bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
                                 Request withdrawal
                             </button>

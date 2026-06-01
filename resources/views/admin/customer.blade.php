@@ -19,8 +19,8 @@
     };
 
     $avatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
-        'female', 'f' => 'New Female Account Avatar.png',
-        default       => 'New male account avatar.png',
+        'female', 'f' => 'New Female Account Avatar.webp',
+        default       => 'New male account avatar.webp',
     }));
 
     $primaryWallet = $user->wallets->first(fn ($wallet) => $wallet->currency->value === 'USD')
@@ -236,6 +236,51 @@
                             {{ $isBanned ? 'Unban' : 'Ban' }}
                         </button>
                     </form>
+
+                    {{-- Reset transaction PIN - only when one is set. Clears it so
+                         the customer is prompted to set a fresh PIN. --}}
+                    @if ($user->hasTransactionPin())
+                        <form method="POST" action="{{ route('admin.customer.reset-pin', $user) }}"
+                              data-confirm="Reset this customer's transaction PIN? They will be asked to set a new one before their next wallet action."
+                              data-confirm-title="Reset transaction PIN"
+                              data-confirm-text="Reset PIN"
+                              data-confirm-tone="warning">
+                            @csrf
+                            <button type="submit" class="{{ $btn }} bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100">
+                                <svg class="{{ $btnIcon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 7.5h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25H6.75a2.25 2.25 0 01-2.25-2.25v-7.5A2.25 2.25 0 016.75 7.5H7.5"/></svg>
+                                Reset PIN
+                            </button>
+                        </form>
+                    @endif
+
+                    {{-- Reset password - emails the customer a reset link (they set
+                         their own new password; the admin never sees it). --}}
+                    <form method="POST" action="{{ route('admin.customer.password-reset', $user) }}"
+                          data-confirm="Email {{ $user->name }} a password reset link? They will set a new password themselves."
+                          data-confirm-title="Send password reset"
+                          data-confirm-text="Send reset link"
+                          data-confirm-tone="warning">
+                        @csrf
+                        <button type="submit" class="{{ $btn }} bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100">
+                            <svg class="{{ $btnIcon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H9v1.5H7.5v1.5H6v1.5H3.75a.75.75 0 01-.75-.75V18.4c0-.2.08-.392.22-.531l5.43-5.43c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/></svg>
+                            Reset password
+                        </button>
+                    </form>
+
+                    {{-- Log in as this customer (impersonation). Opens their
+                         dashboard in the same browser; admin stays signed in on
+                         the admin guard and can return via the banner. --}}
+                    <form method="POST" action="{{ route('admin.customer.login-as', $user) }}"
+                          data-confirm="Log in as {{ $user->name }}? You will be switched into their account in this tab and can return to admin at any time."
+                          data-confirm-title="Log in as customer"
+                          data-confirm-text="Log in as customer"
+                          data-confirm-tone="warning">
+                        @csrf
+                        <button type="submit" class="{{ $btn }} bg-blue-50 text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100">
+                            <svg class="{{ $btnIcon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H2.25"/></svg>
+                            Log in as customer
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -418,9 +463,9 @@
         @php
             $currentMultiplier = (float) ($user->rcoin_multiplier ?? 1.00);
             $multiplierTone = match (true) {
-                $currentMultiplier > 1.0 => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                $currentMultiplier < 1.0 => 'bg-amber-50 text-amber-700 ring-amber-200',
-                default => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+                $currentMultiplier > 1.0 => 'emerald',
+                $currentMultiplier < 1.0 => 'amber',
+                default => 'zinc',
             };
             // Resolve the live Rcoin balance + lifetime earnings (sum of all
             // cashback + referral credits ever awarded to this customer).
@@ -600,7 +645,7 @@
                     <h3 class="text-sm font-bold text-zinc-900">Rcoin earnings multiplier</h3>
                     <p class="mt-0.5 text-[11px] text-zinc-500">Reward power users who advertise the product. Applied to cashback AND referral bonuses.</p>
                 </div>
-                <span class="inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 {{ $multiplierTone }}">{{ number_format($currentMultiplier, 2) }}×</span>
+                <x-admin.badge :tone="$multiplierTone">{{ number_format($currentMultiplier, 2) }}×</x-admin.badge>
             </div>
             <div class="px-5 py-4">
                 <form method="POST" action="{{ route('admin.customer.rcoin-multiplier', $user) }}" class="flex flex-wrap items-end gap-3">
@@ -656,16 +701,16 @@
         {{-- Identity verification (KYC) --}}
         @php
             $kycTone = match ($user->kyc_status) {
-                'verified' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                'pending'  => 'bg-amber-50 text-amber-700 ring-amber-200',
-                'rejected' => 'bg-red-50 text-red-700 ring-red-200',
-                default    => 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+                'verified' => 'emerald',
+                'pending'  => 'amber',
+                'rejected' => 'red',
+                default    => 'zinc',
             };
         @endphp
         <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
                 <h3 class="text-sm font-bold text-zinc-900">Identity verification (KYC)</h3>
-                <span class="inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 {{ $kycTone }}">{{ $user->kyc_status }}</span>
+                <x-admin.badge :tone="$kycTone">{{ $user->kyc_status }}</x-admin.badge>
             </div>
 
             @if ($kyc)

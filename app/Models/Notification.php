@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Domain\Notification\Enums\DeliveryStatus;
 use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Notification\Enums\NotificationPriority;
-use App\Domain\Notification\Enums\DeliveryStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

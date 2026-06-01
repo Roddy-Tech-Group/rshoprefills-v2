@@ -13,7 +13,7 @@
              request never reached the storefront middleware/region resolution. --}}
         <main class="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-12 text-center">
             <img
-                src="{{ asset('assets/' . rawurlencode('404 it seems like you missed your wa go back to shop.png')) }}"
+                src="{{ asset('assets/' . rawurlencode('404 it seems like you missed your wa go back to shop.webp')) }}"
                 alt="404"
                 class="h-56 w-auto object-contain sm:h-72"
                 loading="eager"

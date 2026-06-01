@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Log;
 class ResendProvider implements MailProviderInterface
 {
     private readonly string $apiKey;
+
     private readonly string $fromAddress;
+
     private readonly string $fromName;
 
     public function __construct()
@@ -27,7 +29,7 @@ class ResendProvider implements MailProviderInterface
             ]);
 
             return [
-                'id' => 'mock_resend_id_' . uniqid(),
+                'id' => 'mock_resend_id_'.uniqid(),
                 'status' => 'success',
                 'dry_run' => true,
             ];
@@ -48,7 +50,7 @@ class ResendProvider implements MailProviderInterface
                 'status' => $response->status(),
             ]);
 
-            throw new \RuntimeException('Resend email delivery failed: ' . ($response->json()['message'] ?? $response->body()));
+            throw new \RuntimeException('Resend email delivery failed: '.($response->json()['message'] ?? $response->body()));
         }
 
         return $response->json();

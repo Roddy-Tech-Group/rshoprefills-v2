@@ -4,8 +4,12 @@ namespace Tests\Feature\Admin;
 
 use App\Domain\Admin\Enums\AdminRole;
 use App\Models\Admin;
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Subcategory;
 use App\Models\User;
 use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,16 +83,16 @@ class AdminReportsPageTest extends TestCase
             'metadata' => ['exchange_rate' => 1.0, 'settlement_total_usd' => 14.00, 'settlement_subtotal_usd' => 12.34],
         ]);
 
-        $category = \App\Models\Category::factory()->create();
-        $product = \App\Models\Product::factory()->create([
-            'category_id' => $category->id
+        $category = Category::factory()->create();
+        $product = Product::factory()->create([
+            'category_id' => $category->id,
         ]);
-        $variant = \App\Models\ProductVariant::factory()->create([
-            'product_id' => $product->id
+        $variant = ProductVariant::factory()->create([
+            'product_id' => $product->id,
         ]);
 
-        $subcategory = \App\Models\Subcategory::factory()->create([
-            'category_id' => $category->id
+        $subcategory = Subcategory::factory()->create([
+            'category_id' => $category->id,
         ]);
 
         OrderItem::create([

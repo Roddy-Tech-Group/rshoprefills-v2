@@ -2,14 +2,18 @@
 
 namespace App\Domain\Security\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class TurnstileService
 {
     public const STATUS_SUCCESS = 'success';
+
     public const STATUS_INVALID = 'invalid';
+
     public const STATUS_TIMEOUT = 'timeout';
+
     public const STATUS_BYPASSED = 'bypassed';
 
     public function __construct(
@@ -33,8 +37,6 @@ class TurnstileService
     /**
      * Validate the Turnstile token against Cloudflare API.
      *
-     * @param string|null $token
-     * @param string|null $ip
      * @return array{status: string, message: string}
      */
     public function validateToken(?string $token, ?string $ip = null): array
@@ -73,6 +75,7 @@ class TurnstileService
 
             if ($response->failed()) {
                 Log::warning('Cloudflare Turnstile API non-200 response.', ['status' => $response->status(), 'body' => $response->body()]);
+
                 return [
                     'status' => self::STATUS_TIMEOUT, // Treat API failures as timeouts for fail-open logic
                     'message' => 'Turnstile validation service unavailable.',
@@ -90,20 +93,22 @@ class TurnstileService
 
             // Validation failed
             Log::info('Turnstile validation failed.', ['errors' => $result['error-codes'] ?? []]);
-            
+
             return [
                 'status' => self::STATUS_INVALID,
                 'message' => 'Turnstile verification failed.',
             ];
 
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             Log::error('Turnstile connection timeout/error.', ['exception' => $e->getMessage()]);
+
             return [
                 'status' => self::STATUS_TIMEOUT,
                 'message' => 'Turnstile validation service timed out.',
             ];
         } catch (\Throwable $e) {
             Log::error('Turnstile unexpected error.', ['exception' => $e->getMessage()]);
+
             return [
                 'status' => self::STATUS_TIMEOUT,
                 'message' => 'Turnstile validation service encountered an error.',

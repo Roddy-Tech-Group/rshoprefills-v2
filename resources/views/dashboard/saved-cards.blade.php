@@ -14,8 +14,8 @@
         </div>
 
         {{-- Empty state --}}
-        <div class="rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
-            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
+        <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50">
                 <img src="{{ asset('assets/' . rawurlencode('savedcard.svg')) }}" alt="" class="h-7 w-7" loading="lazy">
             </span>
             <p class="mt-4 text-base font-semibold text-zinc-900">No saved cards yet</p>
@@ -31,8 +31,8 @@
         </div>
 
         {{-- Security note --}}
-        <div class="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-zinc-100">
-            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+        <div class="flex items-start gap-3 rounded-[10px] bg-white p-4 ring-1 ring-zinc-100">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50">
                 <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/>
                 </svg>

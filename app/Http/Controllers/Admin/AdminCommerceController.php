@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Order\Enums\OrderStatus;
+use App\Domain\Order\Events\RefundIssued;
+use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Http\Controllers\Controller;
+use App\Jobs\FulfillOrderItemJob;
+use App\Models\FulfillmentLog;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentAttempt;
-use App\Models\FulfillmentLog;
-use App\Jobs\FulfillOrderItemJob;
-use App\Domain\Payment\Services\PaymentGatewayFactory;
-use App\Domain\Order\Events\RefundIssued;
 use Illuminate\Http\Request;
 
 class AdminCommerceController extends Controller
@@ -24,7 +26,7 @@ class AdminCommerceController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(fn($q) => $q->where('order_number', 'like', "%{$search}%")->orWhereRelation('user', 'email', 'like', "%{$search}%"));
+            $query->where(fn ($q) => $q->where('order_number', 'like', "%{$search}%")->orWhereRelation('user', 'email', 'like', "%{$search}%"));
         }
 
         return response()->json($query->latest()->paginate(15));
@@ -68,7 +70,7 @@ class AdminCommerceController extends Controller
         ]);
 
         $order = Order::findOrFail($orderId);
-        $amount = (float)$validated['amount'];
+        $amount = (float) $validated['amount'];
 
         if ($amount > $order->total_amount) {
             return response()->json(['message' => 'Refund amount cannot exceed the order total amount.'], 400);
@@ -76,10 +78,10 @@ class AdminCommerceController extends Controller
 
         // Get successful or active payment attempt
         $attempt = $order->paymentAttempts()
-            ->whereIn('payment_status', [\App\Domain\Payment\Enums\PaymentStatus::Paid, \App\Domain\Payment\Enums\PaymentStatus::Reserved])
+            ->whereIn('payment_status', [PaymentStatus::Paid, PaymentStatus::Reserved])
             ->first();
 
-        if (!$attempt) {
+        if (! $attempt) {
             return response()->json(['message' => 'No successful payment attempt found for this order.'], 400);
         }
 
@@ -91,15 +93,15 @@ class AdminCommerceController extends Controller
             $provider->refundPayment($attempt, $amount);
 
             // Mark order status
-            $order->order_status = \App\Domain\Order\Enums\OrderStatus::Refunded;
-            $order->payment_status = \App\Domain\Payment\Enums\PaymentStatus::Refunded;
+            $order->order_status = OrderStatus::Refunded;
+            $order->payment_status = PaymentStatus::Refunded;
             $order->save();
 
             RefundIssued::dispatch($order, $amount, $validated['reason']);
 
             return response()->json(['message' => 'Refund processed successfully.']);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Refund operation failed: ' . $e->getMessage()], 400);
+            return response()->json(['message' => 'Refund operation failed: '.$e->getMessage()], 400);
         }
     }
 }

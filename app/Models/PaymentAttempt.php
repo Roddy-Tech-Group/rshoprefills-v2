@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -83,7 +84,7 @@ class PaymentAttempt extends Model
         return $this->morphTo();
     }
 
-    public function paymentSession(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function paymentSession(): HasOne
     {
         return $this->hasOne(PaymentSession::class);
     }

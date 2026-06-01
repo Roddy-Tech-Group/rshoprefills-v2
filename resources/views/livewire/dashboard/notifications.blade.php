@@ -28,6 +28,12 @@ class extends Component {
         Auth::user()->notifications()->whereNull('read_at')->update(['read_at' => now()]);
     }
 
+    /** Permanently delete a single notification. */
+    public function deleteNotification(string $id): void
+    {
+        Auth::user()->notifications()->whereKey($id)->delete();
+    }
+
     public function with(): array
     {
         return [
@@ -46,7 +52,15 @@ class extends Component {
     };
 @endphp
 
-<div class="flex w-full flex-col gap-5">
+<div
+    class="flex w-full flex-col gap-5"
+    x-data="{
+        show: false,
+        note: { id: null, title: '', message: '', time: '', read: false },
+        open(data) { this.note = data; this.show = true; },
+        close() { this.show = false; },
+    }"
+>
 
     {{-- Heading — H1 desktop only (mobile uses the layout's slim top bar); the
          "Mark all read" button keeps showing on mobile, pushed right via ml-auto. --}}
@@ -66,28 +80,50 @@ class extends Component {
     @if ($notifications->isNotEmpty())
         <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
             @foreach ($notifications as $note)
-                <button
-                    type="button"
-                    @if (! $note->read_at) wire:click="markRead('{{ $note->id }}')" @endif
+                <div
                     wire:key="note-{{ $note->id }}"
-                    class="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-zinc-50 {{ $note->read_at ? '' : 'bg-blue-50/50' }}"
+                    class="group relative flex items-stretch transition-colors hover:bg-zinc-50 {{ $note->read_at ? '' : 'bg-blue-50/50' }}"
                 >
-                    {{-- Priority icon tile --}}
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] {{ $toneColor($note->priority) }}">
-                        <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 brightness-0 invert" loading="lazy">
-                    </span>
+                    {{-- Clickable area — opens the detail sheet. --}}
+                    <button
+                        type="button"
+                        @click="open({ id: @js((string) $note->id), title: @js($note->title), message: @js($note->message), time: @js($note->created_at->diffForHumans()), read: @js((bool) $note->read_at) })"
+                        class="flex min-w-0 flex-1 items-start gap-3 px-4 py-3.5 text-left"
+                    >
+                        {{-- Priority icon tile --}}
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] {{ $toneColor($note->priority) }}">
+                            <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 brightness-0 invert" loading="lazy">
+                        </span>
 
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2">
-                            <p class="truncate text-sm font-bold text-zinc-900">{{ $note->title }}</p>
-                            @unless ($note->read_at)
-                                <span class="h-2 w-2 shrink-0 rounded-[10px] bg-blue-600" aria-label="Unread"></span>
-                            @endunless
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <p class="truncate text-sm font-bold text-zinc-900">{{ $note->title }}</p>
+                                @unless ($note->read_at)
+                                    <span class="h-2 w-2 shrink-0 rounded-[10px] bg-blue-600" aria-label="Unread"></span>
+                                @endunless
+                            </div>
+                            <p class="mt-0.5 line-clamp-2 text-xs leading-relaxed text-zinc-600">{{ $note->message }}</p>
+                            <p class="mt-1 text-[11px] text-zinc-400">{{ $note->created_at->diffForHumans() }}</p>
                         </div>
-                        <p class="mt-0.5 text-xs leading-relaxed text-zinc-600">{{ $note->message }}</p>
-                        <p class="mt-1 text-[11px] text-zinc-400">{{ $note->created_at->diffForHumans() }}</p>
-                    </div>
-                </button>
+                    </button>
+
+                    {{-- Small delete button, pinned to the right (5px radius). --}}
+                    <button
+                        type="button"
+                        wire:click="deleteNotification('{{ $note->id }}')"
+                        data-confirm="Delete this notification? This cannot be undone."
+                        data-confirm-title="Delete notification"
+                        data-confirm-text="Delete"
+                        data-confirm-tone="danger"
+                        class="m-2 flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-[5px] text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        aria-label="Delete notification"
+                        title="Delete"
+                    >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-7 0v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7"/>
+                        </svg>
+                    </button>
+                </div>
             @endforeach
         </div>
 
@@ -104,4 +140,69 @@ class extends Component {
             <p class="mt-1 text-sm text-zinc-600">Order updates, wallet activity and security alerts will show up here.</p>
         </div>
     @endif
+
+    {{-- Slide-up detail sheet. Backdrop sits below; the sheet slides up from the
+         bottom edge. Mark as read / Delete call straight through to Livewire. --}}
+    <div
+        x-show="show"
+        x-transition:enter="transition-opacity ease-out duration-300"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition-opacity ease-in duration-200"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        @click="close()"
+        style="display:none;"
+        class="fixed inset-0 z-[60] bg-zinc-900/40"
+    ></div>
+
+    <div
+        x-show="show"
+        @keydown.escape.window="close()"
+        style="display:none;"
+        class="fixed inset-x-0 bottom-0 z-[70] flex justify-center"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div
+            x-show="show"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="translate-y-full"
+            x-transition:enter-end="translate-y-0"
+            x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="translate-y-0"
+            x-transition:leave-end="translate-y-full"
+            class="w-full max-w-lg rounded-t-[20px] bg-white p-5 pb-7 shadow-2xl shadow-zinc-900/20"
+        >
+            <div class="mx-auto mb-4 h-1.5 w-10 rounded-[10px] bg-zinc-200"></div>
+
+            <div class="flex items-start gap-2">
+                <h2 class="flex-1 text-base font-bold text-zinc-900" x-text="note.title"></h2>
+                <button type="button" @click="close()" class="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[5px] text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700" aria-label="Close">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="mt-1 text-[11px] text-zinc-400" x-text="note.time"></p>
+            <p class="mt-3 whitespace-pre-line text-sm leading-relaxed text-zinc-700" x-text="note.message"></p>
+
+            <div class="mt-6 flex items-center gap-3">
+                <button
+                    type="button"
+                    x-show="! note.read"
+                    @click="$wire.markRead(note.id); note.read = true"
+                    class="flex-1 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                >
+                    Mark as read
+                </button>
+                <button
+                    type="button"
+                    @click="$wire.deleteNotification(note.id); close()"
+                    class="rounded-[10px] px-4 py-2.5 text-sm font-semibold text-red-600 ring-1 ring-red-200 transition-colors hover:bg-red-50"
+                    :class="note.read ? 'flex-1' : ''"
+                >
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
 </div>

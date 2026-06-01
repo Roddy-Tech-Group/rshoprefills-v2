@@ -163,17 +163,19 @@ class PollPendingFulfillmentJob implements ShouldQueue
     private function checkOrderCompletion(string $orderId, OrderService $orderService): void
     {
         $order = Order::where('id', $orderId)->lockForUpdate()->first();
-        if (! $order) return;
+        if (! $order) {
+            return;
+        }
 
         $isOrderFinished = $order->items->every(fn ($i) => in_array($i->fulfillment_status, [
             FulfillmentStatus::Fulfilled,
-            FulfillmentStatus::Failed
+            FulfillmentStatus::Failed,
         ]));
 
         if ($isOrderFinished) {
             $allFailed = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Failed);
             $allFulfilled = $order->items->every(fn ($i) => $i->fulfillment_status === FulfillmentStatus::Fulfilled);
-            
+
             if ($allFailed) {
                 $orderService->transitionFulfillmentStatus($order, FulfillmentStatus::Failed);
             } elseif ($allFulfilled) {

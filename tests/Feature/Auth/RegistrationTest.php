@@ -12,9 +12,9 @@ class RegistrationTest extends TestCase
 
     public function test_registration_screen_can_be_rendered(): void
     {
-        $response = $this->get('/register');
-
-        $response->assertStatus(200);
+        // Registration is no longer a dedicated page; /register redirects to
+        // the home page with ?auth=register which triggers the auth modal.
+        $this->get('/register')->assertRedirect('/?auth=register');
     }
 
     public function test_new_users_can_register(): void

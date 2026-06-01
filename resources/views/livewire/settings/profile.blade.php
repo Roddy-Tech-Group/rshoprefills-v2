@@ -190,8 +190,8 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     // Gender-aware default avatar. Resolves on every page render so changing gender in settings
     // updates every place this is read.
     $defaultAvatar = asset('assets/' . rawurlencode(match (strtolower($authUser?->gender ?? '')) {
-        'female', 'f' => 'New Female Account Avatar.png',
-        default       => 'New male account avatar.png',
+        'female', 'f' => 'New Female Account Avatar.webp',
+        default       => 'New male account avatar.webp',
     }));
 @endphp
 
@@ -247,7 +247,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         <x-skeleton class="h-3.5 w-48" />
                     </div>
                 </div>
-                <div class="skeleton-stagger-fast divide-y divide-zinc-100 border-t border-zinc-100">
+                <div class="skeleton-stagger-fast divide-inset">
                     @for ($i = 0; $i < 4; $i++)
                         <div class="flex items-center justify-between px-6 py-3.5" style="--i: {{ $i }}">
                             <div class="space-y-2">
@@ -298,23 +298,23 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         {{-- Cropper modal — opens when a file is picked --}}
                         <template x-if="cropperOpen">
                             <div class="fixed inset-0 z-[80] flex items-center justify-center p-4">
-                                <div class="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm" @click="!saving && closeCropper()" aria-hidden="true"></div>
-                                <div class="relative w-full max-w-lg rounded-[10px] bg-white p-5 shadow-2xl shadow-zinc-900/25" role="dialog" aria-modal="true">
+                                <div class="absolute inset-0 bg-zinc-900/45" @click="!saving && closeCropper()" aria-hidden="true"></div>
+                                <div class="relative w-full max-w-lg rounded-[10px] bg-white/70 ring-1 ring-white/40 p-5 shadow-2xl shadow-zinc-900/25 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70 dark:ring-white/10" role="dialog" aria-modal="true">
                                     <div class="flex items-start justify-between gap-3">
                                         <div>
-                                            <h3 class="text-base font-bold text-zinc-900">Crop your photo</h3>
-                                            <p class="mt-0.5 text-xs text-zinc-600">Drag the box, zoom with the corners. Square crop saves at 512×512.</p>
+                                            <h3 class="text-base font-bold text-zinc-900 dark:text-white">Crop your photo</h3>
+                                            <p class="mt-0.5 text-xs text-zinc-600 dark:text-zinc-300">Drag the box, zoom with the corners. Square crop saves at 512×512.</p>
                                         </div>
                                         <x-close-button @click="closeCropper()" :disabled="false" />
                                     </div>
 
-                                    <div class="mt-4 overflow-hidden rounded-[10px] bg-zinc-100" style="max-height: 60vh;">
+                                    <div class="mt-4 overflow-hidden rounded-[10px] bg-zinc-100 dark:bg-white/5" style="max-height: 60vh;">
                                         {{-- Cropper.js mutates this <img>; it must be inside a sized container. --}}
                                         <img x-ref="cropperImage" :src="imageSrc" alt="" class="block max-w-full" style="max-height: 60vh;">
                                     </div>
 
                                     <div class="mt-4 flex flex-wrap items-center gap-2">
-                                        <button type="button" @click="closeCropper()" :disabled="saving" class="flex-1 rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60">Cancel</button>
+                                        <button type="button" @click="closeCropper()" :disabled="saving" class="flex-1 rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60 dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">Cancel</button>
                                         <button type="button" @click="saveCrop()" :disabled="saving" class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-60">
                                             <svg x-show="saving" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -332,13 +332,11 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2">
                             <p class="truncate text-lg font-bold text-black">{{ $authUser?->name ?? 'Account holder' }}</p>
-                            {{-- Verification badge: ID-verified > email-verified > basic. --}}
+                            {{-- Verification badge: ID-verified shows the Facebook-style
+                                 blue tick; otherwise email-verified > basic pills. --}}
                             @if ($identityVerified)
-                                <a href="{{ route('dashboard.kyc') }}" wire:navigate class="inline-flex items-center gap-1 rounded-[5px] bg-blue-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path fill-rule="evenodd" d="M12 1.5l2.6 1.9 3.2-.2 1 3.1 2.7 1.7-1 3.1 1 3.1-2.7 1.7-1 3.1-3.2-.2L12 22.5l-2.6-1.9-3.2.2-1-3.1L2.5 16l1-3.1-1-3.1 2.7-1.7 1-3.1 3.2.2L12 1.5zm-1 13.6l5-5-1.4-1.4-3.6 3.6-1.6-1.6L7 12.1l3 3z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Verified
+                                <a href="{{ route('dashboard.kyc') }}" wire:navigate title="Identity verified" class="shrink-0">
+                                    <x-ui.verified-badge class="h-5 w-5" />
                                 </a>
                             @elseif ($emailVerified)
                                 <span class="inline-flex items-center rounded-[5px] bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Email Verified</span>
@@ -348,12 +346,10 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         </div>
                         <p class="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-zinc-600">
                             <span class="truncate">{{ $authUser?->email ?? '—' }}</span>
+                            {{-- Email-verified gets the same seal style as the identity
+                                 badge, just green, so the two read as a matching set. --}}
                             @if ($emailVerified)
-                                <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[10px] bg-emerald-500 text-white" title="Email verified">
-                                    <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                    </svg>
-                                </span>
+                                <x-ui.verified-badge color="#10b981" title="Email verified" class="h-4 w-4" />
                             @endif
                         </p>
 
@@ -381,7 +377,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             </div>
 
             {{-- Detail rows --}}
-            <div class="divide-y divide-zinc-100 border-t border-zinc-100">
+            <div class="divide-inset">
                 {{-- Full name --}}
                 <div class="flex items-center justify-between gap-3 px-5 py-3.5 sm:px-6">
                     <div class="min-w-0">
@@ -479,51 +475,51 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                 x-show="editingProfile"
                 x-cloak
                 x-collapse
-                class="border-t border-zinc-100 bg-zinc-50/60"
+                class="border-t border-zinc-100 bg-zinc-50/60 dark:border-white/10 dark:bg-white/[0.03]"
             >
                 <form wire:submit="updateProfileInformation" class="space-y-4 p-5 sm:p-6">
                     <div>
-                        <label for="profile-name" class="mb-1.5 block text-xs font-semibold text-zinc-700">Full name</label>
+                        <label for="profile-name" class="mb-1.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Full name</label>
                         <input
                             wire:model="name"
                             id="profile-name"
                             type="text"
                             required
-                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-white/15 dark:bg-[#0c1a36] dark:text-white"
                             placeholder="Your full name"
                         />
-                        @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('name') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
-                        <label for="profile-email" class="mb-1.5 block text-xs font-semibold text-zinc-700">Email address</label>
+                        <label for="profile-email" class="mb-1.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Email address</label>
                         <input
                             wire:model="email"
                             id="profile-email"
                             type="email"
                             required
-                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-white/15 dark:bg-[#0c1a36] dark:text-white"
                             placeholder="you@example.com"
                         />
-                        @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('email') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
-                        <label for="profile-phone" class="mb-1.5 block text-xs font-semibold text-zinc-700">Phone number</label>
+                        <label for="profile-phone" class="mb-1.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Phone number</label>
                         <input
                             wire:model="phone"
                             id="profile-phone"
                             type="tel"
                             inputmode="tel"
                             autocomplete="tel"
-                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-white/15 dark:bg-[#0c1a36] dark:text-white dark:placeholder:text-zinc-500"
                             placeholder="+237 6XX XXX XXX"
                         />
-                        @error('phone') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('phone') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
-                        <span class="mb-1.5 block text-xs font-semibold text-zinc-700">Gender</span>
+                        <span class="mb-1.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Gender</span>
                         <div class="grid grid-cols-3 gap-2">
                             @foreach ([
                                 ['value' => 'male',   'label' => 'Male',   'icon' => 'male.svg'],
@@ -533,15 +529,15 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                                 <button
                                     type="button"
                                     wire:click="$set('gender', '{{ $opt['value'] }}')"
-                                    class="flex flex-col items-center gap-1 rounded-[10px] border px-2 py-2.5 text-xs font-semibold transition-all active:scale-95 {{ $gender === $opt['value'] ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400' }}"
+                                    class="flex flex-col items-center gap-1 rounded-[10px] border px-2 py-2.5 text-xs font-semibold transition-all active:scale-95 {{ $gender === $opt['value'] ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-500/15 dark:text-blue-300' : 'border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 dark:border-white/15 dark:bg-[#0c1a36] dark:text-zinc-200 dark:hover:border-white/30' }}"
                                     aria-pressed="{{ $gender === $opt['value'] ? 'true' : 'false' }}"
                                 >
-                                    <img src="{{ asset('assets/' . $opt['icon']) }}" alt="" class="h-5 w-5" loading="lazy">
+                                    <img src="{{ asset('assets/' . $opt['icon']) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" loading="lazy">
                                     {{ $opt['label'] }}
                                 </button>
                             @endforeach
                         </div>
-                        @error('gender') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        @error('gender') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <div class="flex items-center gap-2 pt-1">
@@ -554,7 +550,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                                 Saving
                             </span>
                         </button>
-                        <button type="button" @click="editingProfile = false" class="rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">Cancel</button>
+                        <button type="button" @click="editingProfile = false" class="rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -568,7 +564,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         <div class="flex flex-col gap-3">
             {{-- Change password card --}}
             <a href="{{ route('dashboard.password') }}" wire:navigate class="relative flex items-center gap-4 overflow-hidden rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#0a1729] text-white">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
                     </svg>
@@ -630,7 +626,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
 
         <div class="rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
             <div class="mb-4 flex items-start gap-3">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#0a1729] text-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.61-1.611l-5.815 3.875a15.994 15.994 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42"/>
                     </svg>
@@ -641,27 +637,26 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                 </div>
             </div>
 
-            {{-- Modern segmented selector — pure Alpine for a polished feel that stays in light mode --}}
+            {{-- Modern segmented selector — uses the project-canonical PNG theme
+                 icons (brightness-0 + dark:invert so they adapt to the surface). --}}
             @php
                 $themeOptions = [
-                    ['value' => 'light',  'label' => 'Light',  'path' => 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z'],
-                    ['value' => 'dark',   'label' => 'Dark',   'path' => 'M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z'],
-                    ['value' => 'system', 'label' => 'Auto', 'path' => 'M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25'],
+                    ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.webp'],
+                    ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.webp'],
+                    ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.webp'],
                 ];
             @endphp
 
-            <div x-data="{ theme: localStorage.getItem('theme') || 'system' }" x-init="$watch('theme', v => window.setTheme(v))" class="grid grid-cols-3 gap-2 rounded-[10px] bg-zinc-100 p-1">
+            <div x-data="{ theme: localStorage.getItem('theme') || 'system' }" x-init="$watch('theme', v => window.setTheme(v))" class="grid grid-cols-3 gap-2 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#0c1a36]">
                 @foreach ($themeOptions as $opt)
                     <button
                         type="button"
                         @click="theme = '{{ $opt['value'] }}'"
-                        :class="theme === '{{ $opt['value'] }}' ? 'bg-white text-black shadow-sm ring-1 ring-zinc-200' : 'text-zinc-600 hover:bg-white/70 hover:text-black hover:shadow-sm'"
+                        :class="theme === '{{ $opt['value'] }}' ? 'bg-white text-black shadow-sm ring-1 ring-zinc-200 dark:bg-black dark:text-white dark:ring-white/10' : 'text-zinc-600 hover:bg-white/70 hover:text-black hover:shadow-sm dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white'"
                         class="flex flex-col items-center gap-1.5 rounded-[10px] px-2 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-95"
                         :aria-pressed="theme === '{{ $opt['value'] }}'"
                     >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $opt['path'] }}"/>
-                        </svg>
+                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-4 w-4 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
                         {{ $opt['label'] }}
                     </button>
                 @endforeach
@@ -673,7 +668,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     <section>
         <h2 class="mb-2.5 text-base font-bold text-zinc-900">Notifications</h2>
 
-        <div class="divide-y divide-zinc-100 overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+        <div class="divide-inset overflow-hidden rounded-[10px] bg-white shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
             @php
                 // [key, current value, label, description, heroicon path]
                 $notifyRows = [
@@ -687,7 +682,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             @foreach ($notifyRows as [$key, $on, $label, $desc, $iconPath])
                 <div class="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
                     <span class="flex items-center gap-3">
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#0a1729] text-white">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}"/>
                             </svg>
@@ -730,7 +725,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left sm:px-6"
                 >
                     <span class="flex items-center gap-3">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-zinc-800 text-white">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#0a1729] text-white">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
                             </svg>

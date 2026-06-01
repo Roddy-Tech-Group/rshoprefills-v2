@@ -8,6 +8,7 @@ use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Domain\Wallet\Services\WalletService;
 use App\Models\RcoinWithdrawal;
 use App\Models\Setting;
+use App\Support\FeatureFlag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,11 @@ class RcoinWithdrawalController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // features.wallet_withdraw_enabled kill-switch.
+        if (! FeatureFlag::on('wallet_withdraw')) {
+            return back()->withErrors(['amount' => 'Rcoin withdrawals are temporarily disabled.']);
+        }
+
         $user = $request->user();
         abort_if(! $user, 403);
 

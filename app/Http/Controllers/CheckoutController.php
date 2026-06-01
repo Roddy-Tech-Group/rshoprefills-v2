@@ -7,12 +7,18 @@ use App\Domain\Cart\Services\CartPricingService;
 use App\Domain\Fraud\Services\FraudDetectionService;
 use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Order\Services\CheckoutService;
+use App\Domain\Payment\Providers\FlutterwavePaymentProvider;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
+use App\Domain\Security\Services\TurnstileService;
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
 use App\Http\Resources\PaymentSessionResource;
 use App\Models\Order;
+use App\Models\PaymentSession;
 use App\Models\Setting;
+use App\Support\FeatureFlag;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -31,9 +37,13 @@ class CheckoutController extends Controller
 
     public function process(Request $request)
     {
+        // features.checkout_enabled kill-switch. Admin can pause new orders
+        // (e.g. during a supplier outage) without taking the storefront down.
+        abort_if(! FeatureFlag::on('checkout'), 503, 'Checkout is temporarily unavailable.');
+
         $data = $request->validate([
             'delivery_email' => ['required', 'email'],
-            'payment_method' => ['required', 'in:card,mobile_money,crypto,wallet,bank_transfer,apple_pay'],
+            'payment_method' => ['required', 'in:card,mobile_money,crypto,wallet,bank_transfer,apple_pay,ussd,pay_with_bank,bank_qr,mobile_wallet'],
             'coupon_code' => ['nullable', 'string', 'max:64'],
         ]);
 
@@ -66,24 +76,26 @@ class CheckoutController extends Controller
 
         // Turnstile Validation
         if (config('services.turnstile.enabled') && config('services.turnstile.enforce_checkout', true)) {
-            $service = \App\Domain\Security\Services\TurnstileService::make();
+            $service = TurnstileService::make();
             $result = $service->validateToken($request->input('cf-turnstile-response'), $request->ip());
 
-            if ($result['status'] === \App\Domain\Security\Services\TurnstileService::STATUS_TIMEOUT) {
+            if ($result['status'] === TurnstileService::STATUS_TIMEOUT) {
                 // Fail OPEN conditionally: block if fraud risk is elevated
                 if ($fraudService->isSuspiciousCheckout($user, $amount, $request->ip())) {
                     $msg = 'Security verification service is temporarily unavailable and transaction risk is elevated. Please try again later.';
                     if ($request->expectsJson() || $request->ajax()) {
                         return response()->json(['message' => $msg], 403);
                     }
+
                     return redirect()->route('shop.checkout')->with('checkout_status', $msg);
                 }
-            } elseif ($result['status'] !== \App\Domain\Security\Services\TurnstileService::STATUS_SUCCESS && $result['status'] !== \App\Domain\Security\Services\TurnstileService::STATUS_BYPASSED) {
+            } elseif ($result['status'] !== TurnstileService::STATUS_SUCCESS && $result['status'] !== TurnstileService::STATUS_BYPASSED) {
                 $fraudService->recordTurnstileFailure($request->ip());
                 $msg = 'Security verification failed. Please refresh the page and try again.';
                 if ($request->expectsJson() || $request->ajax()) {
                     return response()->json(['message' => $msg], 422);
                 }
+
                 return redirect()->route('shop.checkout')->with('checkout_status', $msg);
             }
         }
@@ -95,15 +107,20 @@ class CheckoutController extends Controller
             $displayCurrency = 'USD';
         }
 
-        // Verify currency-method compatibility behind the scenes
+        // Verify currency-method compatibility behind the scenes. Mirrors the
+        // frontend's `getFilteredMethods` mapping so a tampered request can't
+        // route a method through a currency Flutterwave doesn't accept it on.
         $supported = [
             'USD' => ['card', 'apple_pay', 'crypto', 'wallet'],
-            'EUR' => ['card', 'apple_pay', 'crypto', 'wallet'],
-            'GBP' => ['card', 'apple_pay', 'crypto', 'wallet'],
-            'NGN' => ['card', 'apple_pay', 'bank_transfer', 'crypto', 'wallet'],
+            'EUR' => ['card', 'apple_pay', 'crypto', 'wallet', 'pay_with_bank'],
+            'GBP' => ['card', 'apple_pay', 'crypto', 'wallet', 'pay_with_bank'],
+            'NGN' => ['card', 'apple_pay', 'bank_transfer', 'crypto', 'wallet', 'ussd', 'pay_with_bank', 'bank_qr', 'mobile_wallet'],
             'GHS' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
             'XAF' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
             'XOF' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+            'KES' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+            'UGX' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+            'RWF' => ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
         ];
 
         $allowedMethods = $supported[$displayCurrency] ?? ['card', 'apple_pay'];
@@ -208,5 +225,116 @@ class CheckoutController extends Controller
             ->firstOrFail();
 
         return view('shop.order', ['order' => $order]);
+    }
+
+    /**
+     * Hosted-checkout return URL. Flutterwave redirects the customer here
+     * after a USSD / Pay With Bank / Bank QR / Mobile Wallet payment. We
+     * verify by tx_ref (the only field we trust from the query string) and
+     * push the customer to the order page on success.
+     *
+     * Even if the customer never lands here (closed tab, network drop), the
+     * Flutterwave webhook will reach `/webhooks/flutterwave` and finalise the
+     * payment server-side - this handler is the happy-path nudge.
+     */
+    public function hostedReturn(Request $request, PaymentSession $session)
+    {
+        $attempt = $session->paymentAttempt;
+        if (! $attempt) {
+            return redirect()->route('shop.checkout')->with('checkout_status', 'Payment session has expired.');
+        }
+
+        // payment_sessions has no user_id of its own - ownership lives on the
+        // underlying PaymentAttempt. Guard there so a logged-in customer can't
+        // hand-craft a URL pointing at someone else's session.
+        abort_unless($attempt->user_id === $request->user()?->id, 403);
+
+        $reportedStatus = strtolower((string) $request->query('status'));
+
+        if (in_array($reportedStatus, ['successful', 'completed'], true)) {
+            /** @var FlutterwavePaymentProvider $flw */
+            $flw = app(PaymentGatewayFactory::class)->getProvider('flutterwave');
+
+            // Verify against Flutterwave instead of trusting the query string.
+            // If verification succeeds the provider marks the attempt Paid and
+            // the webhook handler will complete the order fulfilment chain.
+            $verified = $flw->verifyPayment($attempt);
+
+            if ($verified && $attempt->order) {
+                return redirect()->route('shop.order', $attempt->order->order_number);
+            }
+        }
+
+        // Anything else (cancelled, failed, or unverified) returns the
+        // customer to the checkout page with the cart intact for a retry.
+        return redirect()->route('shop.checkout')
+            ->with('checkout_status', 'Payment was not completed. Please try again or pick a different method.');
+    }
+
+    /**
+     * Download the redeemable codes for this order as a CSV file. One row per
+     * unit (so 2 x Apple $5 becomes 2 rows). Owned-by-current-user scope as
+     * the order view itself - codes are the most sensitive thing we hand out.
+     */
+    public function codesCsv(Request $request, string $orderNumber)
+    {
+        $order = $this->loadOrderForDownload($request, $orderNumber);
+
+        $filename = "order-{$order->order_number}-codes.csv";
+
+        return response()->streamDownload(function () use ($order) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Order', 'Item', 'Region', 'Value', 'Currency', 'Code Type', 'Code', 'Status']);
+            foreach ($order->items as $item) {
+                $snap = $item->product_snapshot ?? [];
+                $name = $snap['name'] ?? 'Item';
+                $region = $snap['country_code'] ?? '';
+                $payload = (array) ($item->fulfillment_payload ?? []);
+                $primaryCode = $payload['pin']
+                    ?? $payload['code']
+                    ?? $payload['serial']
+                    ?? $payload['voucher_code']
+                    ?? $payload['activation_code']
+                    ?? '';
+                $codeType = isset($payload['pin']) ? 'PIN' : (isset($payload['serial']) ? 'Serial' : 'Code');
+                fputcsv($out, [
+                    $order->order_number,
+                    $name,
+                    $region,
+                    (string) $item->display_amount,
+                    $item->display_currency ?: $order->settlement_currency,
+                    $codeType,
+                    $primaryCode,
+                    $item->fulfillment_status?->value ?? 'pending',
+                ]);
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    /**
+     * Download a printable PDF receipt with all redemption codes - the "Add
+     * to wallet" action on the success view. Generated via DomPDF from a
+     * dedicated print-friendly blade template.
+     */
+    public function codesPdf(Request $request, string $orderNumber)
+    {
+        $order = $this->loadOrderForDownload($request, $orderNumber);
+
+        $pdf = Pdf::loadView('shop.order-codes-pdf', ['order' => $order]);
+
+        return $pdf->download("order-{$order->order_number}-codes.pdf");
+    }
+
+    private function loadOrderForDownload(Request $request, string $orderNumber): Order
+    {
+        return Order::query()
+            ->where('order_number', $orderNumber)
+            ->where('user_id', $request->user()?->id)
+            ->with('items')
+            ->firstOrFail();
     }
 }

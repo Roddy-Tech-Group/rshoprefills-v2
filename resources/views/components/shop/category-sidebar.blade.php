@@ -8,15 +8,21 @@
 ])
 
 @php
+    // When the sidebar renders inside the dashboard shop chrome, swap every
+    // category link to the matching dashboard route so the user stays inside
+    // their dashboard. Storefront chrome keeps the public URLs.
+    $inDashboard = request()->is('dashboard/shop*') && auth()->check();
+    $r = fn (string $name) => $inDashboard ? route('dashboard.shop.'.$name) : route('shop.'.$name);
+
     // The single source of truth for the storefront category list. Categories
     // without a live page render as disabled "Soon" entries until one ships.
     $categories = [
-        ['slug' => 'gift-cards',     'label' => 'Gift Cards',           'url' => route('shop.gift-cards')],
-        ['slug' => 'mobile-airtime', 'label' => 'Mobile top up & data', 'url' => route('shop.topups')],
-        ['slug' => 'esims',          'label' => 'eSIMs',                'url' => route('shop.esims')],
-        ['slug' => 'bill-payments',  'label' => 'Bill payments',        'url' => route('shop.bills')],
-        ['slug' => 'flights',        'label' => 'Flights',              'url' => route('shop.flights')],
-        ['slug' => 'stays',          'label' => 'Stays',                'url' => route('shop.stays')],
+        ['slug' => 'gift-cards',     'label' => 'Gift Cards',           'url' => $r('gift-cards')],
+        ['slug' => 'mobile-airtime', 'label' => 'Mobile top up & data', 'url' => $r('topups')],
+        ['slug' => 'esims',          'label' => 'eSIMs',                'url' => $r('esims')],
+        ['slug' => 'bill-payments',  'label' => 'Bill payments',        'url' => $r('bills')],
+        ['slug' => 'flights',        'label' => 'Flights',              'url' => $r('flights')],
+        ['slug' => 'stays',          'label' => 'Stays',                'url' => $r('stays')],
     ];
 @endphp
 

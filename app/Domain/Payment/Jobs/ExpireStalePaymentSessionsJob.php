@@ -74,6 +74,7 @@ class ExpireStalePaymentSessionsJob implements ShouldQueue
                 $attempt = $session->paymentAttempt;
                 if (! $attempt) {
                     $expired++;
+
                     continue;
                 }
 

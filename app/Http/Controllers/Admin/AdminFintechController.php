@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Shared\Enums\FundingStatus;
+use App\Domain\Wallet\Jobs\RetryFailedFundingVerificationJob;
 use App\Domain\Wallet\Resources\WalletFundingResource;
 use App\Domain\Wallet\Resources\WalletResource;
 use App\Domain\Wallet\Resources\WalletTransactionResource;
 use App\Http\Controllers\Controller;
+use App\Models\ExchangeRate;
+use App\Models\PaymentAttempt;
+use App\Models\PaymentWebhook;
 use App\Models\Wallet;
 use App\Models\WalletFunding;
 use App\Models\WalletTransaction;
@@ -46,7 +51,7 @@ class AdminFintechController extends Controller
 
     public function paymentAttempts(Request $request)
     {
-        $attempts = \App\Models\PaymentAttempt::with(['user'])
+        $attempts = PaymentAttempt::with(['user'])
             ->when($request->query('gateway'), fn ($q, $g) => $q->where('gateway', $g))
             ->when($request->query('status'), fn ($q, $s) => $q->where('payment_status', $s))
             ->latest()
@@ -57,7 +62,7 @@ class AdminFintechController extends Controller
 
     public function paymentWebhooks(Request $request)
     {
-        $webhooks = \App\Models\PaymentWebhook::query()
+        $webhooks = PaymentWebhook::query()
             ->when($request->query('gateway'), fn ($q, $g) => $q->where('gateway', $g))
             ->when($request->query('processing_status'), fn ($q, $p) => $q->where('processing_status', $p))
             ->when($request->has('processed'), fn ($q) => $q->where('processed', $request->boolean('processed')))
@@ -70,7 +75,7 @@ class AdminFintechController extends Controller
     public function pendingReconciliations(Request $request)
     {
         $pending = WalletFunding::with(['user', 'wallet'])
-            ->where('status', \App\Domain\Shared\Enums\FundingStatus::Pending)
+            ->where('status', FundingStatus::Pending)
             ->where('created_at', '<', now()->subHours(2))
             ->latest()
             ->paginate((int) $request->query('per_page', 15));
@@ -83,7 +88,7 @@ class AdminFintechController extends Controller
         $funding = WalletFunding::findOrFail($id);
 
         // Dispatch manual verification retry job
-        \App\Domain\Wallet\Jobs\RetryFailedFundingVerificationJob::dispatch($funding->id);
+        RetryFailedFundingVerificationJob::dispatch($funding->id);
 
         return response()->json([
             'message' => 'Manual verification retry queued successfully.',
@@ -103,19 +108,19 @@ class AdminFintechController extends Controller
 
         $fundingStats = [
             'total_deposits_count' => WalletFunding::count(),
-            'successful_deposits_count' => WalletFunding::where('status', \App\Domain\Shared\Enums\FundingStatus::Completed)->count(),
-            'pending_deposits_count' => WalletFunding::where('status', \App\Domain\Shared\Enums\FundingStatus::Pending)->count(),
-            'failed_deposits_count' => WalletFunding::where('status', \App\Domain\Shared\Enums\FundingStatus::Failed)->count(),
-            'total_settled_usd' => (float) WalletFunding::where('status', \App\Domain\Shared\Enums\FundingStatus::Completed)->sum('settled_amount_usd'),
+            'successful_deposits_count' => WalletFunding::where('status', FundingStatus::Completed)->count(),
+            'pending_deposits_count' => WalletFunding::where('status', FundingStatus::Pending)->count(),
+            'failed_deposits_count' => WalletFunding::where('status', FundingStatus::Failed)->count(),
+            'total_settled_usd' => (float) WalletFunding::where('status', FundingStatus::Completed)->sum('settled_amount_usd'),
         ];
 
         $webhookStats = [
-            'total_received' => \App\Models\PaymentWebhook::count(),
-            'failed_processing_count' => \App\Models\PaymentWebhook::where('processing_status', 'failed')->count(),
-            'pending_processing_count' => \App\Models\PaymentWebhook::where('processing_status', 'pending')->count(),
+            'total_received' => PaymentWebhook::count(),
+            'failed_processing_count' => PaymentWebhook::where('processing_status', 'failed')->count(),
+            'pending_processing_count' => PaymentWebhook::where('processing_status', 'pending')->count(),
         ];
 
-        $exchangeRates = \App\Models\ExchangeRate::active()->latest()->take(20)->get();
+        $exchangeRates = ExchangeRate::active()->latest()->take(20)->get();
 
         return response()->json([
             'wallet_balances' => $balancesByCurrency,

@@ -255,6 +255,16 @@ class PaymentSessionController extends Controller
                 ]);
                 $npProvider = $gatewayFactory->getProvider('nowpayments');
                 $result = $npProvider->chargeCrypto($attempt, $details['pay_currency']);
+            } elseif (in_array($method, ['ussd', 'pay_with_bank', 'bank_qr', 'mobile_wallet'], true)) {
+                // Hosted-redirect family: USSD, Pay With Bank, Bank QR (NQR),
+                // and Nigerian e-wallets (OPay/eNaira) all share the same flow.
+                // We call Flutterwave's /payments endpoint with a method-specific
+                // `payment_options` value so the hosted page renders only that
+                // method, then redirect the customer there. They return to
+                // /checkout/return where we verify and finalise.
+                $flwProvider = $gatewayFactory->getProvider('flutterwave');
+                $returnUrl = route('shop.checkout.return', ['session' => $session->id]);
+                $result = $flwProvider->chargeHosted($attempt, $method, $returnUrl);
             } elseif ($method === 'wallet') {
                 $request->validate([
                     'details.auth_token' => 'required|string',
@@ -319,6 +329,14 @@ class PaymentSessionController extends Controller
                 $session->save();
             } elseif ($result['status'] === 'awaiting_confirmation') {
                 $session->transitionTo('awaiting_confirmation');
+                $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
+                $session->save();
+            } elseif ($result['status'] === 'awaiting_redirect') {
+                // Hosted-checkout (USSD / Pay With Bank / Bank QR / Mobile Wallet).
+                // Stash the Flutterwave hosted link on the session payload so the
+                // checkout JS can read `payment_payload.redirect_url` and forward
+                // the customer there.
+                $session->transitionTo('awaiting_redirect');
                 $session->payment_payload = array_merge($session->payment_payload ?? [], $result);
                 $session->save();
             } elseif ($result['status'] === 'failed') {

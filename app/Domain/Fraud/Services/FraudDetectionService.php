@@ -105,7 +105,7 @@ class FraudDetectionService
     {
         $key = "fraud_turnstile_failures_{$ip}";
         $failures = TaggedCache::for(['fraud', 'security'])->get($key, 0);
-        
+
         return $failures >= 5;
     }
 }

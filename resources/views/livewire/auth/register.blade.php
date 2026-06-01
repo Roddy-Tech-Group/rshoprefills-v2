@@ -123,19 +123,17 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {{-- Centered form --}}
     <div class="mx-auto flex w-full max-w-md flex-col py-3 sm:flex-1 sm:justify-center sm:py-8">
 
-        <h1 class="flex items-center justify-center gap-2 text-3xl font-bold tracking-tight text-zinc-900">
-            <span>Create an account</span>
-            <svg class="h-7 w-7 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-            </svg>
-        </h1>
-        <p class="mt-2 text-center text-base text-zinc-600">Join RshopRefills and start shopping today</p>
+        <p class="text-center text-base text-zinc-600">Join RshopRefills and start shopping today</p>
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 
         {{-- OAuth buttons --}}
         <div class="mt-4 flex flex-col gap-3 sm:mt-6">
-            <a href="{{ route('auth.google.redirect') }}" class="flex items-center justify-center gap-3 rounded-[10px] border border-zinc-300 bg-white px-4 py-3 text-base font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+            <a
+                href="{{ route('auth.google.redirect', ['popup' => 1]) }}"
+                @click.prevent="window.rshopOpenGoogleOAuth($el.href)"
+                class="flex items-center justify-center gap-3 rounded-[10px] border border-zinc-300 bg-white px-4 py-3 text-base font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+            >
                 <svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

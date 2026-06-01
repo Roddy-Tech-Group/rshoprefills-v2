@@ -12,11 +12,11 @@ use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Domain\Payment\Services\PaymentSessionService;
 use App\Domain\Rewards\Services\RewardEngine;
 use App\Domain\Shared\Enums\Currency;
+use App\Domain\Wallet\Services\CurrencyRateService;
 use App\Domain\Wallet\Services\WalletService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Models\Cart;
 use App\Models\Coupon;
-use App\Models\CurrencyRate;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentAttempt;
@@ -31,7 +31,8 @@ class CheckoutService
         private readonly OrderValidationService $orderValidationService,
         private readonly PaymentGatewayFactory $paymentGatewayFactory,
         private readonly WalletPaymentProvider $walletPaymentProvider,
-        private readonly PaymentSessionService $paymentSessionService
+        private readonly PaymentSessionService $paymentSessionService,
+        private readonly CurrencyRateService $currencyRateService,
     ) {}
 
     /**
@@ -45,12 +46,14 @@ class CheckoutService
         // 1. Recalculate and validate cart items/prices (in raw USD)
         $validatedTotals = $this->orderValidationService->validateForCheckout($cart);
 
-        // 1b. Resolve the display currency rate. The checkout page converts raw
-        //     USD prices into the customer's chosen currency using this rate
-        //     (e.g. USD × 1.04 = platform spread). The order must store the
-        //     display-currency amount so the charge matches what was shown.
-        $rate = CurrencyRate::resolve($displayCurrency);
-        $exchangeRate = (float) $rate->rate_per_usd;
+        // 1b. Resolve the display currency rate via CurrencyRateService so the
+        //     same freshness gate that protects wallet funding protects the order
+        //     boundary too. Routing here used to call CurrencyRate::resolve()
+        //     directly (legacy fallback table, NO freshness check) which meant a
+        //     customer could check out at a 3-week-old rate while accounting
+        //     reconciled against the live registry rate. Throws StaleRateException
+        //     (caught by the controller) when the live pair is past 48h.
+        $exchangeRate = $this->currencyRateService->resolveRate('USD', $displayCurrency);
 
         // 2. Generate a readable, unique order number
         $orderNumber = 'RSR-'.date('Ymd').'-'.strtoupper(Str::random(6));

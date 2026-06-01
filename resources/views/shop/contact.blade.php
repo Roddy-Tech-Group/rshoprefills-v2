@@ -17,6 +17,28 @@
         'Other reason',
     ];
 
+    // Pre-fill from `?subject=` query (used by the dashboard "Need help with
+    // your order" button, which sends e.g. ?subject=Help with order ORD-AB12).
+    // If the value matches a list item exactly we select it; if it carries an
+    // order ID we route to "Order not delivered" and seed the order_id +
+    // message fields so support has context without the user having to retype.
+    $queriedSubject = trim((string) request()->query('subject', ''));
+    $defaultSubject = $subjects[0];
+    $defaultOrderId = '';
+    $defaultMessage = '';
+    if ($queriedSubject !== '') {
+        if (in_array($queriedSubject, $subjects, true)) {
+            $defaultSubject = $queriedSubject;
+        } elseif (preg_match('/order\s+([A-Za-z0-9_-]{4,})/i', $queriedSubject, $m)) {
+            $defaultSubject = 'Order not delivered';
+            $defaultOrderId = $m[1];
+            $defaultMessage = "Hi team, I need help with order {$m[1]}. ";
+        } else {
+            $defaultSubject = 'Other reason';
+            $defaultMessage = $queriedSubject;
+        }
+    }
+
     $channels = [
         ['label' => 'Email us',      'value' => $supportEmail,        'href' => 'mailto:'.$supportEmail, 'path' => 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75'],
         ['label' => 'Response time', 'value' => 'Within 24 hours',    'href' => null,                    'path' => 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z'],
@@ -89,7 +111,7 @@
 
                             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                 {{-- Subject — modern custom dropdown (styled chevron, not the native arrow) --}}
-                                <div x-data="{ open: false, subject: @js(old('subject', $subjects[0])) }" @click.outside="open = false" @keydown.escape="open = false" class="relative">
+                                <div x-data="{ open: false, subject: @js(old('subject', $defaultSubject)) }" @click.outside="open = false" @keydown.escape="open = false" class="relative">
                                     <label class="mb-1.5 block text-sm font-medium text-zinc-700">Subject</label>
                                     <input type="hidden" name="subject" :value="subject">
                                     <button
@@ -129,16 +151,18 @@
                                 {{-- Order ID (optional) --}}
                                 <div>
                                     <label for="order_id" class="mb-1.5 block text-sm font-medium text-zinc-700">Order ID <span class="font-normal text-zinc-500">(optional)</span></label>
-                                    <input id="order_id" name="order_id" type="text" value="{{ old('order_id') }}" placeholder="e.g. ORD-AB12CD34" class="{{ $field }}">
+                                    <input id="order_id" name="order_id" type="text" value="{{ old('order_id', $defaultOrderId) }}" placeholder="e.g. ORD-AB12CD34" class="{{ $field }}">
                                     @error('order_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                 </div>
                             </div>
 
                             <div>
                                 <label for="message" class="mb-1.5 block text-sm font-medium text-zinc-700">Message <span class="text-blue-600">*</span></label>
-                                <textarea id="message" name="message" rows="6" required placeholder="How can we help?" class="{{ $field }} resize-y">{{ old('message') }}</textarea>
+                                <textarea id="message" name="message" rows="6" required placeholder="How can we help?" class="{{ $field }} resize-y">{{ old('message', $defaultMessage) }}</textarea>
                                 @error('message') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
+
+                            <x-turnstile-widget action="contact" context="contact" />
 
                             <div class="flex items-center gap-3 pt-1">
                                 <button type="submit" class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50">
@@ -179,13 +203,13 @@
                             Visit Help Center
                         </a>
                         <div class="mt-5 flex items-center gap-2 border-t border-white/15 pt-5">
-                            <a href="https://facebook.com/rshoprefills" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
+                            <a href="{{ \App\Models\SiteSetting::get('social.facebook', 'https://facebook.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
                                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                             </a>
-                            <a href="https://x.com/rshoprefills" target="_blank" rel="noopener noreferrer" aria-label="X" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
+                            <a href="{{ \App\Models\SiteSetting::get('social.x', 'https://x.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="X" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
                                 <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
                             </a>
-                            <a href="https://instagram.com/rshoprefills" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
+                            <a href="{{ \App\Models\SiteSetting::get('social.instagram', 'https://instagram.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
                                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.849.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.07 1.644.07 4.849 0 3.205-.012 3.584-.07 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.849.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                             </a>
                         </div>
@@ -194,5 +218,81 @@
             </div>
         </div>
     </section>
+
+    {{-- ── Reach out ─────────────────────────────────────────────
+         Department contact tiles. Each tile reads from a contact.*
+         SiteSetting; an empty value hides that tile (so the section can
+         start with 1-2 cards and grow as the team scales). --}}
+    @php
+        $departments = array_values(array_filter([
+            [
+                'label' => 'Partnerships',
+                'email' => trim((string) \App\Models\SiteSetting::get('contact.email_partnerships', '')),
+                'form'  => trim((string) \App\Models\SiteSetting::get('contact.url_partnerships_form', '')),
+                'form_label' => 'Partnerships inquiry form',
+            ],
+            [
+                'label' => 'Suppliers',
+                'email' => trim((string) \App\Models\SiteSetting::get('contact.email_suppliers', '')),
+                'form'  => trim((string) \App\Models\SiteSetting::get('contact.url_suppliers_form', '')),
+                'form_label' => 'Supplier inquiry form',
+            ],
+            [
+                'label' => 'Careers',
+                'email' => trim((string) \App\Models\SiteSetting::get('contact.email_careers', '')),
+                'form'  => '',
+                'form_label' => null,
+            ],
+            [
+                'label' => 'Press & media',
+                'email' => trim((string) \App\Models\SiteSetting::get('contact.email_press', '')),
+                'form'  => '',
+                'form_label' => null,
+            ],
+            [
+                'label' => 'Legal',
+                'email' => trim((string) \App\Models\SiteSetting::get('contact.email_legal', '')),
+                'form'  => '',
+                'form_label' => null,
+            ],
+            [
+                'label' => 'Abuse / Fraud',
+                'email' => trim((string) \App\Models\SiteSetting::get('contact.email_abuse', '')),
+                'form'  => '',
+                'form_label' => null,
+            ],
+        ], fn ($d) => $d['email'] !== ''));
+    @endphp
+
+    @if (count($departments) > 0)
+        <section class="mx-auto w-full max-w-[1140px] px-4 pb-16 sm:px-6 sm:pb-20">
+            <div class="border-t border-zinc-100 pt-12">
+                <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Reach out</h2>
+                <p class="mt-1 text-sm text-zinc-600">Explore collaboration possibilities</p>
+
+                <div class="mt-8 grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($departments as $dept)
+                        <div>
+                            <p class="text-sm font-bold text-zinc-900">{{ $dept['label'] }}</p>
+                            <a href="mailto:{{ $dept['email'] }}" class="mt-2 flex items-center gap-2 text-sm text-zinc-700 transition-colors hover:text-blue-700">
+                                <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+                                </svg>
+                                <span class="break-all">{{ $dept['email'] }}</span>
+                            </a>
+                            @if ($dept['form'])
+                                <a href="{{ $dept['form'] }}" target="_blank" rel="noopener noreferrer" class="mt-1.5 flex items-center gap-2 text-sm text-blue-700 underline underline-offset-4 transition-colors hover:text-blue-800">
+                                    <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                                    </svg>
+                                    {{ $dept['form_label'] }}
+                                </a>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
 
 </x-layouts.app.header>

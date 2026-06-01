@@ -26,10 +26,10 @@ class extends Component {
     #[Validate('required|string|max:2000')]
     public string $body = '';
 
-    #[Validate('required|integer|min:1|max:5')]
-    public int $rating = 5;
+    #[Validate('required|numeric|min:1|max:5')]
+    public float $rating = 5.0;
 
-    #[Validate('required|string|max:40')]
+    #[Validate('required|in:Trustpilot,Google,RshopRefills')]
     public string $source = 'Trustpilot';
 
     #[Validate('required|date')]
@@ -136,7 +136,7 @@ class extends Component {
         $this->authorName = '';
         $this->initials = '';
         $this->body = '';
-        $this->rating = 5;
+        $this->rating = 5.0;
         $this->source = 'Trustpilot';
         $this->reviewedAt = now()->toDateString();
         $this->isPublished = true;
@@ -150,8 +150,8 @@ class extends Component {
 
     <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-bold text-zinc-900">Reviews</h1>
-            <p class="mt-1 text-sm text-zinc-600">Customer reviews shown on the homepage carousel and the public <a href="/reviews" target="_blank" class="text-blue-600 hover:underline">reviews page</a>.</p>
+            <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Reviews</h1>
+            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Customer reviews shown on the homepage carousel and the public <a href="/reviews" target="_blank" class="text-blue-600 hover:underline dark:text-blue-300">reviews page</a>.</p>
         </div>
         <button wire:click="newReview" type="button" class="inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
@@ -160,70 +160,69 @@ class extends Component {
     </header>
 
     @if (session('status'))
-        <div class="mb-4 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">{{ session('status') }}</div>
+        <div class="mb-4 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30">{{ session('status') }}</div>
     @endif
 
-    {{-- Aggregate stats card --}}
-    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Rating</p>
-            <p class="mt-2 text-2xl font-bold text-zinc-900">{{ number_format($this->aggregate['rating'], 1) }} / 5</p>
-        </div>
-        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Review count</p>
-            <p class="mt-2 text-2xl font-bold text-zinc-900">{{ number_format($this->aggregate['count']) }}+</p>
-        </div>
-        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Since</p>
-            <p class="mt-2 text-2xl font-bold text-zinc-900">{{ $this->aggregate['since'] }}</p>
-        </div>
-        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Source</p>
-            <p class="mt-2 text-2xl font-bold text-zinc-900">{{ $this->aggregate['source'] }}</p>
-        </div>
+    {{-- Aggregate stats — same KPI strip pattern used across every admin
+         list page (Rates, Pricing Rules, Account Activity, etc.). --}}
+    <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        @foreach ([
+            ['label' => 'Rating',       'value' => number_format($this->aggregate['rating'], 1) . ' / 5', 'dot' => 'bg-amber-500'],
+            ['label' => 'Review count', 'value' => number_format($this->aggregate['count']) . '+',       'dot' => 'bg-blue-500'],
+            ['label' => 'Since',        'value' => $this->aggregate['since'],                             'dot' => 'bg-emerald-500'],
+            ['label' => 'Source',       'value' => $this->aggregate['source'],                            'dot' => 'bg-fuchsia-500'],
+        ] as $stat)
+            <div class="rounded-[10px] border-[1.5px] border-white bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+                <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
+                    <span class="inline-block h-1.5 w-1.5 rounded-full {{ $stat['dot'] }}"></span>
+                    {{ $stat['label'] }}
+                </p>
+                <p class="mt-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ $stat['value'] }}</p>
+            </div>
+        @endforeach
     </div>
 
-    <div class="overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-100 shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-zinc-50 text-[11px] uppercase tracking-wider text-zinc-600">
+    <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        <div class="overflow-x-auto p-3">
+            <table class="admin-table w-full text-left text-sm">
+                <thead>
                     <tr>
-                        <th class="px-5 py-3 font-semibold">Author</th>
-                        <th class="px-5 py-3 font-semibold">Source</th>
-                        <th class="px-5 py-3 font-semibold">Rating</th>
-                        <th class="px-5 py-3 font-semibold">Reviewed</th>
-                        <th class="px-5 py-3 font-semibold">Body</th>
-                        <th class="px-5 py-3 font-semibold">Status</th>
-                        <th class="px-5 py-3 text-right font-semibold">Actions</th>
+                        <th>Author</th>
+                        <th>Source</th>
+                        <th>Rating</th>
+                        <th>Reviewed</th>
+                        <th>Body</th>
+                        <th>Status</th>
+                        <th class="text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-100">
+                <tbody>
                     @forelse ($this->reviews as $review)
-                        <tr class="hover:bg-zinc-50">
-                            <td class="px-5 py-3">
-                                <p class="font-semibold text-zinc-900">{{ $review->author_name }}</p>
-                                <p class="mt-0.5 text-[11px] text-zinc-500">{{ $review->initials }}</p>
+                        <tr>
+                            <td>
+                                <p class="font-semibold text-zinc-900 dark:text-white">{{ $review->author_name }}</p>
+                                <p class="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">{{ $review->initials }}</p>
                             </td>
-                            <td class="px-5 py-3 text-zinc-700">{{ $review->source }}</td>
-                            <td class="px-5 py-3 text-zinc-700">{{ $review->rating }} / 5</td>
-                            <td class="px-5 py-3 text-zinc-700">{{ $review->reviewed_at->format('M j, Y') }}</td>
-                            <td class="px-5 py-3 max-w-md truncate text-zinc-600">{{ $review->body }}</td>
-                            <td class="px-5 py-3">
-                                <span class="inline-flex items-center rounded-[5px] {{ $review->is_published ? 'bg-emerald-500' : 'bg-zinc-400' }} px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                            <td>{{ $review->source }}</td>
+                            <td>{{ rtrim(rtrim(number_format($review->rating, 1), '0'), '.') }} / 5</td>
+                            <td>{{ $review->reviewed_at->format('M j, Y') }}</td>
+                            <td class="max-w-md truncate">{{ $review->body }}</td>
+                            <td>
+                                <x-admin.badge :tone="$review->is_published ? 'emerald' : 'zinc'">
                                     {{ $review->is_published ? 'Published' : 'Draft' }}
-                                </span>
+                                </x-admin.badge>
                             </td>
-                            <td class="px-5 py-3 text-right">
+                            <td class="whitespace-nowrap text-right">
                                 <div class="inline-flex items-center gap-1.5">
-                                    <button wire:click="togglePublish({{ $review->id }})" type="button" class="rounded-[10px] bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-200">{{ $review->is_published ? 'Unpublish' : 'Publish' }}</button>
-                                    <button wire:click="edit({{ $review->id }})" type="button" class="rounded-[10px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100">Edit</button>
-                                    <button wire:click="delete({{ $review->id }})" wire:confirm="Delete this review permanently?" type="button" class="rounded-[10px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100">Delete</button>
+                                    <button wire:click="togglePublish({{ $review->id }})" type="button" class="rounded-[5px] bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-700/50 dark:text-zinc-300 dark:hover:bg-zinc-700">{{ $review->is_published ? 'Unpublish' : 'Publish' }}</button>
+                                    <button wire:click="edit({{ $review->id }})" type="button" class="rounded-[5px] bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:hover:bg-blue-500/25">Edit</button>
+                                    <button wire:click="delete({{ $review->id }})" wire:confirm="Delete this review permanently?" type="button" class="rounded-[5px] bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25">Delete</button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-12 text-center text-sm text-zinc-600">No reviews yet. Click "New review" to add the first one.</td>
+                            <td colspan="7" class="px-5 py-12 text-center text-sm text-zinc-600 dark:text-zinc-400">No reviews yet. Click "New review" to add the first one.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -262,16 +261,13 @@ class extends Component {
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Rating</label>
-                            <select wire:model="rating" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                                @for ($i = 1; $i <= 5; $i++)
-                                    <option value="{{ $i }}">{{ $i }} star{{ $i > 1 ? 's' : '' }}</option>
-                                @endfor
-                            </select>
+                            <x-admin.select wire:model="rating" :options="['1' => '1 star', '1.5' => '1.5 stars', '2' => '2 stars', '2.5' => '2.5 stars', '3' => '3 stars', '3.5' => '3.5 stars', '4' => '4 stars', '4.5' => '4.5 stars', '5' => '5 stars']" />
                             @error('rating') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Source</label>
-                            <input wire:model="source" type="text" placeholder="Trustpilot" class="mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                            <x-admin.select wire:model="source" :options="['Trustpilot' => 'Trustpilot (emerald star)', 'Google' => 'Google (multi-colour G)', 'RshopRefills' => 'RshopRefills (our website)']" />
+                            <p class="mt-1 text-[10px] text-zinc-500">Picks the brand icon and star colour on the storefront card.</p>
                             @error('source') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>

@@ -3,8 +3,8 @@
 namespace App\Domain\Notification\Channels;
 
 use App\Domain\Notification\DTOs\NotificationPayload;
-use App\Domain\Notification\Enums\NotificationChannel;
 use App\Domain\Notification\Enums\DeliveryStatus;
+use App\Domain\Notification\Enums\NotificationChannel;
 use App\Models\Notification;
 use App\Models\NotificationDelivery;
 

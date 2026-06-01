@@ -25,7 +25,7 @@ class BlogPostSeeder extends Seeder
                 'category' => 'Guides',
                 'title' => 'Getting started: your first purchase on RshopRefills',
                 'excerpt' => 'A quick walkthrough of creating an account, choosing a product and checking out in minutes.',
-                'image' => 'hero gift.png',
+                'image' => 'hero gift.webp',
                 'published_at' => '2026-05-18',
                 'read_time' => '4 min read',
                 'body' => [
@@ -53,7 +53,7 @@ class BlogPostSeeder extends Seeder
                 'category' => 'Travel',
                 'title' => 'eSIM vs roaming: which is cheaper for travelers?',
                 'excerpt' => 'Stay connected abroad without the shock of a roaming bill.',
-                'image' => 'Esim stay connectd.png',
+                'image' => 'Esim stay connectd.webp',
                 'published_at' => '2026-04-02',
                 'read_time' => '5 min read',
                 'body' => [
@@ -67,7 +67,7 @@ class BlogPostSeeder extends Seeder
                 'category' => 'Security',
                 'title' => 'Five ways to keep your account and wallet secure',
                 'excerpt' => 'Simple habits that protect your money and your data.',
-                'image' => 'secured users.png',
+                'image' => 'secured users.webp',
                 'published_at' => '2026-03-14',
                 'read_time' => '4 min read',
                 'body' => [
@@ -95,7 +95,7 @@ class BlogPostSeeder extends Seeder
                 'category' => 'Crypto',
                 'title' => 'Understanding crypto network fees',
                 'excerpt' => 'Why a small fee appears when you pay with crypto, and who sets it.',
-                'image' => 'World Global.png',
+                'image' => 'World Global.webp',
                 'published_at' => '2026-01-16',
                 'read_time' => '3 min read',
                 'body' => [

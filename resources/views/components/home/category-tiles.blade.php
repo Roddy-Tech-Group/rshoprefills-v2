@@ -32,11 +32,11 @@
                     href="{{ route('shop.esims') }}"
                     wire:navigate
                     @mouseenter="active = 1"
-                    :class="active === 1 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 1 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300 dark:bg-[#1d3252] dark:ring-zinc-700/60'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('esim.svg')) }}" alt="" :class="active === 1 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
-                    <span :class="active === 1 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">eSIMs</span>
+                    <img src="{{ asset('assets/' . rawurlencode('esim.svg')) }}" alt="" :class="active === 1 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out dark:brightness-0 dark:invert" loading="lazy">
+                    <span :class="active === 1 ? 'text-white' : 'text-zinc-800 dark:text-white'" class="text-base font-semibold transition-colors duration-300 ease-out">eSIMs</span>
                 </a>
             </li>
 
@@ -46,11 +46,11 @@
                     href="{{ route('shop.topups') }}"
                     wire:navigate
                     @mouseenter="active = 2"
-                    :class="active === 2 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 2 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300 dark:bg-[#1d3252] dark:ring-zinc-700/60'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode('mobile.svg')) }}" alt="" :class="active === 2 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
-                    <span :class="active === 2 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">Mobile Top-ups</span>
+                    <img src="{{ asset('assets/' . rawurlencode('mobile.svg')) }}" alt="" :class="active === 2 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out dark:brightness-0 dark:invert" loading="lazy">
+                    <span :class="active === 2 ? 'text-white' : 'text-zinc-800 dark:text-white'" class="text-base font-semibold transition-colors duration-300 ease-out">Mobile Top-ups</span>
                 </a>
             </li>
 
@@ -60,39 +60,11 @@
                     href="{{ route('shop.bills') }}"
                     wire:navigate
                     @mouseenter="active = 3"
-                    :class="active === 3 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
+                    :class="active === 3 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300 dark:bg-[#1d3252] dark:ring-zinc-700/60'"
                     class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
-                    <img :src="active === 3 ? '{{ asset('assets/' . rawurlencode('bill payment.svg')) }}' : '{{ asset('assets/' . rawurlencode('Bills 2.svg')) }}'" alt="" :class="active === 3 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
-                    <span :class="active === 3 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">Bill Payments</span>
-                </a>
-            </li>
-
-            {{-- Flights --}}
-            <li data-reveal-item class="shrink-0">
-                <a
-                    href="{{ route('shop.flights') }}"
-                    wire:navigate
-                    @mouseenter="active = 4"
-                    :class="active === 4 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
-                    class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                >
-                    <img :src="active === 4 ? '{{ asset('assets/' . rawurlencode('flight.svg')) }}' : '{{ asset('assets/' . rawurlencode('flight 2.svg')) }}'" alt="" :class="active === 4 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
-                    <span :class="active === 4 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">Flights</span>
-                </a>
-            </li>
-
-            {{-- Stays --}}
-            <li data-reveal-item class="shrink-0">
-                <a
-                    href="{{ route('shop.stays') }}"
-                    wire:navigate
-                    @mouseenter="active = 5"
-                    :class="active === 5 ? 'bg-zinc-900 ring-zinc-900 dark:bg-blue-600 dark:ring-blue-600' : 'bg-white ring-zinc-200 hover:ring-zinc-300'"
-                    class="inline-flex items-center gap-3 rounded-[25px] px-6 py-2 ring-1 transition-all duration-300 ease-out will-change-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                >
-                    <img :src="active === 5 ? '{{ asset('assets/' . rawurlencode('stay.svg')) }}' : '{{ asset('assets/' . rawurlencode('stay 2.svg')) }}'" alt="" :class="active === 5 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out" loading="lazy">
-                    <span :class="active === 5 ? 'text-white' : 'text-zinc-800'" class="text-base font-semibold transition-colors duration-300 ease-out">Stays</span>
+                    <img :src="active === 3 ? '{{ asset('assets/' . rawurlencode('bill payment.svg')) }}' : '{{ asset('assets/' . rawurlencode('Bills 2.svg')) }}'" alt="" :class="active === 3 ? 'brightness-0 invert' : ''" class="h-6 w-6 shrink-0 object-contain transition-all duration-300 ease-out dark:brightness-0 dark:invert" loading="lazy">
+                    <span :class="active === 3 ? 'text-white' : 'text-zinc-800 dark:text-white'" class="text-base font-semibold transition-colors duration-300 ease-out">Bill Payments</span>
                 </a>
             </li>
 

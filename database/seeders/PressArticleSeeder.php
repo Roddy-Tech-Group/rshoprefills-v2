@@ -29,7 +29,7 @@ class PressArticleSeeder extends Seeder
                 'category' => 'Implementation',
                 'title' => 'Instant eSIM activation now available worldwide',
                 'excerpt' => 'Travelers can buy and activate an eSIM in minutes and stay connected anywhere.',
-                'image' => 'Esim stay connectd.png',
+                'image' => 'Esim stay connectd.webp',
                 'published_at' => '2026-04-15',
                 'body' => [
                     'RshopRefills now offers instant eSIM activation, so travelers can get connected the moment they arrive, without hunting for a local SIM card.',
@@ -41,7 +41,7 @@ class PressArticleSeeder extends Seeder
                 'category' => 'News',
                 'title' => 'RshopRefills expands access across Africa',
                 'excerpt' => 'More countries, more local payment methods and more brands for customers across the continent.',
-                'image' => 'World Global.png',
+                'image' => 'World Global.webp',
                 'published_at' => '2026-03-10',
                 'body' => [
                     'RshopRefills has expanded its coverage across Africa, bringing more global brands and essential services to more customers.',
@@ -53,7 +53,7 @@ class PressArticleSeeder extends Seeder
                 'category' => 'Implementation',
                 'title' => 'Gift cards, top-ups and bills, all in one wallet',
                 'excerpt' => 'A single in-app wallet now powers purchases across every category we offer.',
-                'image' => 'graphic_rshoprefill.png',
+                'image' => 'graphic_rshoprefill.webp',
                 'published_at' => '2026-02-18',
                 'body' => [
                     'Customers can now hold balance in an in-app wallet and use it to pay across every category on RshopRefills.',
@@ -77,7 +77,7 @@ class PressArticleSeeder extends Seeder
                 'category' => 'Implementation',
                 'title' => 'Automatic refund protection delivers in 60 seconds',
                 'excerpt' => 'If a delivery fails, our system detects it and refunds the wallet automatically, usually within a minute.',
-                'image' => 'instant delivery.png',
+                'image' => 'instant delivery.webp',
                 'published_at' => '2025-12-05',
                 'body' => [
                     'RshopRefills has built failed-transaction protection directly into the platform.',

@@ -42,8 +42,9 @@ new #[Lazy] class extends Component
         // so the mobile and desktop overview cards have enough content to feel full.
         $recentTransactions = $user->walletTransactions()->latest()->limit(8)->get();
 
-        // Latest 3 orders for the Recent Orders card.
-        $recentOrders = $user->orders()->with('items')->latest()->limit(3)->get();
+        // Latest 5 orders for the Recent Orders card. Mobile renders all 5; the
+        // desktop card slices ->take(3) to keep its right-rail compact.
+        $recentOrders = $user->orders()->with('items')->latest()->limit(5)->get();
 
         // Popular gift cards - same source as the storefront's "Popular Gift Cards"
         // row: the hand-curated config/popular_brands.php list, region-locked to the
@@ -116,8 +117,8 @@ new #[Lazy] class extends Component
                 'USDT' => 'USDT.svg',
                 'BUSD' => 'USDT.svg',
                 'SOL'  => 'SOLANA.svg',
-                'BNB'  => 'BNB.png',
-                'LTC'  => 'LTC.png',
+                'BNB'  => 'BNB.webp',
+                'LTC'  => 'LTC.webp',
                 default => null,
             };
         };
@@ -203,20 +204,29 @@ new #[Lazy] class extends Component
     {{-- ─────────────────────────────────────────────────────── --}}
     <div class="flex flex-col gap-5 lg:hidden">
 
-        {{-- Quick Actions (mirrors the desktop card so customers can jump straight into a category). --}}
+        {{-- Quick Actions - 4-col grid (2 rows of 4). --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <h3 class="text-base font-bold text-zinc-900">Quick Actions</h3>
-            <div class="mt-4 grid grid-cols-3 gap-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-zinc-900">Quick Actions</h3>
+                <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate aria-label="See more categories" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="mt-4 grid grid-cols-4 gap-3">
                 @foreach ([
-                    ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    route('shop.gift-cards'), true],
-                    ['eSIMs',      'esim.svg',       'bg-sky-500',     route('shop.esims'),      true],
-                    ['Topups',     'topup1.svg',     'bg-emerald-500', route('shop.topups'),     true],
-                    ['Bills',      'Bills 2.svg',    'bg-teal-500',    route('shop.bills'),      true],
-                    ['Flights',    'flight 2.svg',   'bg-indigo-500',  route('shop.flights'),    true],
-                    ['Stays',      'stay 2.svg',     'bg-orange-500',  route('shop.stays'),      true],
-                ] as [$label, $icon, $bg, $href, $live])
-                    <a href="{{ $href }}" @if ($live) wire:navigate @endif class="group flex flex-col items-center gap-1.5 text-center">
-                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} shadow-sm transition-transform group-hover:scale-105 group-active:scale-95">
+                    ['Gift Cards', 'gift cards.svg',   'bg-pink-500',    route('dashboard.shop.gift-cards')],
+                    ['eSIMs',      'esim.svg',         'bg-sky-500',     route('dashboard.shop.esims')],
+                    ['Flights',    'flight 2.svg',     'bg-indigo-500',  route('dashboard.shop.flights')],
+                    ['Stays',      'stay 2.svg',       'bg-orange-500',  route('dashboard.shop.stays')],
+                    ['Topups',     'topup1.svg',       'bg-emerald-500', route('dashboard.shop.topups')],
+                    ['Bills',      'bill payment.svg', 'bg-teal-500',    route('dashboard.shop.bills')],
+                    ['Gaming',     'Gaming.svg',       'bg-fuchsia-500', route('dashboard.shop.gift-cards')],
+                    ['More',       'More.svg',         'bg-blue-500',    route('dashboard.shop.gift-cards')],
+                ] as [$label, $icon, $bg, $href])
+                    <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105 group-active:scale-95">
                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                         </span>
                         <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
@@ -225,33 +235,70 @@ new #[Lazy] class extends Component
             </div>
         </div>
 
-        {{-- Rcoin card (mobile). Live balance + loyalty tier from the wallet
-             ledger. Mirrors desktop right-rail card. --}}
-        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <div class="flex items-start gap-3">
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100">
-                    <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
-                </span>
-                <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-zinc-900">RShop Rcoin</p>
-                    <div class="mt-1 flex items-center gap-2">
-                        <span class="text-2xl font-bold tracking-tight text-zinc-900">{{ number_format($rcoinBalance) }}</span>
-                        <span class="rounded-[5px] {{ $currentTier['color'] }} px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{{ $currentTier['name'] }}</span>
-                    </div>
-                </div>
+        {{-- Popular Gift Cards - same curated source as desktop. brand-row auto-scrolls on mobile.
+             See-more "+" sends the user to the dashboard gift-cards page so they stay
+             inside the dashboard chrome instead of bouncing out to the storefront. --}}
+        @if ($popularProducts->isNotEmpty())
+            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                <x-home.brand-row
+                    title="Popular Gift Cards"
+                    subtitle="Top-rated in your region"
+                    :view-all-href="route('dashboard.shop.gift-cards')"
+                    view-all-variant="plus"
+                    :cols="5"
+                >
+                    @foreach ($popularProducts as $p)
+                        @php
+                            $logo = Product::brandLogoUrl($p->brand_key, $p->logo_url);
+                            $label = Product::brandDisplayName($p->brand_key);
+                            $brandColor = Product::brandColor($p->brand_key, $p->brand_color);
+                        @endphp
+                        <x-home.brand-card
+                            :name="$label"
+                            :price-range="$p->priceRangeLabel()"
+                            :href="route('shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
+                            :card-class="$logo ? 'bg-[#ffffff]' : ($brandColor ? '' : 'bg-zinc-100')"
+                            :style="! $logo && $brandColor ? 'background-color: ' . $brandColor . ';' : false"
+                        >
+                            @if ($logo)
+                                <img src="{{ $logo }}" alt="{{ $label }} gift card" class="h-full w-full object-cover" loading="lazy">
+                            @else
+                                <span class="px-3 text-center text-xl font-black uppercase leading-tight tracking-tight {{ $brandColor ? 'text-white' : 'text-zinc-700' }}">{{ $label }}</span>
+                            @endif
+                        </x-home.brand-card>
+                    @endforeach
+                </x-home.brand-row>
             </div>
-            <p class="mt-4 text-xs text-zinc-600">Earn Rcoin on every order and referral, then spend it on gift cards.</p>
-            <a href="{{ route('dashboard.rewards') }}" wire:navigate class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
-                <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain" style="filter: brightness(0) invert(1);">
-                View coins
-            </a>
+        @endif
+
+        {{-- Give the Perfect Gift promo - placed here on mobile (desktop keeps its own copy in the right rail). --}}
+        <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
+            <div class="relative z-10 max-w-[64%]">
+                <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
+                <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
+                <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
+                    Shop Now
+                    <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 no-dark-invert" loading="lazy">
+                </a>
+            </div>
+            <img
+                src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
+                alt=""
+                class="pointer-events-none absolute -right-4 bottom-2 h-40 w-auto select-none object-contain drop-shadow-2xl"
+                loading="lazy"
+            >
         </div>
 
-        {{-- Recent Orders - mobile parity with desktop. --}}
+        {{-- Recent Orders - mobile shows up to 5; sits directly above Recent
+             Transactions so the latest spending activity reads as one block. --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Orders</h3>
-                <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                <a href="{{ route('dashboard.orders') }}" wire:navigate aria-label="View all orders" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                </a>
             </div>
 
             <ul class="mt-4 space-y-3">
@@ -300,92 +347,18 @@ new #[Lazy] class extends Component
             </ul>
         </div>
 
-        {{-- Shop by Category - mobile parity. 4-col grid (2 rows of 4). --}}
-        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <div class="flex items-center justify-between">
-                <h3 class="text-base font-bold text-zinc-900">Shop by Category</h3>
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
-            </div>
-            <div class="mt-4 grid grid-cols-4 gap-3">
-                @foreach ([
-                    ['Gift Cards', 'gift cards.svg',   'bg-pink-500',    route('shop.gift-cards')],
-                    ['eSIMs',      'esim.svg',         'bg-sky-500',     route('shop.esims')],
-                    ['Flights',    'flight 2.svg',     'bg-indigo-500',  route('shop.flights')],
-                    ['Stays',      'stay 2.svg',       'bg-orange-500',  route('shop.stays')],
-                    ['Topups',     'topup1.svg',       'bg-emerald-500', route('shop.topups')],
-                    ['Bills',      'bill payment.svg', 'bg-teal-500',    route('shop.bills')],
-                    ['Gaming',     'Gaming.svg',       'bg-fuchsia-500', route('shop.gift-cards')],
-                    ['More',       'More.svg',         'bg-blue-500',    route('shop.gift-cards')],
-                ] as [$label, $icon, $bg, $href])
-                    <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
-                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105 group-active:scale-95">
-                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
-                        </span>
-                        <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
-                    </a>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Popular Gift Cards - same curated source as desktop. brand-row auto-scrolls on mobile. --}}
-        @if ($popularProducts->isNotEmpty())
-            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <x-home.brand-row
-                    title="Popular Gift Cards"
-                    subtitle="Top-rated in your region"
-                    :view-all-href="route('shop.gift-cards')"
-                    :cols="5"
-                >
-                    @foreach ($popularProducts as $p)
-                        @php
-                            $logo = Product::brandLogoUrl($p->brand_key, $p->logo_url);
-                            $label = Product::brandDisplayName($p->brand_key);
-                            $brandColor = Product::brandColor($p->brand_key, $p->brand_color);
-                        @endphp
-                        <x-home.brand-card
-                            :name="$label"
-                            :price-range="$p->priceRangeLabel()"
-                            :href="route('shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
-                            :card-class="$logo ? 'bg-[#ffffff]' : ($brandColor ? '' : 'bg-zinc-100')"
-                            :style="! $logo && $brandColor ? 'background-color: ' . $brandColor . ';' : false"
-                        >
-                            @if ($logo)
-                                <img src="{{ $logo }}" alt="{{ $label }} gift card" class="h-full w-full object-cover" loading="lazy">
-                            @else
-                                <span class="px-3 text-center text-xl font-black uppercase leading-tight tracking-tight {{ $brandColor ? 'text-white' : 'text-zinc-700' }}">{{ $label }}</span>
-                            @endif
-                        </x-home.brand-card>
-                    @endforeach
-                </x-home.brand-row>
-            </div>
-        @endif
-
-        {{-- Give the Perfect Gift promo - placed here on mobile (desktop keeps its own copy in the right rail). --}}
-        <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
-            <div class="relative z-10 max-w-[64%]">
-                <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
-                <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
-                    Shop Now
-                    <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 no-dark-invert" loading="lazy">
-                </a>
-            </div>
-            <img
-                src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
-                alt=""
-                class="pointer-events-none absolute -right-4 bottom-2 h-40 w-auto select-none object-contain drop-shadow-2xl"
-                loading="lazy"
-            >
-        </div>
-
         {{-- Recent Transactions - mobile only; mirrors the desktop right-rail card.
              Shows top-ups (credits) and purchases (debits) interleaved since both
              write to wallet_transactions. Capped at 8 here, full history is on
-             /dashboard/transactions via the View all link. --}}
+             /dashboard/transactions via the See more "+" button. --}}
         <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
-                <a href="{{ route('dashboard.transactions') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                <a href="{{ route('dashboard.transactions') }}" wire:navigate aria-label="View all transactions" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                </a>
             </div>
 
             <ul class="mt-4 space-y-3">
@@ -490,38 +463,39 @@ new #[Lazy] class extends Component
                             :aria-expanded="open.toString()"
                             class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
                         >
-                            {{-- Theme indicator - swaps sun / moon / monitor with a quick
-                                 cross-fade so the button itself signals the current mode. --}}
+                            {{-- Theme indicator - swaps Light / Dark / Auto PNG icons
+                                 (project-canonical, brightness-0 dark:invert so they
+                                 adapt to the current surface). --}}
                             <span class="relative inline-flex h-4 w-4 items-center justify-center">
-                                <svg
+                                <img
                                     x-show="theme === 'light'"
                                     x-cloak
                                     x-transition:enter="transition ease-out duration-200"
-                                    x-transition:enter-start="opacity-0 rotate-45 scale-75"
-                                    x-transition:enter-end="opacity-100 rotate-0 scale-100"
+                                    x-transition:enter-start="opacity-0 scale-75"
+                                    x-transition:enter-end="opacity-100 scale-100"
                                     x-transition:leave="transition ease-in duration-150"
-                                    x-transition:leave-start="opacity-100 rotate-0 scale-100"
-                                    x-transition:leave-end="opacity-0 -rotate-45 scale-75"
-                                    class="absolute h-4 w-4 text-amber-500"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"
+                                    x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-75"
+                                    src="{{ asset('assets/' . rawurlencode('Light mode respects theme.webp')) }}"
+                                    alt=""
+                                    class="absolute h-4 w-4 brightness-0 dark:invert"
+                                    loading="lazy"
                                 >
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
-                                </svg>
-                                <svg
+                                <img
                                     x-show="theme === 'dark'"
                                     x-cloak
                                     x-transition:enter="transition ease-out duration-200"
-                                    x-transition:enter-start="opacity-0 -rotate-45 scale-75"
-                                    x-transition:enter-end="opacity-100 rotate-0 scale-100"
+                                    x-transition:enter-start="opacity-0 scale-75"
+                                    x-transition:enter-end="opacity-100 scale-100"
                                     x-transition:leave="transition ease-in duration-150"
-                                    x-transition:leave-start="opacity-100 rotate-0 scale-100"
-                                    x-transition:leave-end="opacity-0 rotate-45 scale-75"
-                                    class="absolute h-4 w-4 text-blue-500"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"
+                                    x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-75"
+                                    src="{{ asset('assets/' . rawurlencode('Dark mode respects light and dark mode.webp')) }}"
+                                    alt=""
+                                    class="absolute h-4 w-4 brightness-0 dark:invert"
+                                    loading="lazy"
                                 >
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
-                                </svg>
-                                <svg
+                                <img
                                     x-show="theme === 'system'"
                                     x-transition:enter="transition ease-out duration-200"
                                     x-transition:enter-start="opacity-0 scale-75"
@@ -529,11 +503,11 @@ new #[Lazy] class extends Component
                                     x-transition:leave="transition ease-in duration-150"
                                     x-transition:leave-start="opacity-100 scale-100"
                                     x-transition:leave-end="opacity-0 scale-75"
-                                    class="absolute h-4 w-4"
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"
+                                    src="{{ asset('assets/' . rawurlencode('Auto Mode.webp')) }}"
+                                    alt=""
+                                    class="absolute h-4 w-4 brightness-0 dark:invert"
+                                    loading="lazy"
                                 >
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"/>
-                                </svg>
                             </span>
                             Customize
                             <svg class="h-4 w-4 text-zinc-600 transition-transform duration-150" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -556,9 +530,9 @@ new #[Lazy] class extends Component
                         >
                             <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Appearance</p>
                             @foreach ([
-                                ['value' => 'light',  'label' => 'Light',  'icon' => 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z'],
-                                ['value' => 'dark',   'label' => 'Dark',   'icon' => 'M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z'],
-                                ['value' => 'system', 'label' => 'System', 'icon' => 'M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25'],
+                                ['value' => 'light',  'label' => 'Light',  'png' => 'Light mode respects theme.webp'],
+                                ['value' => 'dark',   'label' => 'Dark',   'png' => 'Dark mode respects light and dark mode.webp'],
+                                ['value' => 'system', 'label' => 'System', 'png' => 'Auto Mode.webp'],
                             ] as $opt)
                                 <button
                                     type="button"
@@ -568,9 +542,12 @@ new #[Lazy] class extends Component
                                     role="menuitem"
                                 >
                                     <span class="inline-flex items-center gap-2.5">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $opt['icon'] }}"/>
-                                        </svg>
+                                        <img
+                                            src="{{ asset('assets/' . rawurlencode($opt['png'])) }}"
+                                            alt=""
+                                            class="h-4 w-4 shrink-0 brightness-0 dark:invert"
+                                            loading="lazy"
+                                        >
                                         {{ $opt['label'] }}
                                     </span>
                                     <svg x-show="theme === '{{ $opt['value'] }}'" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -655,8 +632,8 @@ new #[Lazy] class extends Component
                     </div>
                 </div>
 
-                {{-- Wallet + Quick Actions + Recent Order row --}}
-                <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                {{-- Wallet + Recent Order row --}}
+                <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
 
                     {{-- Wallet balance card. Switchable per-currency. Card bg adopts the active wallet's brand color. --}}
                     <div
@@ -769,34 +746,8 @@ new #[Lazy] class extends Component
                         @endif
                     </div>
 
-                    {{-- Quick Actions card (mirrors the Shop by Category buckets so customers can jump straight in) --}}
-                    <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                        <h3 class="text-base font-semibold text-zinc-900">Quick Actions</h3>
-                        <div class="mt-4 grid grid-cols-3 gap-3">
-                            @foreach ([
-                                ['Gift Cards', 'gift cards.svg', 'bg-pink-500',    null,               route('shop.gift-cards')],
-                                ['eSIMs',      'esim.svg',       'bg-sky-500',     null,               route('shop.esims')],
-                                ['Topups',     'topup1.svg',     'bg-emerald-500', null,               route('shop.topups')],
-                                ['Bills',      'Bills 2.svg',    'bg-teal-500',    'bill payment.svg', route('shop.bills')],
-                                ['Flights',    'flight 2.svg',   'bg-indigo-500',  'flight.svg',       route('shop.flights')],
-                                ['Stays',      'stay 2.svg',     'bg-orange-500',  'stay.svg',         route('shop.stays')],
-                            ] as [$label, $icon, $bg, $hoverIcon, $href])
-                                <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-1.5 text-center">
-                                    <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105">
-                                        @if ($hoverIcon)
-                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
-                                            <img src="{{ asset('assets/' . rawurlencode($hoverIcon)) }}" alt="" class="hidden h-6 w-6 brightness-0 invert group-hover:block" loading="lazy">
-                                        @else
-                                            <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
-                                        @endif
-                                    </span>
-                                    <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
-                                </a>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    {{-- Recent Order card --}}
+                    {{-- Recent Order card. Capped at 3 on desktop's right-rail
+                         even though the query fetches 5 (mobile renders all 5). --}}
                     <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
@@ -804,7 +755,7 @@ new #[Lazy] class extends Component
                         </div>
 
                         <ul class="mt-4 space-y-3">
-                            @forelse ($recentOrders as $order)
+                            @forelse ($recentOrders->take(3) as $order)
                                 @php
                                     $groupedItems = $order->items->groupBy('product_variant_id');
                                     $firstGroup = $groupedItems->first();
@@ -863,26 +814,26 @@ new #[Lazy] class extends Component
                     </div>
                 </div>
 
-                {{-- Shop by Category + Recommended for you (combined card with divider) --}}
+                {{-- Quick Actions + Recommended for you (combined card with divider) --}}
                 <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
 
-                    {{-- Shop by Category section --}}
+                    {{-- Quick Actions section --}}
                     <div class="p-5 sm:p-6">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-base font-semibold text-zinc-900">Shop by Category</h3>
-                            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                            <h3 class="text-base font-semibold text-zinc-900">Quick Actions</h3>
+                            <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
                         </div>
 
                         <div class="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-8">
                             @foreach ([
-                                ['Gift Cards', 'gift cards.svg',   'bg-pink-500',     null,             route('shop.gift-cards')],
-                                ['eSIMs',      'esim.svg',         'bg-sky-500',      null,             route('shop.esims')],
-                                ['Flights',    'flight 2.svg',     'bg-indigo-500',   'flight.svg',     route('shop.flights')],
-                                ['Stays',      'stay 2.svg',       'bg-orange-500',   'stay.svg',       route('shop.stays')],
-                                ['Topups',     'topup1.svg',       'bg-emerald-500',  null,             route('shop.topups')],
-                                ['Bills',      'bill payment.svg', 'bg-teal-500',     'Bills 2.svg',    route('shop.bills')],
-                                ['Gaming',     'Gaming.svg',       'bg-fuchsia-500',  'gaming two.svg', route('shop.gift-cards')],
-                                ['More',       'More.svg',         'bg-blue-500',     'more two.svg',   route('shop.gift-cards')],
+                                ['Gift Cards', 'gift cards.svg',   'bg-pink-500',     null,             route('dashboard.shop.gift-cards')],
+                                ['eSIMs',      'esim.svg',         'bg-sky-500',      null,             route('dashboard.shop.esims')],
+                                ['Flights',    'flight 2.svg',     'bg-indigo-500',   'flight.svg',     route('dashboard.shop.flights')],
+                                ['Stays',      'stay 2.svg',       'bg-orange-500',   'stay.svg',       route('dashboard.shop.stays')],
+                                ['Topups',     'topup1.svg',       'bg-emerald-500',  null,             route('dashboard.shop.topups')],
+                                ['Bills',      'bill payment.svg', 'bg-teal-500',     'Bills 2.svg',    route('dashboard.shop.bills')],
+                                ['Gaming',     'Gaming.svg',       'bg-fuchsia-500',  'gaming two.svg', route('dashboard.shop.gift-cards')],
+                                ['More',       'More.svg',         'bg-blue-500',     'more two.svg',   route('dashboard.shop.gift-cards')],
                             ] as [$label, $icon, $bg, $hoverIcon, $href])
                                 <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
                                     <span class="flex h-14 w-14 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105">
@@ -978,14 +929,14 @@ new #[Lazy] class extends Component
                         <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
                         {{-- Literal-hex bg + no-dark-invert icon so this light button stays
                              light on the always-dark promo card in both themes. --}}
-                        <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
+                        <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
                             Shop Now
                             <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 no-dark-invert" loading="lazy">
                         </a>
                     </div>
 
                     <img
-                        src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
+                        src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
                         alt=""
                         class="pointer-events-none absolute -right-4 bottom-2 h-48 w-auto select-none object-contain drop-shadow-2xl"
                         loading="lazy"

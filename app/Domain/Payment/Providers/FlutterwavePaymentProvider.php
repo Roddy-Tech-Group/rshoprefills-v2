@@ -531,6 +531,116 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         ];
     }
 
+    /**
+     * Initialise a Flutterwave HOSTED checkout for a method that we don't render
+     * inline ourselves: USSD, Pay With Bank, Bank QR (NQR), Mobile Wallets.
+     *
+     * Flutterwave's hosted /payments endpoint returns a `payment_link` we
+     * redirect the customer to. The hosted page is pre-filtered by the
+     * `payment_options` field so the customer only sees their chosen method.
+     *
+     * @param  string  $methodKey  Our internal key from the checkout picker
+     *                             (ussd / pay_with_bank / bank_qr / mobile_wallet).
+     * @param  string  $returnUrl  Where Flutterwave should send the customer
+     *                             after they complete (or cancel) the flow.
+     */
+    public function chargeHosted(PaymentAttempt $attempt, string $methodKey, string $returnUrl): array
+    {
+        // Map our internal method keys onto Flutterwave's payment_options
+        // strings. Multi-value strings are comma-separated per FW spec.
+        $paymentOptions = match ($methodKey) {
+            'ussd' => 'ussd',
+            'pay_with_bank' => 'account',
+            'bank_qr' => 'qr',
+            'mobile_wallet' => 'opay,enaira,mobilemoneynigeria',
+            default => $methodKey,
+        };
+
+        if (str_contains($this->secretKey, 'MOCK')) {
+            // Sandbox / dev path - go straight to a mock-success return so the
+            // wizard can be tested without real FW credentials.
+            $mockUrl = $returnUrl.(str_contains($returnUrl, '?') ? '&' : '?').'tx_ref='.$attempt->idempotency_key.'&status=successful&mock=1';
+
+            return [
+                'status' => 'awaiting_redirect',
+                'redirect_url' => $mockUrl,
+                'method' => $methodKey,
+            ];
+        }
+
+        try {
+            $response = Http::withToken($this->secretKey)
+                ->post("{$this->baseUrl}/payments", [
+                    'tx_ref' => $attempt->idempotency_key,
+                    'amount' => (float) $attempt->amount,
+                    'currency' => strtoupper($attempt->currency),
+                    'redirect_url' => $returnUrl,
+                    'payment_options' => $paymentOptions,
+                    'customer' => [
+                        'email' => $attempt->user->email,
+                        'name' => $attempt->user->name,
+                    ],
+                    'customizations' => [
+                        'title' => 'RshopRefills Payment',
+                        'description' => $attempt->order
+                            ? "Order #{$attempt->order->order_number}"
+                            : "Payment Ref #{$attempt->idempotency_key}",
+                    ],
+                ]);
+
+            if ($response->failed()) {
+                Log::error('Flutterwave hosted init HTTP failed', [
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                    'tx_ref' => $attempt->idempotency_key,
+                    'method_key' => $methodKey,
+                    'payment_options' => $paymentOptions,
+                ]);
+
+                return [
+                    'status' => 'failed',
+                    'message' => 'Failed to initialise payment: '.($response->json('message') ?? 'Unknown error'),
+                ];
+            }
+
+            $data = $response->json();
+            $link = $data['data']['link'] ?? null;
+
+            if (! $link) {
+                Log::error('Flutterwave hosted init missing payment link', [
+                    'body' => $data,
+                    'tx_ref' => $attempt->idempotency_key,
+                    'method_key' => $methodKey,
+                ]);
+
+                return [
+                    'status' => 'failed',
+                    'message' => 'Payment provider returned no checkout link.',
+                ];
+            }
+
+            $attempt->payment_url = $link;
+            $attempt->save();
+
+            return [
+                'status' => 'awaiting_redirect',
+                'redirect_url' => $link,
+                'method' => $methodKey,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Flutterwave hosted init exception', [
+                'message' => $e->getMessage(),
+                'tx_ref' => $attempt->idempotency_key,
+                'method_key' => $methodKey,
+            ]);
+
+            return [
+                'status' => 'failed',
+                'message' => 'Failed to initialise payment: '.$e->getMessage(),
+            ];
+        }
+    }
+
     public function verifyPayment(PaymentAttempt $attempt): bool
     {
         if (str_contains($this->secretKey, 'MOCK')) {

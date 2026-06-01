@@ -5,19 +5,20 @@
     $totalCustomers = User::count();
 
     // Status pill tone — drives the right-side chip per row. Active means the
-    // email is verified AND the account isn't banned/suspended.
+    // email is verified AND the account isn't banned/suspended. Tone names
+    // map onto <x-admin.badge>'s canonical palette.
     $statusFor = function (User $user): array {
         if ($user->banned_at !== null) {
-            return ['label' => 'Banned', 'class' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'];
+            return ['label' => 'Banned', 'tone' => 'red'];
         }
         if ($user->suspended_at !== null) {
-            return ['label' => 'Suspended', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+            return ['label' => 'Suspended', 'tone' => 'amber'];
         }
         if ($user->email_verified_at === null) {
-            return ['label' => 'Pending', 'class' => 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+            return ['label' => 'Pending', 'tone' => 'amber'];
         }
 
-        return ['label' => 'Active', 'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30'];
+        return ['label' => 'Active', 'tone' => 'emerald'];
     };
 @endphp
 
@@ -38,17 +39,30 @@
                 minmax(90px,  0.6fr);  /* View action */
             gap: 1.25rem;
             align-items: center;
+            min-width: 900px;
         }
-        @media (max-width: 1024px) {
-            .cust-row { grid-template-columns: minmax(200px, 1.7fr) minmax(100px, 0.8fr) minmax(80px, 0.6fr); }
-            .cust-row > *:not(.col-user):not(.col-status):not(.col-action) { display: none; }
+        .cust-body:not(:last-of-type)::after {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            right: 1.5rem;
+            bottom: 0;
+            height: 1px;
+            background-color: rgb(244 244 245);
+            pointer-events: none;
         }
+        html.dark .cust-body:not(:last-of-type)::after {
+            background-color: rgb(255 255 255 / 0.08);
+        }
+        .cust-body:hover::after { display: none; }
+        .cust-body:hover { border-radius: 10px; }
     </style>
 
-    <div class="flex flex-col gap-2">
-        {{-- Header pill — light-blue bg, 2px blue ring, matches the Products
-             filter bar styling. --}}
-        <div class="cust-row hidden rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 shadow-sm shadow-zinc-900/5 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400 md:grid">
+    <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+        <div class="overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
+
+        {{-- Header pill --}}
+        <div class="cust-row grid mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400">
             <span class="col-user">User</span>
             <span class="col-status">Status</span>
             <span>Wallet Balance</span>
@@ -60,14 +74,14 @@
             @php
                 $status = $statusFor($user);
                 $rowAvatar = $user->avatar_url ?: asset('assets/' . rawurlencode(match (strtolower($user->gender ?? '')) {
-                    'female', 'f' => 'New Female Account Avatar.png',
-                    default       => 'New male account avatar.png',
+                    'female', 'f' => 'New Female Account Avatar.webp',
+                    default       => 'New male account avatar.webp',
                 }));
             @endphp
             <a
                 href="{{ route('admin.customer', $user) }}"
                 wire:navigate
-                class="cust-row group cursor-pointer rounded-[10px] border border-zinc-100 bg-white px-6 py-3 shadow-sm shadow-zinc-900/5 transition-colors hover:border-blue-600 hover:bg-blue-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:hover:border-blue-400 dark:hover:bg-blue-600/15"
+                class="cust-row cust-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
             >
                 {{-- User — avatar + name + email stacked. --}}
                 <div class="col-user flex min-w-0 items-center gap-3">
@@ -80,9 +94,7 @@
 
                 {{-- Status pill --}}
                 <span class="col-status">
-                    <span class="inline-flex w-fit items-center whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ring-1 {{ $status['class'] }}">
-                        {{ $status['label'] }}
-                    </span>
+                    <x-admin.badge :tone="$status['tone']">{{ $status['label'] }}</x-admin.badge>
                 </span>
 
                 {{-- Wallet balance --}}
@@ -106,9 +118,11 @@
                 </span>
             </a>
         @empty
-            <div class="rounded-[10px] bg-white px-5 py-12 text-center text-sm text-zinc-600 shadow-sm ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-400 dark:ring-zinc-700/60">
+            <div class="px-5 py-12 text-center text-sm text-zinc-600 dark:text-zinc-400">
                 No customers yet.
             </div>
         @endforelse
+
+        </div>
     </div>
 </x-layouts.admin>

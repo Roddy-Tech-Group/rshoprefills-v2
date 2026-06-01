@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Domain\Notification\Jobs\RetryFailedNotificationsJob;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Jobs\ExpireStalePaymentSessionsJob;
 use App\Domain\Wallet\Jobs\ReconcilePendingFundingsJob;
@@ -19,8 +20,70 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote')->hourly();
 
+// Pull live FX rates from open.er-api.com and push them into exchange_rates.
+// Daily cadence is plenty - ECB / interbank rates only refresh once a day.
+// SyncExchangeRatesJob still runs hourly as a safety net so any admin manual
+// edit to a CurrencyRate row propagates within the hour even without `rates:fetch`.
+Schedule::command('rates:fetch')->dailyAt('03:00')->name('rates:fetch-daily');
 Schedule::job(new SyncExchangeRatesJob)->hourly();
 Schedule::job(new ReconcilePendingFundingsJob)->hourly();
+
+// Airalo requires syncing GET /v2/packages at least once every 60 minutes
+// or they email warning the catalog may be stale. withoutOverlapping prevents
+// a slow sync from doubling up; runInBackground so cron isn't blocked while
+// the API call is paginating. Logs go to storage/logs/laravel.log.
+Schedule::command('airalo:sync-esims')
+    ->hourly()
+    ->withoutOverlapping(60)
+    ->runInBackground()
+    ->name('airalo:sync-esims-hourly');
+
+// Zendit catalog syncs - keep gift cards, top-ups and bills fresh without
+// any manual intervention. Cadence is every 6h (Zendit catalog changes
+// less often than Airalo eSIM packages). Each command is idempotent
+// (updateOrCreate by SKU) so re-running just refreshes data, no duplicates.
+Schedule::command('zendit:sync-giftcards')
+    ->everySixHours()
+    ->withoutOverlapping(120)
+    ->runInBackground()
+    ->name('zendit:sync-giftcards-6h');
+
+Schedule::command('topups:sync')
+    ->everySixHours()
+    ->withoutOverlapping(120)
+    ->runInBackground()
+    ->name('zendit:sync-topups-6h');
+
+// Split bills out of the gift-cards catalog after the giftcards sync runs.
+// Fires 15 minutes past the hour so it lands AFTER the 6h sync above
+// completes for that slot (gift cards sync typically finishes in <10 min).
+Schedule::command('catalog:split-bill-payments')
+    ->cron('15 */6 * * *')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->name('catalog:split-bills-6h');
+
+// Operator/biller logos are missing from Zendit's /topups/offers + bills
+// payloads, so we backfill from a separate logo source. Weekly is fine -
+// brand logos don't change often.
+Schedule::command('topups:sync-logos')
+    ->weekly()
+    ->sundays()
+    ->at('04:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->name('topups:sync-logos-weekly');
+
+// Auto-retry failed customer notifications. The job picks up notifications
+// that have been in the Failed state for at least 5 minutes (transient outage
+// backoff) and re-dispatches them, capped at MAX_AUTO_RETRIES per row so a
+// permanently broken recipient doesn't churn forever. Admin retains a manual
+// per-row Retry button on /admin/notifications for cases where the auto-sweep
+// has exhausted its retries.
+Schedule::job(new RetryFailedNotificationsJob)
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->name('notifications:retry-failed');
 
 // Sweep PaymentSessions past their 15-minute TTL and cancel the linked Order /
 // WalletFunding, so half-finished checkout attempts don't sit Pending on the

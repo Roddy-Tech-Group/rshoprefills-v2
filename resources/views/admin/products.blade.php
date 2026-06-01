@@ -123,7 +123,13 @@
             //      that effectively cover a region or the world)
             $q->where(function ($qq) use ($regionFilter, $regionToCountries) {
                 if ($regionFilter === 'Global') {
-                    $qq->whereRaw("JSON_LENGTH(JSON_EXTRACT(product_variants.metadata, '$.coverage')) > 5")
+                    // WW is the explicit Worldwide marker we set on Global
+                    // products at sync time (Airalo's "Global eSIM" etc.).
+                    // The JSON_LENGTH checks catch multi-country variants whose
+                    // metadata enumerates coverage, but Airalo's single 'WW'
+                    // bucket needs the direct country_code match too.
+                    $qq->where('products.country_code', 'WW')
+                       ->orWhereRaw("JSON_LENGTH(JSON_EXTRACT(product_variants.metadata, '$.coverage')) > 5")
                        ->orWhereRaw("JSON_LENGTH(JSON_EXTRACT(product_variants.metadata, '$.countries')) > 5")
                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(product_variants.metadata, '$.regions[0]')) IN ('Global', 'World', 'Worldwide')");
 
@@ -411,7 +417,7 @@
 
             @if ($anyFilter)
                 <a href="{{ route('admin.products') }}" wire:navigate class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50">
-                    <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-4 w-4 object-contain" loading="lazy">
+                    <img src="{{ asset('assets/' . rawurlencode('x button.webp')) }}" alt="" class="h-4 w-4 object-contain" loading="lazy">
                     Clear filters
                 </a>
             @endif
@@ -484,9 +490,10 @@
              right to flag it as the pricing-tool zone (matches the reference). --}}
         <style>
             /* Single source of truth for column widths. Header + rows both use
-               .variant-row so any tweak here updates both. Seven columns only:
-               Region, Country, Product Type, Brand, Cost Price, Sales Price,
-               Benefits — wide enough to breathe. */
+               .variant-row so any tweak here updates both. Same 9 columns at
+               every viewport; the parent .variant-scroll wraps it in a
+               horizontal scroller so mobile gets the full table by swiping
+               sideways instead of hiding 6 columns. */
             .variant-row {
                 display: grid;
                 grid-template-columns:
@@ -501,10 +508,44 @@
                     minmax(160px, 1.4fr);   /* Benefits */
                 gap: 1.25rem;
                 align-items: center;
+                /* Keep the row wide on small screens; the parent scroller
+                   lets the user pan horizontally to reach hidden columns. */
+                min-width: 1180px;
             }
-            @media (max-width: 1024px) {
-                .variant-row { grid-template-columns: minmax(160px, 1.5fr) minmax(110px, 1fr) minmax(120px, 1fr); }
-                .variant-row > *:not(.col-brand):not(.col-cost):not(.col-price) { display: none; }
+            /* Sticky header row inside the scroller. Stays pinned to the top
+               of the scroll viewport while body rows pan vertically + the
+               whole table pans horizontally on mobile. */
+            .variant-header {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+            }
+            /* Inset divider between body rows. The line stops 1.5rem short of
+               each edge so it doesn't run into the card's rounded corners. */
+            .variant-body:not(:last-of-type)::after {
+                content: '';
+                position: absolute;
+                left: 1.5rem;
+                right: 1.5rem;
+                bottom: 0;
+                height: 1px;
+                background-color: rgb(244 244 245);
+                pointer-events: none;
+            }
+            html.dark .variant-body:not(:last-of-type)::after {
+                background-color: rgb(255 255 255 / 0.08);
+            }
+            /* Hide the divider line when hovering — otherwise it paints over
+               the bottom edge of the hover ring (ring + divider both sit at
+               y = bottom of the row, divider wins because ::after is the
+               last-painted element). */
+            .variant-body:hover::after {
+                display: none;
+            }
+            /* Match the header pill's 10px corner radius on hover so the
+               ring reads as the same shape language. */
+            .variant-body:hover {
+                border-radius: 10px;
             }
         </style>
 
@@ -512,20 +553,21 @@
             x-data="{ navigating: false }"
             x-on:livewire:navigate.window="navigating = true"
             x-on:livewire:navigated.window="navigating = false"
-            class="relative flex flex-col gap-2"
+            class="relative overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:bg-[#1d3252] dark:border-white"
         >
+          <div class="overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
 
             {{-- Header row — its own pill card. Each filterable column owns
                  its own Alpine scope with a dropdown anchored directly beneath
                  the column header so the panel appears exactly where clicked. --}}
             @php
-                $filterIcon = asset('assets/'.rawurlencode('filter to be used as black and white for light mode and dark mode leave origianl color if only asked.png'));
+                $filterIcon = asset('assets/'.rawurlencode('filter to be used as black and white for light mode and dark mode leave origianl color if only asked.webp'));
                 $activeItem = 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300';
                 $inactiveItem = 'text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-white/5';
                 $itemBase = 'block truncate rounded-[10px] px-3 py-2 text-[12px] font-medium transition-colors';
                 $panelBase = 'absolute left-0 top-full z-40 mt-2 w-72 overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60';
             @endphp
-            <div class="variant-row hidden rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 shadow-sm shadow-zinc-900/5 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400 md:grid">
+            <div class="variant-row variant-header grid mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400">
 
                 {{-- BRAND --}}
                 <span class="col-brand relative" x-data="{ open: false, search: '' }" @click.outside="open = false" @keydown.escape.window="open = false">
@@ -854,12 +896,18 @@
                         'manualPriceUsd' => $variant->manual_retail_price_usd !== null
                             ? (float) $variant->manual_retail_price_usd
                             : null,
+                        // Per-product PricingRule, if one exists. NULL = falling
+                        // back to subcategory / category / global rule chain.
+                        'productMarkup' => (function () use ($product) {
+                            $rule = $product ? \App\Models\PricingRule::where('product_id', $product->id)->where('is_active', true)->first() : null;
+                            return $rule ? ['type' => $rule->markup_type, 'value' => (float) $rule->markup_value] : null;
+                        })(),
                         'roamingCountries' => $roamingCountries,
                     ];
                 @endphp
                 <article
                     @click="$dispatch('variant-show', @js($drawerPayload))"
-                    class="variant-row group cursor-pointer rounded-[10px] border border-zinc-100 bg-white px-6 py-3 shadow-sm shadow-zinc-900/5 transition-colors hover:border-blue-600 hover:bg-blue-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:hover:border-blue-400 dark:hover:bg-blue-600/15"
+                    class="variant-row variant-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
                 >
                     {{-- Brand (text only, no logo) --}}
                     <span class="col-brand min-w-0 truncate text-[13px] font-semibold text-zinc-900 dark:text-white">{{ $brandLabel }}</span>
@@ -904,7 +952,7 @@
                     <span class="col-benefits min-w-0 text-[13px] leading-snug text-zinc-700 line-clamp-2 dark:text-zinc-200">{{ $sentBenefits ?? '—' }}</span>
                 </article>
             @empty
-                <div class="rounded-[10px] bg-white px-5 py-20 text-center shadow-sm ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <div class="px-5 py-20 text-center">
                     <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 dark:bg-blue-600/15 dark:text-blue-300">
                         <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -915,14 +963,15 @@
                     @if ($search !== '' || $categorySlug !== 'all')
                         <a href="{{ route('admin.products') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-300">
                             Clear all filters
-                            <img src="{{ asset('assets/' . rawurlencode('x button.png')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
+                            <img src="{{ asset('assets/' . rawurlencode('x button.webp')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                         </a>
                     @endif
                 </div>
             @endforelse
+          </div>
 
             @if ($variants->hasPages())
-                <div class="mt-2 rounded-[10px] bg-white px-5 py-3 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+                <div class="border-t border-zinc-100 px-5 py-3 dark:border-zinc-700/60">
                     {{ $variants->onEachSide(1)->links('vendor.pagination.circles') }}
                 </div>
             @endif
@@ -987,8 +1036,8 @@
                         <div>
                             <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Status</p>
                             <div class="mt-1 inline-flex items-center gap-0.5 rounded-[10px] bg-zinc-100 p-0.5 dark:bg-[#26416b]">
-                                <button type="button" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors" :class="data.isAvailable ? 'bg-red-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">Enabled</button>
-                                <button type="button" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors" :class="! data.isAvailable ? 'bg-zinc-700 text-white' : 'text-zinc-600 dark:text-zinc-300'">Disabled</button>
+                                <button type="button" @click="setAvailable(true)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="data.isAvailable ? 'bg-red-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">Enabled</button>
+                                <button type="button" @click="setAvailable(false)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="! data.isAvailable ? 'bg-zinc-700 text-white' : 'text-zinc-600 dark:text-zinc-300'">Disabled</button>
                             </div>
                         </div>
                     </div>
@@ -1141,6 +1190,100 @@
                         <p class="mt-2 text-[10px] text-zinc-500">Rates-derived suggestion: <span class="font-semibold" x-text="data.retailLabel"></span></p>
                     </div>
 
+                    {{-- Markup rule (per-product). Wins over subcategory /
+                         category / global rules. Save creates the rule, Reset
+                         deletes it and falls back to the chain. Independent
+                         from the Sales Price override above: the override is
+                         an absolute price (no scaling); markup scales with
+                         supplier cost. --}}
+                    <div class="mt-6 border-t border-zinc-100 pt-4 dark:border-zinc-700/60">
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Markup rule</h3>
+                            <span x-show="data.productMarkup" class="rounded-[5px] bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Per-product</span>
+                            <span x-show="!data.productMarkup" class="rounded-[5px] bg-zinc-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-700 dark:bg-zinc-700/50 dark:text-zinc-300">Using chain</span>
+                        </div>
+                        <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Markup wins over subcategory / category / global rules for this product only.</p>
+                        <div class="mt-3 flex flex-wrap items-stretch gap-2">
+                            {{-- Modern dropdown - Alpine version matching the
+                                 <x-admin.select> visual language. Uses the
+                                 parent drawer's `markupType` directly via
+                                 the inherited Alpine scope. --}}
+                            <div
+                                x-data="{ open: false, options: { percentage: 'Percent (%)', fixed: 'Flat ($)' } }"
+                                @click.outside="open = false"
+                                @keydown.escape.window="open = false"
+                                class="relative w-32 shrink-0"
+                            >
+                                <button
+                                    type="button"
+                                    @click="open = !open"
+                                    :disabled="savingMarkup"
+                                    :aria-expanded="open.toString()"
+                                    class="flex h-9 w-full items-center justify-between gap-2 rounded-[10px] border bg-white px-3 text-[12px] font-semibold text-zinc-900 outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#0c1a36] dark:text-white"
+                                    :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400 dark:border-zinc-700/60'"
+                                >
+                                    <span x-text="options[markupType]">Percent (%)</span>
+                                    <svg class="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div
+                                    x-show="open"
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-150"
+                                    x-transition:enter-start="opacity-0 -translate-y-1"
+                                    x-transition:enter-end="opacity-100 translate-y-0"
+                                    class="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 dark:border-zinc-700/60 dark:bg-[#1d3252]"
+                                    role="listbox"
+                                >
+                                    <template x-for="(label, value) in options" :key="value">
+                                        <button
+                                            type="button"
+                                            role="option"
+                                            :aria-selected="markupType === value"
+                                            @click="markupType = value; open = false"
+                                            class="flex w-full items-center justify-between gap-2 rounded-[10px] px-3 py-2 text-left text-[12px] font-medium transition-colors"
+                                            :class="markupType === value ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5'"
+                                        >
+                                            <span x-text="label"></span>
+                                            <svg x-show="markupType === value" class="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                x-model="markupValue"
+                                :disabled="savingMarkup"
+                                :placeholder="markupType === 'percentage' ? '5' : '0.50'"
+                                class="h-9 flex-1 rounded-[10px] border border-zinc-200 bg-white px-3 text-[12px] text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#0c1a36] dark:text-white"
+                            >
+                            <button
+                                type="button"
+                                @click="saveMarkup()"
+                                :disabled="savingMarkup || !markupValue"
+                                class="h-9 rounded-[10px] bg-blue-600 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <span x-text="savingMarkup ? 'Saving...' : 'Save'"></span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="resetMarkup()"
+                                :disabled="savingMarkup || !data.productMarkup"
+                                class="h-9 rounded-[10px] border border-zinc-200 bg-white px-3 text-[11px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                        <p x-show="data.productMarkup" class="mt-2 text-[10px] text-zinc-500">
+                            Currently <span class="font-semibold" x-text="data.productMarkup ? (data.productMarkup.type === 'percentage' ? data.productMarkup.value + '%' : '$' + data.productMarkup.value + ' flat') : ''"></span>
+                        </p>
+                    </div>
+
                     {{-- Featured + Popular toggles. Both are product-level flags
                          (not per-variant): toggling them on any one of a
                          product's variants flips the badge sitewide. --}}
@@ -1148,8 +1291,12 @@
                         <h3 class="text-sm font-bold text-zinc-900 dark:text-white">Badges</h3>
                         <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Applies to the parent product across the storefront.</p>
                         <div class="mt-3 space-y-2">
-                            {{-- Featured toggle with glowing-gradient preview. --}}
-                            <label class="flex items-center justify-between gap-3 rounded-[10px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60">
+                            {{-- Featured toggle with glowing-gradient preview.
+                                 Right slot is a checkbox to ENABLE the badge,
+                                 OR (once set) a red X button to remove it -
+                                 same "click here to switch off" affordance the
+                                 admin asked for, no extra round-trip needed. --}}
+                            <label class="flex items-center justify-between gap-3 rounded-[10px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60" :class="data.isFeatured && 'ring-1 ring-inset ring-amber-300/60 bg-amber-50/40 dark:bg-amber-500/[0.07] dark:ring-amber-400/30'">
                                 <span class="flex items-center gap-2.5">
                                     <span class="inline-flex items-center gap-1 rounded-[10px] bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-pink-500/40">
                                         <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.39 7.36H22l-6.18 4.49L18.18 21 12 16.51 5.82 21l2.36-7.15L2 9.36h7.61z"/></svg>
@@ -1157,11 +1304,33 @@
                                     </span>
                                     <span class="text-[12px] text-zinc-700 dark:text-zinc-200">Glowing gradient badge</span>
                                 </span>
-                                <input type="checkbox" x-model="data.isFeatured" @change="toggleFeatured()" :disabled="togglingFeatured" class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500">
+                                {{-- Off state: checkbox to enable. --}}
+                                <input
+                                    x-show="!data.isFeatured"
+                                    type="checkbox"
+                                    x-model="data.isFeatured"
+                                    @change="toggleFeatured()"
+                                    :disabled="togglingFeatured"
+                                    class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
+                                >
+                                {{-- On state: explicit Remove X button. --}}
+                                <button
+                                    type="button"
+                                    x-show="data.isFeatured"
+                                    x-cloak
+                                    @click.prevent="data.isFeatured = false; toggleFeatured()"
+                                    :disabled="togglingFeatured"
+                                    aria-label="Remove Featured badge"
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-red-50 text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                                >
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
                             </label>
 
-                            {{-- Popular toggle. --}}
-                            <label class="flex items-center justify-between gap-3 rounded-[10px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60">
+                            {{-- Popular toggle. Same pattern. --}}
+                            <label class="flex items-center justify-between gap-3 rounded-[10px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60" :class="data.isPopular && 'ring-1 ring-inset ring-blue-300/60 bg-blue-50/40 dark:bg-blue-500/[0.07] dark:ring-blue-400/30'">
                                 <span class="flex items-center gap-2.5">
                                     <span class="inline-flex items-center gap-1 rounded-[10px] bg-blue-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                                         <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.5a9.5 9.5 0 100 19 9.5 9.5 0 000-19zm1 14h-2v-2h2v2zm0-4h-2V6h2v6.5z"/></svg>
@@ -1169,7 +1338,27 @@
                                     </span>
                                     <span class="text-[12px] text-zinc-700 dark:text-zinc-200">Customer-favourite tag</span>
                                 </span>
-                                <input type="checkbox" x-model="data.isPopular" @change="togglePopular()" :disabled="togglingPopular" class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500">
+                                <input
+                                    x-show="!data.isPopular"
+                                    type="checkbox"
+                                    x-model="data.isPopular"
+                                    @change="togglePopular()"
+                                    :disabled="togglingPopular"
+                                    class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
+                                >
+                                <button
+                                    type="button"
+                                    x-show="data.isPopular"
+                                    x-cloak
+                                    @click.prevent="data.isPopular = false; togglePopular()"
+                                    :disabled="togglingPopular"
+                                    aria-label="Remove Popular badge"
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-red-50 text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                                >
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
                             </label>
                         </div>
                     </div>
@@ -1186,10 +1375,52 @@
                         <div class="mt-3 space-y-2 rounded-[10px] border border-zinc-200 p-3 dark:border-zinc-700/60">
                             <div class="grid grid-cols-2 gap-2">
                                 <input type="text" x-model="couponForm.code" placeholder="CODE (e.g. SAVE10)" class="col-span-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] uppercase text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
-                                <select x-model="couponForm.discount_type" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
-                                    <option value="percent">Percent off</option>
-                                    <option value="fixed">USD off</option>
-                                </select>
+                                {{-- Modern dropdown (Alpine) - mirrors the markup-type
+                                     picker so the drawer reads consistently. --}}
+                                <div
+                                    x-data="{ open: false, options: { percent: 'Percent off', fixed: 'USD off' } }"
+                                    @click.outside="open = false"
+                                    @keydown.escape.window="open = false"
+                                    class="relative"
+                                >
+                                    <button
+                                        type="button"
+                                        @click="open = !open"
+                                        :aria-expanded="open.toString()"
+                                        class="flex w-full items-center justify-between gap-2 rounded-[10px] border bg-white px-3 py-2 text-[12px] font-medium text-zinc-900 outline-none transition-colors dark:bg-[#26416b] dark:text-white"
+                                        :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400 dark:border-zinc-700/60'"
+                                    >
+                                        <span x-text="options[couponForm.discount_type]">Percent off</span>
+                                        <svg class="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform" :class="open && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+                                    <div
+                                        x-show="open"
+                                        x-cloak
+                                        x-transition:enter="transition ease-out duration-150"
+                                        x-transition:enter-start="opacity-0 -translate-y-1"
+                                        x-transition:enter-end="opacity-100 translate-y-0"
+                                        class="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 dark:border-zinc-700/60 dark:bg-[#1d3252]"
+                                        role="listbox"
+                                    >
+                                        <template x-for="(label, value) in options" :key="value">
+                                            <button
+                                                type="button"
+                                                role="option"
+                                                :aria-selected="couponForm.discount_type === value"
+                                                @click="couponForm.discount_type = value; open = false"
+                                                class="flex w-full items-center justify-between gap-2 rounded-[10px] px-3 py-2 text-left text-[12px] font-medium transition-colors"
+                                                :class="couponForm.discount_type === value ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/5'"
+                                            >
+                                                <span x-text="label"></span>
+                                                <svg x-show="couponForm.discount_type === value" class="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                                </svg>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
                                 <input type="number" step="0.01" min="0.01" x-model="couponForm.discount_value" :placeholder="couponForm.discount_type === 'percent' ? '10' : '5.00'" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
                                 <input type="number" min="1" x-model="couponForm.max_uses" placeholder="Max uses (blank = ∞)" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
                                 <input type="datetime-local" x-model="couponForm.valid_until" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
@@ -1252,6 +1483,14 @@
                     togglingFeatured: false,
                     togglingPopular: false,
 
+                    // Variant availability toggle
+                    savingAvailable: false,
+
+                    // Per-product markup rule form
+                    markupType: 'percentage',
+                    markupValue: '',
+                    savingMarkup: false,
+
                     // Coupons
                     coupons: [],
                     couponForm: {
@@ -1270,6 +1509,14 @@
                         this.coupons = [];
                         this.couponError = '';
                         this.couponForm = { code: '', discount_type: 'percent', discount_value: '', max_uses: '', valid_until: '' };
+                        // Pre-fill the markup form with the existing per-product rule (if any).
+                        if (this.data.productMarkup) {
+                            this.markupType = this.data.productMarkup.type || 'percentage';
+                            this.markupValue = String(this.data.productMarkup.value ?? '');
+                        } else {
+                            this.markupType = 'percentage';
+                            this.markupValue = '';
+                        }
                         this.isOpen = true;
                         document.body.style.overflow = 'hidden';
                         this.loadCoupons();
@@ -1342,6 +1589,58 @@
                             alert(e.message);
                         } finally {
                             this.savingPrice = false;
+                        }
+                    },
+
+                    async saveMarkup() {
+                        if (!this.data.productId || this.savingMarkup) { return; }
+                        const value = parseFloat(this.markupValue);
+                        if (!isFinite(value) || value < 0) { return; }
+                        this.savingMarkup = true;
+                        try {
+                            const json = await this._send('PATCH',
+                                `/admin/api/catalog/products/${this.data.productId}/markup`,
+                                { markup_type: this.markupType, markup_value: value });
+                            this.data.productMarkup = { type: json.markup_type, value: json.markup_value };
+                        } catch (e) {
+                            alert(e.message);
+                        } finally {
+                            this.savingMarkup = false;
+                        }
+                    },
+
+                    async resetMarkup() {
+                        if (!this.data.productId || this.savingMarkup) { return; }
+                        if (!confirm('Remove the per-product markup and fall back to category / global rules?')) { return; }
+                        this.savingMarkup = true;
+                        try {
+                            await this._send('DELETE',
+                                `/admin/api/catalog/products/${this.data.productId}/markup`);
+                            this.data.productMarkup = null;
+                            this.markupType = 'percentage';
+                            this.markupValue = '';
+                        } catch (e) {
+                            alert(e.message);
+                        } finally {
+                            this.savingMarkup = false;
+                        }
+                    },
+
+                    async setAvailable(value) {
+                        if (!this.data.variantId || this.savingAvailable || this.data.isAvailable === value) { return; }
+                        const previous = this.data.isAvailable;
+                        this.data.isAvailable = value;
+                        this.savingAvailable = true;
+                        try {
+                            const json = await this._send('PATCH',
+                                `/admin/api/catalog/variants/${this.data.variantId}/availability`,
+                                { is_available: value });
+                            this.data.isAvailable = json.is_available;
+                        } catch (e) {
+                            this.data.isAvailable = previous;
+                            alert(e.message);
+                        } finally {
+                            this.savingAvailable = false;
                         }
                     },
 

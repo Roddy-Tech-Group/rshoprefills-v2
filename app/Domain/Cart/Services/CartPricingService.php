@@ -2,9 +2,11 @@
 
 namespace App\Domain\Cart\Services;
 
+use App\Domain\Rewards\Services\RewardEngine;
 use App\Models\PricingRule;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Setting;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -68,8 +70,8 @@ class CartPricingService
             $totalProviderCost += ($item->provider_cost_usd * $item->quantity);
         }
 
-        $rewardEngine = app(\App\Domain\Rewards\Services\RewardEngine::class);
-        $cashbackPercentage = (float) \App\Models\Setting::get('cashback_percentage', 1.0);
+        $rewardEngine = app(RewardEngine::class);
+        $cashbackPercentage = (float) Setting::get('cashback_percentage', 1.0);
         $estimatedRcoinReward = $rewardEngine->usdToRcoin($subtotal * ($cashbackPercentage / 100));
 
         return [

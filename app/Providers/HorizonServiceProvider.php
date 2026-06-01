@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Horizon;
 use Laravel\Horizon\HorizonApplicationServiceProvider;
@@ -30,7 +31,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
         Gate::define('viewHorizon', function ($user = null) {
             // Check if the current request has an authenticated admin session
             // The $user param is the default 'web' guard user (null if not logged in to frontend)
-            return \Illuminate\Support\Facades\Auth::guard('admin')->check();
+            return Auth::guard('admin')->check();
         });
     }
 }

@@ -7,18 +7,18 @@
     $rcoinEnabled = (bool) \App\Models\Setting::get('rcoin_enabled', true);
 
     $features = [
-        ['icon' => 'fast.png',            'title' => 'Effortless and quick',      'desc' => 'Pick, pay and receive in seconds. No queues, no waiting, no friction.'],
+        ['icon' => 'fast.webp',            'title' => 'Effortless and quick',      'desc' => 'Pick, pay and receive in seconds. No queues, no waiting, no friction.'],
         ['icon' => 'secure payments.svg', 'title' => 'Privacy and security',       'desc' => 'Your details and every payment are protected with strong security at each step.'],
         ['icon' => 'wide selection.svg',  'title' => 'Wide selection of products', 'desc' => 'Gift cards, eSIMs, mobile top-ups and bill payments from across the world.'],
     ];
 
     $giftLogos = collect([
-        ['src' => 'apple.png',      'name' => 'Apple',       'tagline' => 'For everything Apple',     'color' => '#a2aaad'],
-        ['src' => 'amazon.png',     'name' => 'Amazon',      'tagline' => 'Shop millions of items',   'color' => '#ff9900'],
-        ['src' => 'steam.png',      'name' => 'Steam',       'tagline' => 'Games and more',           'color' => '#1b2838'],
-        ['src' => 'playstation.png','name' => 'PlayStation', 'tagline' => 'Play has no limits',       'color' => '#0070d1'],
+        ['src' => 'apple.webp',      'name' => 'Apple',       'tagline' => 'For everything Apple',     'color' => '#a2aaad'],
+        ['src' => 'amazon.webp',     'name' => 'Amazon',      'tagline' => 'Shop millions of items',   'color' => '#ff9900'],
+        ['src' => 'steam.webp',      'name' => 'Steam',       'tagline' => 'Games and more',           'color' => '#1b2838'],
+        ['src' => 'playstation.webp','name' => 'PlayStation', 'tagline' => 'Play has no limits',       'color' => '#0070d1'],
         ['src' => 'netflix.webp',   'name' => 'Netflix',     'tagline' => 'Stories without limits',   'color' => '#e50914'],
-        ['src' => 'googleplay.png', 'name' => 'Google Play', 'tagline' => 'Apps, games and more',     'color' => '#34a853'],
+        ['src' => 'googleplay.webp', 'name' => 'Google Play', 'tagline' => 'Apps, games and more',     'color' => '#34a853'],
         ['src' => 'spotify.webp',   'name' => 'Spotify',     'tagline' => 'Music for everyone',       'color' => '#1db954'],
         ['src' => 'nintendo.webp',  'name' => 'Nintendo',    'tagline' => 'Play anywhere',            'color' => '#e60012'],
         ['src' => 'twitch.webp',    'name' => 'Twitch',      'tagline' => 'Support your streamers',   'color' => '#9146ff'],
@@ -27,9 +27,9 @@
     // 'mono' => flatten the blue line-art icon to black in light mode + white in
     // dark mode (brightness-0 dark:invert). Coloured crypto logos stay as-is.
     $payments = [
-        ['src' => 'credit card payment.png',    'name' => 'Card',          'mono' => true],
-        ['src' => 'apply pay.png',              'name' => 'Apple Pay',     'mono' => true],
-        ['src' => 'Bank transfer.png',          'name' => 'Bank Transfer', 'mono' => true],
+        ['src' => 'credit card payment.webp',    'name' => 'Card',          'mono' => true],
+        ['src' => 'apply pay.webp',              'name' => 'Apple Pay',     'mono' => true],
+        ['src' => 'Bank transfer.webp',          'name' => 'Bank Transfer', 'mono' => true],
         ['src' => 'MOMO.svg',                   'name' => 'Mobile Money', 'mono' => true],
         ['src' => 'BTC.svg',                    'name' => 'Bitcoin'],
         ['src' => 'USDT.svg',                   'name' => 'USDT'],
@@ -166,7 +166,7 @@
                 <div class="mx-auto w-full max-w-sm rounded-[24px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <div class="flex items-center gap-3">
                         <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-zinc-50 ring-1 ring-zinc-100">
-                            <img src="{{ $img('amazon.png') }}" alt="" class="h-7 w-7 object-contain" loading="lazy">
+                            <img src="{{ $img('amazon.webp') }}" alt="" class="h-7 w-7 object-contain" loading="lazy">
                         </span>
                         <div>
                             <p class="text-sm font-bold text-zinc-900">Amazon Gift Card</p>
@@ -248,7 +248,7 @@
             </div>
             <div class="order-1 lg:order-2">
                 <div class="mx-auto w-full max-w-md overflow-hidden rounded-[24px] bg-blue-50 p-6 ring-1 ring-zinc-100">
-                    <img src="{{ $img('step 3.png') }}" alt="Enjoy your product instantly" class="mx-auto h-auto w-full max-w-sm object-contain" loading="lazy">
+                    <img src="{{ $img('step 3.webp') }}" alt="Enjoy your product instantly" class="mx-auto h-auto w-full max-w-sm object-contain" loading="lazy">
                 </div>
             </div>
         </div>
@@ -267,9 +267,9 @@
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
                 </a>
                 @guest
-                    <a href="{{ route('register') }}" wire:navigate class="inline-flex items-center justify-center gap-2 rounded-[6px] border border-white/40 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+                    <button type="button" @click="$dispatch('open-auth-modal', { mode: 'register' })" class="inline-flex items-center justify-center gap-2 rounded-[6px] border border-white/40 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
                         Create an account
-                    </a>
+                    </button>
                 @endguest
             </div>
         </div>

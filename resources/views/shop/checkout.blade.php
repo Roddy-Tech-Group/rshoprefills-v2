@@ -63,6 +63,16 @@
             </div>
         @endif
 
+        {{-- features.checkout_enabled kill-switch banner. Mirrors the server-side
+             abort at CheckoutController::process() so users see the paused state
+             upfront instead of bouncing off a 503 on submit. --}}
+        <x-paused-banner
+            flag="checkout"
+            title="Checkout is temporarily paused"
+            message="New orders are currently unavailable. Your cart is saved and you can try again shortly."
+            class="mt-4"
+        />
+
         <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
@@ -75,7 +85,7 @@
 
             {{-- Empty cart --}}
             <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white px-6 py-20 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <img src="{{ asset('assets/' . rawurlencode('Empty cart.png')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
+                <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
                 <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
@@ -306,13 +316,15 @@
                         </div>
                     </div>
 
-                    {{-- Delivery email --}}
+                    {{-- Delivery email - doubles as a gifting field: drop a
+                         friend's email here to send the redemption codes
+                         straight to them instead of yourself. --}}
                     <div class="mt-4">
-                        <label for="delivery_email" class="text-sm font-semibold text-zinc-900">Delivery email</label>
-                        <p class="mt-0.5 text-xs text-zinc-600">Redemption codes are emailed here right after payment.</p>
+                        <label for="delivery_email" class="text-sm font-semibold text-zinc-900">Delivery email or send as a gift</label>
+                        <p class="mt-0.5 text-xs text-zinc-600">Codes are emailed to this address right after payment. Use a friend's email to send it as a gift.</p>
                         <input id="delivery_email" name="delivery_email" type="email" required
                             value="{{ old('delivery_email', auth()->user()?->email) }}"
-                            placeholder="you@example.com" class="{{ $fieldClass }}">
+                            placeholder="you@example.com or friend@example.com" class="{{ $fieldClass }}">
                         @error('delivery_email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
 
@@ -322,9 +334,14 @@
                             <button type="button" @click="method = m.key"
                                 :class="method === m.key ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500/20' : 'border-zinc-200 hover:border-zinc-300'"
                                 class="flex items-start gap-2.5 rounded-[10px] border bg-white px-3 py-2.5 text-left transition duration-150 active:scale-[0.98]">
-                                <span class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200">
+                                <span class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 dark:bg-white/5 dark:ring-white/15">
                                     <template x-if="m.icon">
-                                        <img :src="m.icon" alt="" class="h-5 w-5 object-contain" loading="lazy">
+                                        {{-- Card + Apple Pay icons are monochrome glyphs: force them
+                                             black in light mode, white in dark mode. The other payment
+                                             icons (MoMo, crypto, wallet, bank) keep their brand colors. --}}
+                                        <img :src="m.icon" alt=""
+                                             :class="['h-5 w-5 object-contain', (m.key === 'card' || m.key === 'apple_pay') ? 'brightness-0 dark:invert' : '']"
+                                             loading="lazy">
                                     </template>
                                 </span>
                                 <span class="min-w-0 flex-1">
@@ -505,6 +522,27 @@
                         </div>
                     </div>
 
+                    {{-- Hosted-redirect methods (USSD, Pay With Bank, Bank QR,
+                         Mobile Wallet) all share the same "you'll finish on
+                         the next screen" panel. Each gets a tiny method-specific
+                         hint so the customer knows what to expect (dial code,
+                         bank login, QR scan, e-wallet pin). --}}
+                    @php
+                        $hostedMethods = [
+                            'ussd'           => ['title' => 'USSD',           'hint' => 'You will dial a short code on your phone to authorise the payment.'],
+                            'pay_with_bank'  => ['title' => 'Pay With Bank',  'hint' => 'You will sign in to your internet or mobile banking to complete the payment.'],
+                            'bank_qr'        => ['title' => 'Bank QR (NQR)',  'hint' => 'You will scan a QR code with your bank app to confirm the payment.'],
+                            'mobile_wallet'  => ['title' => 'Mobile Wallet',  'hint' => 'You will authorise the payment inside your mobile wallet app.'],
+                        ];
+                    @endphp
+                    @foreach ($hostedMethods as $key => $meta)
+                        <div x-show="method === '{{ $key }}'" x-collapse x-cloak class="mt-5 rounded-[10px] bg-blue-50 px-4 py-4 ring-1 ring-blue-100">
+                            <p class="text-sm font-bold text-blue-900">{{ $meta['title'] }}</p>
+                            <p class="mt-1 text-xs leading-relaxed text-blue-800/90">{{ $meta['hint'] }}</p>
+                            <p class="mt-2 text-[11px] text-blue-700/80">After you tap Continue we will redirect you to our payment partner to finish the payment safely.</p>
+                        </div>
+                    @endforeach
+
                     @error('payment_method') <p class="mt-3 text-xs text-red-600">{{ $message }}</p> @enderror
 
                     {{-- Total --}}
@@ -526,13 +564,12 @@
                         </p>
                     </div>
 
-                    {{-- Turnstile --}}
-                    @if(config('services.turnstile.enabled') && config('services.turnstile.enforce_checkout', true))
-                        <div wire:ignore class="mt-4">
-                            <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-action="checkout" data-theme="light"></div>
-                            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-                        </div>
-                    @endif
+                    {{-- Turnstile. Uses the shared explicit-render widget so
+                         it mounts under the storefront layout's loader. The
+                         hidden input "cf-turnstile-response" is auto-injected
+                         into this form by Cloudflare on success, then picked
+                         up by CheckoutController::process(). --}}
+                    <x-turnstile-widget action="checkout" context="checkout" class="mt-4" />
 
                     {{-- Continue --}}
                     @auth
@@ -554,9 +591,9 @@
                             </template>
                         </button>
                     @else
-                        <a href="{{ route('login') }}" wire:navigate class="mt-4 flex w-full items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700">
+                        <button type="button" @click="$dispatch('open-auth-modal', { mode: 'login' })" class="mt-4 flex w-full items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700">
                             Sign in to pay
-                        </a>
+                        </button>
                         <p class="mt-2 text-center text-xs text-zinc-600">You need an account to complete a purchase.</p>
                     @endauth
 
@@ -867,24 +904,49 @@
                 applyRcoin: '',
 
                 allMethods: [
-                    { key: 'card', label: 'Card', desc: 'Visa, Mastercard', icon: '/assets/credit%20card%20payment.png' },
-                    { key: 'mobile_money', label: 'Mobile Money', desc: 'MTN, Orange, Vodafone', icon: '/assets/pay%20with%20crypto%20momo%20%2B.png' },
-                    { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account', icon: '/assets/Bank%20transfer.png' },
-                    { key: 'apple_pay', label: 'Apple Pay', desc: 'Pay via Apple Wallet', icon: '/assets/apply%20pay.png' },
-                    { key: 'crypto', label: 'Crypto', desc: 'USDT, BTC, ETH and more', icon: '/assets/USDT.svg' },
-                    { key: 'wallet', label: 'Wallet', desc: 'Pay with wallet balance', icon: '/assets/Wallet.svg' }
+                    { key: 'card',          label: 'Card',          desc: 'Visa, Mastercard',           icon: '/assets/credit%20card%20payment.webp' },
+                    { key: 'mobile_money',  label: 'Mobile Money',  desc: 'MTN, Orange, Vodafone',      icon: '/assets/pay%20with%20crypto%20momo%20%2B.webp' },
+                    { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account',    icon: '/assets/Bank%20transfer.webp' },
+                    // New: covers Flutterwave's "Pay With Bank" (internet banking
+                    // redirect) for NGN / GBP / EUR.
+                    { key: 'pay_with_bank', label: 'Pay With Bank', desc: 'Internet & mobile banking',  icon: '/assets/Bank%20transfer.webp' },
+                    // New: USSD dial codes (Nigeria). Customer dials a code on
+                    // their phone to authorise the payment.
+                    { key: 'ussd',          label: 'USSD',          desc: 'Dial a code on your phone',  icon: '/assets/credit%20card%20payment.webp' },
+                    // New: scan-to-pay QR (Nigerian banks).
+                    { key: 'bank_qr',       label: 'Bank QR',       desc: 'Scan to pay in your bank app', icon: '/assets/credit%20card%20payment.webp' },
+                    // New: NGN digital wallets (OPay / eNaira). Provider name
+                    // hidden per project convention; admin reconciliation still
+                    // sees the specific provider on the order.
+                    { key: 'mobile_wallet', label: 'Mobile Wallet', desc: 'Pay with a Nigerian e-wallet', icon: '/assets/Wallet.svg' },
+                    { key: 'apple_pay',     label: 'Apple Pay',     desc: 'Pay via Apple Wallet',       icon: '/assets/apply%20pay.webp' },
+                    { key: 'crypto',        label: 'Crypto',        desc: 'USDT, BTC, ETH and more',    icon: '/assets/USDT.svg' },
+                    { key: 'wallet',        label: 'Wallet',        desc: 'Pay with wallet balance',    icon: '/assets/Wallet.svg' }
                 ],
 
                 getFilteredMethods() {
                     const currency = this.$store.cart.currency;
+                    // Currency -> allowed method keys. Mirrors what's enabled on
+                    // the Flutterwave dashboard so we never offer a method that
+                    // their modal would then reject. Order matters: it's the
+                    // order tabs render in the grid.
+                    // Ordering is by DOMINANT local method first so the customer
+                    // sees their familiar option at top-left of the grid:
+                    //   - Francophone Africa (XAF/XOF) → MTN MoMo first
+                    //   - Nigeria (NGN) → Bank Transfer first (most-used FW method)
+                    //   - Ghana / Kenya / Uganda / Rwanda → Mobile money first
+                    //   - US / EU / UK → Card first, crypto for the savvy users
                     const mapping = {
-                        'USD': ['card', 'apple_pay', 'crypto', 'wallet'],
-                        'EUR': ['card', 'apple_pay', 'crypto', 'wallet'],
-                        'GBP': ['card', 'apple_pay', 'crypto', 'wallet'],
-                        'NGN': ['card', 'apple_pay', 'bank_transfer', 'crypto', 'wallet'],
-                        'GHS': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
-                        'XAF': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
-                        'XOF': ['card', 'apple_pay', 'mobile_money', 'crypto', 'wallet'],
+                        'USD': ['card', 'crypto', 'apple_pay', 'wallet'],
+                        'EUR': ['card', 'pay_with_bank', 'crypto', 'apple_pay', 'wallet'],
+                        'GBP': ['card', 'pay_with_bank', 'crypto', 'apple_pay', 'wallet'],
+                        'NGN': ['bank_transfer', 'card', 'pay_with_bank', 'ussd', 'bank_qr', 'mobile_wallet', 'apple_pay', 'crypto', 'wallet'],
+                        'GHS': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'XAF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'XOF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'KES': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'UGX': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'RWF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
                     };
                     const allowedKeys = mapping[currency] || ['card', 'apple_pay', 'crypto'];
                     return this.allMethods.filter(m => {
@@ -1210,6 +1272,12 @@
                         } else if (this.method === 'bank_transfer') {
                             this.paymentState = 'processing';
                             await this.paySession('bank_transfer', {});
+                        } else if (['ussd', 'pay_with_bank', 'bank_qr', 'mobile_wallet'].includes(this.method)) {
+                            // Hosted-redirect family. paySession() will receive
+                            // status === 'awaiting_redirect' from the API and
+                            // send the customer to Flutterwave's hosted page.
+                            this.paymentState = 'processing';
+                            await this.paySession(this.method, {});
                         }
                     } catch (err) {
                         this.submitting = false;
@@ -1318,6 +1386,18 @@
                     if (status === 'confirmed') {
                         this.paymentState = 'success';
                         setTimeout(() => { window.location.href = this.redirectUrl; }, 2000);
+                    } else if (status === 'awaiting_redirect') {
+                        // Hosted-checkout methods (USSD / Pay With Bank /
+                        // Bank QR / Mobile Wallet). The API has returned a
+                        // Flutterwave-hosted URL; send the customer there and
+                        // they'll come back through /checkout/return.
+                        const url = sessionData.payment_payload?.redirect_url;
+                        if (url) {
+                            window.location.href = url;
+                            return;
+                        }
+                        this.paymentState = 'error';
+                        this.errorMessage = 'Could not start the payment. Please try a different method.';
                     } else if (status === 'failed') {
                         this.paymentState = 'error';
                         this.errorMessage = sessionData.payment_payload?.failure_reason || 'Transaction could not be completed.';

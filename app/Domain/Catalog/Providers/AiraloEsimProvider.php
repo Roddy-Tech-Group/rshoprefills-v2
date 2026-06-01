@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Log;
 class AiraloEsimProvider implements ProviderInterface
 {
     private string $baseUrl;
+
     private string $clientId;
+
     private string $clientSecret;
 
     public function __construct()

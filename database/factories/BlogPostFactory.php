@@ -20,7 +20,7 @@ class BlogPostFactory extends Factory
             'category' => fake()->randomElement(['Guides', 'Crypto', 'Travel', 'Security', 'Product']),
             'title' => $title,
             'excerpt' => fake()->sentence(12),
-            'image' => 'hero gift.png',
+            'image' => 'hero gift.webp',
             'body' => [fake()->paragraph(3), fake()->paragraph(3)],
             'author' => 'RshopRefills Team',
             'read_time' => fake()->numberBetween(2, 6).' min read',

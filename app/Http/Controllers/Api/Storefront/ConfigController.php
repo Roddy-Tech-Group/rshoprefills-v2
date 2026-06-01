@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Storefront;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
-use Illuminate\Http\Request;
 
 class ConfigController extends Controller
 {
@@ -19,7 +18,7 @@ class ConfigController extends Controller
                     'enabled' => (bool) Setting::get('redemption_enabled', true),
                     'min_rcoin' => (int) Setting::get('redemption_min_rcoin', 2000),
                     'max_percentage' => (float) Setting::get('redemption_max_percentage', 30.0),
-                ]
+                ],
             ],
             // Add other frontend configs here in the future
         ]);

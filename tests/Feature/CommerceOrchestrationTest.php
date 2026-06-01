@@ -2,26 +2,28 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Domain\Fulfillment\Services\FulfillmentProviderFactory;
+use App\Domain\Order\Enums\OrderStatus;
+use App\Domain\Order\Services\CheckoutService;
+use App\Domain\Order\Services\OrderService;
+use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Providers\WalletPaymentProvider;
+use App\Domain\Shared\Enums\Currency;
+use App\Jobs\FulfillOrderItemJob;
+use App\Jobs\VerifyPaymentJob;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\PaymentAttempt;
+use App\Models\PricingRule;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Subcategory;
 use App\Models\User;
 use App\Models\Wallet;
-use App\Domain\Shared\Enums\Currency;
-use App\Domain\Shared\Enums\TransactionCategory;
-use App\Domain\Order\Enums\OrderStatus;
-use App\Domain\Payment\Enums\PaymentStatus;
-use App\Domain\Fulfillment\Enums\FulfillmentStatus;
-use App\Jobs\FulfillOrderItemJob;
-use App\Jobs\VerifyPaymentJob;
-use App\Domain\Payment\Providers\WalletPaymentProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -30,7 +32,9 @@ class CommerceOrchestrationTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private ProductVariant $variant;
+
     private Cart $cart;
 
     protected function setUp(): void
@@ -73,10 +77,10 @@ class CommerceOrchestrationTest extends TestCase
         ]);
 
         // Clear pricing resolver cache
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
 
         // Establish pricing rule matching exactly the cart item's price
-        \App\Models\PricingRule::create([
+        PricingRule::create([
             'markup_type' => 'fixed',
             'markup_value' => 1.00,
             'is_active' => true,
@@ -175,7 +179,7 @@ class CommerceOrchestrationTest extends TestCase
         app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($this->user, '5283');
 
         // Place order directly via service
-        $order = app(\App\Domain\Order\Services\CheckoutService::class)->placeOrder(
+        $order = app(CheckoutService::class)->placeOrder(
             user: $this->user,
             cart: $this->cart,
             paymentMethod: 'wallet',
@@ -192,8 +196,8 @@ class CommerceOrchestrationTest extends TestCase
         // Execute FulfillOrderItemJob synchronously
         $job = new FulfillOrderItemJob($orderItem);
         $job->handle(
-            app(\App\Domain\Fulfillment\Services\FulfillmentProviderFactory::class),
-            app(\App\Domain\Order\Services\OrderService::class),
+            app(FulfillmentProviderFactory::class),
+            app(OrderService::class),
             app(WalletPaymentProvider::class)
         );
 
@@ -204,8 +208,8 @@ class CommerceOrchestrationTest extends TestCase
 
         // Verify wallet debit finalized
         $wallet->refresh();
-        $this->assertEquals(89.00, (float)$wallet->balance);
-        $this->assertEquals(0.00, (float)$wallet->locked_balance);
+        $this->assertEquals(89.00, (float) $wallet->balance);
+        $this->assertEquals(0.00, (float) $wallet->locked_balance);
 
         // Verify order completed
         $order->refresh();
@@ -229,7 +233,7 @@ class CommerceOrchestrationTest extends TestCase
                 'id',
                 'order_number',
                 'checkout_url',
-            ]
+            ],
         ]);
 
         $order = Order::first();
@@ -242,7 +246,7 @@ class CommerceOrchestrationTest extends TestCase
         Queue::fake([VerifyPaymentJob::class]);
 
         // Place external order first
-        $order = app(\App\Domain\Order\Services\CheckoutService::class)->placeOrder(
+        $order = app(CheckoutService::class)->placeOrder(
             user: $this->user,
             cart: $this->cart,
             paymentMethod: 'flutterwave',

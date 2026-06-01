@@ -8,6 +8,7 @@ use App\Jobs\SyncZenditEsimsJob;
 use App\Jobs\SyncZenditGiftCardsJob;
 use App\Jobs\SyncZenditTopupsJob;
 use App\Models\Coupon;
+use App\Models\PricingRule;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
@@ -102,6 +103,58 @@ class AdminCatalogController extends Controller
         $variant->update(['manual_retail_price_usd' => null]);
 
         return response()->json(['manual_retail_price_usd' => null]);
+    }
+
+    /**
+     * Toggle a single variant's storefront availability. Disabled variants
+     * stop appearing in catalog listings + can't be added to cart.
+     */
+    public function setVariantAvailability(Request $request, ProductVariant $variant)
+    {
+        $validated = $request->validate(['is_available' => ['required', 'boolean']]);
+        $variant->update(['is_available' => (bool) $validated['is_available']]);
+
+        return response()->json(['is_available' => (bool) $variant->is_available]);
+    }
+
+    /**
+     * Upsert a per-product PricingRule directly from the product drawer.
+     * Creates one rule per product (product_id set, category/subcategory null)
+     * so the most-specific layer of the rules chain takes effect immediately.
+     */
+    public function setProductMarkup(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'markup_type' => ['required', 'in:percentage,fixed'],
+            'markup_value' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $rule = PricingRule::updateOrCreate(
+            ['product_id' => $product->id],
+            [
+                'category_id' => $product->category_id,
+                'subcategory_id' => $product->subcategory_id,
+                'markup_type' => $validated['markup_type'],
+                'markup_value' => $validated['markup_value'],
+                'is_active' => true,
+            ],
+        );
+
+        return response()->json([
+            'markup_type' => $rule->markup_type,
+            'markup_value' => (float) $rule->markup_value,
+        ]);
+    }
+
+    /**
+     * Remove the per-product PricingRule so pricing falls back to the
+     * subcategory / category / global rule chain.
+     */
+    public function clearProductMarkup(Product $product)
+    {
+        PricingRule::where('product_id', $product->id)->delete();
+
+        return response()->json(['markup_type' => null, 'markup_value' => null]);
     }
 
     /**

@@ -33,8 +33,8 @@
             'USDT' => 'USDT.svg',
             'BUSD' => 'USDT.svg',
             'SOL'  => 'SOLANA.svg',
-            'BNB'  => 'BNB.png',
-            'LTC'  => 'LTC.png',
+            'BNB'  => 'BNB.webp',
+            'LTC'  => 'LTC.webp',
             default => null,
         };
     };
@@ -63,6 +63,14 @@
             <p class="mt-1 text-sm text-zinc-600">Your balances across every currency you hold.</p>
         </div>
 
+        {{-- features.wallet_funding_enabled kill-switch banner. Existing
+             balances stay spendable; only new top-ups are paused. --}}
+        <x-paused-banner
+            flag="wallet_funding"
+            title="Wallet top-ups are temporarily paused"
+            message="You can still spend your existing balance. New top-ups will be back online shortly."
+        />
+
         {{-- Success banner after creating a wallet --}}
         @if (session('wallet_created'))
             <div class="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
@@ -73,16 +81,17 @@
             </div>
         @endif
 
-        {{-- Count summary (+ add-wallet action once at least one wallet exists, so a
-             customer can open another currency; the empty state carries it otherwise). --}}
-        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        {{-- Summary strip - count chip + add-wallet CTA. Glass surface with
+             a subtle ring + tinted shadow to lift it off the page bg without
+             feeling heavy. --}}
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-blue-900/[0.04] ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-white/10">
             <div class="flex min-w-0 items-center gap-4">
-                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100">
-                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6" loading="lazy">
+                <span class="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-blue-500 to-blue-700 shadow-sm shadow-blue-600/30">
+                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                 </span>
                 <div class="min-w-0">
-                    <p class="text-2xl font-bold tracking-tight text-zinc-900">{{ $walletCount }}</p>
-                    <p class="text-sm text-zinc-600">{{ \Illuminate\Support\Str::plural('wallet card', $walletCount) }} active</p>
+                    <p class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">{{ $walletCount }}</p>
+                    <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ \Illuminate\Support\Str::plural('wallet card', $walletCount) }} active</p>
                 </div>
             </div>
             @if ($walletCount > 0)
@@ -94,36 +103,53 @@
         @if ($walletCount > 0)
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($walletsPayload as $w)
-                    <div class="flex flex-col gap-4 rounded-2xl bg-blue-800 p-5 text-white shadow-sm shadow-black/10 ring-1 ring-white/10">
-                        <div class="flex items-start justify-between gap-3">
+                    {{-- Flat solid blue card: currency chip, large balance, then a
+                         hairline divider before the compact Top Up component.
+                         rounded-[10px] keeps it consistent with the rest of the
+                         dashboard. --}}
+                    <div
+                        class="group relative flex flex-col gap-4 overflow-hidden rounded-[10px] bg-blue-700 p-5 text-white shadow-lg shadow-blue-900/20 ring-1 ring-white/10 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-blue-900/30"
+                    >
+                        <div class="relative flex items-start justify-between gap-3">
                             <div class="min-w-0">
-                                <p class="text-xs font-semibold uppercase tracking-wider text-blue-100">Wallet Balance</p>
-                                <p class="mt-1.5 truncate text-2xl font-bold tracking-tight">{{ $w['formatted'] }}</p>
-                                <p class="mt-0.5 text-xs text-blue-100">{{ $w['code'] }} &middot; {{ $w['label'] }}</p>
+                                <div class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-100 ring-1 ring-white/15">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.9)]"></span>
+                                    Wallet Balance
+                                </div>
+                                <p class="mt-3 truncate text-3xl font-extrabold tracking-tight tabular-nums">{{ $w['formatted'] }}</p>
+                                <p class="mt-1 text-xs font-medium text-blue-100/90">{{ $w['code'] }} &middot; {{ $w['label'] }}</p>
                             </div>
-                            <span class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15">
+                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white/15 ring-1 ring-white/20 backdrop-blur-sm">
                                 @if ($w['icon'])
-                                    <img src="{{ $w['icon'] }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
+                                    <img src="{{ $w['icon'] }}" alt="" class="h-7 w-7 object-contain" loading="lazy">
                                 @else
-                                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-5 w-5 brightness-0 invert" loading="lazy">
+                                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                                 @endif
                             </span>
                         </div>
 
-                        {{-- In-card Top Up — fund-wallet Volt component, pre-set to this currency. --}}
-                        <livewire:dashboard.fund-wallet :currency="$w['code']" variant="compact" wire:key="wallet-fund-{{ $w['code'] }}" />
+                        {{-- Hairline divider so the Top Up button feels like its
+                             own action surface inside the card. --}}
+                        <div class="relative h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent" aria-hidden="true"></div>
+
+                        {{-- In-card Top Up - fund-wallet Volt component, pre-set to this currency. --}}
+                        <div class="relative">
+                            <livewire:dashboard.fund-wallet :currency="$w['code']" variant="compact" wire:key="wallet-fund-{{ $w['code'] }}" />
+                        </div>
                     </div>
                 @endforeach
             </div>
         @else
-            {{-- Empty state --}}
-            <div class="rounded-2xl bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
-                <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
-                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-7 w-7" loading="lazy">
+            {{-- Empty state - modern centered card with a soft tinted icon halo. --}}
+            <div class="relative overflow-hidden rounded-[10px] bg-white px-6 py-16 text-center shadow-sm shadow-blue-900/[0.04] ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-white/10">
+                {{-- Soft background glow behind the icon. --}}
+                <div class="pointer-events-none absolute left-1/2 top-8 h-32 w-32 -translate-x-1/2 rounded-full bg-blue-100/60 blur-2xl dark:bg-blue-500/10" aria-hidden="true"></div>
+                <span class="relative mx-auto flex h-16 w-16 items-center justify-center rounded-[10px] bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-600/30 ring-4 ring-white dark:ring-[#0c1a36]">
+                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-7 w-7 brightness-0 invert" loading="lazy">
                 </span>
-                <p class="mt-4 text-base font-semibold text-zinc-900">No wallet found</p>
-                <p class="mt-1 text-sm text-zinc-600">Your wallet is normally set up automatically. If it didn't, create one here to get started.</p>
-                <div class="mt-5 flex justify-center">
+                <p class="relative mt-5 text-lg font-bold text-zinc-900 dark:text-white">No wallet yet</p>
+                <p class="relative mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Your wallet is normally set up automatically. If it did not, create one here to get started.</p>
+                <div class="relative mt-6 flex justify-center">
                     <livewire:dashboard.create-wallet wire:key="create-wallet-empty" />
                 </div>
             </div>

@@ -9,15 +9,18 @@ use App\Domain\Notification\Listeners\SendFulfillmentNotificationListener;
 use App\Domain\Notification\Listeners\SendOrderConfirmationListener;
 use App\Domain\Notification\Listeners\SendWalletCreditNotificationListener;
 use App\Domain\Notification\Listeners\SendWalletDebitNotificationListener;
+use App\Domain\Notification\Listeners\SendWalletFundingFailedNotificationListener;
 use App\Domain\Notification\Listeners\SendWelcomeEmailListener;
 use App\Domain\Notification\Providers\MailProviderInterface;
 use App\Domain\Notification\Providers\ResendProvider;
+use App\Domain\Wallet\Events\FundingFailed;
 use App\Domain\Wallet\Events\WalletCredited;
 use App\Domain\Wallet\Events\WalletDebited;
 use App\Http\View\Composers\CartComposer;
 use App\Listeners\CommerceNotificationListener;
 use App\Listeners\CreateWalletForNewUser;
 use App\Listeners\TransactionPinNotificationListener;
+use App\Support\FeatureFlag;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
@@ -48,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(WalletCredited::class, SendWalletCreditNotificationListener::class);
         Event::listen(WalletDebited::class, SendWalletDebitNotificationListener::class);
+        // Customer notification when a top-up is rejected by the gateway.
+        // Pairs with the WalletCredited listener so both outcomes surface
+        // in the bell feed, not just successes.
+        Event::listen(FundingFailed::class, SendWalletFundingFailedNotificationListener::class);
 
         Event::subscribe(SendOrderConfirmationListener::class);
         Event::subscribe(SendFulfillmentNotificationListener::class);
@@ -71,5 +78,11 @@ class AppServiceProvider extends ServiceProvider
         // to evolve currency rendering as new codes / locales come online.
         Blade::directive('money', fn ($expr) => "<?php echo \App\Domain\Shared\Services\Money::format($expr); ?>");
         Blade::directive('moneyCode', fn ($expr) => "<?php echo \App\Domain\Shared\Services\Money::codeAmount($expr); ?>");
+
+        // @feature('checkout') ... @endfeature       - render when ON
+        // @unlessfeature('signup') ... @endfeature   - render when OFF
+        // Reads features.<name>_enabled from SiteSetting (cached, on/off toggles
+        // managed from the admin System Settings page).
+        Blade::if('feature', fn (string $name) => FeatureFlag::on($name));
     }
 }

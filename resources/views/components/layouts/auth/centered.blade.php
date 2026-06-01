@@ -1,20 +1,11 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{ $title ?? config('app.name', 'RshopRefills') }}</title>
-        <meta name="description" content="Browse GiftCards, Esims, Topups, Book Flights and Stays from the comfort of your Home less stress Reliable trusted and world wide">
+        @include('partials.head')
 
-        <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
-        <link rel="apple-touch-icon" href="{{ asset('assets/PWAicon.png') }}">
+        <link href="https://fonts.bunny.net/css?family=instrument-sans:700" rel="stylesheet" />
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
-
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-        {{-- App-style slide-up sheet entrance — same animation pattern as the split auth layout. --}}
+        {{-- App-style slide-up sheet entrance - same animation pattern as the split auth layout. --}}
         <style>
             @keyframes authSlideUp {
                 from { transform: translateY(110px) scale(0.97); opacity: 0; }
@@ -45,7 +36,7 @@
                     <a href="{{ route('home') }}" wire:navigate class="flex shrink-0 flex-col items-center rounded-[10px] group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                         <span class="flex h-10 items-center">
                             <img
-                                src="{{ asset('assets/Rshoprefillslogo.png') }}"
+                                src="{{ asset('assets/Rshoprefillslogo.webp') }}"
                                 alt="RshopRefills"
                                 class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                             />

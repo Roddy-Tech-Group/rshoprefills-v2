@@ -14,7 +14,7 @@
         <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
-                    src="{{ asset('assets/' . rawurlencode('Pick a product first process.png')) }}"
+                    src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
                     alt=""
                     class="h-full w-full object-cover"
                     loading="lazy"
@@ -32,7 +32,7 @@
         <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
-                    src="{{ asset('assets/' . rawurlencode('pay with crypto momo +.png')) }}"
+                    src="{{ asset('assets/' . rawurlencode('pay with crypto momo +.webp')) }}"
                     alt=""
                     class="h-full w-full object-cover"
                     loading="lazy"
@@ -50,7 +50,7 @@
         <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
                 <img
-                    src="{{ asset('assets/' . rawurlencode('step 3.png')) }}"
+                    src="{{ asset('assets/' . rawurlencode('step 3.webp')) }}"
                     alt=""
                     class="h-full w-full object-cover"
                     loading="lazy"

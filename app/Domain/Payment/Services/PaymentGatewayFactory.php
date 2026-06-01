@@ -3,9 +3,9 @@
 namespace App\Domain\Payment\Services;
 
 use App\Domain\Payment\Interfaces\PaymentProviderInterface;
-use App\Domain\Payment\Providers\WalletPaymentProvider;
 use App\Domain\Payment\Providers\FlutterwavePaymentProvider;
 use App\Domain\Payment\Providers\NowPaymentsProvider;
+use App\Domain\Payment\Providers\WalletPaymentProvider;
 use App\Domain\Shared\Enums\PaymentGateway;
 
 class PaymentGatewayFactory

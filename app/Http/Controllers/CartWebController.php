@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
+use App\Domain\Wallet\Exceptions\StaleRateException;
+use App\Domain\Wallet\Services\CurrencyRateService;
 use App\Models\Cart;
-use App\Models\CurrencyRate;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\FeatureFlag;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -27,6 +30,7 @@ class CartWebController extends Controller
     public function __construct(
         private CartManager $cartManager,
         private CartPricingService $pricing,
+        private CurrencyRateService $currencyRateService,
     ) {}
 
     /**
@@ -47,6 +51,15 @@ class CartWebController extends Controller
 
     public function add(Request $request)
     {
+        // features.guest_cart_enabled kill-switch. Off = guests get a 401
+        // and must sign in before adding to cart. Authed users always pass.
+        if (! $request->user() && ! FeatureFlag::on('guest_cart')) {
+            return response()->json([
+                'message' => 'Please sign in to add items to your cart.',
+                'auth_required' => true,
+            ], 401);
+        }
+
         $data = $request->validate([
             'product_variant_id' => ['required', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1'],
@@ -130,9 +143,27 @@ class CartWebController extends Controller
         $cart->load('items.product.category', 'items.variant');
         $totals = $this->pricing->calculateCartTotals($cart->items);
 
-        $rate = CurrencyRate::resolve($currencyCode);
+        // Route the conversion through CurrencyRateService so the same freshness
+        // gate that protects checkout protects the cart display too. If the rate
+        // is critically stale (> 48h, StaleRateException) we degrade to raw USD
+        // and flag the response so the frontend can show a "prices in USD -
+        // rates refreshing" banner, instead of silently showing the customer a
+        // stale price they could then check out at.
+        $resolvedCurrency = strtoupper(trim((string) $currencyCode)) ?: 'USD';
+        $rateStale = false;
+        try {
+            $exchangeRate = $this->currencyRateService->resolveRate('USD', $resolvedCurrency);
+        } catch (StaleRateException $e) {
+            Log::warning('Cart fell back to USD display due to critically stale rate.', [
+                'requested_currency' => $resolvedCurrency,
+                'error' => $e->getMessage(),
+            ]);
+            $resolvedCurrency = 'USD';
+            $exchangeRate = 1.0;
+            $rateStale = true;
+        }
 
-        $items = $cart->items->map(function ($item) use ($rate) {
+        $items = $cart->items->map(function ($item) use ($exchangeRate) {
             $product = $item->product;
             $variant = $item->variant;
             $name = $product
@@ -150,9 +181,9 @@ class CartWebController extends Controller
                 'face_label' => $this->faceLabel($variant),
                 'quantity' => (int) $item->quantity,
                 'unit_price_usd' => round($unitUsd, 2),
-                'unit_price' => round($rate->convert($unitUsd), 2),
+                'unit_price' => round($unitUsd * $exchangeRate, 2),
                 'line_total_usd' => round($lineUsd, 2),
-                'line_total' => round($rate->convert($lineUsd), 2),
+                'line_total' => round($lineUsd * $exchangeRate, 2),
                 // Category drives per-item copy on the cart + checkout pages
                 // (gift-card region notice, top-up phone hint, eSIM QR hint).
                 'category_slug' => $product?->category?->slug,
@@ -164,11 +195,12 @@ class CartWebController extends Controller
 
         $response = response()->json([
             'count' => (int) $cart->items->sum('quantity'),
-            'currency' => $rate->code,
-            'currency_symbol' => Product::currencySymbol($rate->code),
-            'rate' => (float) $rate->rate_per_usd,
+            'currency' => $resolvedCurrency,
+            'currency_symbol' => Product::currencySymbol($resolvedCurrency),
+            'rate' => $exchangeRate,
+            'rate_stale' => $rateStale,
             'subtotal_usd' => round($subtotalUsd, 2),
-            'subtotal' => round($rate->convert($subtotalUsd), 2),
+            'subtotal' => round($subtotalUsd * $exchangeRate, 2),
             'estimated_rcoin_reward' => (int) ($totals['estimated_rcoin_reward'] ?? 0),
             'items' => $items,
         ]);

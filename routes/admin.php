@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AdminReportExportController;
 use App\Http\Controllers\Admin\AdminRewardAnalyticsController;
 use App\Http\Controllers\Admin\AdminRewardSettingsController;
 use App\Http\Controllers\Admin\AdminSreController;
+use App\Http\Controllers\Admin\AdminTransactionExportController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
 use App\Http\Controllers\ThemeController;
@@ -126,16 +127,28 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('customers/{user}/rcoin-multiplier', [AdminCustomerController::class, 'setRcoinMultiplier'])->name('customer.rcoin-multiplier');
         Route::post('customers/{user}/wallet-adjust', [AdminCustomerController::class, 'adjustWalletBalance'])->name('customer.wallet-adjust');
         Route::post('customers/{user}/message', [AdminCustomerController::class, 'message'])->name('customer.message');
+        Route::post('customers/{user}/reset-pin', [AdminCustomerController::class, 'resetTransactionPin'])->name('customer.reset-pin');
+        Route::post('customers/{user}/password-reset', [AdminCustomerController::class, 'sendPasswordReset'])->name('customer.password-reset');
+        Route::post('customers/{user}/login-as', [AdminCustomerController::class, 'loginAsCustomer'])->name('customer.login-as');
         // Friendly fallback: a GET on the same path (URL bar, back-button, link
         // prefetch) redirects to the customer page instead of 405ing.
         Route::get('customers/{user}/message', fn (User $user) => redirect()->route('admin.customer', $user));
         Route::view('transactions', 'admin.transactions')->name('transactions');
+        Route::get('transactions/export.csv', [AdminTransactionExportController::class, 'csv'])->name('transactions.export');
         Route::view('wallets', 'admin.wallets')->name('wallets');
         Volt::route('rates', 'admin.rates')->name('rates');
         Volt::route('account', 'admin.account')->name('account');
         Volt::route('notifications', 'admin.notifications')->name('notifications');
         Volt::route('reports', 'admin.reports')->name('reports');
         Route::get('reports/export.csv', [AdminReportExportController::class, 'csv'])->name('reports.export');
+
+        Volt::route('support-tickets', 'admin.support-tickets')->name('support-tickets');
+        Volt::route('admins', 'admin.admins')->name('admins');
+        Volt::route('pricing-rules', 'admin.pricing-rules')->name('pricing-rules');
+        Volt::route('newsletter', 'admin.newsletter')->name('newsletter');
+        Volt::route('settings', 'admin.system-settings')->name('settings');
+        Volt::route('api-settings', 'admin.api-settings')->name('api-settings');
+        Volt::route('account-activity', 'admin.account-activity')->name('account-activity');
 
         // Content (CMS) - stub Volt pages that list what's in the DB today.
         // CRUD UI lands in a follow-up; for now editors confirm data is wired.
@@ -202,6 +215,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // on a ProductVariant - the drawer is variant-level.
             Route::patch('variants/{variant}/price', [AdminCatalogController::class, 'setVariantPrice'])->name('variants.price.set');
             Route::delete('variants/{variant}/price', [AdminCatalogController::class, 'clearVariantPrice'])->name('variants.price.clear');
+            Route::patch('variants/{variant}/availability', [AdminCatalogController::class, 'setVariantAvailability'])->name('variants.availability');
+            Route::patch('products/{product}/markup', [AdminCatalogController::class, 'setProductMarkup'])->name('products.markup.set');
+            Route::delete('products/{product}/markup', [AdminCatalogController::class, 'clearProductMarkup'])->name('products.markup.clear');
             Route::get('variants/{variant}/coupons', [AdminCatalogController::class, 'listCoupons'])->name('variants.coupons.index');
             Route::post('variants/{variant}/coupons', [AdminCatalogController::class, 'createCoupon'])->name('variants.coupons.create');
             Route::delete('coupons/{coupon}', [AdminCatalogController::class, 'deleteCoupon'])->name('coupons.delete');

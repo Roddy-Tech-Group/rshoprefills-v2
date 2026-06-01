@@ -2,8 +2,8 @@
 
 namespace App\Domain\Wallet\Jobs;
 
-use App\Models\PaymentWebhook;
 use App\Domain\Wallet\Services\WalletFundingService;
+use App\Models\PaymentWebhook;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,6 +16,7 @@ class ProcessFundingWebhookJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
+
     public $backoff = [30, 60, 120];
 
     /**
@@ -36,6 +37,7 @@ class ProcessFundingWebhookJob implements ShouldQueue
 
         if (! $webhook) {
             Log::error("PaymentWebhook ID {$this->paymentWebhookId} not found during processing job.");
+
             return;
         }
 
@@ -52,7 +54,7 @@ class ProcessFundingWebhookJob implements ShouldQueue
             if ($eventType === 'charge.completed' || strtolower($status) === 'successful') {
                 if ($txRef && $transactionId) {
                     $fundingService->processSuccessfulFunding($txRef, (string) $transactionId, $payload);
-                    
+
                     $webhook->update([
                         'processed' => true,
                         'processing_status' => 'completed',
@@ -84,7 +86,7 @@ class ProcessFundingWebhookJob implements ShouldQueue
 
             $webhook->update([
                 'processing_status' => 'failed',
-                'exception_traces' => $e->getMessage() . PHP_EOL . $e->getTraceAsString(),
+                'exception_traces' => $e->getMessage().PHP_EOL.$e->getTraceAsString(),
             ]);
 
             throw $e;

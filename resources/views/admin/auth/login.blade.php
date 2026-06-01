@@ -8,7 +8,7 @@
             {{-- Admin chip --}}
             <div class="flex justify-center">
                 <span class="inline-flex items-center gap-1.5 rounded-[6px] bg-blue-300 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-black">
-                    <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="h-3.5 w-3.5" loading="lazy">
+                    <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="no-dark-invert h-3.5 w-3.5" loading="lazy">
                     Administrator
                 </span>
             </div>

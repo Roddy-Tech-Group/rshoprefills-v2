@@ -1,11 +1,11 @@
 /**
- * Entrance + scroll-reveal animations + Roddy Custom Hero animation with GSAP.
+ * Entrance + scroll-reveal animations with GSAP.
  *
  * GSAP is loaded via dynamic import so the page still works if the package
  * isn't installed yet. Run `npm i gsap` to enable animations.
  */
 async function initAnimations() {
-    let gsap, ScrollTrigger, InertiaPlugin;
+    let gsap, ScrollTrigger;
     try {
         ({ default: gsap } = await import('gsap'));
         ({ ScrollTrigger } = await import('gsap/ScrollTrigger'));
@@ -13,15 +13,6 @@ async function initAnimations() {
     } catch (err) {
         console.warn('[animations] gsap not available — skipping animations. Run `npm i gsap`.');
         return;
-    }
-
-    // InertiaPlugin is optional — only needed for the Roddy Custom Hero dots inertia.
-    try {
-        ({ InertiaPlugin } = await import('gsap/InertiaPlugin'));
-        gsap.registerPlugin(InertiaPlugin);
-    } catch (err) {
-        InertiaPlugin = null;
-        console.warn('[animations] InertiaPlugin not available — hero dots will fall back to simple physics.');
     }
 
     // Tear down any existing scroll triggers so they don't pile up after navigation.
@@ -83,174 +74,8 @@ async function initAnimations() {
         );
     });
 
-    // ----- Roddy Custom Hero animation with GSAP: interactive dots grid -----
-    initRoddyCustomHeroDots(gsap, !!InertiaPlugin);
-
     // Recalculate positions after the page settles.
     requestAnimationFrame(() => ScrollTrigger.refresh());
-}
-
-/**
- * Roddy Custom Hero animation with GSAP.
- * Builds a grid of dots inside any [data-dots-container-init] element.
- * Dots glow toward an active colour as the cursor approaches, get pushed
- * outward on fast motion, and respond to clicks with a radial shockwave.
- */
-function initRoddyCustomHeroDots(gsap, hasInertia) {
-    document.querySelectorAll('[data-dots-container-init]').forEach((container) => {
-        // Roddy Custom Hero animation with GSAP: configuration
-        const colors         = { base: 'rgba(113, 113, 122, 0.2)', active: '#3B82F6' };
-        const threshold      = 150;
-        const speedThreshold = 100;
-        const shockRadius    = 250;
-        const shockPower     = 5;
-        const maxSpeed       = 5000;
-        const centerHole     = true;
-
-        let dots = [];
-        let dotCenters = [];
-
-        function buildGrid() {
-            container.innerHTML = '';
-            dots = [];
-            dotCenters = [];
-
-            const style = getComputedStyle(container);
-            const dotPx = parseFloat(style.fontSize);
-            const gapPx = dotPx * 2;
-            const contW = container.clientWidth;
-            const contH = container.clientHeight;
-
-            const cols  = Math.floor((contW + gapPx) / (dotPx + gapPx));
-            const rows  = Math.floor((contH + gapPx) / (dotPx + gapPx));
-            const total = cols * rows;
-
-            const holeCols = centerHole ? (cols % 2 === 0 ? 4 : 5) : 0;
-            const holeRows = centerHole ? (rows % 2 === 0 ? 4 : 5) : 0;
-            const startCol = (cols - holeCols) / 2;
-            const startRow = (rows - holeRows) / 2;
-
-            for (let i = 0; i < total; i++) {
-                const row    = Math.floor(i / cols);
-                const col    = i % cols;
-                const isHole = centerHole &&
-                    row >= startRow && row < startRow + holeRows &&
-                    col >= startCol && col < startCol + holeCols;
-
-                const d = document.createElement('div');
-                d.classList.add('roddy-dot');
-
-                if (isHole) {
-                    d.style.visibility = 'hidden';
-                    d._isHole = true;
-                } else {
-                    gsap.set(d, { x: 0, y: 0, backgroundColor: colors.base });
-                    d._inertiaApplied = false;
-                }
-
-                container.appendChild(d);
-                dots.push(d);
-            }
-
-            requestAnimationFrame(() => {
-                dotCenters = dots
-                    .filter((d) => !d._isHole)
-                    .map((d) => {
-                        const r = d.getBoundingClientRect();
-                        return {
-                            el: d,
-                            x:  r.left + window.scrollX + r.width  / 2,
-                            y:  r.top  + window.scrollY + r.height / 2,
-                        };
-                    });
-            });
-        }
-
-        window.addEventListener('resize', buildGrid);
-        buildGrid();
-
-        // Roddy Custom Hero animation with GSAP: hover glow + inertia push
-        let lastTime = 0, lastX = 0, lastY = 0;
-
-        window.addEventListener('mousemove', (e) => {
-            const now = performance.now();
-            const dt  = now - lastTime || 16;
-            let   dx  = e.pageX - lastX;
-            let   dy  = e.pageY - lastY;
-            let   vx  = dx / dt * 1000;
-            let   vy  = dy / dt * 1000;
-            let speed = Math.hypot(vx, vy);
-
-            if (speed > maxSpeed) {
-                const scale = maxSpeed / speed;
-                vx *= scale; vy *= scale; speed = maxSpeed;
-            }
-
-            lastTime = now;
-            lastX    = e.pageX;
-            lastY    = e.pageY;
-
-            requestAnimationFrame(() => {
-                dotCenters.forEach(({ el, x, y }) => {
-                    const dist = Math.hypot(x - e.pageX, y - e.pageY);
-                    const t    = Math.max(0, 1 - dist / threshold);
-                    const col  = gsap.utils.interpolate(colors.base, colors.active, t);
-                    gsap.set(el, { backgroundColor: col });
-
-                    if (speed > speedThreshold && dist < threshold && !el._inertiaApplied) {
-                        el._inertiaApplied = true;
-                        const pushX = (x - e.pageX) + vx * 0.005;
-                        const pushY = (y - e.pageY) + vy * 0.005;
-
-                        pushDot(el, pushX, pushY, hasInertia);
-                    }
-                });
-            });
-        });
-
-        // Roddy Custom Hero animation with GSAP: click shockwave
-        window.addEventListener('click', (e) => {
-            dotCenters.forEach(({ el, x, y }) => {
-                const dist = Math.hypot(x - e.pageX, y - e.pageY);
-                if (dist < shockRadius && !el._inertiaApplied) {
-                    el._inertiaApplied = true;
-                    const falloff = Math.max(0, 1 - dist / shockRadius);
-                    const pushX   = (x - e.pageX) * shockPower * falloff;
-                    const pushY   = (y - e.pageY) * shockPower * falloff;
-
-                    pushDot(el, pushX, pushY, hasInertia);
-                }
-            });
-        });
-
-        function pushDot(el, pushX, pushY, useInertia) {
-            const settle = () => {
-                gsap.to(el, {
-                    x: 0,
-                    y: 0,
-                    duration: 1.5,
-                    ease: 'elastic.out(1, 0.75)',
-                });
-                el._inertiaApplied = false;
-            };
-
-            if (useInertia) {
-                gsap.to(el, {
-                    inertia: { x: pushX, y: pushY, resistance: 750 },
-                    onComplete: settle,
-                });
-            } else {
-                // Fallback when InertiaPlugin isn't available — quick push, then settle.
-                gsap.to(el, {
-                    x: pushX,
-                    y: pushY,
-                    duration: 0.3,
-                    ease: 'power2.out',
-                    onComplete: settle,
-                });
-            }
-        }
-    });
 }
 
 /**
@@ -582,6 +407,43 @@ document.addEventListener('alpine:init', () => {
 });
 
 /**
+ * Open Google OAuth in a centred popup window instead of full-page redirect.
+ * The popup lands on /auth/popup-complete after sign-in (success or failure);
+ * that page postMessages back here and closes itself. We listen for the
+ * message — on success we navigate to the dashboard, on cancel we just stay
+ * on the current page. Popup-blocker fallback: if window.open returns null,
+ * we navigate to the URL in the current tab so the user can still sign in.
+ */
+window.rshopOpenGoogleOAuth = function (href) {
+    const w = 500, h = 650;
+    const dualLeft  = (window.screenLeft !== undefined ? window.screenLeft : window.screenX) || 0;
+    const dualTop   = (window.screenTop  !== undefined ? window.screenTop  : window.screenY) || 0;
+    const winWidth  = window.innerWidth  || document.documentElement.clientWidth  || screen.width;
+    const winHeight = window.innerHeight || document.documentElement.clientHeight || screen.height;
+    const left = dualLeft + (winWidth  - w) / 2;
+    const top  = dualTop  + (winHeight - h) / 2;
+    const popup = window.open(href, 'rshop-google-oauth', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,noopener=no`);
+    if (! popup) {
+        // Popup blocked - fall back to a normal redirect so the user can still sign in.
+        window.location.href = href;
+        return;
+    }
+    popup.focus();
+    const onMessage = (event) => {
+        if (event.origin !== window.location.origin) { return; }
+        const data = event.data;
+        if (! data || data.source !== 'rshop-google-oauth') { return; }
+        window.removeEventListener('message', onMessage);
+        if (data.status === 'success') {
+            // Match the original full-redirect destination.
+            window.location.href = '/dashboard';
+        }
+        // status === 'cancelled' leaves the user on the current page.
+    };
+    window.addEventListener('message', onMessage);
+};
+
+/**
  * Live brand search dropdown for the storefront nav. Hits /api/search/brands?q=
  * with a small debounce, renders a dropdown of matching brands while the user
  * types. Pressing Enter submits the form to /gift-cards?q= for the full
@@ -712,63 +574,124 @@ window.dashboardSearch = function () {
 window.customerReviewsCarousel = function () {
     return {
         navigating: false,
-        animating: false,
+        tx: 0,
+        maxTx: 0,
+        cardW: 288,
+        gap: 20,
+        padLeft: 0,
+        savedDuration: '0.6s',
+        dragArmed: false,
+        dragging: false,
+        dragTarget: null,
+        dragPointerId: null,
+        dragStartX: 0,
+        dragStartTx: 0,
 
-        // Cubic ease-in-out — slow start, quick middle, gentle finish.
-        _ease(t) {
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        // Wire up the transform-based carousel: measure the content column
+        // padding, compute scroll bounds, snap to start. Matches the brand-row
+        // factory so both rows feel identical.
+        setup() {
+            const viewport = this.$refs.track;
+            const list     = this.$refs.list;
+            if (! viewport || ! list) return;
+
+            const card   = list.querySelector('article');
+            const header = this.$refs.header;
+            this.cardW   = card ? card.offsetWidth : 288;
+            this.gap     = window.innerWidth >= 640 ? 20 : 16;
+            // Measure the header content column (not the full-bleed section)
+            // so the first review card lines up with the "What our customers
+            // say" title on every viewport, including mobile.
+            this.padLeft = header
+                ? Math.round(header.getBoundingClientRect().left)
+                : Math.round(this.$el.getBoundingClientRect().left);
+            list.style.paddingLeft = this.padLeft + 'px';
+            this.tx = 0;
+            this.maxTx = Math.min(0, viewport.clientWidth - list.scrollWidth);
+            list.style.transform = 'translate3d(0, 0, 0)';
+
+            // Slow the slide down on long rows so a 20-card carousel doesn't
+            // feel hurried. Base 0.6s, +0.04s per item beyond 5, capped at 1.2s.
+            const itemCount = list.children.length;
+            const duration  = Math.min(1.2, 0.6 + 0.04 * Math.max(0, itemCount - 5));
+            this.savedDuration = duration.toFixed(2) + 's';
+            list.style.transitionDuration = this.savedDuration;
         },
 
-        // Animate the scroll position to `target` over ~620ms with rAF.
-        _scrollTo(target) {
-            const track = this.$refs.track;
-            if (! track) return;
-
-            const max = track.scrollWidth - track.clientWidth;
-            const start = track.scrollLeft;
-            const end = Math.max(0, Math.min(target, max));
-            const distance = end - start;
-            if (Math.abs(distance) < 1) return;
-
-            // Respect reduced-motion — jump straight there, no animation.
-            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                track.scrollLeft = end;
-                return;
-            }
-
-            const duration = 620;
-            const startedAt = performance.now();
-            this.animating = true;
-
-            const step = (now) => {
-                const progress = Math.min(1, (now - startedAt) / duration);
-                track.scrollLeft = start + distance * this._ease(progress);
-                if (progress < 1) {
-                    requestAnimationFrame(step);
-                } else {
-                    this.animating = false;
-                }
-            };
-            requestAnimationFrame(step);
-        },
-
-        // Advance one screenful; loop back to the start once the end is reached.
+        // Advance 2 cards per click on desktop / tablet, 1 on mobile. Loops back
+        // to the start once the end is reached (the original reviews-carousel
+        // contract; lets the row run forever from a single Next button).
         next() {
-            if (this.animating) return;
-            const track = this.$refs.track;
-            if (! track) return;
+            const list = this.$refs.list;
+            if (! list) return;
 
-            const card = track.querySelector('article');
-            const cardWidth = (card ? card.offsetWidth : 288) + 20; // card + gap
-            const max = track.scrollWidth - track.clientWidth;
-
-            if (track.scrollLeft >= max - 8) {
-                this._scrollTo(0);
+            if (this.tx <= this.maxTx + 1) {
+                this.tx = 0;
+                list.style.transform = 'translate3d(0, 0, 0)';
                 return;
             }
 
-            const perView = Math.max(1, Math.floor(track.clientWidth / cardWidth));
-            this._scrollTo(track.scrollLeft + perView * cardWidth);
+            const cardsPerStep = window.innerWidth >= 640 ? 2 : 1;
+            const step = cardsPerStep * (this.cardW + this.gap);
+            this.tx = Math.max(this.maxTx, this.tx - step);
+            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
+        },
+
+        // Touch / pointer drag for mobile + trackpad. Matches the brand-row
+        // implementation so both carousels feel identical when swiped.
+        //
+        // 8px movement threshold gates the drag commitment. Below it, the
+        // gesture is treated as a click - we do not capture the pointer,
+        // do not move the list, and do not snap on release - so reviews
+        // (and any clickable card inside the row) receive a clean click.
+        onDragStart(e) {
+            const list = this.$refs.list;
+            if (! list) return;
+            if (e.button !== undefined && e.button !== 0) return;
+            this.dragArmed = true;
+            this.dragging = false;
+            this.dragTarget = e.currentTarget;
+            this.dragPointerId = e.pointerId;
+            this.dragStartX = e.clientX;
+            this.dragStartTx = this.tx;
+        },
+        onDragMove(e) {
+            if (! this.dragArmed) return;
+            const list = this.$refs.list;
+            if (! list) return;
+            const delta = e.clientX - this.dragStartX;
+
+            if (! this.dragging && Math.abs(delta) < 8) return;
+
+            if (! this.dragging) {
+                this.dragging = true;
+                list.style.transitionDuration = '0s';
+                try { this.dragTarget?.setPointerCapture(this.dragPointerId); } catch (_) {}
+            }
+
+            const raw = this.dragStartTx + delta;
+            const next = raw > 0
+                ? raw * 0.35
+                : (raw < this.maxTx ? this.maxTx + (raw - this.maxTx) * 0.35 : raw);
+            list.style.transform = `translate3d(${next}px, 0, 0)`;
+        },
+        onDragEnd(e) {
+            if (! this.dragArmed) return;
+            const wasDragging = this.dragging;
+            this.dragArmed = false;
+            this.dragging = false;
+
+            if (! wasDragging) return;
+
+            const list = this.$refs.list;
+            if (! list) return;
+            list.style.transitionDuration = this.savedDuration;
+            const delta = e.clientX - this.dragStartX;
+            const step  = this.cardW + this.gap;
+            const projected = this.dragStartTx + delta;
+            const snapped   = Math.round(projected / step) * step;
+            this.tx = Math.max(this.maxTx, Math.min(0, snapped));
+            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
         },
     };
 };
@@ -1140,12 +1063,17 @@ window.kycDatePicker = function (initial = '') {
  *   })"
  */
 window.bestSellingCountriesMap = function (payload) {
-    const COUNTRIES = payload.countries || {};
-    const REGIONS = payload.regions || {};
+    // codeToContinent is reference data (ISO -> continent); never changes per
+    // request, so it stays as a const captured at init. The countries/regions
+    // payloads DO change when the Period or Product filter is clicked - they
+    // live on `this` so updateData() can mutate them without re-initializing
+    // the map (the rendered SVG would be lost on a re-init).
     const CODE_TO_CONTINENT = payload.codeToContinent || {};
 
     return {
         map: null,
+        countries: payload.countries || {},
+        regions: payload.regions || {},
         view: 'country',  // 'country' | 'region'
         continent: 'all', // 'all' | 'Africa' | 'Asia' | 'Europe' | 'North America' | 'South America' | 'Oceania'
 
@@ -1222,6 +1150,24 @@ window.bestSellingCountriesMap = function (payload) {
         setView(v) { this.view = v; },
         setContinent(c) { this.continent = c; },
 
+        // Called from the dashboard's Livewire layer (via the
+        // map-data-updated browser event) when the Period or Product filter
+        // changes. Swaps in the new aggregates and re-shades the SVG in
+        // place - the map stays interactive throughout.
+        //
+        // Livewire 3 wraps named params in different detail shapes depending
+        // on how the event is consumed: sometimes `{ params: [{ ... }] }`,
+        // sometimes the params spread directly onto detail. We accept both.
+        updateData(detail) {
+            if (! detail) return;
+            const payload = Array.isArray(detail?.params)
+                ? (detail.params[0] || {})
+                : detail;
+            this.countries = payload.countries || {};
+            this.regions   = payload.regions   || {};
+            this._refresh();
+        },
+
         // True when the country code belongs to the currently-selected
         // continent scope. Global ('all') passes everything.
         _inScope(code) {
@@ -1241,8 +1187,8 @@ window.bestSellingCountriesMap = function (payload) {
             // Country mode: shade per-country, filtered by continent scope.
             if (this.view === 'country') {
                 const out = {};
-                Object.keys(COUNTRIES).forEach((cc) => {
-                    if (this._inScope(cc)) { out[cc] = COUNTRIES[cc]; }
+                Object.keys(this.countries).forEach((cc) => {
+                    if (this._inScope(cc)) { out[cc] = this.countries[cc]; }
                 });
                 return out;
             }
@@ -1253,16 +1199,16 @@ window.bestSellingCountriesMap = function (payload) {
             Object.keys(CODE_TO_CONTINENT).forEach((cc) => {
                 if (!this._inScope(cc)) { return; }
                 const region = CODE_TO_CONTINENT[cc];
-                if (REGIONS[region] !== undefined) { out[cc] = REGIONS[region]; }
+                if (this.regions[region] !== undefined) { out[cc] = this.regions[region]; }
             });
             return out;
         },
 
         _tooltipValue(code) {
             if (!this._inScope(code)) { return null; }
-            if (this.view === 'country') { return COUNTRIES[code] ?? null; }
+            if (this.view === 'country') { return this.countries[code] ?? null; }
             const region = CODE_TO_CONTINENT[code];
-            return region ? (REGIONS[region] ?? null) : null;
+            return region ? (this.regions[region] ?? null) : null;
         },
 
         _refresh() {

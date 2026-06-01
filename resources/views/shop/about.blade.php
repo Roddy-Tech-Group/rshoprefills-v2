@@ -3,12 +3,34 @@
     // dark; coloured accents (text-blue-700) read in both themes.
     $img = fn (string $file) => asset('assets/'.rawurlencode($file));
 
+    // Live catalog counters. Cached for 10 minutes so the about page stays fast.
+    // Each value is floored to a marketing-round number so the copy reads
+    // cleanly without odd granular figures (e.g. 23,756 -> 23,000+).
+    $aboutStats = \Illuminate\Support\Facades\Cache::remember(
+        'about.catalog_stats',
+        now()->addMinutes(10),
+        fn () => [
+            'variants'   => (int) \App\Models\ProductVariant::where('is_available', true)->count(),
+            'countries'  => (int) \App\Models\Product::where('is_active', true)
+                ->whereNotNull('country_code')
+                ->distinct('country_code')
+                ->count('country_code'),
+            'categories' => (int) \App\Models\Category::count(),
+            'currencies' => (int) \App\Models\Product::whereNotNull('currency_code')
+                ->distinct('currency_code')
+                ->count('currency_code'),
+        ],
+    );
+    $productsFloor   = max(1000, intdiv($aboutStats['variants'], 1000) * 1000);
+    $countriesFloor  = max(10, intdiv($aboutStats['countries'], 10) * 10);
+    $currenciesFloor = max(10, intdiv($aboutStats['currencies'], 10) * 10);
+
     $stats = [
-        ['target' => 2000, 'decimals' => 0, 'suffix' => '+',  'label' => 'Products'],
-        ['target' => 180,  'decimals' => 0, 'suffix' => '+',  'label' => 'Countries'],
-        ['target' => 5,    'decimals' => 0, 'suffix' => '+',  'label' => 'Categories'],
-        ['target' => 18,   'decimals' => 0, 'suffix' => '+',  'label' => 'Currencies'],
-        ['target' => 99.9, 'decimals' => 1, 'suffix' => '%',  'label' => 'Uptime'],
+        ['target' => $productsFloor,           'decimals' => 0, 'suffix' => '+',  'label' => 'Products'],
+        ['target' => $countriesFloor,          'decimals' => 0, 'suffix' => '+',  'label' => 'Countries'],
+        ['target' => $aboutStats['categories'],'decimals' => 0, 'suffix' => '+',  'label' => 'Categories'],
+        ['target' => $currenciesFloor,         'decimals' => 0, 'suffix' => '+',  'label' => 'Currencies'],
+        ['target' => 99.9,                     'decimals' => 1, 'suffix' => '%',  'label' => 'Uptime'],
         ['text' => 'Daily', 'label' => 'Support'],
     ];
 @endphp
@@ -67,7 +89,7 @@
                     </div>
                 @endforeach
                 </dl>
-                <img src="{{ $img('about 2.png') }}" alt="" class="hidden h-24 w-auto shrink-0 lg:block" loading="lazy">
+                <img src="{{ $img('about 2.webp') }}" alt="" class="hidden h-24 w-auto shrink-0 lg:block" loading="lazy">
             </div>
         </div>
     </section>
@@ -103,7 +125,7 @@
 
                 {{-- Right: image (full-bleed photo filling the panel) --}}
                 <div class="relative order-first bg-blue-50 lg:order-none" style="min-height: 20rem;">
-                    <img src="{{ $img('About Us.jpg') }}" alt="The people behind RshopRefills" class="object-cover" style="position: absolute; inset: 0; height: 100%; width: 100%;" loading="lazy">
+                    <img src="{{ $img('About Us.webp') }}" alt="The people behind RshopRefills" class="object-cover" style="position: absolute; inset: 0; height: 100%; width: 100%;" loading="lazy">
                 </div>
             </div>
         </div>

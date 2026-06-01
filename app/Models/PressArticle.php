@@ -17,6 +17,8 @@ use Illuminate\Support\Carbon;
  * @property string $title
  * @property string $excerpt
  * @property string $image
+ * @property string|null $attachment_path
+ * @property string|null $attachment_label
  * @property array<int, string> $body
  * @property Carbon $published_at
  * @property bool $is_published
@@ -35,6 +37,8 @@ class PressArticle extends Model
         'title',
         'excerpt',
         'image',
+        'attachment_path',
+        'attachment_label',
         'body',
         'published_at',
         'is_published',
