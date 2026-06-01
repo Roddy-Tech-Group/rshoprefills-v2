@@ -22,6 +22,21 @@ html {
     text-size-adjust: 100%;
 }
 
+/* iOS/touch Safari zooms the whole page in when a form control whose font-size
+   is below 16px gains focus, which makes the page appear to "grow" (e.g. the
+   top-up amount input, search boxes, admin form fields). Forcing every
+   text-entry control to 16px on coarse-pointer (touch) devices removes that
+   zoom entirely; pointer-fine (desktop/laptop) keeps its compact input
+   typography. !important is required to beat Tailwind's text-sm/text-xs classes,
+   whose class-level specificity would otherwise win over an element selector. */
+@media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+
 @theme {
     --font-sans: 'Satoshi-Regular', 'Satoshi', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 

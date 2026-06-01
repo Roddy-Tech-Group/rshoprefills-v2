@@ -108,7 +108,7 @@
                 x-show="choice === 'light'"
                 src="{{ asset('assets/' . rawurlencode('Light mode respects theme.webp')) }}"
                 alt=""
-                class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
+                class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
             <img
@@ -116,7 +116,7 @@
                 x-cloak
                 src="{{ asset('assets/' . rawurlencode('Dark mode respects light and dark mode.webp')) }}"
                 alt=""
-                class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
+                class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
             <img
@@ -124,7 +124,7 @@
                 x-cloak
                 src="{{ asset('assets/' . rawurlencode('Auto Mode.webp')) }}"
                 alt=""
-                class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
+                class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert"
                 loading="lazy"
             >
         </button>
@@ -154,7 +154,7 @@
                         role="menuitemradio"
                         :aria-checked="(choice === '{{ $opt['value'] }}').toString()"
                     >
-                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-6 w-6 shrink-0 object-contain brightness-0 dark:invert sm:h-5 sm:w-5" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-8 w-8 shrink-0 object-contain brightness-0 dark:invert sm:h-6 sm:w-6" loading="lazy">
                         <span class="hidden sm:inline">{{ $opt['label'] }}</span>
                     </button>
                 @endforeach
