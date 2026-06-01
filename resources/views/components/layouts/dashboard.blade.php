@@ -1137,11 +1137,12 @@
                     <livewire:notifications-menu tone="dark" />
                 </div>
             </div>
+        @endif
 
             {{-- ─────────────────────────────────────────────────────── --}}
-            {{-- FLOATING INNER-PAGE CHROME (mobile, inner pages only)   --}}
-            {{-- Hamburger | locale switcher | bell. Slides in once the   --}}
-            {{-- regular top bar leaves the viewport.                     --}}
+            {{-- FLOATING MOBILE CHROME (all dashboard pages, mobile)    --}}
+            {{-- Hamburger | locale | cart | bell. Pins to the viewport   --}}
+            {{-- once the page scrolls past the header, on every page.    --}}
             {{-- ─────────────────────────────────────────────────────── --}}
             <div
                 x-data="{
@@ -1215,7 +1216,6 @@
                     </div>
                 </div>
             </div>
-        @endif
 
             <div class="flex flex-col bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:min-h-full lg:px-10 lg:py-8 dark:bg-[#0c1a36]">
                 <div class="w-full lg:flex-1">
