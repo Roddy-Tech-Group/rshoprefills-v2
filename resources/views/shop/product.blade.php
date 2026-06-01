@@ -359,8 +359,8 @@
                             <label class="mb-1.5 block text-xs font-semibold text-zinc-900">Amount</label>
                             <div
                                 x-data="{ open: false, locked: false }"
-                                @mouseenter="open = true"
-                                @mouseleave="if (! locked) open = false"
+                                @mouseenter="if (window.matchMedia('(hover: hover)').matches) open = true"
+                                @mouseleave="if (window.matchMedia('(hover: hover)').matches && ! locked) open = false"
                                 @click.outside="open = false; locked = false"
                                 class="relative"
                             >
@@ -477,8 +477,8 @@
                             <label class="mb-1.5 block text-xs font-semibold text-zinc-900">Quantity</label>
                             <div
                                 x-data="{ open: false, locked: false }"
-                                @mouseenter="open = true"
-                                @mouseleave="if (! locked) open = false"
+                                @mouseenter="if (window.matchMedia('(hover: hover)').matches) open = true"
+                                @mouseleave="if (window.matchMedia('(hover: hover)').matches && ! locked) open = false"
                                 @click.outside="open = false; locked = false"
                                 class="relative"
                             >
@@ -523,8 +523,8 @@
                             <label class="mb-1.5 block text-xs font-semibold text-zinc-900">Estimated price</label>
                             <div
                                 x-data="{ open: false, locked: false }"
-                                @mouseenter="open = true"
-                                @mouseleave="if (! locked) open = false"
+                                @mouseenter="if (window.matchMedia('(hover: hover)').matches) open = true"
+                                @mouseleave="if (window.matchMedia('(hover: hover)').matches && ! locked) open = false"
                                 @click.outside="open = false; locked = false"
                                 class="relative"
                             >

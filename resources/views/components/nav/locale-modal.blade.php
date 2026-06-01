@@ -141,7 +141,7 @@
     x-transition:leave-end="opacity-0"
     @click.self="localeModalOpen = false"
     style="display:none;"
-    class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] p-4 sm:items-center"
+    class="fixed inset-0 z-[60] flex items-center justify-center p-4"
     role="dialog"
     aria-modal="true"
     aria-labelledby="locale-modal-title"
@@ -155,7 +155,7 @@
         x-transition:leave="transition duration-200 ease-in"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-8 scale-[0.98]"
-        class="pointer-events-auto relative w-full max-w-2xl rounded-[10px] bg-white/70 ring-1 ring-white/40 shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] backdrop-blur-2xl backdrop-saturate-150 will-change-transform dark:bg-[#0c1a36]/65 dark:ring-white/15"
+        class="pointer-events-auto relative flex max-h-[88vh] w-full max-w-2xl flex-col rounded-[10px] bg-white/70 ring-1 ring-white/40 shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] backdrop-blur-2xl backdrop-saturate-150 will-change-transform dark:bg-[#0c1a36]/65 dark:ring-white/15"
     >
         {{-- Close button (positioned outside the card's top-right corner) --}}
         <x-close-button @click="localeModalOpen = false" class="absolute -top-3 -right-3 z-10 shadow-lg shadow-zinc-900/20" />
@@ -163,8 +163,10 @@
         {{-- Header --}}
         <h2 id="locale-modal-title" class="mb-5 text-lg font-bold text-zinc-900 dark:text-white">Country and language</h2>
 
-        {{-- Body --}}
-        <div class="flex flex-col gap-6">
+        {{-- Body — scrolls internally so the card never exceeds the viewport
+             (88vh cap on the card); the header and Save button stay fixed.
+             min-h-0 lets this flex child actually shrink + scroll on mobile. --}}
+        <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-0.5">
 
             {{-- Country picker --}}
             <div

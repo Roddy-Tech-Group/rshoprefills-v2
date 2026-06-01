@@ -150,11 +150,11 @@
                         :class="choice === '{{ $opt['value'] }}'
                             ? 'bg-blue-600 text-white'
                             : 'text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-[#26416b]'"
-                        class="flex w-full items-center gap-2.5 rounded-[5px] px-3 py-1.5 text-left text-sm font-medium transition-colors"
+                        class="flex w-full items-center justify-center gap-2.5 rounded-[5px] px-3 py-2 text-left text-sm font-medium transition-colors sm:justify-start sm:py-1.5"
                         role="menuitemradio"
                         :aria-checked="(choice === '{{ $opt['value'] }}').toString()"
                     >
-                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-5 w-5 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-6 w-6 shrink-0 object-contain brightness-0 dark:invert sm:h-5 sm:w-5" loading="lazy">
                         <span class="hidden sm:inline">{{ $opt['label'] }}</span>
                     </button>
                 @endforeach
