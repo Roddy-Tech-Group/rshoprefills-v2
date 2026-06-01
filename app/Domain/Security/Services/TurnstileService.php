@@ -48,7 +48,7 @@ class TurnstileService
             ];
         }
 
-        if ($this->bypassLocal && app()->environment('local')) {
+        if ($this->bypassLocal && app()->environment('local', 'testing')) {
             return [
                 'status' => self::STATUS_BYPASSED,
                 'message' => 'Turnstile validation bypassed for local environment.',
