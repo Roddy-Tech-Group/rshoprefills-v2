@@ -601,7 +601,7 @@
                 @keydown.escape.window="open = false"
                 @keydown.window.prevent.ctrl.k="open = true; $nextTick(() => $refs.searchInput.focus())"
                 @keydown.window.prevent.meta.k="open = true; $nextTick(() => $refs.searchInput.focus())"
-                class="absolute left-1/2 top-1/2 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 px-4"
+                class="relative min-w-0 flex-1 max-w-2xl"
             >
                 <div
                     role="search"

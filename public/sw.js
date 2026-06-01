@@ -8,7 +8,7 @@
  *
  * Bump CACHE_VERSION to invalidate old caches on the next activate.
  */
-const CACHE_VERSION = 'rshop-v1';
+const CACHE_VERSION = 'rshop-v2';
 const OFFLINE_FALLBACK = '/dashboard';
 
 self.addEventListener('install', () => {

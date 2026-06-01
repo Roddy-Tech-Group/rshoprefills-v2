@@ -48,12 +48,12 @@
                 <x-nav.main-nav />
             </header>
 
-            {{-- overflow-x-clip prevents the carousel full-bleed (mx-[calc(50%-50vw)]
-                 w-screen) from creating a horizontal scrollbar: 100vw includes the
-                 vertical scrollbar width, so the breakout would otherwise be ~15px
-                 wider than the body. `clip` (not `hidden`) doesn't create a new
-                 scroll container, so sticky positioning still works. --}}
-            <main class="flex-1 overflow-x-clip bg-zinc-100">
+            {{-- Horizontal-clip for the carousel full-bleed (mx-[calc(50%-50vw)])
+                 lives on <html> (see partials/head) instead of here. Putting it on
+                 <main> made <main> clip its fixed-position descendants (the eSIM buy
+                 bar + modals rendered trapped inside the content box instead of the
+                 viewport). <html> is the viewport root, so it never traps fixed. --}}
+            <main class="flex-1 bg-zinc-100">
                 {{ $slot }}
             </main>
 

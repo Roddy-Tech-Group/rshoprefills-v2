@@ -340,7 +340,7 @@ new class extends Component {
              passwords, gender, two checkboxes) so it gets tighter top/bottom
              padding than the leaner login view. --}}
         <div
-            class="flex-1 overflow-y-auto px-7 sm:px-10"
+            class="flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-7 sm:px-10"
             :class="mode === 'register' ? 'py-4 sm:py-5' : 'py-8 sm:py-10'"
         >
 

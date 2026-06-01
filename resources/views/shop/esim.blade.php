@@ -778,7 +778,7 @@
                 </div>
                 @if ($coverageCount > 1)
                     <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">This eSIM works across {{ $coverageCount }} countries and connects to a local network automatically in each.</p>
-                    <div class="mt-4 max-h-72 overflow-y-auto pr-1">
+                    <div class="mt-4 max-h-72 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] pr-1">
                         <ul class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-zinc-700 sm:grid-cols-3 dark:text-zinc-300">
                             @foreach ($coverageList as $c)
                                 <li class="truncate">{{ $c }}</li>
@@ -834,7 +834,7 @@
                     </div>
                 </div>
 
-                <div class="mx-4 mb-4 min-h-0 flex-1 overflow-y-auto rounded-[10px] p-3 ring-1 ring-zinc-200 dark:ring-zinc-700/60">
+                <div class="mx-4 mb-4 min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] rounded-[10px] p-3 ring-1 ring-zinc-200 dark:ring-zinc-700/60">
                     {{-- iOS --}}
                     <div x-show="compatTab === 'ios'" class="space-y-0.5">
                         @foreach ($compat['ios'] as $device)

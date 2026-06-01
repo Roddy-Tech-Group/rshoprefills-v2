@@ -79,6 +79,11 @@
 <style>
     html { background-color: #ffffff; }
     html.dark { background-color: #0c1a36; }
+    /* Kill the ~15px horizontal scrollbar from full-bleed sections
+       (mx-[calc(50%-50vw)]) at the viewport root. `clip` keeps vertical scroll
+       and, unlike doing this on an inner wrapper, never becomes a containing
+       block/clip context for position:fixed modals + bars. */
+    html { overflow-x: clip; }
 </style>
 
 {{-- ─────────────────────────────── SEO ───────────────────────────────────
@@ -228,7 +233,10 @@
     }
     main {
         animation: pageSlideIn 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-        will-change: transform;
+        /* NOTE: no `will-change: transform` here. It would make <main> a permanent
+           containing block for position:fixed descendants, trapping fixed buy bars
+           and modals inside <main> instead of pinning them to the viewport. The
+           500ms slide runs fine without the hint. */
     }
 
     /* Micro-Fade Shift: scoped to layouts that opt in via

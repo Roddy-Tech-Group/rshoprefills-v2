@@ -33,126 +33,28 @@
         navigating: false,
         canPrev: false,
         canNext: true,
-        cardW: 280,
-        gap: 20,
-        padLeft: 0,
-        tx: 0,
-        maxTx: 0,
-        savedDuration: '0.6s',
-        // dragArmed: pointerdown fired but threshold not yet crossed.
-        // dragging:  threshold crossed - we own the gesture, click is killed.
-        dragArmed: false,
-        dragging: false,
-        dragTarget: null,
-        dragPointerId: null,
-        dragStartX: 0,
-        dragStartTx: 0,
-        setup() {
-            const viewport = this.$refs.track;
-            const list     = this.$refs.list;
-            if (! viewport || ! list) { return; }
-            this.cardW   = window.innerWidth >= 1024 ? 280 : window.innerWidth >= 640 ? 200 : 160;
-            this.gap     = window.innerWidth >= 640 ? 20 : 16;
-            this.padLeft = Math.round(this.$el.getBoundingClientRect().left);
-            list.style.paddingLeft = this.padLeft + 'px';
-            this.tx = 0;
-            this.maxTx = Math.min(0, viewport.clientWidth - list.scrollWidth);
-            list.style.transform = 'translate3d(0, 0, 0)';
-            // Slow the slide down when the row is long so a 20-card carousel
-            // doesn't feel hurried. Base 0.6s, +0.04s per item, capped at 1.2s.
-            const itemCount = list.children.length;
-            const duration  = Math.min(1.2, 0.6 + 0.04 * Math.max(0, itemCount - 5));
-            this.savedDuration = duration.toFixed(2) + 's';
-            list.style.transitionDuration = this.savedDuration;
-            this.canPrev = false;
-            this.canNext = this.maxTx < 0;
+        // Native horizontal scroll (no JS hand-drag). Touch + trackpad get the
+        // browser's own smooth momentum scrolling, and it never fights vertical
+        // page scroll. The arrow buttons (desktop only) drive scrollBy().
+        refresh() {
+            const t = this.$refs.track;
+            if (! t) { return; }
+            this.canPrev = t.scrollLeft > 4;
+            this.canNext = t.scrollLeft + t.clientWidth < t.scrollWidth - 4;
         },
-        scroll(dir) {
-            const list = this.$refs.list;
-            if (! list) { return; }
-            // Shift by exactly 2 cards per click (1 on mobile). Keeps the slide
-            // short so longer rows take several clicks to traverse instead of
-            // flying past in one or two presses.
-            const cardsPerStep = window.innerWidth >= 640 ? 2 : 1;
-            const step = cardsPerStep * (this.cardW + this.gap);
-            this.tx = Math.max(this.maxTx, Math.min(0, this.tx - dir * step));
-            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
-            this.canPrev = this.tx < 0;
-            this.canNext = this.tx > this.maxTx;
-        },
-        // Touch / pointer drag for mobile + trackpad. Disables the CSS
-        // transition while dragging so the finger tracks 1:1, then re-enables
-        // it on release and snaps to the nearest card boundary.
-        //
-        // A movement THRESHOLD (8px) gates the actual drag. Below that, the
-        // gesture is treated as a click - we do not capture the pointer,
-        // do not move the list, and do not snap on release. This is what
-        // makes the brand card links inside the carousel actually clickable
-        // (previously a 1-2px finger wiggle would shift the carousel and
-        // the click would land on a different element or be swallowed
-        // entirely by the pointer-capture call).
-        onDragStart(e) {
-            const list = this.$refs.list;
-            if (! list) { return; }
-            // Don't engage drag on right-clicks or middle-clicks.
-            if (e.button !== undefined && e.button !== 0) { return; }
-            this.dragArmed = true;
-            this.dragging = false;
-            this.dragTarget = e.currentTarget;
-            this.dragPointerId = e.pointerId;
-            this.dragStartX = e.clientX;
-            this.dragStartTx = this.tx;
-        },
-        onDragMove(e) {
-            if (! this.dragArmed) { return; }
-            const list = this.$refs.list;
-            if (! list) { return; }
-            const delta = e.clientX - this.dragStartX;
-
-            // Below the threshold this is still a click candidate - bail out
-            // without touching the list so the underlying <a> can receive
-            // the click cleanly on pointerup.
-            if (! this.dragging && Math.abs(delta) < 8) { return; }
-
-            // Crossed the threshold: commit to a drag from here on.
-            if (! this.dragging) {
-                this.dragging = true;
-                list.style.transitionDuration = '0s';
-                try { this.dragTarget?.setPointerCapture(this.dragPointerId); } catch (_) {}
-            }
-
-            const raw = this.dragStartTx + delta;
-            // Soft clamp so the user feels the edges instead of hitting a wall.
-            const next = raw > 0 ? raw * 0.35 : (raw < this.maxTx ? this.maxTx + (raw - this.maxTx) * 0.35 : raw);
-            list.style.transform = `translate3d(${next}px, 0, 0)`;
-        },
-        onDragEnd(e) {
-            if (! this.dragArmed) { return; }
-            const wasDragging = this.dragging;
-            this.dragArmed = false;
-            this.dragging = false;
-
-            // No drag actually happened - leave everything alone so the
-            // click event that follows pointerup hits its <a> target.
-            if (! wasDragging) { return; }
-
-            const list = this.$refs.list;
-            if (! list) { return; }
-            list.style.transitionDuration = this.savedDuration;
-            const delta = e.clientX - this.dragStartX;
-            const step  = this.cardW + this.gap;
-            // Snap to nearest card boundary, biased toward swipe direction.
-            const projected = this.dragStartTx + delta;
-            const snapped   = Math.round(projected / step) * step;
-            this.tx = Math.max(this.maxTx, Math.min(0, snapped));
-            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
-            this.canPrev = this.tx < 0;
-            this.canNext = this.tx > this.maxTx;
+        nudge(dir) {
+            const t = this.$refs.track;
+            if (! t) { return; }
+            const first   = t.querySelector('.carousel-list > *');
+            const perStep = window.innerWidth >= 640 ? 2 : 1;
+            const gap     = window.innerWidth >= 640 ? 20 : 16;
+            const step    = first ? (first.getBoundingClientRect().width + gap) * perStep : t.clientWidth * 0.8;
+            t.scrollBy({ left: dir * step, behavior: 'smooth' });
         },
     }"
     x-on:livewire:navigate.window="navigating = true"
-    x-on:livewire:navigated.window="navigating = false; $nextTick(() => setup())"
-    x-init="$nextTick(() => setup())"
+    x-on:livewire:navigated.window="navigating = false; $nextTick(() => refresh())"
+    x-init="$nextTick(() => refresh())"
     class="relative"
 >
     <div class="mb-4 flex items-end justify-between gap-4">
@@ -179,7 +81,7 @@
             @if ($carousel)
                 <button
                     type="button"
-                    @click="scroll(-1)"
+                    @click="nudge(-1)"
                     :disabled="! canPrev"
                     aria-label="Previous"
                     class="hidden h-9 w-9 items-center justify-center rounded-full bg-white text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed sm:flex dark:bg-[#1d3252] dark:text-zinc-200 dark:ring-zinc-700/60 dark:hover:bg-[#26416b]"
@@ -190,7 +92,7 @@
                 </button>
                 <button
                     type="button"
-                    @click="scroll(1)"
+                    @click="nudge(1)"
                     :disabled="! canNext"
                     aria-label="Next"
                     class="hidden h-9 w-9 items-center justify-center rounded-full bg-white text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed sm:flex dark:bg-[#1d3252] dark:text-zinc-200 dark:ring-zinc-700/60 dark:hover:bg-[#26416b]"
@@ -212,19 +114,14 @@
              Native overflow-x-auto preserves trackpad/touch swipe momentum. --}}
         <div
             x-ref="track"
-            @resize.window.debounce.200ms="setup()"
-            @pointerdown="onDragStart($event)"
-            @pointermove="onDragMove($event)"
-            @pointerup="onDragEnd($event)"
-            @pointercancel="onDragEnd($event)"
-            class="mx-[calc(50%-50vw)] w-screen overflow-hidden py-4 touch-pan-y select-none"
-            style="cursor: grab;"
+            @scroll.passive="refresh()"
+            @resize.window.debounce.200ms="refresh()"
+            class="mx-[calc(50%-50vw)] w-screen overflow-x-auto overflow-y-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] scroll-pl-4 sm:scroll-pl-6 lg:scroll-pl-8"
+            style="scroll-behavior: smooth;"
         >
             <ul
-                x-ref="list"
                 data-reveal-group
-                :style="`--card-w: ${cardW}px`"
-                class="carousel-list flex w-max gap-4 pl-4 pr-4 sm:gap-5 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 [&>*]:shrink-0"
+                class="carousel-list flex w-max gap-4 pl-4 pr-4 sm:gap-5 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 [&>*]:shrink-0 [&>*]:snap-start"
             >
                 {{ $slot }}
             </ul>

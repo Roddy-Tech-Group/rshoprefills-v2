@@ -480,7 +480,7 @@ new class extends Component
                         x-transition:leave="transition ease-in duration-100"
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 -translate-y-1"
-                        class="absolute left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10"
+                        class="absolute left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10"
                         role="listbox"
                     >
                         @foreach (self::fundableCurrencies() as $c)

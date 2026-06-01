@@ -163,9 +163,24 @@ document.addEventListener('livewire:navigated', bootAll);
 (function autoCloseOnScroll() {
     let t;
     const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    // On mobile, focusing an input opens the on-screen keyboard, which fires a
+    // scroll event. We must NOT dispatch the synthetic Escape in that case -
+    // it would close the auth modal (and any open dialog) the instant the user
+    // taps a field. Only auto-close dropdowns on genuine page scrolls.
+    const isEditing = () => {
+        const el = document.activeElement;
+        return !! el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+    };
     window.addEventListener('scroll', () => {
         clearTimeout(t);
         t = setTimeout(() => {
+            // Skip the close-Escape when:
+            //  1. a field is focused (mobile keyboard opening fires a scroll), or
+            //  2. a modal has locked body scroll (rshopScrollLock sets
+            //     body.position:fixed) - while locked the page isn't really
+            //     scrolling, so any scroll event is spurious (rubber-band /
+            //     keyboard) and would otherwise close the open modal.
+            if (isEditing() || document.body.style.position === 'fixed') { return; }
             window.dispatchEvent(escape);
             window.dispatchEvent(new CustomEvent('app-page-scroll'));
         }, 60);

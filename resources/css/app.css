@@ -9,6 +9,19 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Effortless-feel baseline ─────────────────────────────────────────────
+   Native-app touch feel: no grey tap-flash on touch, no iOS auto text-resizing
+   when rotating. (Momentum scrolling is native on iOS 13+; smooth modal scroll
+   comes from overscroll-contain on the scroll containers themselves.) */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+html {
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 @theme {
     --font-sans: 'Satoshi-Regular', 'Satoshi', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 

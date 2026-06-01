@@ -155,7 +155,7 @@
                         :aria-checked="(choice === '{{ $opt['value'] }}').toString()"
                     >
                         <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-5 w-5 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
-                        <span>{{ $opt['label'] }}</span>
+                        <span class="hidden sm:inline">{{ $opt['label'] }}</span>
                     </button>
                 @endforeach
             </div>
