@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Order\Events\PaymentConfirmed;
 use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
@@ -129,6 +130,8 @@ class PaymentSessionController extends Controller
                 if ($attempt->order) {
                     $orderService = app(OrderService::class);
                     $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Paid, $attempt->verification_payload);
+
+                    PaymentConfirmed::dispatch($attempt->order, $attempt);
 
                     // Dispatch fulfillment jobs
                     foreach ($attempt->order->items as $item) {
@@ -305,6 +308,9 @@ class PaymentSessionController extends Controller
                 if ($attempt->order) {
                     $orderService = app(OrderService::class);
                     $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Paid, $result);
+
+                    PaymentConfirmed::dispatch($attempt->order, $attempt);
+
                     foreach ($attempt->order->items as $item) {
                         FulfillOrderItemJob::dispatch($item);
                     }

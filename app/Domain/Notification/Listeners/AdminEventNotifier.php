@@ -4,7 +4,7 @@ namespace App\Domain\Notification\Listeners;
 
 use App\Domain\Notification\Services\AdminNotificationService;
 use App\Domain\Order\Events\FulfillmentFailed;
-use App\Domain\Order\Events\OrderPlaced;
+use App\Domain\Order\Events\PaymentConfirmed;
 use App\Domain\Order\Events\PaymentFailed;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Events\Dispatcher;
@@ -31,7 +31,7 @@ class AdminEventNotifier
         );
     }
 
-    public function onOrderPlaced(OrderPlaced $event): void
+    public function onPaymentConfirmed(PaymentConfirmed $event): void
     {
         $order = $event->order;
 
@@ -74,7 +74,7 @@ class AdminEventNotifier
     {
         return [
             Registered::class => 'onRegistered',
-            OrderPlaced::class => 'onOrderPlaced',
+            PaymentConfirmed::class => 'onPaymentConfirmed',
             PaymentFailed::class => 'onPaymentFailed',
             FulfillmentFailed::class => 'onFulfillmentFailed',
         ];

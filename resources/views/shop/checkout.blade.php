@@ -676,7 +676,7 @@
                             <h3 class="text-sm font-bold text-zinc-900 mb-2">Transaction PIN Required</h3>
                             <p class="text-xs text-zinc-600 mb-4">Enter your 4-digit transaction PIN to authorize this payment from your wallet balance.</p>
                             <div class="space-y-4">
-                                <input type="password" inputmode="numeric" x-model="walletPin" maxlength="4" placeholder="••••"
+                                <input type="password" inputmode="numeric" x-ref="walletPinInput" x-model="walletPin" maxlength="4" placeholder="••••"
                                     @keydown.enter.prevent="authorizeWalletPayment()"
                                     class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
                                 <p x-show="errorMessage" x-cloak class="text-center text-xs text-red-600" x-text="errorMessage"></p>
@@ -1345,7 +1345,7 @@
                  * debit through the pay endpoint.
                  */
                 async authorizeWalletPayment() {
-                    const pin = (this.walletPin || '').trim();
+                    const pin = (this.$refs.walletPinInput?.value || this.walletPin || '').trim();
                     if (!/^\d{4}$/.test(pin)) {
                         this.errorMessage = 'Enter your 4-digit transaction PIN.';
                         return;
@@ -1367,10 +1367,13 @@
                             this.authorizingWallet = false;
                             // 422 returns { message, errors: { pin: [...] } }; 429 is a lockout/throttle.
                             this.errorMessage = (data.errors?.pin?.[0]) || data.message || 'Could not verify your PIN.';
+                            this.walletPin = '';
+                            if (this.$refs.walletPinInput) this.$refs.walletPinInput.value = '';
                             return;
                         }
                         this.authorizingWallet = false;
                         this.walletPin = '';
+                        if (this.$refs.walletPinInput) this.$refs.walletPinInput.value = '';
                         // Authorize the debit with the single-use token.
                         await this.paySession('wallet', { auth_token: data.auth_token });
                     } catch (e) {
