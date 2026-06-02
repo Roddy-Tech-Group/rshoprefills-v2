@@ -222,7 +222,7 @@
                     </div>
 
                     {{-- Options --}}
-                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] p-1">
+                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain p-1">
                         <template x-for="[name, flag] in Object.entries(options).filter(([n]) => n.toLowerCase().includes(search.toLowerCase()))" :key="name">
                             <button
                                 type="button"
@@ -304,7 +304,7 @@
                     </div>
 
                     {{-- Options --}}
-                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch] p-1">
+                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain p-1">
                         <template x-for="lang in options.filter(l => l.toLowerCase().includes(search.toLowerCase()))" :key="lang">
                             <button
                                 type="button"
