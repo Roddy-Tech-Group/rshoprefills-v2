@@ -564,12 +564,6 @@
                         </p>
                     </div>
 
-                    {{-- Turnstile. Uses the shared explicit-render widget so
-                         it mounts under the storefront layout's loader. The
-                         hidden input "cf-turnstile-response" is auto-injected
-                         into this form by Cloudflare on success, then picked
-                         up by CheckoutController::process(). --}}
-                    <x-turnstile-widget action="checkout" context="checkout" class="mt-4" />
 
                     {{-- Continue --}}
                     @auth
