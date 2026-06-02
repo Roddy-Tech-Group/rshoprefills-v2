@@ -5,6 +5,7 @@ namespace Tests\Feature\Catalog;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -266,5 +267,25 @@ class EsimDetailPageTest extends TestCase
     public function test_an_unknown_region_returns_404(): void
     {
         $this->get('/esims/this-region-does-not-exist')->assertNotFound();
+    }
+
+    public function test_dashboard_buy_bar_lifts_above_the_mobile_tab_bar(): void
+    {
+        $this->withoutVite();
+
+        $this->esimRegion();
+
+        // In the dashboard the mobile tab bar (lg:hidden) pins to bottom-0, so the
+        // buy bar must lift above it on small screens; lg has no tab bar and drops
+        // back to bottom-0.
+        $this->actingAs(User::factory()->create())
+            ->get(route('dashboard.shop.esim', 'united-states-data-esim'))
+            ->assertOk()
+            ->assertSee('bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0', false);
+
+        // The storefront has no tab bar, so its buy bar stays pinned to bottom-0.
+        $this->get(route('shop.esim', 'united-states-data-esim'))
+            ->assertOk()
+            ->assertDontSee('bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))]', false);
     }
 }
