@@ -9,7 +9,7 @@ use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Payment\Providers\FlutterwavePaymentProvider;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
-use App\Domain\Security\Services\TurnstileService;
+
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
@@ -74,31 +74,6 @@ class CheckoutController extends Controller
         $cartTotals = app(CartPricingService::class)->calculateCartTotals($cart->items);
         $amount = $cartTotals['total'];
 
-        // Turnstile Validation
-        if (config('services.turnstile.enabled') && config('services.turnstile.enforce_checkout', true)) {
-            $service = TurnstileService::make();
-            $result = $service->validateToken($request->input('cf-turnstile-response'), $request->ip());
-
-            if ($result['status'] === TurnstileService::STATUS_TIMEOUT) {
-                // Fail OPEN conditionally: block if fraud risk is elevated
-                if ($fraudService->isSuspiciousCheckout($user, $amount, $request->ip())) {
-                    $msg = 'Security verification service is temporarily unavailable and transaction risk is elevated. Please try again later.';
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['message' => $msg], 403);
-                    }
-
-                    return redirect()->route('shop.checkout')->with('checkout_status', $msg);
-                }
-            } elseif ($result['status'] !== TurnstileService::STATUS_SUCCESS && $result['status'] !== TurnstileService::STATUS_BYPASSED) {
-                $fraudService->recordTurnstileFailure($request->ip());
-                $msg = 'Security verification failed. Please refresh the page and try again.';
-                if ($request->expectsJson() || $request->ajax()) {
-                    return response()->json(['message' => $msg], 422);
-                }
-
-                return redirect()->route('shop.checkout')->with('checkout_status', $msg);
-            }
-        }
 
         // Display currency comes from the customer's locale (hidden field on the
         // checkout form). Settlement is always USD; this is presentation only.

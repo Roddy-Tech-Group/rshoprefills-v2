@@ -145,6 +145,27 @@ new class extends Component
         bankDetails: null,
         pollInterval: null,
         verifying: false,
+        applePayAvailable: false,
+
+        init() {
+            try {
+                this.applePayAvailable = !! (
+                    window.ApplePaySession
+                    && typeof window.ApplePaySession.canMakePayments === 'function'
+                    && window.ApplePaySession.canMakePayments()
+                );
+            } catch (_) {
+                this.applePayAvailable = false;
+            }
+        },
+
+        getFilteredMethods() {
+            if (!this.session || !this.session.available_methods) return [];
+            return this.session.available_methods.filter(m => {
+                if (m.type === 'apple_pay' && !this.applePayAvailable) return false;
+                return true;
+            });
+        },
 
         initPayment(session) {
             this.session = session;
@@ -230,11 +251,7 @@ new class extends Component
                 this.cryptoDetails.pay_currency = method.coin || 'usdt';
                 this.paySession('crypto', { pay_currency: this.cryptoDetails.pay_currency });
             } else if (method.type === 'apple_pay') {
-                this.paymentState = 'processing';
-                setTimeout(() => {
-                    this.paymentState = 'success';
-                    setTimeout(() => { window.location.reload(); }, 1500);
-                }, 2000);
+                this.paySession('apple_pay', {});
             }
         },
 
@@ -580,7 +597,7 @@ new class extends Component
                     <p class="text-xs text-zinc-500 mb-4">Choose how you want to fund your account.</p>
 
                     <div class="grid grid-cols-1 gap-3">
-                        <template x-for="method in session?.available_methods" :key="method.type">
+                        <template x-for="method in getFilteredMethods()" :key="method.type">
                             <button
                                 type="button"
                                 @click="selectPaymentMethod(method)"
