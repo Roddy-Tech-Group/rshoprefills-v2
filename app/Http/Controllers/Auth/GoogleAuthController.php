@@ -105,19 +105,21 @@ class GoogleAuthController extends Controller
     }
 
     /**
-     * Build the Google driver. In local dev we skip the OAuth state check via
-     * stateless() (sessions don't share between localhost and 127.0.0.1) and
-     * disable SSL verification on the Guzzle client (Windows PHP installs
-     * often lack a CA bundle, causing cURL error 60). Production keeps both on.
+     * Build the Google driver.
+     * We run statelessly in all environments to prevent `InvalidStateException`
+     * during popup-based auth where session cookies might be dropped by the
+     * browser's cross-site cookie restrictions (SameSite).
+     *
+     * In local dev, we also disable SSL verification on the Guzzle client
+     * (Windows PHP installs often lack a CA bundle, causing cURL error 60).
      */
     protected function driver()
     {
         /** @var AbstractProvider $driver */
-        $driver = Socialite::driver('google');
+        $driver = Socialite::driver('google')->stateless();
 
         if (app()->environment('local')) {
             $driver = $driver
-                ->stateless()
                 ->setHttpClient(new Client(['verify' => false]));
         }
 
