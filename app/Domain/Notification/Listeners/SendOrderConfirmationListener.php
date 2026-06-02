@@ -6,7 +6,7 @@ use App\Domain\Notification\Mail\AdminNewOrderAlertMail;
 use App\Domain\Notification\Mail\OrderPlacedMail;
 use App\Domain\Notification\Mail\RefundProcessedMail;
 use App\Domain\Notification\Services\NotificationDispatcher;
-use App\Domain\Order\Events\OrderPlaced;
+use App\Domain\Order\Events\PaymentConfirmed;
 use App\Domain\Order\Events\RefundIssued;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -18,9 +18,9 @@ class SendOrderConfirmationListener
     ) {}
 
     /**
-     * Handle OrderPlaced.
+     * Handle PaymentConfirmed.
      */
-    public function onOrderPlaced(OrderPlaced $event): void
+    public function onPaymentConfirmed(PaymentConfirmed $event): void
     {
         $order = $event->order;
         $user = $order->user;
@@ -82,7 +82,7 @@ class SendOrderConfirmationListener
     public function subscribe($events): array
     {
         return [
-            OrderPlaced::class => 'onOrderPlaced',
+            PaymentConfirmed::class => 'onPaymentConfirmed',
             RefundIssued::class => 'onRefundIssued',
         ];
     }

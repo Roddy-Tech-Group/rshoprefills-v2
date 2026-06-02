@@ -9,6 +9,8 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use App\Domain\Security\Services\TurnstileService;
 use App\Support\TaggedCache;
+use Illuminate\Auth\Events\Lockout;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
@@ -37,6 +39,8 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
     public function resetPassword(): void
     {
         $this->validateTurnstile();
+        
+        $this->ensureIsNotRateLimited();
 
         $this->validate([
             'token' => ['required'],
@@ -68,9 +72,34 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
             return;
         }
 
+        RateLimiter::clear($this->throttleKey());
         Session::flash('status', __($status));
 
         $this->redirectRoute('login', navigate: true);
+    }
+
+    protected function ensureIsNotRateLimited(): void
+    {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+            RateLimiter::hit($this->throttleKey());
+            return;
+        }
+
+        event(new Lockout(request()));
+
+        $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'email' => __('auth.throttle', [
+                'seconds' => $seconds,
+                'minutes' => ceil($seconds / 60),
+            ]),
+        ]);
+    }
+
+    protected function throttleKey(): string
+    {
+        return Str::transliterate(Str::lower($this->email).'|'.request()->ip());
     }
 
     protected function validateTurnstile(): void

@@ -122,21 +122,21 @@ Artisan::command('zendit:sync-giftcards', function () {
 Schedule::call(function () {
     $cutoff = now()->subMinutes(10);
 
-    $orphanedOrders = Order::query()
+    Order::query()
         ->where('payment_status', PaymentStatus::Paid)
         ->where('fulfillment_status', FulfillmentStatus::NotStarted)
         ->where('placed_at', '<=', $cutoff)
         ->with('items')
-        ->get();
-
-    foreach ($orphanedOrders as $order) {
-        foreach ($order->items as $item) {
-            if ($item->fulfillment_status === FulfillmentStatus::NotStarted) {
-                Log::warning("Fulfillment sweeper: re-dispatching FulfillOrderItemJob for orphaned item {$item->id} on order {$order->order_number}");
-                FulfillOrderItemJob::dispatch($item);
+        ->chunkById(100, function ($orphanedOrders) {
+            foreach ($orphanedOrders as $order) {
+                foreach ($order->items as $item) {
+                    if ($item->fulfillment_status === FulfillmentStatus::NotStarted) {
+                        Log::warning("Fulfillment sweeper: re-dispatching FulfillOrderItemJob for orphaned item {$item->id} on order {$order->order_number}");
+                        FulfillOrderItemJob::dispatch($item);
+                    }
+                }
             }
-        }
-    }
+        });
 })->everyFiveMinutes()->name('fulfillment:rescue-orphaned-orders');
 
 // Pending-fulfillment poll sweeper.
@@ -154,9 +154,10 @@ Schedule::call(function () {
     OrderItem::query()
         ->whereIn('fulfillment_status', [FulfillmentStatus::Processing, FulfillmentStatus::Delayed])
         ->where('updated_at', '>=', $cutoff)
-        ->get()
-        ->each(function (OrderItem $item) {
-            dispatch_sync(new PollPendingFulfillmentJob($item));
+        ->chunkById(100, function ($items) {
+            $items->each(function (OrderItem $item) {
+                dispatch_sync(new PollPendingFulfillmentJob($item));
+            });
         });
 })->everyMinute()->name('fulfillment:poll-pending')->withoutOverlapping();
 

@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use App\Domain\Security\Services\TurnstileService;
 use App\Support\TaggedCache;
+use Illuminate\Auth\Events\Lockout;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -18,14 +21,42 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
     public function sendPasswordResetLink(): void
     {
         $this->validateTurnstile();
+        
+        $this->ensureIsNotRateLimited();
 
         $this->validate([
             'email' => ['required', 'string', 'email'],
         ]);
 
         Password::sendResetLink($this->only('email'));
+        
+        RateLimiter::clear($this->throttleKey());
 
         session()->flash('status', __('A reset link will be sent if the account exists.'));
+    }
+
+    protected function ensureIsNotRateLimited(): void
+    {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 3)) {
+            RateLimiter::hit($this->throttleKey());
+            return;
+        }
+
+        event(new Lockout(request()));
+
+        $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'email' => __('auth.throttle', [
+                'seconds' => $seconds,
+                'minutes' => ceil($seconds / 60),
+            ]),
+        ]);
+    }
+
+    protected function throttleKey(): string
+    {
+        return Str::transliterate(Str::lower($this->email).'|'.request()->ip());
     }
 
     protected function validateTurnstile(): void
