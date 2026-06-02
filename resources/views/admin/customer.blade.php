@@ -816,11 +816,20 @@
         @php
             $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
 
-            // Wallet headline: convert each wallet's balance into USD using
-            // its native currency, then sum.
-            $walletTotalUsd = $user->wallets->sum(
-                fn ($w) => $rateService->convert((float) $w->balance, $w->currency->value, 'USD')
-            );
+            // Wallet headline: convert each wallet's balance into USD using its
+            // native currency, then sum. A stale or unavailable FX rate throws
+            // (a deliberate guard on transactional paths), but it must never take
+            // down this read-only admin view - so an unconvertible wallet is
+            // skipped and the headline is flagged approximate ("~").
+            $walletTotalUsd = 0.0;
+            $walletTotalApprox = false;
+            foreach ($user->wallets as $w) {
+                try {
+                    $walletTotalUsd += $rateService->convert((float) $w->balance, $w->currency->value, 'USD');
+                } catch (\Throwable $e) {
+                    $walletTotalApprox = true;
+                }
+            }
 
             // Total spent: prefer the Order helper (which understands the rate
             // snapshot + falls back honestly). Sum its USD output per order
@@ -834,7 +843,7 @@
             @foreach ([
                 ['Total orders', number_format($ordersCount)],
                 ['Total spent', \App\Domain\Shared\Services\Money::codeAmount((float) $totalSpentUsd, 'USD')],
-                ['Wallet balance', \App\Domain\Shared\Services\Money::codeAmount((float) $walletTotalUsd, 'USD')],
+                ['Wallet balance', ($walletTotalApprox ? '~' : '').\App\Domain\Shared\Services\Money::codeAmount((float) $walletTotalUsd, 'USD')],
                 ['Unread alerts', number_format($unreadNotifications)],
             ] as [$label, $value])
                 <div class="rounded-[16px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
