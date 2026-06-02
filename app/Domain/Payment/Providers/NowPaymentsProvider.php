@@ -56,7 +56,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
             $response = Http::withHeaders([
                 'x-api-key' => $this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->post("{$this->baseUrl}/invoice", [
+            ])->post("{$this->baseUrl}/payment", [
                 'price_amount' => $attempt->amount,
                 'price_currency' => strtoupper($attempt->currency),
                 'pay_currency' => 'btc', // default to BTC or allow selection in metadata
@@ -74,12 +74,12 @@ class NowPaymentsProvider implements PaymentProviderInterface
             }
 
             $body = $response->json();
-            $gatewayRef = $body['id'] ?? null;
+            $gatewayRef = $body['payment_id'] ?? null;
             $payAddress = $body['pay_address'] ?? '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
             $payAmount = $body['pay_amount'] ?? round($attempt->amount * 0.000015, 6);
             $payCurrency = $body['pay_currency'] ?? 'btc';
             $network = $this->resolveNetwork($payCurrency);
-            $expiresAt = $body['expiration_date'] ?? now()->addMinutes(30)->toIso8601String();
+            $expiresAt = $body['time_limit'] ?? now()->addMinutes(30)->toIso8601String();
 
             $attempt->payment_url = null;
             $attempt->gateway_reference = $gatewayRef;
@@ -167,7 +167,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
             $response = Http::withHeaders([
                 'x-api-key' => $this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->post("{$this->baseUrl}/invoice", $payload);
+            ])->post("{$this->baseUrl}/payment", $payload);
 
             if ($response->failed()) {
                 Log::error('NowPayments invoice creation failed in chargeCrypto', [
@@ -182,11 +182,11 @@ class NowPaymentsProvider implements PaymentProviderInterface
             }
 
             $body = $response->json();
-            $gatewayRef = $body['id'] ?? null;
+            $gatewayRef = $body['payment_id'] ?? null;
             $payAddress = $body['pay_address'] ?? '';
             $payAmount = $body['pay_amount'] ?? 0;
             $network = $this->resolveNetwork($payCurrency);
-            $expiresAt = $body['expiration_date'] ?? now()->addMinutes(30)->toIso8601String();
+            $expiresAt = $body['time_limit'] ?? now()->addMinutes(30)->toIso8601String();
 
             $attempt->gateway_reference = $gatewayRef;
             $attempt->save();
