@@ -1355,6 +1355,8 @@
                 $watch('language', v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
             "
             x-on:open-locale-modal.window="localeModalOpen = true"
+            @keydown.escape.window="localeModalOpen = false"
+            x-effect="localeModalOpen ? window.rshopScrollLock?.lock() : window.rshopScrollLock?.unlock()"
         >
             <x-nav.locale-modal />
         </div>
