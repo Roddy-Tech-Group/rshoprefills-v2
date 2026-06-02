@@ -128,6 +128,8 @@ new class extends Component
             expiry_year: '',
             card_holder: ''
         },
+        cardBrand: 'unknown',
+        cardExpiryRaw: '',
         pinValue: '',
         otpValue: '',
         momoDetails: {
@@ -165,22 +167,54 @@ new class extends Component
                 expiry_year: '',
                 card_holder: ''
             };
+            this.cardBrand = 'unknown';
+            this.cardExpiryRaw = '';
             this.momoDetails = {
                 phone_number: '',
                 network: ''
             };
         },
 
-        formatCardNumber(e) {
-            let value = e.target.value.replace(/\D/g, '');
+        detectCardType() {
+            let num = this.cardDetails.card_number.replace(/\D/g, '');
+            
+            // Auto-format card number as they type (e.g. 1234 5678 1234 5678)
             let formatted = '';
-            for (let i = 0; i < value.length; i++) {
+            for (let i = 0; i < num.length; i++) {
                 if (i > 0 && i % 4 === 0) {
                     formatted += ' ';
                 }
-                formatted += value[i];
+                formatted += num[i];
             }
             this.cardDetails.card_number = formatted;
+
+            // Detect brand
+            if (num.startsWith('4')) {
+                this.cardBrand = 'visa';
+            } else if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)/.test(num)) {
+                this.cardBrand = 'mastercard';
+            } else if (/^(506[0-1]|507[8-9]|6500)/.test(num)) {
+                this.cardBrand = 'verve';
+            } else if (/^(34|37)/.test(num)) {
+                this.cardBrand = 'amex';
+            } else if (/^(6011|65)/.test(num)) {
+                this.cardBrand = 'discover';
+            } else if (/^(35)/.test(num)) {
+                this.cardBrand = 'jcb';
+            } else {
+                this.cardBrand = 'unknown';
+            }
+        },
+
+        formatExpiry() {
+            let exp = this.cardExpiryRaw.replace(/\D/g, '');
+            if (exp.length > 2) {
+                this.cardExpiryRaw = exp.slice(0, 2) + ' / ' + exp.slice(2, 4);
+            } else {
+                this.cardExpiryRaw = exp;
+            }
+            this.cardDetails.expiry_month = exp.slice(0, 2);
+            this.cardDetails.expiry_year = exp.slice(2, 4);
         },
 
         selectPaymentMethod(method) {
@@ -587,26 +621,62 @@ new class extends Component
                     
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-semibold text-zinc-700">Cardholder Name</label>
-                            <input type="text" x-model="cardDetails.card_holder" placeholder="e.g. John Doe" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
+                            <label class="block text-xs font-semibold text-zinc-700">Name on card</label>
+                            <input type="text" x-model="cardDetails.card_holder" autocomplete="cc-name" placeholder="Full name" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-zinc-700">Card Number</label>
-                            <input type="text" @input="formatCardNumber" x-model="cardDetails.card_number" maxlength="19" placeholder="0000 0000 0000 0000" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900">
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-3">
-                            <div class="col-span-2">
-                                <label class="block text-xs font-semibold text-zinc-700">Expiry (MM/YY)</label>
-                                <div class="flex gap-2">
-                                    <input type="text" x-model="cardDetails.expiry_month" placeholder="MM" maxlength="2" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
-                                    <input type="text" x-model="cardDetails.expiry_year" placeholder="YY" maxlength="2" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
+                            <label class="block text-xs font-semibold text-zinc-700">Card number</label>
+                            <div class="relative mt-1.5">
+                                <input 
+                                    type="text" 
+                                    inputmode="numeric" 
+                                    autocomplete="cc-number" 
+                                    placeholder="1234 1234 1234 1234" 
+                                    x-model="cardDetails.card_number"
+                                    @input="detectCardType"
+                                    class="w-full rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 pr-16 tabular-nums"
+                                >
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
+                                          x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
+                                          :class="{
+                                              'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
+                                              'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
+                                              'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
+                                              'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
+                                              'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
+                                              'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
+                                          }"
+                                    ></span>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-semibold text-zinc-700 text-center">CVV</label>
-                                <input type="password" x-model="cardDetails.cvv" placeholder="123" maxlength="4" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 text-center">
+                                <label class="block text-xs font-semibold text-zinc-700">Expiry</label>
+                                <input 
+                                    type="text" 
+                                    inputmode="numeric" 
+                                    autocomplete="cc-exp" 
+                                    placeholder="MM / YY" 
+                                    x-model="cardExpiryRaw"
+                                    @input="formatExpiry"
+                                    class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 tabular-nums"
+                                >
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-700">CVV</label>
+                                <input 
+                                    type="password" 
+                                    inputmode="numeric" 
+                                    autocomplete="cc-csc" 
+                                    placeholder="123" 
+                                    x-model="cardDetails.cvv"
+                                    maxlength="4"
+                                    class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 tabular-nums"
+                                >
                             </div>
                         </div>
 
