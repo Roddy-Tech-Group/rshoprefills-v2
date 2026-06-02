@@ -110,6 +110,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
             'btc' => 'bitcoin',
             'eth' => 'ethereum',
             'usdt' => 'tron',
+            'usdttrc20' => 'tron',
             'ltc' => 'litecoin',
             default => 'bitcoin',
         };
@@ -118,6 +119,9 @@ class NowPaymentsProvider implements PaymentProviderInterface
     public function chargeCrypto(PaymentAttempt $attempt, string $payCurrency): array
     {
         $payCurrency = strtolower($payCurrency);
+        if ($payCurrency === 'usdt') {
+            $payCurrency = 'usdttrc20';
+        }
         $txRef = $attempt->idempotency_key;
 
         if (str_contains($this->apiKey, 'MOCK')) {
