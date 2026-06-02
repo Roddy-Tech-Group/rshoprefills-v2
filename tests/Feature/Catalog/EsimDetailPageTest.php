@@ -281,11 +281,11 @@ class EsimDetailPageTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('dashboard.shop.esim', 'united-states-data-esim'))
             ->assertOk()
-            ->assertSee('bottom-[calc(5rem_+_env(safe-area-inset-bottom))] lg:bottom-0', false);
+            ->assertSee('bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0', false);
 
         // The storefront has no tab bar, so its buy bar stays pinned to bottom-0.
         $this->get(route('shop.esim', 'united-states-data-esim'))
             ->assertOk()
-            ->assertDontSee('bottom-[calc(5rem_+_env(safe-area-inset-bottom))]', false);
+            ->assertDontSee('bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))]', false);
     }
 }

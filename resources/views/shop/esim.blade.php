@@ -688,10 +688,11 @@
             {{-- position:fixed + the parent's permanent pb-32 means the bar overlays
                  content without ever reflowing the page. The floating X chip in the
                  middle clears selectedId, which hides the bar via x-show.
-                 In the dashboard the mobile tab bar (lg:hidden, ~5rem tall incl. the
+                 In the dashboard the mobile tab bar (lg:hidden, ~5rem tall plus the
                  iOS safe area) also pins to bottom-0, so on those screens we lift the
-                 buy bar above it; lg has no tab bar, so it drops back to bottom-0. --}}
-            <div x-show="selectedId" x-transition.opacity style="display:none;" class="fixed inset-x-0 {{ $inDash ? 'bottom-[calc(5rem_+_env(safe-area-inset-bottom))] lg:bottom-0' : 'bottom-0' }} z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)] dark:border-zinc-700/60 dark:bg-[#1d3252]/95">
+                 buy bar clear of it (6.5rem leaves a comfortable gap above the nav);
+                 lg has no tab bar, so it drops back to bottom-0. --}}
+            <div x-show="selectedId" x-transition.opacity style="display:none;" class="fixed inset-x-0 {{ $inDash ? 'bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0' : 'bottom-0' }} z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)] dark:border-zinc-700/60 dark:bg-[#1d3252]/95">
                 {{-- Centered close chip: deselects the current plan, which collapses
                      the bar. Sits half-out-of-bar so the X is visible without crowding
                      the buy controls. --}}
