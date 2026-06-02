@@ -437,7 +437,7 @@ window.rshopOpenGoogleOAuth = function (href) {
     const winHeight = window.innerHeight || document.documentElement.clientHeight || screen.height;
     const left = dualLeft + (winWidth  - w) / 2;
     const top  = dualTop  + (winHeight - h) / 2;
-    const popup = window.open(href, 'rshop-google-oauth', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,noopener=no`);
+    const popup = window.open(href, 'rshop-google-oauth', `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
     if (! popup) {
         // Popup blocked - fall back to a normal redirect so the user can still sign in.
         window.location.href = href;

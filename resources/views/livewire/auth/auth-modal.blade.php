@@ -355,7 +355,7 @@ new class extends Component {
                 {{-- Google OAuth --}}
                 <a
                     href="{{ route('auth.google.redirect', ['popup' => 1]) }}"
-                    @click.prevent="window.rshopOpenGoogleOAuth?.($el.href) ?? (window.location.href = $el.href)"
+                    @click.prevent="window.rshopOpenGoogleOAuth ? window.rshopOpenGoogleOAuth($el.href) : (window.location.href = $el.href)"
                     class="mt-7 flex w-full items-center justify-center gap-3 rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10"
                 >
                     <svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
