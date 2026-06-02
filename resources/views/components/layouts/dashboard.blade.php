@@ -1179,9 +1179,10 @@
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
 
-                {{-- Locale switcher chip (center) - flag + country, taps open the
-                     shared slide-up locale/language modal so users can switch fast
-                     while scrolling through any inner page. Same glass treatment. --}}
+                {{-- Locale switcher chip (center) - only on inner pages. The
+                     dashboard overview keeps its floating bar to hamburger +
+                     cart + notification (locale lives in the hero there). --}}
+                @if ($skipMobileHero)
                 <button
                     type="button"
                     @click="$dispatch('open-locale-modal')"
@@ -1194,6 +1195,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                     </svg>
                 </button>
+                @endif
 
                 {{-- Cart + notification chips (right) - same glass treatment, pinned. --}}
                 <div class="pointer-events-auto flex items-center gap-2" x-data>
