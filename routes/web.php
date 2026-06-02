@@ -17,10 +17,13 @@ use App\Http\Controllers\RcoinConvertController;
 use App\Http\Controllers\RcoinWithdrawalController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
+use App\Models\BlogPost;
 use App\Models\CurrencyRate;
+use App\Models\PressArticle;
 use App\Models\Product;
 use App\Support\TaggedCache;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -34,13 +37,20 @@ Route::get('/', function () {
 // The dashboard sidebar/menu links to these same URLs (no duplicate dashboard.gift-cards page).
 Route::view('gift-cards', 'shop.gift-cards')->name('shop.gift-cards');
 
-// Live-search JSON endpoint used by the nav search bar. Returns up to 8 brand matches
-// grouped by brand_key (so "apple" returns "Everything Apple" once, not 8 country rows).
+// Global live-search JSON endpoint used by the nav + dashboard search bars.
+// Searches every product category (gift cards, mobile top-ups, bill payments,
+// eSIMs) grouped by brand_key, then a small set of key pages - each result
+// carries a ready-to-use `url` + a `type` label so the UI links correctly per
+// type. Legacy `slug`/`country` fields are kept for backward compatibility.
 Route::get('api/search/brands', function (Request $request) {
     $q = trim((string) $request->query('q', ''));
     if (mb_strlen($q) < 2) {
         return response()->json([]);
     }
+
+    // Category slug -> URL segment + human label for the result row.
+    $segByCat = ['gift-cards' => 'gift-cards', 'mobile-airtime' => 'topups', 'bill-payments' => 'bills', 'esims' => 'esims'];
+    $labelByCat = ['gift-cards' => 'Gift card', 'mobile-airtime' => 'Mobile top-up', 'bill-payments' => 'Bill payment', 'esims' => 'eSIM'];
 
     $brandIds = Product::query()
         ->where('is_active', true)
@@ -54,16 +64,40 @@ Route::get('api/search/brands', function (Request $request) {
         ->limit(8)
         ->pluck('id');
 
-    $products = Product::query()
+    $products = Product::with('category')
         ->whereIn('id', $brandIds)
-        ->get(['id', 'brand_key', 'country_code', 'logo_url', 'name']);
+        ->get(['id', 'brand_key', 'country_code', 'logo_url', 'name', 'category_id']);
 
-    return response()->json($products->map(fn ($p) => [
-        'name' => Product::brandDisplayName($p->brand_key),
-        'slug' => Product::brandSlug($p->brand_key),
-        'logo' => Product::brandLogoUrl($p->brand_key, $p->logo_url),
-        'country' => $p->country_code,
-    ])->values());
+    $items = $products->map(function ($p) use ($segByCat, $labelByCat) {
+        $cat = $p->category?->slug ?? 'gift-cards';
+        $seg = $segByCat[$cat] ?? 'gift-cards';
+        $slug = Product::brandSlug($p->brand_key);
+
+        return [
+            'type' => $labelByCat[$cat] ?? 'Product',
+            'name' => Product::brandDisplayName($p->brand_key),
+            'logo' => Product::brandLogoUrl($p->brand_key, $p->logo_url),
+            'url' => '/'.$seg.'/'.$slug,
+            // Legacy fields (older UI builds /gift-cards/{slug} from these).
+            'slug' => $slug,
+            'country' => $p->country_code,
+        ];
+    });
+
+    // Key pages, matched by title - so a global search also surfaces sections.
+    $pages = collect([
+        ['name' => 'Gift cards', 'url' => route('shop.gift-cards')],
+        ['name' => 'eSIMs', 'url' => route('shop.esims')],
+        ['name' => 'Mobile top-ups', 'url' => route('shop.topups')],
+        ['name' => 'Bill payments', 'url' => route('shop.bills')],
+        ['name' => 'Help center', 'url' => route('shop.help')],
+        ['name' => 'FAQ', 'url' => route('shop.faq')],
+    ])->filter(fn ($pg) => str_contains(strtolower($pg['name']), strtolower($q)))
+        ->map(fn ($pg) => ['type' => 'Page', 'name' => $pg['name'], 'logo' => null, 'url' => $pg['url'], 'slug' => null, 'country' => null])
+        ->take(4)
+        ->values();
+
+    return response()->json($items->concat($pages)->values());
 })->name('api.search.brands');
 
 // Brand-level detail page. The URL slug is a kebab-cased brand_key
@@ -321,7 +355,7 @@ Route::get('robots.txt', function () {
 // pages + one URL per product brand (gift cards / top-ups / bill payments).
 // Cached for 6 hours so the brand query never runs on a hot crawl.
 Route::get('sitemap.xml', function () {
-    $xml = \Illuminate\Support\Facades\Cache::remember('sitemap.xml.v2', now()->addHours(6), function () {
+    $xml = Cache::remember('sitemap.xml.v2', now()->addHours(6), function () {
         $urls = [];
         $push = function (string $loc, string $priority = '0.7', string $freq = 'weekly') use (&$urls) {
             $urls[$loc] = ['loc' => $loc, 'priority' => $priority, 'freq' => $freq];
@@ -340,7 +374,7 @@ Route::get('sitemap.xml', function () {
             'shop.sitemap' => '0.3',
         ];
         foreach ($staticNames as $name => $priority) {
-            if (\Illuminate\Support\Facades\Route::has($name)) {
+            if (Route::has($name)) {
                 $push(route($name), $priority);
             }
         }
@@ -360,17 +394,17 @@ Route::get('sitemap.xml', function () {
             ->get()
             ->each(function ($row) use ($push, $routeByCategory) {
                 $name = $routeByCategory[$row->category_slug] ?? null;
-                if ($name && \Illuminate\Support\Facades\Route::has($name)) {
+                if ($name && Route::has($name)) {
                     $push(route($name, ['brandSlug' => Product::brandSlug($row->brand_key)]), '0.8');
                 }
             });
 
         // Blog posts + press releases: prime content for organic ranking, so
         // every published article gets its own sitemap entry.
-        \App\Models\BlogPost::published()->get(['slug'])->each(function ($post) use ($push) {
+        BlogPost::published()->get(['slug'])->each(function ($post) use ($push) {
             $push(route('shop.blog.show', $post->slug), '0.7', 'monthly');
         });
-        \App\Models\PressArticle::published()->get(['slug'])->each(function ($article) use ($push) {
+        PressArticle::published()->get(['slug'])->each(function ($article) use ($push) {
             $push(route('shop.press.show', $article->slug), '0.6', 'monthly');
         });
 

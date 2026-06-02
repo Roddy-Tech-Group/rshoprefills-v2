@@ -130,10 +130,10 @@
 
                     {{-- Results list --}}
                     <ul x-show="results.length > 0" class="max-h-[60vh] divide-y divide-zinc-100/80 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        <template x-for="r in results" :key="r.slug">
+                        <template x-for="r in results" :key="r.url">
                             <li>
                                 <a
-                                    :href="'/gift-cards/' + r.slug"
+                                    :href="r.url"
                                     wire:navigate
                                     @click="open = false"
                                     class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-100"
@@ -146,7 +146,10 @@
                                     <template x-if="!r.logo">
                                         <span class="flex aspect-[16/10] w-20 shrink-0 items-center justify-center rounded-[5px] bg-white text-sm font-black uppercase text-zinc-700 shadow-sm ring-1 ring-zinc-200" x-text="r.name.substring(0, 2).toUpperCase()"></span>
                                     </template>
-                                    <span class="flex-1 truncate text-sm font-semibold text-zinc-900" x-text="r.name"></span>
+                                    <span class="flex min-w-0 flex-1 flex-col">
+                                        <span class="truncate text-sm font-semibold text-zinc-900" x-text="r.name"></span>
+                                        <span class="text-[11px] text-zinc-500" x-text="r.type"></span>
+                                    </span>
                                 </a>
                             </li>
                         </template>
@@ -255,10 +258,10 @@
                         <div class="mt-3 max-h-[70vh] overflow-y-auto rounded-[10px] bg-white shadow-sm ring-1 ring-zinc-100 dark:bg-[#162a4a] dark:ring-white/10" x-show="query.length >= 2">
                             <div x-show="loading && results.length === 0" class="px-5 py-6 text-center text-sm text-zinc-600 dark:text-zinc-400">Searching…</div>
                             <ul x-show="results.length > 0" class="divide-y divide-zinc-100 dark:divide-white/10">
-                                <template x-for="r in results" :key="r.slug">
+                                <template x-for="r in results" :key="r.url">
                                     <li>
                                         <a
-                                            :href="'/gift-cards/' + r.slug"
+                                            :href="r.url"
                                             wire:navigate
                                             @click="mobileSearchOpen = false"
                                             class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-zinc-100 dark:hover:bg-white/5"
@@ -271,7 +274,10 @@
                                             <template x-if="!r.logo">
                                                 <span class="flex aspect-[16/10] w-16 shrink-0 items-center justify-center rounded-[6px] bg-zinc-100 text-xs font-black uppercase text-zinc-700 ring-1 ring-zinc-200" x-text="r.name.substring(0, 2).toUpperCase()"></span>
                                             </template>
-                                            <span class="flex-1 truncate text-sm font-semibold text-zinc-900 dark:text-white" x-text="r.name"></span>
+                                            <span class="flex min-w-0 flex-1 flex-col">
+                                                <span class="truncate text-sm font-semibold text-zinc-900 dark:text-white" x-text="r.name"></span>
+                                                <span class="text-[11px] text-zinc-500 dark:text-zinc-400" x-text="r.type"></span>
+                                            </span>
                                         </a>
                                     </li>
                                 </template>

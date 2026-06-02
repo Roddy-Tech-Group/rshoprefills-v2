@@ -669,8 +669,8 @@
                         </div>
 
                         {{-- Matches --}}
-                        <template x-for="r in results" :key="r.slug">
-                            <a :href="'/gift-cards/' + r.slug" class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-blue-100">
+                        <template x-for="r in results" :key="r.url">
+                            <a :href="r.url" class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-blue-100">
                                 <span class="flex min-w-0 items-center gap-3">
                                     <span class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-200">
                                         <template x-if="r.logo"><img :src="r.logo" alt="" class="h-full w-full object-cover"></template>
@@ -678,7 +678,7 @@
                                     </span>
                                     <span class="min-w-0 leading-tight">
                                         <span class="block truncate text-sm font-semibold text-zinc-900" x-text="r.name"></span>
-                                        <span class="block text-xs text-zinc-600">Gift card</span>
+                                        <span class="block text-xs text-zinc-600" x-text="r.type"></span>
                                     </span>
                                 </span>
                                 <svg class="h-4 w-4 shrink-0 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">

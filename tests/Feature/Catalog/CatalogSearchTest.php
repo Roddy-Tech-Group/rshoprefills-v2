@@ -77,4 +77,24 @@ class CatalogSearchTest extends TestCase
     {
         $this->get('/esims/this-region-does-not-exist')->assertNotFound();
     }
+
+    public function test_global_search_tags_products_with_type_and_correct_url(): void
+    {
+        $this->product();
+
+        $response = $this->getJson(route('api.search.brands', ['q' => 'steam']))->assertOk();
+
+        $this->assertSame('Gift card', $response->json('0.type'));
+        $this->assertStringStartsWith('/gift-cards/', $response->json('0.url'));
+    }
+
+    public function test_global_search_surfaces_matching_pages(): void
+    {
+        $results = collect($this->getJson(route('api.search.brands', ['q' => 'help']))->assertOk()->json());
+
+        $page = $results->firstWhere('type', 'Page');
+
+        $this->assertNotNull($page, 'Expected a page result when searching "help".');
+        $this->assertSame('Help center', $page['name']);
+    }
 }
