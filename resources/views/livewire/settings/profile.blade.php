@@ -334,8 +334,8 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     </div>
 
                     <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <p class="truncate text-lg font-bold text-black">{{ $authUser?->name ?? 'Account holder' }}</p>
+                        <div class="flex items-center gap-1.5">
+                            <p class="min-w-0 truncate text-lg font-bold text-black">{{ $authUser?->name ?? 'Account holder' }}</p>
                             {{-- Verification badge: ID-verified shows the Facebook-style
                                  blue tick; otherwise email-verified > basic pills. --}}
                             @if ($identityVerified)
