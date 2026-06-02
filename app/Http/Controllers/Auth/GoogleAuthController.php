@@ -82,8 +82,10 @@ class GoogleAuthController extends Controller
                 Cookie::queue(Cookie::forget(CaptureReferralCookie::COOKIE_NAME));
             }
 
-            Auth::login($user, remember: true);
-            session()->regenerate();
+            if (! Auth::check() || Auth::id() !== $user->id) {
+                Auth::login($user, remember: true);
+                session()->regenerate();
+            }
 
             if ($isPopup) {
                 return redirect()->route('auth.popup-complete');
