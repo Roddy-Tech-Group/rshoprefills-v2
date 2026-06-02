@@ -841,39 +841,10 @@
                 </div>
             </div>
 
-            {{-- Visible desktop locale switcher (country + language). Mobile has
-                 its own floating bar, so this is lg-only. Both buttons open the
-                 shared locale modal via the 'open-locale-modal' event the layout
-                 already listens for; the chip values stay in sync through the
-                 'locale-updated' event the modal dispatches. --}}
-            <div
-                x-data="{ country: 'United States', countryCode: 'US', language: 'English' }"
-                @locale-updated.window="country = $event.detail.country; countryCode = $event.detail.countryCode; language = $event.detail.language"
-                class="hidden items-center gap-1 lg:flex"
-            >
-                <button
-                    type="button"
-                    @click="$dispatch('open-locale-modal')"
-                    class="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-200/70 dark:text-white dark:hover:bg-white/10"
-                    aria-label="Change country"
-                >
-                    <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3 w-[18px] shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200 dark:ring-white/20">
-                    <span class="hidden max-w-[110px] truncate xl:inline" x-text="country">United States</span>
-                </button>
-
-                <button
-                    type="button"
-                    @click="$dispatch('open-locale-modal')"
-                    class="flex items-center gap-1.5 rounded-[10px] px-2.5 py-1.5 text-[13px] font-medium text-zinc-900 transition-colors hover:bg-zinc-200/70 dark:text-white dark:hover:bg-white/10"
-                    aria-label="Change language"
-                >
-                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>
-                    </svg>
-                    <span class="hidden xl:inline" x-text="language">English</span>
-                </button>
-            </div>
+            {{-- Regional country/language switcher intentionally lives only on the
+                 shop/category pages (storefront layout), not the dashboard - it
+                 changes the catalog region, which doesn't apply to account pages.
+                 The user's own account country is set in profile settings. --}}
 
             {{-- Notification bell (desktop) — hidden lg:block so it never doubles
                  up with the mobile hero bell on small screens. --}}
@@ -953,35 +924,8 @@
                             Appearance
                         </a>
 
-                        {{-- Divider before locale block --}}
-                        <div class="my-1 h-px bg-zinc-100"></div>
-
-                        {{-- Language (opens shared locale modal) --}}
-                        <button type="button" @click="locked = false; open = false; $dispatch('open-locale-modal')" class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
-                            <span class="flex items-center gap-3">
-                                <img src="{{ asset('assets/' . rawurlencode('global svg.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
-                                Language
-                            </span>
-                            <span class="text-xs font-semibold text-zinc-600" x-text="language">English</span>
-                        </button>
-
-                        {{-- Country (opens shared locale modal) --}}
-                        <button type="button" @click="locked = false; open = false; $dispatch('open-locale-modal')" class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
-                            <span class="flex items-center gap-3">
-                                <svg class="h-5 w-5 shrink-0 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
-                                </svg>
-                                Country
-                            </span>
-                            <span class="flex items-center gap-1.5 text-xs font-semibold text-zinc-600">
-                                <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3 w-[18px] shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
-                                <span class="max-w-[80px] truncate" x-text="country">United States</span>
-                            </span>
-                        </button>
-
-                        {{-- Divider after locale block --}}
-                        <div class="my-1 h-px bg-zinc-100"></div>
+                        {{-- (Regional country/language switcher removed from the
+                             dashboard - it belongs on shop/category pages only.) --}}
 
                         <a href="{{ route('dashboard.notifications') }}" wire:navigate class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <span class="flex items-center gap-3">
@@ -1179,23 +1123,9 @@
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
 
-                {{-- Locale switcher chip (center) - only on inner pages. The
-                     dashboard overview keeps its floating bar to hamburger +
-                     cart + notification (locale lives in the hero there). --}}
-                @if ($skipMobileHero)
-                <button
-                    type="button"
-                    @click="$dispatch('open-locale-modal')"
-                    aria-label="Change language and region"
-                    class="pointer-events-auto inline-flex h-11 items-center gap-2 rounded-full bg-white/40 px-4 text-sm font-semibold text-zinc-900 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:text-white dark:ring-white/20 dark:hover:bg-white/15"
-                >
-                    <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-white/40">
-                    <span class="max-w-[90px] truncate" x-text="country">United States</span>
-                    <svg class="h-3.5 w-3.5 text-zinc-700 dark:text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                    </svg>
-                </button>
-                @endif
+                {{-- (Regional locale chip removed - dashboard floating bar is
+                     hamburger + cart + notification only; region switching is a
+                     shop-page concern, not an account-page one.) --}}
 
                 {{-- Cart + notification chips (right) - same glass treatment, pinned. --}}
                 <div class="pointer-events-auto flex items-center gap-2" x-data>
@@ -1352,7 +1282,11 @@
             x-data="storefrontLocale()"
             x-init="
                 init();
-                // Profile dropdown chip listens for these events to keep its display values in sync.
+                // The floating chips, desktop switcher and profile chip are separate
+                // Alpine scopes that default to United States/English and only sync via
+                // this event. Broadcast the persisted values once on load so they show
+                // the saved country/language instead of reverting to USA on every reload.
+                $nextTick(() => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
                 $watch('country',  v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
                 $watch('language', v => $dispatch('locale-updated', { country: country, countryFlag: countryFlag, countryCode: countryCode, language: language }));
             "

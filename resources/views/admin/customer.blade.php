@@ -434,6 +434,21 @@
                         @error('phone') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div>
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Country</label>
+                        <div class="relative mt-1.5">
+                            <select name="country" class="w-full appearance-none rounded-[10px] border border-zinc-200 bg-white px-3 py-2 pr-9 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <option value="">Not set</option>
+                                @foreach (array_keys(config('countries.codes', [])) as $cName)
+                                    <option value="{{ $cName }}" @selected(old('country', $user->country) === $cName)>{{ $cName }}</option>
+                                @endforeach
+                            </select>
+                            <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                        @error('country') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
                         <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Gender</label>
                         {{-- Native <select> kept for accessibility + form submission; the OS arrow
                              is hidden with appearance-none and replaced by a centred chevron SVG. --}}

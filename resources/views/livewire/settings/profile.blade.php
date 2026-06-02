@@ -15,6 +15,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     public string $name = '';
     public string $email = '';
     public ?string $phone = null;
+    public ?string $country = null;
     public ?string $gender = null;
     public $avatar = null;
 
@@ -31,10 +32,11 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     public function mount(): void
     {
         $user = Auth::user();
-        $this->name   = $user->name;
-        $this->email  = $user->email;
-        $this->phone  = $user->phone;
-        $this->gender = $user->gender;
+        $this->name    = $user->name;
+        $this->email   = $user->email;
+        $this->phone   = $user->phone;
+        $this->country = $user->country;
+        $this->gender  = $user->gender;
 
         $prefs = app(\App\Domain\Notification\Services\NotificationPreferenceService::class)->getPreferences($user);
         $this->notifyEmail     = $prefs->email_enabled;
@@ -66,6 +68,11 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             // Phone: free-form for now, allows + and digits and spaces. Backend can swap in a stricter rule
             // (libphonenumber, country-aware) once a phone library ships.
             'phone'  => ['nullable', 'string', 'max:32', 'regex:/^[\d\s\+\-\(\)]+$/'],
+
+            // Account country - the user's declared country (profile attribute,
+            // shown in their info and to admins). Constrained to the known
+            // country list so junk can't be stored. NOT the shopping region.
+            'country' => ['nullable', 'string', Rule::in(array_keys(config('countries.codes', [])))],
 
             // Gender enum stored as a short string. Add new values to the migration column and the union here.
             'gender' => ['nullable', 'in:male,female,other'],
@@ -435,21 +442,21 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     </span>
                 </button>
 
-                {{-- Country — clickable row that opens the shared locale modal. Display syncs via 'locale-updated' window event. --}}
-                <button type="button" @click="$dispatch('open-locale-modal')" class="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left sm:px-6">
+                {{-- Country (account attribute) — the user's declared country,
+                     shown on their profile and to admins. Edited via the form
+                     below; this is NOT the shopping region switcher. --}}
+                <div class="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left sm:px-6">
                     <div class="min-w-0">
                         <p class="text-[11px] font-semibold uppercase tracking-wider text-zinc-600">Country</p>
-                        <p class="mt-0.5 flex items-center gap-2 text-sm font-medium text-black">
-                            <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
-                            <span x-text="country">Cameroon</span>
+                        <p class="mt-0.5 flex items-center gap-2 text-sm font-medium text-black dark:text-white">
+                            @php $profileCc = strtolower((string) (config('countries.codes')[$country] ?? '')); @endphp
+                            @if ($profileCc)
+                                <img src="https://flagcdn.com/w40/{{ $profileCc }}.png" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
+                            @endif
+                            <span>{{ $country ?: 'Not set' }}</span>
                         </p>
                     </div>
-                    <span class="rounded-[10px] p-1.5 text-zinc-600" aria-label="Change country">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                        </svg>
-                    </span>
-                </button>
+                </div>
             </div>
 
             {{-- Mobile edit button (full width at bottom of card on small screens) --}}
@@ -513,6 +520,22 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             placeholder="+237 6XX XXX XXX"
                         />
                         @error('phone') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label for="profile-country" class="mb-1.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Country</label>
+                        <select
+                            wire:model="country"
+                            id="profile-country"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-white/15 dark:bg-[#0c1a36] dark:text-white"
+                        >
+                            <option value="">Select your country</option>
+                            @foreach (array_keys(config('countries.codes', [])) as $cName)
+                                <option value="{{ $cName }}">{{ $cName }}</option>
+                            @endforeach
+                        </select>
+                        @error('country') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
+                        <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">The country shown on your account - this does not change the shop region.</p>
                     </div>
 
                     <div>

@@ -310,7 +310,7 @@
                                 type="button"
                                 role="option"
                                 :aria-selected="language === lang ? 'true' : 'false'"
-                                @click="language = lang; open = false; search = ''"
+                                @click="language = lang; open = false; search = ''; window.dispatchEvent(new CustomEvent('language-changed', { detail: lang }))"
                                 :class="language === lang ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
                                 class="flex w-full items-center rounded-[10px] px-3 py-2 text-left text-base font-medium transition-colors"
                             >

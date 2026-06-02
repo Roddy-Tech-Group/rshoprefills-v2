@@ -127,6 +127,11 @@
     // which is far smoother than the in-place re-translate. English clears the
     // cookie so the reload shows the original source.
     function applyByName(name) {
+        // Persist here too (not just via the Alpine locale store) so the choice
+        // survives the reload no matter which layout/scope triggered the change -
+        // the dashboard's locale store sits in a different Alpine scope than the
+        // storefront's, and was not reliably saving before the reload.
+        writeStored(name);
         var code = nameToCode(name);
         if (code === 'en') {
             clearGoogTrans();

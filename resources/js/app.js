@@ -852,9 +852,10 @@ window.storefrontLocale = function () {
             // (covers non-shop pages, where reloadIfShop does not navigate).
             this.$watch('currency', () => window.dispatchEvent(new CustomEvent('currency-changed')));
 
-            // Tell the translate engine (partials/translate-engine.blade.php) to
-            // re-translate the page when the language changes from the locale modal.
-            this.$watch('language', (val) => window.dispatchEvent(new CustomEvent('language-changed', { detail: val })));
+            // NOTE: the locale modal dispatches `language-changed` itself when a
+            // language is picked (works regardless of which Alpine scope the modal
+            // is mounted in - storefront vs dashboard). We intentionally do NOT
+            // dispatch it from this watcher to avoid a double trigger / double reload.
         },
     };
 };

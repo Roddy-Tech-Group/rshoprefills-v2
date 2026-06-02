@@ -37,6 +37,7 @@ class AdminCustomerController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:30'],
+            'country' => ['nullable', 'string', Rule::in(array_keys(config('countries.codes', [])))],
             'gender' => ['nullable', 'in:male,female,other'],
         ]);
 

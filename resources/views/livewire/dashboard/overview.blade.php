@@ -225,7 +225,7 @@ new #[Lazy] class extends Component
                     ['Stays',      'stay 2.svg',       'bg-orange-500',  route('dashboard.shop.stays')],
                     ['Topups',     'topup1.svg',       'bg-emerald-500', route('dashboard.shop.topups')],
                     ['Bills',      'bill payment.svg', 'bg-teal-500',    route('dashboard.shop.bills')],
-                    ['Gaming',     'Gaming.svg',       'bg-fuchsia-500', route('dashboard.shop.gift-cards')],
+                    ['Gaming',     'Gaming.svg',       'bg-fuchsia-500', route('dashboard.shop.gift-cards', ['subcategory' => 'gaming-entertainment'])],
                     ['More',       'More.svg',         'bg-blue-500',    route('dashboard.shop.gift-cards')],
                 ] as [$label, $icon, $bg, $href])
                     <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
@@ -835,7 +835,7 @@ new #[Lazy] class extends Component
                                 ['Stays',      'stay 2.svg',       'bg-orange-500',   'stay.svg',       route('dashboard.shop.stays')],
                                 ['Topups',     'topup1.svg',       'bg-emerald-500',  null,             route('dashboard.shop.topups')],
                                 ['Bills',      'bill payment.svg', 'bg-teal-500',     'Bills 2.svg',    route('dashboard.shop.bills')],
-                                ['Gaming',     'Gaming.svg',       'bg-fuchsia-500',  'gaming two.svg', route('dashboard.shop.gift-cards')],
+                                ['Gaming',     'Gaming.svg',       'bg-fuchsia-500',  'gaming two.svg', route('dashboard.shop.gift-cards', ['subcategory' => 'gaming-entertainment'])],
                                 ['More',       'More.svg',         'bg-blue-500',     'more two.svg',   route('dashboard.shop.gift-cards')],
                             ] as [$label, $icon, $bg, $hoverIcon, $href])
                                 <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">

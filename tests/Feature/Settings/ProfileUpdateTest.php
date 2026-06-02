@@ -38,6 +38,36 @@ class ProfileUpdateTest extends TestCase
         $this->assertNull($user->email_verified_at);
     }
 
+    public function test_account_country_can_be_saved_and_persists(): void
+    {
+        $user = User::factory()->create(['country' => null]);
+
+        $this->actingAs($user);
+
+        Volt::test('settings.profile')
+            ->set('name', $user->name)
+            ->set('email', $user->email)
+            ->set('country', 'Cameroon')
+            ->call('updateProfileInformation')
+            ->assertHasNoErrors();
+
+        $this->assertEquals('Cameroon', $user->refresh()->country);
+    }
+
+    public function test_account_country_rejects_values_outside_the_country_list(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        Volt::test('settings.profile')
+            ->set('name', $user->name)
+            ->set('email', $user->email)
+            ->set('country', 'Atlantis')
+            ->call('updateProfileInformation')
+            ->assertHasErrors('country');
+    }
+
     public function test_email_verification_status_is_unchanged_when_email_address_is_unchanged(): void
     {
         $user = User::factory()->create();
