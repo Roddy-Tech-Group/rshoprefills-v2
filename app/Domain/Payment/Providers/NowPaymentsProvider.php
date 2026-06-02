@@ -17,7 +17,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
     public function __construct()
     {
         $this->apiKey = config('services.nowpayments.api_key') ?: 'NOWPAYMENTS_KEY_MOCK';
-        $this->baseUrl = 'https://api.nowpayments.io/v1';
+        $this->baseUrl = config('services.nowpayments.base_url') ?: 'https://api.nowpayments.io/v1';
     }
 
     public function initializePayment(PaymentAttempt $attempt): array
