@@ -155,7 +155,7 @@
         x-transition:leave="transition duration-200 ease-in"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-8 scale-[0.98]"
-        class="pointer-events-auto relative w-full max-w-2xl rounded-[10px] bg-white/70 ring-1 ring-white/40 shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] backdrop-blur-2xl backdrop-saturate-150 will-change-transform dark:bg-[#0c1a36]/65 dark:ring-white/15"
+        class="pointer-events-auto relative w-full max-w-2xl rounded-[10px] bg-white/70 ring-1 ring-white/40 shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/65 dark:ring-white/15"
     >
         {{-- Close button (positioned outside the card's top-right corner) --}}
         <x-close-button @click="localeModalOpen = false" class="absolute -top-3 -right-3 z-10 shadow-lg shadow-zinc-900/20" />
