@@ -51,8 +51,18 @@ new class extends Component {
     public string $regGender = '';
     public bool $regAcceptedTerms = false;
     public bool $regNewsletterOptIn = false;
+    public string $regReferral = '';
 
     public ?string $turnstileToken = null;
+
+    /**
+     * Prefill the referral code from the ?ref cookie so a customer who arrived
+     * through a friend's invite link sees it filled in (still editable).
+     */
+    public function mount(): void
+    {
+        $this->regReferral = trim((string) request()->cookie(CaptureReferralCookie::COOKIE_NAME, ''));
+    }
 
     public function login(): void
     {
@@ -131,21 +141,14 @@ new class extends Component {
             }
         }
 
-        // Referral attribution from the CaptureReferralCookie cookie.
-        $referralCode = trim((string) request()->cookie(CaptureReferralCookie::COOKIE_NAME, ''));
-        if ($referralCode !== '') {
-            $referrer = User::query()
-                ->where('referral_code', $referralCode)
-                ->where('id', '!=', $user->id)
-                ->first();
-            if ($referrer) {
-                Referral::firstOrCreate(
-                    ['referred_user_id' => $user->id],
-                    ['referrer_id' => $referrer->id, 'status' => 'active', 'total_rewards_generated' => 0, 'total_orders_completed' => 0],
-                );
-            }
-            Cookie::queue(Cookie::forget(CaptureReferralCookie::COOKIE_NAME));
-        }
+        // Referral attribution: prefer the code typed in the modal, otherwise
+        // fall back to the ?ref cookie. Referral::attribute matches it to a
+        // referrer and silently no-ops on blank / no-match / self-referral.
+        $referralCode = $this->regReferral !== ''
+            ? $this->regReferral
+            : (string) request()->cookie(CaptureReferralCookie::COOKIE_NAME, '');
+        Referral::attribute($user, $referralCode);
+        Cookie::queue(Cookie::forget(CaptureReferralCookie::COOKIE_NAME));
 
         Auth::login($user);
         $this->redirect(route('dashboard', absolute: false), navigate: true);
@@ -528,6 +531,24 @@ new class extends Component {
                             @endforeach
                         </div>
                         @error('regGender') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Referral code (optional). Prefilled from the ?ref invite
+                         cookie when present, but always editable so a friend's
+                         code can be pasted in by hand. --}}
+                    <div>
+                        <label for="regReferral" class="mb-2 block text-base font-medium text-white/85">
+                            Referral code <span class="font-normal text-white/45">(optional)</span>
+                        </label>
+                        <input
+                            wire:model="regReferral"
+                            id="regReferral"
+                            type="text"
+                            autocomplete="off"
+                            placeholder="Enter a friend's referral code"
+                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                        >
+                        @error('regReferral') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <label class="flex cursor-pointer items-start gap-3 text-base text-white/75">
