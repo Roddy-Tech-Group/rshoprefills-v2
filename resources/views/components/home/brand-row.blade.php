@@ -36,6 +36,28 @@
         // Native horizontal scroll (no JS hand-drag). Touch + trackpad get the
         // browser's own smooth momentum scrolling, and it never fights vertical
         // page scroll. The arrow buttons (desktop only) drive scrollBy().
+        //
+        // setup() restores two things the native-scroll track needs that plain
+        // CSS can't express against a centered max-w container:
+        //   1. padLeft - the section's distance from the viewport's left edge.
+        //      The full-bleed track spans 100vw, so we pad the list (and the
+        //      snap start) by padLeft to line the FIRST card up with the
+        //      section heading / content column. On scroll the cards still pass
+        //      through that padding out to the absolute viewport left (x=0).
+        //   2. --card-w - a fixed per-breakpoint card width consumed by the
+        //      carousel-list card-width rule in app.css. Without it the cards
+        //      fall back to brand-card sm:w-auto and balloon to their logo size.
+        setup() {
+            const t    = this.$refs.track;
+            const list = this.$refs.list;
+            if (! t || ! list) { return; }
+            const padLeft = Math.round(this.$el.getBoundingClientRect().left);
+            list.style.paddingLeft   = padLeft + 'px';
+            t.style.scrollPaddingLeft = padLeft + 'px';
+            const cardW = window.innerWidth >= 1024 ? 280 : window.innerWidth >= 640 ? 200 : 160;
+            list.style.setProperty('--card-w', cardW + 'px');
+            this.$nextTick(() => this.refresh());
+        },
         refresh() {
             const t = this.$refs.track;
             if (! t) { return; }
@@ -53,8 +75,8 @@
         },
     }"
     x-on:livewire:navigate.window="navigating = true"
-    x-on:livewire:navigated.window="navigating = false; $nextTick(() => refresh())"
-    x-init="$nextTick(() => refresh())"
+    x-on:livewire:navigated.window="navigating = false; $nextTick(() => setup())"
+    x-init="$nextTick(() => setup())"
     class="relative"
 >
     <div class="mb-4 flex items-end justify-between gap-4">
@@ -115,12 +137,16 @@
         <div
             x-ref="track"
             @scroll.passive="refresh()"
-            @resize.window.debounce.200ms="refresh()"
+            @resize.window.debounce.200ms="setup()"
             class="mx-[calc(50%-50vw)] w-screen overflow-x-auto overflow-y-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] scroll-pl-4 sm:scroll-pl-6 lg:scroll-pl-8"
             style="scroll-behavior: smooth;"
         >
+            {{-- pl-* / --card-w fallbacks: setup() overrides paddingLeft and sets
+                 --card-w inline at runtime; these keep a sane layout pre-JS. --}}
             <ul
+                x-ref="list"
                 data-reveal-group
+                style="--card-w: 280px;"
                 class="carousel-list flex w-max gap-4 pl-4 pr-4 sm:gap-5 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 [&>*]:shrink-0 [&>*]:snap-start"
             >
                 {{ $slot }}
