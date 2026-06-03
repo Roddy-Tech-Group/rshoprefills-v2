@@ -24,14 +24,32 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     /**
      * Register the Horizon gate.
      *
-     * This gate determines who can access Horizon in non-local environments.
+     * This gate determines who can access Horizon.
      */
     protected function gate(): void
     {
         Gate::define('viewHorizon', function ($user = null) {
-            // Check if the current request has an authenticated admin session
-            // The $user param is the default 'web' guard user (null if not logged in to frontend)
-            return Auth::guard('admin')->check();
+            if (! Auth::guard('admin')->check()) {
+                return false;
+            }
+
+            $admin = Auth::guard('admin')->user();
+            return $admin && $admin->isActive();
+        });
+    }
+
+    /**
+     * Configure the Horizon authorization services.
+     *
+     * Overriding parent to enforce the gate in ALL environments (including local),
+     * ensuring strict admin-only access at all times.
+     */
+    protected function authorization(): void
+    {
+        $this->gate();
+
+        Horizon::auth(function ($request) {
+            return Gate::check('viewHorizon', [$request->user()]);
         });
     }
 }

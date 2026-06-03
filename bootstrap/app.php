@@ -67,5 +67,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => request()->is('admin*') ? route('admin.dashboard') : route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->dontFlash([
+            'password',
+            'password_confirmation',
+            'transaction_pin',
+            'api_key',
+            'secret',
+            'credentials',
+        ]);
+        \Sentry\Laravel\Integration::handles($exceptions);
     })->create();
