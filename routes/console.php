@@ -24,9 +24,9 @@ Artisan::command('inspire', function () {
 // Daily cadence is plenty - ECB / interbank rates only refresh once a day.
 // SyncExchangeRatesJob still runs hourly as a safety net so any admin manual
 // edit to a CurrencyRate row propagates within the hour even without `rates:fetch`.
-Schedule::command('rates:fetch')->dailyAt('03:00')->name('rates:fetch-daily');
-Schedule::job(new SyncExchangeRatesJob)->hourly();
-Schedule::job(new ReconcilePendingFundingsJob)->hourly();
+Schedule::command('rates:fetch')->dailyAt('03:00')->name('rates:fetch-daily')->sentryMonitor('rates-fetch-daily');
+Schedule::job(new SyncExchangeRatesJob)->hourly()->sentryMonitor('sync-exchange-rates');
+Schedule::job(new ReconcilePendingFundingsJob)->hourly()->sentryMonitor('reconcile-pending-fundings');
 
 // Airalo requires syncing GET /v2/packages at least once every 60 minutes
 // or they email warning the catalog may be stale. withoutOverlapping prevents
@@ -89,7 +89,7 @@ Schedule::job(new RetryFailedNotificationsJob)
 // WalletFunding, so half-finished checkout attempts don't sit Pending on the
 // customer's dashboard forever. Five-minute cadence — the dead state shows for
 // at most ~5 min between cron ticks.
-Schedule::job(new ExpireStalePaymentSessionsJob)->everyFiveMinutes();
+Schedule::job(new ExpireStalePaymentSessionsJob)->everyFiveMinutes()->sentryMonitor('expire-stale-payment-sessions');
 
 // Same job, on demand. Useful after a debugging session left dozens of Pending
 // orders, or any time you want to flush stale sessions without waiting for cron.
@@ -137,7 +137,7 @@ Schedule::call(function () {
                 }
             }
         });
-})->everyFiveMinutes()->name('fulfillment:rescue-orphaned-orders');
+})->everyFiveMinutes()->name('fulfillment:rescue-orphaned-orders')->sentryMonitor('fulfillment-rescue-orphaned-orders');
 
 // Pending-fulfillment poll sweeper.
 //
@@ -162,8 +162,8 @@ Schedule::call(function () {
 })->everyMinute()->name('fulfillment:poll-pending')->withoutOverlapping();
 
 // Enterprise Reconciliation Engine Scheduling
-Schedule::command('reconcile:wallet-balances')->dailyAt('02:00');
-Schedule::command('reconcile:orphaned-sessions')->hourly();
+Schedule::command('reconcile:wallet-balances')->dailyAt('02:00')->sentryMonitor('reconcile-wallet-balances');
+Schedule::command('reconcile:orphaned-sessions')->hourly()->sentryMonitor('reconcile-orphaned-sessions');
 
 // Enterprise Provider Monitoring
-Schedule::command('zendit:check-balance --threshold=500')->hourly();
+Schedule::command('zendit:check-balance --threshold=500')->hourly()->sentryMonitor('zendit-check-balance');
