@@ -616,7 +616,7 @@ class extends Component {
     @if ($orders->hasPages())
         {{-- Matches the admin products page paginator (vendor/pagination/circles). --}}
         <div class="mt-2 rounded-[10px] border-2 border-zinc-100 bg-white px-5 py-3 dark:bg-[#1d3252] dark:ring-zinc-700/60">
-            {{ $orders->onEachSide(1)->links('vendor.pagination.circles') }}
+            {{ $orders->onEachSide(1)->links('vendor.pagination.circles-livewire') }}
         </div>
     @endif
 </div>
