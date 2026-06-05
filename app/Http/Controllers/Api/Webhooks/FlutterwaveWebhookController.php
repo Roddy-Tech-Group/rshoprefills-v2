@@ -12,25 +12,27 @@ class FlutterwaveWebhookController extends Controller
 {
     public function handle(Request $request)
     {
-        Log::info('Flutterwave Webhook received', $request->all());
+        $signature = (string) $request->header('verif-hash');
+        $expectedSignature = (string) config('services.flutterwave.webhook_hash');
 
-        $signature = $request->header('verif-hash');
-        $expectedSignature = env('FLUTTERWAVE_SECRET_HASH', 'FLW_SECRET_HASH_MOCK');
+        // Fail closed: a webhook secret must be configured and must match the
+        // signature header exactly. There is no mock/bypass fallback, so an
+        // unsigned or mismatched request is always rejected. hash_equals guards
+        // against timing attacks; reading via config() survives config:cache.
+        if ($expectedSignature === '' || ! hash_equals($expectedSignature, $signature)) {
+            Log::warning('Flutterwave webhook rejected: invalid or missing signature');
 
-        // Verify webhook signature (allow mock signature in development)
-        if ($expectedSignature !== 'FLW_SECRET_HASH_MOCK' && $signature !== $expectedSignature) {
-            Log::warning('Flutterwave webhook signature mismatch', [
-                'received' => $signature,
-                'expected' => $expectedSignature,
-            ]);
-
-            return response()->json(['message' => 'Unauthorized signature'], 401);
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
 
         $payload = $request->all();
         $txRef = $payload['txRef'] ?? ($payload['data']['tx_ref'] ?? null);
         $status = $payload['status'] ?? ($payload['data']['status'] ?? null);
         $id = $payload['id'] ?? ($payload['data']['id'] ?? null);
+
+        // Redacted log: never persist the full provider payload (card data,
+        // customer PII, auth metadata). Only the reference + status are recorded.
+        Log::info('Flutterwave webhook received', ['tx_ref' => $txRef, 'status' => $status]);
 
         if (! $txRef) {
             return response()->json(['message' => 'Missing transaction reference'], 400);

@@ -12,36 +12,33 @@ class NowPaymentsWebhookController extends Controller
 {
     public function handle(Request $request)
     {
-        Log::info('NowPayments Webhook received', $request->all());
+        $signature = (string) $request->header('x-nowpayments-sig');
+        $ipnSecret = (string) config('services.nowpayments.ipn_secret');
 
-        // Validate crypt signature if configured
-        $signature = $request->header('x-nowpayments-sig');
-        $ipnSecret = config('services.nowpayments.ipn_secret', 'NOWPAYMENTS_IPN_MOCK');
+        // Fail closed: the IPN secret must be configured. There is no mock/bypass
+        // fallback, so a webhook is only trusted when its HMAC-SHA512 signature
+        // matches. hash_equals guards against timing attacks.
+        if ($ipnSecret === '') {
+            Log::warning('NowPayments webhook rejected: IPN secret not configured');
 
-        if ($ipnSecret !== 'NOWPAYMENTS_IPN_MOCK' && empty($signature)) {
-            Log::warning('NowPayments webhook: missing signature header');
-
-            return response()->json(['message' => 'Missing signature'], 401);
+            return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        // Verify crypt signature mathematically if possible or bypass in MOCK
-        if ($ipnSecret !== 'NOWPAYMENTS_IPN_MOCK') {
-            $signingData = json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-            $calculatedSig = hash_hmac('sha512', $signingData, $ipnSecret);
+        $signingData = json_encode($request->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $calculatedSig = hash_hmac('sha512', $signingData, $ipnSecret);
 
-            if ($signature !== $calculatedSig) {
-                Log::warning('NowPayments webhook signature mismatch', [
-                    'received' => $signature,
-                    'calculated' => $calculatedSig,
-                ]);
+        if ($signature === '' || ! hash_equals($calculatedSig, $signature)) {
+            Log::warning('NowPayments webhook rejected: invalid or missing signature');
 
-                return response()->json(['message' => 'Invalid signature'], 401);
-            }
+            return response()->json(['message' => 'Invalid signature'], 401);
         }
 
         $payload = $request->all();
         $invoiceId = $payload['invoice_id'] ?? null;
         $paymentStatus = $payload['payment_status'] ?? null;
+
+        // Redacted log: only the invoice + status, never the full payload.
+        Log::info('NowPayments webhook received', ['invoice_id' => $invoiceId, 'payment_status' => $paymentStatus]);
 
         if (! $invoiceId) {
             return response()->json(['message' => 'Missing invoice ID'], 400);

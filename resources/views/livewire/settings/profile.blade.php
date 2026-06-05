@@ -522,18 +522,72 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         @error('phone') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                     </div>
 
+                    @php
+                        // Same option shape the KYC dropdown consumes, so the country
+                        // field reuses the shared kycSelect modern dropdown component.
+                        $countryOptions = collect(array_keys(config('countries.codes', [])))
+                            ->map(fn ($cName) => ['value' => $cName, 'label' => $cName])
+                            ->values();
+                    @endphp
                     <div>
                         <label for="profile-country" class="mb-1.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Country</label>
-                        <select
-                            wire:model="country"
-                            id="profile-country"
-                            class="w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-white/15 dark:bg-[#0c1a36] dark:text-white"
+                        <div
+                            x-data="kycSelect(@js($countryOptions), @js($country), true)"
+                            x-init="$watch('value', value => $wire.set('country', value, false))"
+                            @click.outside="open = false"
+                            @keydown.escape="open = false"
+                            class="relative"
                         >
-                            <option value="">Select your country</option>
-                            @foreach (array_keys(config('countries.codes', [])) as $cName)
-                                <option value="{{ $cName }}">{{ $cName }}</option>
-                            @endforeach
-                        </select>
+                            <button
+                                type="button"
+                                id="profile-country"
+                                @click="toggle()"
+                                :class="open && 'border-blue-500 ring-2 ring-blue-500/15'"
+                                class="flex w-full items-center justify-between gap-2 rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-left text-sm text-black transition-colors dark:border-white/15 dark:bg-[#0c1a36] dark:text-white"
+                            >
+                                <span :class="value ? 'text-black dark:text-white' : 'text-zinc-400'" x-text="selectedLabel || 'Select your country'"></span>
+                                <svg :class="open && 'rotate-180'" class="h-4 w-4 shrink-0 text-zinc-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                x-cloak
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 -translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-white shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200 dark:bg-[#0c1a36] dark:ring-white/15"
+                            >
+                                <div class="border-b border-zinc-100 p-2 dark:border-white/10">
+                                    <input
+                                        x-ref="search"
+                                        x-model="query"
+                                        type="text"
+                                        placeholder="Search countries"
+                                        class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-white/15 dark:bg-[#0c1a36] dark:text-white"
+                                    >
+                                </div>
+                                <ul class="max-h-52 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                    <template x-for="opt in filtered" :key="opt.value">
+                                        <li>
+                                            <button
+                                                type="button"
+                                                @click="pick(opt.value)"
+                                                :class="opt.value === value ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300' : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5'"
+                                                class="flex w-full items-center justify-between gap-2 rounded-[10px] px-3 py-2 text-left text-sm transition-colors"
+                                            >
+                                                <span x-text="opt.label"></span>
+                                                <svg x-show="opt.value === value" class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                                </svg>
+                                            </button>
+                                        </li>
+                                    </template>
+                                    <li x-show="filtered.length === 0" class="px-3 py-3 text-center text-sm text-zinc-500">No matches</li>
+                                </ul>
+                            </div>
+                        </div>
                         @error('country') <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $message }}</p> @enderror
                         <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">The country shown on your account - this does not change the shop region.</p>
                     </div>
