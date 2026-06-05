@@ -526,7 +526,7 @@
                                 x-transition:leave-start="opacity-100 translate-y-0"
                                 x-transition:leave-end="opacity-0 -translate-y-1"
                                 style="display:none;"
-                                class="fixed right-3 top-[84px] z-[56] w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[10px] bg-white/80 px-3 py-2 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 sm:right-4"
+                                class="fixed right-3 top-[84px] z-[56] w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[10px] bg-white/80 px-3 py-2 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 sm:right-4 lg:right-[max(2rem,calc((100vw-1350px)/2+2rem))]"
                                 role="menu"
                             >
                         {{-- Empty state --}}
