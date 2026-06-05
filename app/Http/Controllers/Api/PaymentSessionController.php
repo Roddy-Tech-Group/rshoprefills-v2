@@ -25,9 +25,13 @@ class PaymentSessionController extends Controller
     /**
      * Display the specified payment session details.
      */
-    public function show(string $id)
+    public function show(string $id, Request $request)
     {
-        $session = PaymentSession::findOrFail($id);
+        $session = PaymentSession::with('paymentAttempt')->findOrFail($id);
+
+        if (! $session->paymentAttempt || $session->paymentAttempt->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized access to payment session.');
+        }
 
         return new PaymentSessionResource($session);
     }
@@ -35,9 +39,15 @@ class PaymentSessionController extends Controller
     /**
      * Retrieve the current raw status of the payment session (optimized for fast polling).
      */
-    public function status(string $id)
+    public function status(string $id, Request $request)
     {
-        $session = PaymentSession::select('id', 'status', 'expires_at', 'confirmed_at', 'failed_at')->findOrFail($id);
+        $session = PaymentSession::with('paymentAttempt:id,user_id')
+            ->select('id', 'status', 'expires_at', 'confirmed_at', 'failed_at', 'payment_attempt_id')
+            ->findOrFail($id);
+
+        if (! $session->paymentAttempt || $session->paymentAttempt->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized access to payment session.');
+        }
 
         return response()->json([
             'id' => $session->id,
@@ -51,9 +61,13 @@ class PaymentSessionController extends Controller
     /**
      * Cancel the specified active payment session.
      */
-    public function cancel(string $id)
+    public function cancel(string $id, Request $request)
     {
-        $session = PaymentSession::findOrFail($id);
+        $session = PaymentSession::with('paymentAttempt')->findOrFail($id);
+
+        if (! $session->paymentAttempt || $session->paymentAttempt->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
 
         try {
             DB::transaction(function () use ($session) {
@@ -91,7 +105,11 @@ class PaymentSessionController extends Controller
      */
     public function verify(string $id, Request $request)
     {
-        $session = PaymentSession::findOrFail($id);
+        $session = PaymentSession::with('paymentAttempt')->findOrFail($id);
+
+        if (! $session->paymentAttempt || $session->paymentAttempt->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
 
         if ($session->status === 'confirmed') {
             return response()->json([
@@ -174,7 +192,11 @@ class PaymentSessionController extends Controller
      */
     public function pay(string $id, Request $request)
     {
-        $session = PaymentSession::findOrFail($id);
+        $session = PaymentSession::with('paymentAttempt')->findOrFail($id);
+
+        if (! $session->paymentAttempt || $session->paymentAttempt->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
 
         if (in_array($session->status, ['confirmed', 'failed', 'expired', 'cancelled'])) {
             return response()->json([
