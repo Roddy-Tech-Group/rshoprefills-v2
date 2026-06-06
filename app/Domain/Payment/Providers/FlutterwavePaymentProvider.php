@@ -4,6 +4,7 @@ namespace App\Domain\Payment\Providers;
 
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Interfaces\PaymentProviderInterface;
+use App\Domain\Payment\Support\MockMode;
 use App\Models\PaymentAttempt;
 use App\Models\WalletFunding;
 use Illuminate\Support\Facades\Http;
@@ -17,7 +18,16 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
 
     public function __construct()
     {
-        $this->secretKey = config('services.flutterwave.secret_key') ?: 'FLW_SECRET_KEY_MOCK';
+        $secretKey = config('services.flutterwave.secret_key');
+
+        // Fail closed: outside local/testing (and without PAYMENT_MOCK=true) a
+        // missing secret must hard-fail rather than silently process payments
+        // against the mock gateway.
+        if (empty($secretKey) && ! MockMode::allowed()) {
+            throw new \RuntimeException('Flutterwave secret key (FLW_SECRET_KEY) is not configured. Refusing to fall back to mock credentials outside local/testing.');
+        }
+
+        $this->secretKey = $secretKey ?: 'FLW_SECRET_KEY_MOCK';
         $this->baseUrl = 'https://api.flutterwave.com/v3';
     }
 
@@ -34,7 +44,11 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $description = "Wallet Funding Ref #{$payable->reference}";
         }
 
-        $publicKey = config('services.flutterwave.public_key') ?: 'FLW_PUB_KEY_MOCK';
+        $publicKey = config('services.flutterwave.public_key');
+        if (empty($publicKey) && ! MockMode::allowed()) {
+            throw new \RuntimeException('Flutterwave public key (FLW_PUBLIC_KEY) is not configured. Refusing to fall back to mock credentials outside local/testing.');
+        }
+        $publicKey = $publicKey ?: 'FLW_PUB_KEY_MOCK';
 
         // Set attempt's gateway reference to tx_ref for tracking before webhook or capture
         $attempt->gateway_reference = $txRef;
@@ -714,6 +728,22 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $status = $data['status'] ?? null;
         $amount = $data['amount'] ?? 0;
         $currency = $data['currency'] ?? '';
+        $reportedRef = (string) ($data['tx_ref'] ?? '');
+
+        // Cross-bind: the gateway-reported tx_ref MUST match the reference we
+        // generated for this attempt. Without this, a verified-but-unrelated
+        // transaction (e.g. a client-relayed id pointing at someone else's
+        // successful charge for the same amount/currency) could mark THIS
+        // attempt paid. hash_equals to keep the compare constant-time.
+        if ($reportedRef === '' || ! hash_equals((string) $attempt->idempotency_key, $reportedRef)) {
+            Log::warning('Flutterwave verification rejected: tx_ref mismatch', [
+                'attempt_id' => $attempt->id,
+                'expected' => $attempt->idempotency_key,
+                'reported' => $reportedRef,
+            ]);
+
+            return false;
+        }
 
         if ($status === 'successful'
             && (float) $amount >= (float) $attempt->amount

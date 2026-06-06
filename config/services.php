@@ -60,6 +60,12 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
     ],
 
+    // Master switch allowing the payment providers to fall back to mock
+    // credentials OUTSIDE local/testing. Defaults to false so production hard
+    // fails on a missing real key instead of silently going mock. See
+    // App\Domain\Payment\Support\MockMode.
+    'payment_mock' => env('PAYMENT_MOCK', false),
+
     'flutterwave' => [
         'public_key' => env('FLW_PUBLIC_KEY'),
         'secret_key' => env('FLW_SECRET_KEY'),

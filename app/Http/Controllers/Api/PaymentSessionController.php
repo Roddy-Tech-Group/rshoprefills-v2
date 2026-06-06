@@ -123,8 +123,16 @@ class PaymentSessionController extends Controller
             return response()->json(['message' => 'Associated payment attempt not found.'], 404);
         }
 
-        // Retrieve transaction ID from request if provided (e.g. from Flutterwave inline callback response)
-        if ($txId = $request->input('transaction_id')) {
+        // A client may relay the Flutterwave transaction id back from the inline
+        // callback. Validate it strictly (numeric, bounded) and only accept it
+        // when we do NOT already hold a numeric, gateway/webhook-set reference —
+        // a client must never be able to overwrite a trusted reference.
+        $validated = $request->validate([
+            'transaction_id' => ['nullable', 'string', 'max:64', 'regex:/^\d+$/'],
+        ]);
+
+        $txId = $validated['transaction_id'] ?? null;
+        if ($txId && ! ctype_digit((string) $attempt->gateway_reference)) {
             $attempt->gateway_reference = $txId;
             $attempt->save();
         }
