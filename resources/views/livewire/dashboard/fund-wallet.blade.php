@@ -314,6 +314,14 @@ new class extends Component
             } else if (status === 'failed') {
                 this.paymentState = 'error';
                 this.errorMessage = sessionData.payment_payload?.failure_reason || 'Transaction could not be completed.';
+            } else if (status === 'awaiting_redirect') {
+                const url = sessionData.payment_payload?.redirect_url;
+                if (url) {
+                    window.location.href = url;
+                    return;
+                }
+                this.paymentState = 'error';
+                this.errorMessage = 'Could not start the payment. Please try a different method.';
             } else if (status === 'awaiting_customer_action') {
                 const action = sessionData.payment_payload?.action;
                 if (action === 'pin') {
