@@ -477,6 +477,17 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $status = $data['status'] ?? 'error';
             $innerData = $data['data'] ?? [];
 
+            $authMeta = $innerData['meta']['authorization'] ?? $data['meta']['authorization'] ?? null;
+            $authMode = $authMeta['mode'] ?? null;
+
+            if ($status === 'success' && $authMode === 'redirect') {
+                return [
+                    'status' => 'awaiting_redirect',
+                    'redirect_url' => $authMeta['redirect'] ?? null,
+                    'message' => $data['message'] ?? 'Please complete the Apple Pay payment on the next screen.',
+                ];
+            }
+
             if ($status === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
                 $attempt->gateway_reference = (string) $innerData['id'];
                 $attempt->payment_status = PaymentStatus::Paid;
