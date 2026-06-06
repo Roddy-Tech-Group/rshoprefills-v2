@@ -52,7 +52,7 @@ class SendOrderConfirmationListener
             user: $adminUser,
             title: $isLargeTransaction ? 'CRITICAL: Large Transaction Alert' : 'New Order Notification',
             message: $isLargeTransaction
-                ? "An exceptionally large order #{$order->order_number} of {$order->total_amount} {$order->currency->value} was placed."
+                ? "An exceptionally large order #{$order->order_number} of {$order->total_amount} {$order->display_currency} was placed."
                 : "A new order #{$order->order_number} was placed.",
             category: 'security',
             mailable: new AdminNewOrderAlertMail($order, $isLargeTransaction)
@@ -70,7 +70,7 @@ class SendOrderConfirmationListener
         $this->dispatcher->dispatch(
             user: $user,
             title: 'Refund Processed',
-            message: "A refund of {$event->amount} {$order->currency->value} has been credited to your wallet for Order #{$order->order_number}.",
+            message: "A refund of {$event->amount} {$order->display_currency} has been credited to your wallet for Order #{$order->order_number}.",
             category: 'order',
             mailable: new RefundProcessedMail($user, $order, $event->amount, $event->reason)
         );
