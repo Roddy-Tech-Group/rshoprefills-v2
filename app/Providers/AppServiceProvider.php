@@ -22,8 +22,11 @@ use App\Listeners\CreateWalletForNewUser;
 use App\Listeners\TransactionPinNotificationListener;
 use App\Support\FeatureFlag;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -84,5 +87,37 @@ class AppServiceProvider extends ServiceProvider
         // Reads features.<name>_enabled from SiteSetting (cached, on/off toggles
         // managed from the admin System Settings page).
         Blade::if('feature', fn (string $name) => FeatureFlag::on($name));
+
+        $this->configureRateLimiters();
+    }
+
+    /**
+     * Named rate limiters for the payment-session API surface. Each limiter
+     * returns TWO limits so abuse is capped both per-user (a customer can only
+     * juggle so many concurrent checkouts) and per-user+session (one session
+     * can't be hammered, which would amplify gateway-verification cost). The
+     * user key falls back to IP for the rare unauthenticated edge.
+     */
+    private function configureRateLimiters(): void
+    {
+        RateLimiter::for('payment-session-poll', function (Request $request) {
+            $userKey = (string) ($request->user()?->id ?? $request->ip());
+            $sessionId = (string) $request->route('id');
+
+            return [
+                Limit::perMinute(120)->by('psp:u:'.$userKey),
+                Limit::perMinute(60)->by('psp:us:'.$userKey.':'.$sessionId),
+            ];
+        });
+
+        RateLimiter::for('payment-session-action', function (Request $request) {
+            $userKey = (string) ($request->user()?->id ?? $request->ip());
+            $sessionId = (string) $request->route('id');
+
+            return [
+                Limit::perMinute(20)->by('psa:u:'.$userKey),
+                Limit::perMinute(10)->by('psa:us:'.$userKey.':'.$sessionId),
+            ];
+        });
     }
 }

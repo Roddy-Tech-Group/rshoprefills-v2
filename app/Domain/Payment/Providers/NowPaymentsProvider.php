@@ -4,6 +4,7 @@ namespace App\Domain\Payment\Providers;
 
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Interfaces\PaymentProviderInterface;
+use App\Domain\Payment\Support\MockMode;
 use App\Models\PaymentAttempt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -16,7 +17,16 @@ class NowPaymentsProvider implements PaymentProviderInterface
 
     public function __construct()
     {
-        $this->apiKey = config('services.nowpayments.api_key') ?: 'NOWPAYMENTS_KEY_MOCK';
+        $apiKey = config('services.nowpayments.api_key');
+
+        // Fail closed: outside local/testing (and without PAYMENT_MOCK=true) a
+        // missing API key must hard-fail rather than silently process crypto
+        // payments against the mock gateway.
+        if (empty($apiKey) && ! MockMode::allowed()) {
+            throw new \RuntimeException('NowPayments API key (NOWPAYMENTS_API_KEY) is not configured. Refusing to fall back to mock credentials outside local/testing.');
+        }
+
+        $this->apiKey = $apiKey ?: 'NOWPAYMENTS_KEY_MOCK';
         $this->baseUrl = config('services.nowpayments.base_url') ?: 'https://api.nowpayments.io/v1';
     }
 
