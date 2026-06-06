@@ -123,19 +123,13 @@ class PaymentSessionController extends Controller
             return response()->json(['message' => 'Associated payment attempt not found.'], 404);
         }
 
-        // A client may relay the Flutterwave transaction id back from the inline
-        // callback. Validate it strictly (numeric, bounded) and only accept it
-        // when we do NOT already hold a numeric, gateway/webhook-set reference —
-        // a client must never be able to overwrite a trusted reference.
-        $validated = $request->validate([
-            'transaction_id' => ['nullable', 'string', 'max:64', 'regex:/^\d+$/'],
-        ]);
-
-        $txId = $validated['transaction_id'] ?? null;
-        if ($txId && ! ctype_digit((string) $attempt->gateway_reference)) {
-            $attempt->gateway_reference = $txId;
-            $attempt->save();
-        }
+        // We deliberately ignore any client-supplied transaction_id. Verification
+        // resolves the authentic gateway transaction from OUR own reference:
+        // while gateway_reference is still our (non-numeric) tx_ref,
+        // verifyPayment() falls back to a tx_ref lookup that captures the real
+        // numeric id and cross-binds it to this attempt. This removes the client
+        // trust boundary entirely — a caller can never influence the
+        // reconciliation reference used downstream.
 
         try {
             $gatewayFactory = app(PaymentGatewayFactory::class);
