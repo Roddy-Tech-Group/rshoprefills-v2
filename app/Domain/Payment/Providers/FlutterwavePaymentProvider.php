@@ -375,7 +375,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $bankDetails = [
                 'bank_name' => $innerData['transfer_bank'] ?? 'Unknown Bank',
                 'account_number' => $innerData['transfer_account'],
-                'account_name' => 'Flutterwave Account',
+                'account_name' => 'Roddy Tech Group',
                 'amount' => $innerData['transfer_amount'] ?? $attempt->amount,
                 'expires_at' => now()->addMinutes(30)->toIso8601String(),
             ];
@@ -476,6 +476,17 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             $data = $response->json();
             $status = $data['status'] ?? 'error';
             $innerData = $data['data'] ?? [];
+
+            $authMeta = $innerData['meta']['authorization'] ?? $data['meta']['authorization'] ?? null;
+            $authMode = $authMeta['mode'] ?? null;
+
+            if ($status === 'success' && $authMode === 'redirect') {
+                return [
+                    'status' => 'awaiting_redirect',
+                    'redirect_url' => $authMeta['redirect'] ?? null,
+                    'message' => $data['message'] ?? 'Please complete the Apple Pay payment on the next screen.',
+                ];
+            }
 
             if ($status === 'success' && isset($innerData['status']) && $innerData['status'] === 'successful') {
                 $attempt->gateway_reference = (string) $innerData['id'];
