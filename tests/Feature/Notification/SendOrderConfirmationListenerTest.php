@@ -22,39 +22,67 @@ class SendOrderConfirmationListenerTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function orderFor(User $user, float $total, string $currency = 'NGN'): Order
+    /** @param array<string, mixed> $extra */
+    private function orderFor(User $user, float $total, string $currency = 'NGN', array $extra = []): Order
     {
         $order = new Order;
-        $order->forceFill([
+        $order->forceFill(array_merge([
             'order_number' => 'ORD-TEST-1',
             'display_currency' => $currency,
             'total_amount' => $total,
-        ]);
+        ], $extra));
         $order->setRelation('user', $user);
 
         return $order;
     }
 
-    public function test_large_transaction_admin_alert_builds_without_null_currency_crash(): void
+    /** @return list<string> */
+    private function capturedMessages(callable $fire, int $times): array
     {
-        $user = User::factory()->create();
-        // total far above the default 5000 suspicious threshold -> large branch.
-        $order = $this->orderFor($user, 999999.00, 'NGN');
-
         $messages = [];
         $dispatcher = $this->mock(NotificationDispatcher::class);
         $dispatcher->shouldReceive('dispatch')
-            ->twice() // customer confirmation + admin alert
+            ->times($times)
             ->andReturnUsing(function (...$args) use (&$messages) {
                 $messages[] = $args[2]; // message is the 3rd positional arg
             });
 
-        app(SendOrderConfirmationListener::class)
-            ->onPaymentConfirmed(new PaymentConfirmed($order, new PaymentAttempt));
+        $fire(app(SendOrderConfirmationListener::class));
+
+        return $messages;
+    }
+
+    public function test_large_usd_transaction_admin_alert_builds_without_null_currency_crash(): void
+    {
+        $user = User::factory()->create();
+        // USD total above the default 5000 threshold -> large branch.
+        $order = $this->orderFor($user, 6000.00, 'USD');
+
+        $messages = $this->capturedMessages(
+            fn (SendOrderConfirmationListener $l) => $l->onPaymentConfirmed(new PaymentConfirmed($order, new PaymentAttempt)),
+            times: 2, // customer confirmation + admin alert
+        );
 
         $adminMessage = collect($messages)->first(fn ($m) => str_contains($m, 'exceptionally large'));
         $this->assertNotNull($adminMessage);
-        $this->assertStringContainsString('NGN', $adminMessage);
+        $this->assertStringContainsString('USD', $adminMessage);
+    }
+
+    public function test_large_display_amount_with_small_usd_is_not_flagged_large(): void
+    {
+        $user = User::factory()->create();
+        // 999,999 NGN display, but only ~$3 USD -> must NOT trip the threshold.
+        $order = $this->orderFor($user, 999999.00, 'NGN', [
+            'metadata' => ['settlement_total_usd' => 3.00],
+        ]);
+
+        $messages = $this->capturedMessages(
+            fn (SendOrderConfirmationListener $l) => $l->onPaymentConfirmed(new PaymentConfirmed($order, new PaymentAttempt)),
+            times: 2,
+        );
+
+        $this->assertNull(collect($messages)->first(fn ($m) => str_contains($m, 'exceptionally large')));
+        $this->assertNotNull(collect($messages)->first(fn ($m) => str_contains($m, 'A new order')));
     }
 
     public function test_refund_message_builds_without_null_currency_crash(): void
@@ -62,16 +90,10 @@ class SendOrderConfirmationListenerTest extends TestCase
         $user = User::factory()->create();
         $order = $this->orderFor($user, 2800.00, 'GHS');
 
-        $messages = [];
-        $dispatcher = $this->mock(NotificationDispatcher::class);
-        $dispatcher->shouldReceive('dispatch')
-            ->once()
-            ->andReturnUsing(function (...$args) use (&$messages) {
-                $messages[] = $args[2];
-            });
-
-        app(SendOrderConfirmationListener::class)
-            ->onRefundIssued(new RefundIssued($order, 100.0, 'duplicate charge'));
+        $messages = $this->capturedMessages(
+            fn (SendOrderConfirmationListener $l) => $l->onRefundIssued(new RefundIssued($order, 100.0, 'duplicate charge')),
+            times: 1,
+        );
 
         $this->assertStringContainsString('GHS', $messages[0]);
     }

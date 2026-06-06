@@ -9,10 +9,20 @@ use App\Domain\Notification\Services\NotificationDispatcher;
 use App\Domain\Order\Events\PaymentConfirmed;
 use App\Domain\Order\Events\RefundIssued;
 use App\Models\User;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Str;
 
-class SendOrderConfirmationListener
+/**
+ * Queued so notification work never runs inside the payment-confirmation DB
+ * transaction (VerifyPaymentJob). Previously a throw here rolled back the whole
+ * confirmation; now a failed notification only retries its own job and can never
+ * undo a captured payment.
+ */
+class SendOrderConfirmationListener implements ShouldQueue
 {
+    use InteractsWithQueue;
+
     public function __construct(
         private readonly NotificationDispatcher $dispatcher
     ) {}
@@ -34,9 +44,12 @@ class SendOrderConfirmationListener
             mailable: new OrderPlacedMail($user, $order)
         );
 
-        // 2. Check dynamic suspicious transaction limit (fallback 5000.0)
+        // 2. Check dynamic suspicious transaction limit (fallback 5000.0).
+        // Compare against the USD source-of-truth, not the raw display amount —
+        // total_amount is in the order's display_currency, so comparing a NGN
+        // figure against a USD threshold would flag almost every order.
         $threshold = (float) config('notification.limits.suspicious_threshold', 5000.0);
-        $isLargeTransaction = ($order->total_amount > $threshold);
+        $isLargeTransaction = ($order->usdTotal() > $threshold);
 
         // 3. Notify Admin of new order or suspicious transaction
         $adminEmail = config('mail.admin_address') ?? 'admin@rshoprefills.com';
