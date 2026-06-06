@@ -1,69 +1,48 @@
 # Launch Report
 
 ## TL;DR
-Targeted launch security check (Payments, Rate limits) on the supplied codebase files. The payment/webhook flows include several good controls (signature verification with fail-closed, transaction locking, and state-machine transitions). However, the “verify” and “pay” endpoints allow repeated gateway interactions without any explicit per-session/per-attempt rate limiting, and there are a couple of local correctness issues that can lead to unintended behavior during terminal-state handling and (
+Payments + rate limiting check found no hardcoded credentials/secrets. Webhook signature verification for Flutterwave and NowPayments is implemented and fails closed. However, the payment/session endpoints lack per-session/per-attempt throttling and have inconsistent payload/exception handling that could enable repeated confirm/verify/poll abuse and confusing client behavior under failure.
 
 ## Verdict
 Launch ready: No
 Security level: medium
 
 ## Detailed Report
-## Scope
-- Payments: payment session lifecycle, explicit verify/pay endpoints, webhook handlers, wallet/crypto providers.
-- Rate limits: login/admin throttling and any throttling on payment endpoints.
+Scope: Payments and rate limits across provided controllers/services and related payment orchestration.
 
-## What looks good
-- Webhook signature verification is implemented for both Flutterwave and NowPayments and appears fail-closed (rejects when secret/config/signature missing).
-- Payment confirmations and verification are guarded by DB transactions and locks in the session service and verify job.
-- PaymentSession state transitions are validated against an allowed transition matrix.
-- Admin login has throttling via RateLimiter and login recording.
-- Customer login/signup/password reset flows include rate limiting and (optionally) Cloudflare Turnstile.
+What looks good (security baseline):
+- Flutterwave webhook: verifies `verif-hash` against configured `services.flutterwave.webhook_hash` and rejects on mismatch (fails closed).
+- NowPayments webhook: verifies `x-nowpayments-sig` using configured `services.nowpayments.ipn_secret` with `hash_equals` and rejects when the secret is missing or signature mismatches.
+- Payment session state machine exists (PaymentSession::transitionTo) and blocks invalid transitions.
+- Some wallet auth token consumption exists in WalletPaymentProvider (authorization tokens are consumed).
+- Admin login has rate limiting (AdminAuthService uses RateLimiter).
 
-## Key gaps for launch (Payments + Rate limits)
-- **No explicit rate limiting / abuse controls on payment session endpoints** (`pay`, `verify`, `status`, `cancel`). These endpoints can trigger gateway calls and/or fulfillment logic. While the session state machine prevents some invalid transitions, it does not cap repeated calls while a session remains in non-terminal states.
-- **Wallet funding / PIN auth flows depend on a verification token**, but the payment session endpoints that call into authorization/confirm logic are not throttled.
+Rate limiting gaps (payments-specific):
+- There is no visible rate limiting/throttling applied to high-risk API endpoints for payments: showing/polling payment sessions (`status`), initiating payment verification (`verify`), and paying/authorizing (`pay`).
+- There is also no visible per-session/per-attempt throttling for repeated verify/pay calls that could cause excess gateway traffic, job dispatch amplification, or brute-force style probing of gateway references.
 
-## Overall launch decision
-Because the scope requires *Payments* and *Rate limits*, the missing throttling on high-impact payment endpoints is a blocker for launch-readiness. Recommended immediate remediation is to add endpoint-level rate limiting (per user + per session/attempt) for `api.payment-sessions.pay`, `api.payment-sessions.verify`, and polling where appropriate.
-
-## Findings
-See the concrete, fixable items below (limited to issues visible in supplied files).
+Concrete bug/abuse risks (specific to provided code):
+- PaymentSessionController::verify allows a client to set/overwrite `gateway_reference` on the PaymentAttempt when `transaction_id` is present and the current gateway_reference is not numeric; this is a trust boundary that should be constrained further (e.g., only allow setting from expected/opaque provider values, and never let verify inputs mutate references used for reconciliation).
+- verify/pay/cancel endpoints catch exceptions in a way that can leak raw exception messages to clients (`verify` returns `Verification...:`
 
 ## AI Coding Agent Notes
-### Where to focus (concrete)
-1) **Throttle the explicit payment endpoints** in `app/Http/Controllers/Api/PaymentSessionController.php`:
-   - `pay(string $id, Request $request)` (gateway charges, wallet authorization)
-   - `verify(string $id, Request $request)` (calls gateway verifyPayment and can trigger confirmation + fulfillment)
-   - also consider throttling `status()` and `cancel()`.
-   
-2) Confirm that your API routes apply throttling middleware for these endpoints (not shown in supplied files). If not, implement local throttling in the controller or add middleware per route group.
+Files reviewed: PaymentSessionController, CheckoutApiController, NowPaymentsWebhookController, FlutterwaveWebhookController, payment providers (FlutterwavePaymentProvider, NowPaymentsProvider, WalletPaymentProvider), PaymentSessionService, VerifyPaymentJob/RefundPaymentJob, plus auth/rate-limiting patterns for comparison.
 
-### Payment correctness controls already present
-- Webhook signature verification:
-  - `app/Http/Controllers/Api/Webhooks/FlutterwaveWebhookController.php`
-  - `app/Http/Controllers/Api/Webhooks/NowPaymentsWebhookController.php`
-- Concurrency/locking during verification and session confirmation:
-  - `app/Jobs/VerifyPaymentJob.php`
-  - `app/Domain/Payment/Services/PaymentSessionService.php`
+Key security posture decisions already present:
+- Webhooks fail closed with cryptographic signature verification.
+- There is a state transition matrix for PaymentSession.
 
-### Rate limiting coverage already present (non-payment)
-- Admin login throttling:
-  - `app/Domain/Admin/Services/AdminAuthService.php`
-- Customer auth throttling and Turnstile in Livewire components and `routes/auth.php`.
+What’s missing for a secure payments launch:
+- App-wide and payments-specific rate limiting on poll/verify/pay endpoints.
+- Stronger invariants around what a client is allowed to mutate during verify.
+
+Immediate recommendation:
+- Block repeated calls to `/api/payment-sessions/{id}/status|verify|pay|cancel` per user+session (and optionally per IP), and ensure verify/pay are idempotent and do not dispatch multiple fulfillment/confirm flows under repeated client requests.
 
 ## Fixable Findings
-- WARNING: Verify endpoint triggers gateway verification/fulfillment without any explicit per-session rate limiting
-  - Location: app/Http/Controllers/Api/PaymentSessionController.php:55-165
-  - `PaymentSessionController::verify()` calls the gateway `verifyPayment()` and, on success, confirms the session and dispatches fulfillment jobs (order items) and/or wallet funding processing. The controller contains no explicit throttling/attempt caps, so a client can repeatedly hammer `verify` for the same session (or across sessions) while the session is non-terminal, potentially causing excessive gateway API calls and (depending on idempotency elsewhere) repeated expensive work.
-
-Fix locally by adding Laravel RateLimiter (or middleware) for this endpoint keyed by user_id + payment_session_id (and optionally payment_attempt_id).
-- WARNING: Pay endpoint triggers gateway charges/authorizations without any explicit per-session/per-user rate limiting
-  - Location: app/Http/Controllers/Api/PaymentSessionController.php:167-390
-  - `PaymentSessionController::pay()` performs gateway charges (card/bank_transfer/apple_pay/mobile_money/crypto/hosted flows) or wallet authorization, but has no explicit throttling in this controller. A malicious client can repeatedly call `pay` for the same session while it is still in a non-terminal state, likely creating repeated gateway charge attempts and/or wasting resources.
-
-Fix locally by adding RateLimiter logic in `pay()` keyed by user_id + payment_session_id + (method) and returning 429 when the limit is exceeded.
-- WARNING: Polling and cancel endpoints lack explicit rate limiting controls
-  - Location: app/Http/Controllers/Api/PaymentSessionController.php:27-85
-  - `PaymentSessionController::status()` and `cancel()` are also high-frequency / state-changing operations for payment sessions and are not explicitly throttled in the controller. Polling endpoints can be abused to cause DB load; cancel could be abused to disrupt customer payments.
-
-Fix locally by applying RateLimiter in `status()` and `cancel()` (or middleware) keyed to user_id + session id.
+- WARNING: No rate limiting on high-risk payment session endpoints (poll/verify/pay/cancel)
+  - Location: app/Http/Controllers/Api/PaymentSessionController.php:1-250
+  - The API endpoints that drive payment state changes and gateway checks—`PaymentSessionController::status`, `::verify`, `::pay`, and `::cancel`—do not apply any visible throttling/RateLimiter middleware or checks. Under attack, a client can repeatedly poll/trigger verify and cause repeated gateway calls and job dispatch amplification. Add per-route (user+payment_session_id) rate limits (Laravel throttle middleware) and/or internal idempotency checks at the controller/service boundary.
+- WARNING: verify() mutates PaymentAttempt gateway_reference based on client-supplied transaction_id
+  - Location: app/Http/Controllers/Api/PaymentSessionController.php:1-250
+  - `verify()` validates `transaction_id` and, when conditions match, assigns it into `$attempt->gateway_reference` and saves. This creates a trust boundary where a client can potentially influence reconciliation identifiers used downstream. Tighten allowed behavior: only accept transaction_id values when they match the expected gateway reference shape for the selected provider and/or only when the attempt is in a state where provider_reference is truly unset/placeholder; otherwise ignore and do not save.
