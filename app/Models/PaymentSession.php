@@ -132,7 +132,7 @@ class PaymentSession extends Model
             'awaiting_customer_action' => ['processing', 'confirmed', 'failed', 'cancelled'],
             'awaiting_transfer' => ['awaiting_confirmation', 'processing', 'confirmed', 'failed', 'expired', 'cancelled'],
             'awaiting_redirect' => ['processing', 'confirmed', 'failed', 'expired', 'cancelled'],
-            'awaiting_confirmation' => ['confirmed', 'failed', 'expired', 'cancelled'],
+            'awaiting_confirmation' => ['processing', 'confirmed', 'failed', 'expired', 'cancelled'],
             'processing' => ['confirmed', 'failed'],
             'confirmed' => [],
             'failed' => [],
