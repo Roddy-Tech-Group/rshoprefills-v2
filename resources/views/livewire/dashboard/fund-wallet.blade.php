@@ -249,7 +249,7 @@ new class extends Component
                 this.paymentState = 'momo_input';
             } else if (method.type === 'crypto') {
                 this.cryptoDetails.pay_currency = method.coin || 'usdt';
-                this.paySession('crypto', { pay_currency: this.cryptoDetails.pay_currency });
+                this.paymentState = 'crypto_input';
             } else if (method.type === 'apple_pay') {
                 this.paySession('apple_pay', {});
             }
@@ -788,32 +788,110 @@ new class extends Component
                     </div>
                 </div>
 
-                <!-- Bank Transfer virtual accounts display -->
-                <div x-show="paymentState === 'awaiting_transfer'">
-                    <h3 class="text-sm font-bold text-zinc-900 mb-2">Virtual Bank Transfer</h3>
-                    <p class="text-xs text-zinc-600 mb-4">Please make a transfer to the temporary virtual account below:</p>
+                <!-- Crypto Input -->
+                <div x-show="paymentState === 'crypto_input'">
+                    <div class="flex items-center gap-2 mb-4">
+                        <button type="button" @click="paymentState = 'select_method'" class="text-zinc-500 hover:text-zinc-800 text-xs flex items-center gap-1">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg> Back
+                        </button>
+                    </div>
+                    <h3 class="text-sm font-bold text-zinc-900 mb-4">Select Cryptocurrency</h3>
+                    
+                    <div class="mt-1.5 grid grid-cols-4 gap-2 mb-4">
+                        <template x-for="coin in ['usdt', 'btc', 'eth', 'ltc']" :key="coin">
+                            <button type="button" @click="cryptoDetails.pay_currency = coin; paySession('crypto', { pay_currency: coin })"
+                                class="flex flex-col items-center gap-1 rounded-[10px] border bg-white px-2 py-2.5 transition-colors border-zinc-200 hover:border-blue-500 hover:bg-blue-50">
+                                <span class="flex h-6 w-6 items-center justify-center rounded-[10px] bg-amber-500 text-[10px] font-black text-white uppercase" x-text="coin.substring(0, 1)"></span>
+                                <span class="text-xs font-bold text-zinc-900 uppercase" x-text="coin"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <p class="mt-3 text-xs text-zinc-600">
+                        Pick a coin and continue — the next step shows the exact wallet address and amount to send.
+                    </p>
+                </div>
 
-                    <div class="bg-zinc-50 border border-zinc-200 rounded-[10px] p-4 space-y-3">
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-zinc-500">Bank Name</span>
-                            <span class="font-bold text-zinc-900" x-text="bankDetails?.bank_name"></span>
-                        </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-zinc-500">Account Number</span>
-                            <div class="flex items-center gap-1.5">
-                                <span class="font-bold text-zinc-900 text-sm" x-text="bankDetails?.account_number"></span>
-                                <button type="button" @click="copyToClipboard(bankDetails?.account_number)" class="text-blue-600 hover:text-blue-800 text-[10px] font-semibold">Copy</button>
+                <!-- Bank Transfer virtual accounts display or Crypto invoice -->
+                <div x-show="paymentState === 'awaiting_transfer'">
+                    <!-- If Bank Transfer details -->
+                    <template x-if="session?.payment_payload?.bank_details || session?.payment_payload?.account_number">
+                        <div>
+                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Virtual Bank Transfer</h3>
+                            <p class="text-xs text-zinc-600 mb-4">Please make a transfer to the temporary virtual account below:</p>
+
+                            <div class="bg-zinc-50 border border-zinc-200 rounded-[10px] p-4 space-y-3">
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-zinc-500">Bank Name</span>
+                                    <span class="font-bold text-zinc-900" x-text="bankDetails?.bank_name"></span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-zinc-500">Account Number</span>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-bold text-zinc-900 text-sm" x-text="bankDetails?.account_number"></span>
+                                        <button type="button" @click="copyToClipboard(bankDetails?.account_number)" class="text-blue-600 hover:text-blue-800 text-[10px] font-semibold">Copy</button>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-zinc-500">Account Name</span>
+                                    <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name"></span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs border-t border-zinc-200 pt-2">
+                                    <span class="text-zinc-500">Amount</span>
+                                    <span class="font-extrabold text-blue-700 text-sm" x-text="session?.currency + ' ' + Number(bankDetails?.amount || session?.amount).toFixed(2)"></span>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-zinc-500">Account Name</span>
-                            <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name"></span>
+                    </template>
+
+                    <!-- If Crypto details -->
+                    <template x-if="session?.payment_payload?.qr_payload || session?.payment_payload?.pay_address">
+                        <div>
+                            <h3 class="text-sm font-bold text-zinc-900 text-center mb-2">Crypto Payment Details</h3>
+                            <p class="text-xs text-zinc-600 text-center mb-4">Send the exact amount of cryptocurrency shown to the address below:</p>
+
+                            <div class="flex flex-col items-center gap-4 bg-zinc-50 p-4 border border-zinc-200 rounded-[10px] shadow-inner">
+                                <!-- QR Code -->
+                                <div class="flex shrink-0 flex-col items-center rounded-[10px] bg-white p-3 border border-zinc-150 shadow-sm">
+                                    <img 
+                                        :src="'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(session?.payment_payload?.qr_payload || '')" 
+                                        alt="Payment QR Code" 
+                                        class="h-32 w-32 object-contain"
+                                    />
+                                    <span class="mt-1.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">Scan to pay</span>
+                                </div>
+
+                                <!-- Details -->
+                                <div class="w-full space-y-3.5 text-xs">
+                                    <div>
+                                        <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Cryptocurrency / Network</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="rounded-[10px] bg-blue-50 px-2 py-0.5 font-bold text-blue-700 uppercase" x-text="session?.payment_payload?.pay_currency || 'btc'"></span>
+                                            <span class="text-[10px] font-medium text-zinc-500 uppercase" x-text="'Network: ' + (session?.payment_payload?.network || 'bitcoin')"></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Amount to Send</span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded-[10px] border border-zinc-150" x-text="session?.payment_payload?.pay_amount"></span>
+                                            <span class="font-bold text-zinc-600 uppercase" x-text="session?.payment_payload?.pay_currency"></span>
+                                            <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_amount, 'amount_crypto')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded-[10px] transition-all">
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Deposit Address</span>
+                                        <div class="mt-1 flex items-center gap-1.5">
+                                            <input type="text" readonly :value="session?.payment_payload?.pay_address" class="w-full bg-white px-2.5 py-1.5 rounded-[10px] border border-zinc-200 text-[10px] text-zinc-800 font-mono select-all outline-none">
+                                            <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_address, 'address')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold shrink-0 bg-blue-50 px-2.5 py-1.5 rounded-[10px] transition-all border border-blue-100">
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex justify-between items-center text-xs border-t border-zinc-200 pt-2">
-                            <span class="text-zinc-500">Amount</span>
-                            <span class="font-extrabold text-blue-700 text-sm" x-text="session?.currency + ' ' + Number(bankDetails?.amount || session?.amount).toFixed(2)"></span>
-                        </div>
-                    </div>
+                    </template>
 
                     <div class="flex flex-col items-center mt-5 text-center">
                         <svg class="h-5 w-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
