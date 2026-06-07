@@ -3,6 +3,7 @@
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Wallet\Services\WalletFundingService;
 use App\Domain\Wallet\Services\WalletService;
+use App\Models\CurrencyRate;
 use Livewire\Volt\Component;
 
 /**
@@ -16,6 +17,13 @@ use Livewire\Volt\Component;
  */
 new class extends Component
 {
+    public function with(): array
+    {
+        return [
+            'cryptoCoins' => CurrencyRate::query()->where('is_active', true)->where('type', 'crypto')->get()
+        ];
+    }
+
     /** Funding form. */
     public string $currency = 'USD';
 
@@ -798,13 +806,19 @@ new class extends Component
                     <h3 class="text-sm font-bold text-zinc-900 mb-4">Select Cryptocurrency</h3>
                     
                     <div class="mt-1.5 grid grid-cols-4 gap-2 mb-4">
-                        <template x-for="coin in ['usdt', 'btc', 'eth', 'ltc']" :key="coin">
-                            <button type="button" @click="cryptoDetails.pay_currency = coin; paySession('crypto', { pay_currency: coin })"
+                        @forelse ($cryptoCoins as $coin)
+                            <button type="button" @click="cryptoDetails.pay_currency = '{{ strtolower($coin->code) }}'; paySession('crypto', { pay_currency: '{{ strtolower($coin->code) }}' })"
                                 class="flex flex-col items-center gap-1 rounded-[10px] border bg-white px-2 py-2.5 transition-colors border-zinc-200 hover:border-blue-500 hover:bg-blue-50">
-                                <span class="flex h-6 w-6 items-center justify-center rounded-[10px] bg-amber-500 text-[10px] font-black text-white uppercase" x-text="coin.substring(0, 1)"></span>
-                                <span class="text-xs font-bold text-zinc-900 uppercase" x-text="coin"></span>
+                                @if ($coin->icon_path)
+                                    <img src="{{ asset('assets/' . $coin->icon_path) }}" alt="" class="h-6 w-6 rounded-[10px]">
+                                @else
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-[10px] bg-amber-500 text-[10px] font-black text-white uppercase">{{ substr($coin->code, 0, 1) }}</span>
+                                @endif
+                                <span class="text-xs font-bold text-zinc-900 uppercase">{{ $coin->code }}</span>
                             </button>
-                        </template>
+                        @empty
+                            <p class="text-xs text-zinc-500 col-span-4">No crypto options available currently.</p>
+                        @endforelse
                     </div>
                     <p class="mt-3 text-xs text-zinc-600">
                         Pick a coin and continue — the next step shows the exact wallet address and amount to send.
