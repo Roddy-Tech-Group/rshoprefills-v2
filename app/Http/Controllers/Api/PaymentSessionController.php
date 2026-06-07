@@ -278,6 +278,26 @@ class PaymentSessionController extends Controller
                 $request->validate([
                     'details.pay_currency' => 'required|string',
                 ]);
+
+                // --- FIX: Switch gateway to nowpayments for both Attempt and Funding ---
+                // By default, wallet funding initiates with flutterwave. When switching
+                // to crypto in the checkout/funding wizard, we must update the gateway
+                // so that webhooks and verify jobs use the correct provider.
+                $attempt->gateway = 'nowpayments';
+                $attempt->save();
+
+                $session->provider = 'nowpayments';
+                $session->session_type = 'crypto';
+                $session->save();
+
+                if ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                    $funding = $attempt->payable;
+                    if ($funding) {
+                        $funding->gateway = 'nowpayments';
+                        $funding->save();
+                    }
+                }
+
                 $npProvider = $gatewayFactory->getProvider('nowpayments');
                 $result = $npProvider->chargeCrypto($attempt, $details['pay_currency']);
             } elseif (in_array($method, ['ussd', 'pay_with_bank', 'bank_qr', 'mobile_wallet'], true)) {
