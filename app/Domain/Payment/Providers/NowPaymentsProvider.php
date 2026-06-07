@@ -52,13 +52,25 @@ class NowPaymentsProvider implements PaymentProviderInterface
             ];
         }
 
+        $priceCurrency = strtoupper($attempt->currency);
+        $priceAmount = $attempt->amount;
+
+        // Convert to USD if the currency is not supported by NowPayments.
+        $supportedFiats = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'CZK', 'DKK', 'HKD', 'HUF', 'ILS', 'INR', 'JPY', 'MXN', 'NOK', 'NZD', 'PLN', 'RUB', 'SEK', 'SGD', 'THB', 'TRY', 'ZAR'];
+        if (!in_array($priceCurrency, $supportedFiats)) {
+            $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
+            $rate = $rateService->resolveRate($priceCurrency, 'USD');
+            $priceAmount = round($priceAmount * $rate, 2);
+            $priceCurrency = 'USD';
+        }
+
         try {
             $response = Http::withHeaders([
                 'x-api-key' => $this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post("{$this->baseUrl}/payment", [
-                'price_amount' => $attempt->amount,
-                'price_currency' => strtoupper($attempt->currency),
+                'price_amount' => $priceAmount,
+                'price_currency' => $priceCurrency,
                 'pay_currency' => 'btc', // default to BTC or allow selection in metadata
                 'ipn_callback_url' => route('api.webhooks.nowpayments'),
                 'order_id' => $attempt->order->id,
@@ -153,13 +165,26 @@ class NowPaymentsProvider implements PaymentProviderInterface
             ];
         }
 
+        $priceCurrency = strtoupper($attempt->currency);
+        $priceAmount = $attempt->amount;
+
+        // NowPayments supported fiat currencies (approximate main list).
+        // If it's an African local currency or unsupported fiat, we fall back to USD.
+        $supportedFiats = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'CZK', 'DKK', 'HKD', 'HUF', 'ILS', 'INR', 'JPY', 'MXN', 'NOK', 'NZD', 'PLN', 'RUB', 'SEK', 'SGD', 'THB', 'TRY', 'ZAR'];
+        if (!in_array($priceCurrency, $supportedFiats)) {
+            $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
+            $rate = $rateService->resolveRate($priceCurrency, 'USD');
+            $priceAmount = round($priceAmount * $rate, 2);
+            $priceCurrency = 'USD';
+        }
+
         try {
             $orderId = $attempt->order ? $attempt->order->id : null;
             $description = $attempt->order ? "Order #{$attempt->order->order_number}" : "Wallet Deposit Ref #{$attempt->payable->reference}";
 
             $payload = [
-                'price_amount' => $attempt->amount,
-                'price_currency' => strtoupper($attempt->currency),
+                'price_amount' => $priceAmount,
+                'price_currency' => $priceCurrency,
                 'pay_currency' => $payCurrency,
                 'ipn_callback_url' => route('api.webhooks.nowpayments'),
                 'order_description' => $description,
