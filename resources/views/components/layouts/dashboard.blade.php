@@ -610,16 +610,27 @@
                     <svg class="h-5 w-5 shrink-0 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
+                    {{-- `readonly` until focus defeats Chrome/password-manager autofill,
+                         which otherwise ignores autocomplete="off" and injects the
+                         user's saved login email here — that auto-filled value tripped
+                         @focus and made the dropdown spring open on every page load. The
+                         field becomes editable the moment the user actually focuses it. --}}
                     <input
                         x-ref="searchInput"
                         x-model="query"
                         @input="onInput()"
-                        @focus="open = true"
+                        @focus="$el.removeAttribute('readonly'); open = true"
                         type="search"
+                        name="dashboard_search"
                         placeholder="Search products, brands or categories"
                         aria-label="Search products, brands or categories"
+                        readonly
                         autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="off"
                         spellcheck="false"
+                        data-1p-ignore
+                        data-lpignore="true"
                         class="flex-1 min-w-0 bg-transparent text-base text-zinc-800 placeholder:text-zinc-600 outline-none"
                     />
                     <span class="hidden items-center gap-1 rounded-[10px] border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-600 sm:inline-flex">

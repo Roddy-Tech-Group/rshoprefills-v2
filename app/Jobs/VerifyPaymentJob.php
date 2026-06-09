@@ -45,6 +45,21 @@ class VerifyPaymentJob implements ShouldQueue
             $isPaid = $provider->verifyPayment($attempt);
 
             if ($isPaid) {
+                // If this is a WalletFunding attempt, process it via WalletFundingService
+                if ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                    Log::info("VerifyPaymentJob: payment confirmed for WalletFunding attempt {$attempt->id}");
+                    $funding = $attempt->payable;
+                    if ($funding && $funding->status !== \App\Domain\Shared\Enums\FundingStatus::Completed) {
+                        $fundingService = app(\App\Domain\Wallet\Services\WalletFundingService::class);
+                        $fundingService->processSuccessfulFunding(
+                            $funding->reference,
+                            $attempt->gateway_reference ?: 'VERIFY-'.uniqid(),
+                            $attempt->verification_payload ?: []
+                        );
+                    }
+                    return;
+                }
+
                 // Check if the order is already Paid by a different attempt
                 $order = Order::where('id', $attempt->order_id)->lockForUpdate()->first();
                 if ($order && $order->payment_status === PaymentStatus::Paid) {
@@ -57,10 +72,12 @@ class VerifyPaymentJob implements ShouldQueue
                     return;
                 }
 
-                Log::info("VerifyPaymentJob: payment confirmed for attempt {$attempt->id}");
+                Log::info("VerifyPaymentJob: payment confirmed for order attempt {$attempt->id}");
 
                 // 1. Transition the order's payment status to Paid
-                $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Paid, $attempt->verification_payload);
+                if ($attempt->order) {
+                    $orderService->transitionPaymentStatus($attempt->order, PaymentStatus::Paid, $attempt->verification_payload);
+                }
 
                 // 2. Synchronize active PaymentSession model if exists
                 $attempt->load('paymentSession');
@@ -74,12 +91,13 @@ class VerifyPaymentJob implements ShouldQueue
 
                 // 3. Refresh Order to verify paid status
                 $order = Order::find($attempt->order_id);
+                if ($order) {
+                    PaymentConfirmed::dispatch($order, $attempt);
 
-                PaymentConfirmed::dispatch($order, $attempt);
-
-                // 4. Dispatch fulfillment jobs for each order item
-                foreach ($order->items as $item) {
-                    FulfillOrderItemJob::dispatch($item);
+                    // 4. Dispatch fulfillment jobs for each order item
+                    foreach ($order->items as $item) {
+                        FulfillOrderItemJob::dispatch($item);
+                    }
                 }
             } else {
                 Log::warning("VerifyPaymentJob: payment verification returned unpaid/pending for attempt {$attempt->id}");
