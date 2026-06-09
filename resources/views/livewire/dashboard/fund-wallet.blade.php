@@ -705,7 +705,7 @@ new class extends Component
                                     type="password" 
                                     inputmode="numeric" 
                                     autocomplete="cc-csc" 
-                                    placeholder="123" 
+                                    placeholder="•••"
                                     x-model="cardDetails.cvv"
                                     maxlength="4"
                                     class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 tabular-nums"
