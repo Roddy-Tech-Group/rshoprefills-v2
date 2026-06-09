@@ -195,6 +195,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Admin Commerce Monitoring & Actions API
         Route::prefix('api/commerce')->name('api.commerce.')->group(function () {
             Route::get('orders', [AdminCommerceController::class, 'listOrders'])->name('orders');
+            Route::get('orders/export', [AdminCommerceController::class, 'exportOrders'])->name('orders.export');
             Route::get('payments', [AdminCommerceController::class, 'listPayments'])->name('payments');
             Route::get('fulfillments', [AdminCommerceController::class, 'listFulfillmentLogs'])->name('fulfillments');
             Route::post('orders/{itemId}/retry-fulfillment', [AdminCommerceController::class, 'retryFulfillment'])->name('retry-fulfillment');

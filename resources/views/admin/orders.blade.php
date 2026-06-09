@@ -24,6 +24,18 @@
     <x-slot:heading>Orders</x-slot:heading>
     <x-slot:subheading>{{ number_format($totalOrders) }} orders total. Showing the latest 50.</x-slot:subheading>
 
+    {{-- Export the full order history (excludes never-paid checkouts, matching
+         the list below) as a CSV for record-keeping / accounting. --}}
+    <div class="mb-4 flex justify-end">
+        <a href="{{ route('admin.api.commerce.orders.export') }}"
+            class="inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
+            </svg>
+            Export CSV
+        </a>
+    </div>
+
     {{-- Shared grid template — same pattern as Customers / Transactions /
          Products pages so every list reads the same. --}}
     <style>
