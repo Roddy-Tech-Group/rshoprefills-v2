@@ -9,6 +9,39 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Flatpickr dark theme ─────────────────────────────────────────────────
+   The base flatpickr.css (imported in app.js) themes light mode; these rules
+   repaint the calendar to the admin navy palette (#1d3252 surface, blue accent)
+   when <html> has the .dark class. */
+html.dark .flatpickr-calendar {
+    background: #1d3252;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    color: #e5e7eb;
+}
+html.dark .flatpickr-calendar.arrowTop::before,
+html.dark .flatpickr-calendar.arrowTop::after { border-bottom-color: #1d3252; }
+html.dark .flatpickr-calendar.arrowBottom::before,
+html.dark .flatpickr-calendar.arrowBottom::after { border-top-color: #1d3252; }
+html.dark .flatpickr-months .flatpickr-month,
+html.dark .flatpickr-current-month input.cur-year,
+html.dark .flatpickr-current-month .flatpickr-monthDropdown-months { color: #fff; }
+html.dark .flatpickr-monthDropdown-months { background: #1d3252; }
+html.dark .flatpickr-weekday { color: #9ca3af; }
+html.dark .flatpickr-day { color: #e5e7eb; }
+html.dark .flatpickr-day:hover,
+html.dark .flatpickr-day:focus { background: rgba(255, 255, 255, 0.08); border-color: transparent; }
+html.dark .flatpickr-day.today { border-color: #60a5fa; }
+html.dark .flatpickr-day.selected,
+html.dark .flatpickr-day.selected:hover { background: #2563eb; border-color: #2563eb; color: #fff; }
+html.dark .flatpickr-day.flatpickr-disabled,
+html.dark .flatpickr-day.prevMonthDay,
+html.dark .flatpickr-day.nextMonthDay { color: #4b5563; }
+html.dark .flatpickr-months .flatpickr-prev-month svg,
+html.dark .flatpickr-months .flatpickr-next-month svg { fill: #cbd5e1; }
+html.dark .flatpickr-months .flatpickr-prev-month:hover svg,
+html.dark .flatpickr-months .flatpickr-next-month:hover svg { fill: #fff; }
+
 /* ── Effortless-feel baseline ─────────────────────────────────────────────
    Native-app touch feel: no grey tap-flash on touch, no iOS auto text-resizing
    when rotating. (Momentum scrolling is native on iOS 13+; smooth modal scroll

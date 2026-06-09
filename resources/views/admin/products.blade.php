@@ -1423,77 +1423,34 @@
                                 </div>
                                 <input type="number" step="0.01" min="0.01" x-model="couponForm.discount_value" :placeholder="couponForm.discount_type === 'percent' ? '10' : '5.00'" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
                                 <input type="number" min="1" x-model="couponForm.max_uses" placeholder="Max uses (blank = ∞)" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
-                                {{-- Custom expiry calendar — replaces the native datetime-local
-                                     picker so it matches the dark admin theme. Date-only, future
-                                     dates only (the API requires valid_until > now), stored as
-                                     end-of-day. Reads/writes couponForm.valid_until via Alpine's
-                                     scope chain (same as the discount-type select above). --}}
-                                <div class="relative"
-                                     x-data="{
-                                        open: false,
-                                        view: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                                        pad(n) { return String(n).padStart(2, '0'); },
-                                        monthLabel() { return this.view.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); },
-                                        days() {
-                                            const y = this.view.getFullYear(), m = this.view.getMonth();
-                                            const lead = new Date(y, m, 1).getDay();
-                                            const count = new Date(y, m + 1, 0).getDate();
-                                            const today = new Date(); today.setHours(0, 0, 0, 0);
-                                            const cells = [];
-                                            for (let i = 0; i < lead; i++) { cells.push(null); }
-                                            for (let d = 1; d <= count; d++) {
-                                                const dt = new Date(y, m, d);
-                                                cells.push({ day: d, iso: y + '-' + this.pad(m + 1) + '-' + this.pad(d), past: dt < today, today: dt.getTime() === today.getTime() });
-                                            }
-                                            return cells;
-                                        },
-                                        prev() { this.view = new Date(this.view.getFullYear(), this.view.getMonth() - 1, 1); },
-                                        next() { this.view = new Date(this.view.getFullYear(), this.view.getMonth() + 1, 1); }
-                                     }"
-                                     @click.outside="open = false"
-                                     @keydown.escape.window="open = false">
-                                    <button type="button"
-                                        @click="open = !open; if (couponForm.valid_until) { view = new Date(new Date(couponForm.valid_until).getFullYear(), new Date(couponForm.valid_until).getMonth(), 1); }"
-                                        class="flex w-full items-center justify-between gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-left text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
-                                        <span x-text="couponForm.valid_until ? new Date(couponForm.valid_until).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Expiry (optional)'"
-                                              :class="couponForm.valid_until ? '' : 'text-zinc-400 dark:text-zinc-500'"></span>
-                                        <svg class="h-4 w-4 shrink-0 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                    </button>
-                                    <div x-show="open" x-cloak x-transition.opacity.duration.150ms
-                                         class="absolute right-0 z-50 mt-1 w-64 rounded-[10px] border border-zinc-200 bg-white p-3 shadow-xl shadow-zinc-900/15 dark:border-zinc-700/60 dark:bg-[#1d3252]">
-                                        <div class="mb-2 flex items-center justify-between">
-                                            <button type="button" @click="prev()" class="flex h-6 w-6 items-center justify-center rounded-[10px] text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5">
-                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                                            </button>
-                                            <span class="text-[12px] font-semibold text-zinc-900 dark:text-white" x-text="monthLabel()"></span>
-                                            <button type="button" @click="next()" class="flex h-6 w-6 items-center justify-center rounded-[10px] text-zinc-500 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5">
-                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                                            </button>
-                                        </div>
-                                        <div class="mb-1 grid grid-cols-7 gap-1">
-                                            <template x-for="(w, wi) in ['S', 'M', 'T', 'W', 'T', 'F', 'S']" :key="wi">
-                                                <span class="text-center text-[10px] font-semibold uppercase text-zinc-400 dark:text-zinc-500" x-text="w"></span>
-                                            </template>
-                                        </div>
-                                        <div class="grid grid-cols-7 gap-1">
-                                            <template x-for="(cell, i) in days()" :key="i">
-                                                <button type="button"
-                                                    :disabled="!cell || cell.past"
-                                                    @click="couponForm.valid_until = cell.iso + 'T23:59'; open = false"
-                                                    x-text="cell ? cell.day : ''"
-                                                    class="flex h-7 items-center justify-center rounded-[10px] text-[11px] tabular-nums transition-colors"
-                                                    :class="!cell ? 'invisible' : (couponForm.valid_until && couponForm.valid_until.slice(0, 10) === cell.iso ? 'bg-blue-600 text-white font-semibold' : (cell.past ? 'cursor-not-allowed text-zinc-300 dark:text-zinc-600' : (cell.today ? 'text-blue-600 ring-1 ring-blue-400 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-white/5' : 'text-zinc-700 hover:bg-blue-50 dark:text-zinc-200 dark:hover:bg-white/5')))">
-                                                </button>
-                                            </template>
-                                        </div>
-                                        <div class="mt-2 flex items-center justify-between border-t border-zinc-100 pt-2 dark:border-white/10">
-                                            <button type="button" @click="couponForm.valid_until = ''; open = false" class="text-[11px] font-semibold text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">Clear</button>
-                                            <button type="button" @click="const t = new Date(); couponForm.valid_until = t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()) + 'T23:59'; open = false" class="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Today</button>
-                                        </div>
-                                    </div>
-                                </div>
+                                {{-- Flatpickr expiry picker. Date-only, future dates only (the API
+                                     requires valid_until > now), stored as end-of-day. flatpickr is
+                                     exposed on window in app.js; the dark calendar theme lives in
+                                     app.css. Writes the ISO value to couponForm.valid_until and
+                                     clears itself when the form resets. --}}
+                                <input
+                                    type="text"
+                                    x-ref="couponExpiry"
+                                    placeholder="Expiry (optional)"
+                                    readonly
+                                    x-init="
+                                        const pad = (n) => String(n).padStart(2, '0');
+                                        const fp = window.flatpickr($refs.couponExpiry, {
+                                            minDate: 'today',
+                                            dateFormat: 'M j, Y',
+                                            disableMobile: true,
+                                            onChange: (dates) => {
+                                                if (dates.length) {
+                                                    const d = dates[0];
+                                                    couponForm.valid_until = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T23:59';
+                                                } else {
+                                                    couponForm.valid_until = '';
+                                                }
+                                            },
+                                        });
+                                        $watch('couponForm.valid_until', (v) => { if (!v && fp.selectedDates.length) { fp.clear(); } });
+                                    "
+                                    class="cursor-pointer rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white dark:placeholder:text-zinc-500">
                             </div>
                             <p x-show="couponError" x-text="couponError" class="text-[11px] text-red-600"></p>
                             <button type="button" @click="createCoupon()" :disabled="creatingCoupon" class="w-full rounded-[10px] bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
