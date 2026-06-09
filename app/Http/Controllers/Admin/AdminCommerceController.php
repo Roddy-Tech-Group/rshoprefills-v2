@@ -13,9 +13,18 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentAttempt;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminCommerceController extends Controller
 {
+    /**
+     * Never-paid checkouts (abandoned / failed) are noise in the orders ledger;
+     * the orders page hides them and the export mirrors that by default.
+     *
+     * @var list<string>
+     */
+    private const HIDDEN_ORDER_STATUSES = ['pending', 'cancelled', 'failed'];
+
     public function listOrders(Request $request)
     {
         $query = Order::with(['user', 'items']);
@@ -30,6 +39,63 @@ class AdminCommerceController extends Controller
         }
 
         return response()->json($query->latest()->paginate(15));
+    }
+
+    /**
+     * Stream the full order history as a CSV for record-keeping. Honours the
+     * same status/search filters as listOrders and, like the orders page,
+     * excludes never-paid checkouts unless a specific status is requested.
+     * Streamed row-by-row via a cursor so large histories don't exhaust memory.
+     */
+    public function exportOrders(Request $request): StreamedResponse
+    {
+        $query = Order::with('user')->withCount('items');
+
+        if ($request->filled('status')) {
+            $query->where('order_status', $request->input('status'));
+        } else {
+            $query->whereNotIn('order_status', self::HIDDEN_ORDER_STATUSES);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(fn ($q) => $q->where('order_number', 'like', "%{$search}%")->orWhereRelation('user', 'email', 'like', "%{$search}%"));
+        }
+
+        $query->latest();
+
+        $filename = 'orders-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Order Number', 'Customer Name', 'Customer Email', 'Items',
+                'Subtotal (USD)', 'Total (USD)', 'Display Total', 'Display Currency',
+                'Order Status', 'Payment Status', 'Fulfillment Status', 'Created At',
+            ]);
+
+            foreach ($query->cursor() as $order) {
+                fputcsv($handle, [
+                    $order->order_number,
+                    $order->user?->name,
+                    $order->user?->email,
+                    $order->items_count,
+                    number_format($order->usdSubtotal(), 2, '.', ''),
+                    number_format($order->usdTotal(), 2, '.', ''),
+                    number_format((float) $order->total_amount, 2, '.', ''),
+                    $order->display_currency,
+                    $order->order_status?->value,
+                    $order->payment_status?->value,
+                    $order->fulfillment_status?->value,
+                    $order->created_at?->toDateTimeString(),
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function listPayments(Request $request)
