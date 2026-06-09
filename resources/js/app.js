@@ -1,3 +1,10 @@
+// Flatpickr — modern date picker used by admin forms (e.g. coupon expiry).
+// Exposed on window so Alpine x-init expressions can call flatpickr() directly.
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.css';
+
+window.flatpickr = flatpickr;
+
 /**
  * Entrance + scroll-reveal animations with GSAP.
  *
