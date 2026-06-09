@@ -42,6 +42,24 @@ html.dark .flatpickr-months .flatpickr-next-month svg { fill: #cbd5e1; }
 html.dark .flatpickr-months .flatpickr-prev-month:hover svg,
 html.dark .flatpickr-months .flatpickr-next-month:hover svg { fill: #fff; }
 
+/* Year <select> dropdown injected by initExpiryFlatpickr (app.js), styled to sit
+   inline next to Flatpickr's month dropdown. */
+.flatpickr-yearDropdown {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: none;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    margin-left: 0.25rem;
+}
+.flatpickr-yearDropdown:focus { outline: none; }
+html.dark .flatpickr-yearDropdown { color: #fff; }
+html.dark .flatpickr-yearDropdown option { background: #1d3252; color: #fff; }
+
 /* ── Effortless-feel baseline ─────────────────────────────────────────────
    Native-app touch feel: no grey tap-flash on touch, no iOS auto text-resizing
    when rotating. (Momentum scrolling is native on iOS 13+; smooth modal scroll

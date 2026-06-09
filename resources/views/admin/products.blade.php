@@ -1435,18 +1435,8 @@
                                     readonly
                                     x-init="
                                         const pad = (n) => String(n).padStart(2, '0');
-                                        const fp = window.flatpickr($refs.couponExpiry, {
-                                            minDate: 'today',
-                                            dateFormat: 'M j, Y',
-                                            disableMobile: true,
-                                            onChange: (dates) => {
-                                                if (dates.length) {
-                                                    const d = dates[0];
-                                                    couponForm.valid_until = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T23:59';
-                                                } else {
-                                                    couponForm.valid_until = '';
-                                                }
-                                            },
+                                        const fp = window.initExpiryFlatpickr($refs.couponExpiry, (d) => {
+                                            couponForm.valid_until = d ? d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T23:59' : '';
                                         });
                                         $watch('couponForm.valid_until', (v) => { if (!v && fp.selectedDates.length) { fp.clear(); } });
                                     "

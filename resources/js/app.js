@@ -6,6 +6,59 @@ import 'flatpickr/dist/flatpickr.css';
 window.flatpickr = flatpickr;
 
 /**
+ * Replace Flatpickr's numeric year stepper with a real <select> dropdown
+ * (Flatpickr ships a month dropdown but not a year one). Lists the current year
+ * through +10. Styling lives in app.css under `.flatpickr-yearDropdown`.
+ */
+function mountYearDropdown(fp, range = 10) {
+    const yearInput = fp.currentYearElement;
+    if (!yearInput) return;
+    const numWrapper = yearInput.closest('.numInputWrapper');
+    if (!numWrapper || numWrapper.dataset.yearDropdown) return;
+
+    const select = document.createElement('select');
+    select.className = 'flatpickr-yearDropdown';
+    const base = new Date().getFullYear();
+    for (let y = base; y <= base + range; y++) {
+        const opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        select.appendChild(opt);
+    }
+    select.value = String(fp.currentYear);
+    select.addEventListener('change', () => fp.changeYear(parseInt(select.value, 10)));
+
+    numWrapper.style.display = 'none';
+    numWrapper.dataset.yearDropdown = '1';
+    numWrapper.parentNode.insertBefore(select, numWrapper.nextSibling);
+    numWrapper._yearDropdown = select;
+}
+
+function syncYearDropdown(fp) {
+    const numWrapper = fp.currentYearElement?.closest('.numInputWrapper');
+    if (numWrapper?._yearDropdown) {
+        numWrapper._yearDropdown.value = String(fp.currentYear);
+    }
+}
+
+/**
+ * Flatpickr for an expiry date field: date-only, future dates only, month +
+ * year dropdowns. `onSelect` receives the chosen Date (or null when cleared).
+ */
+window.initExpiryFlatpickr = function (el, onSelect) {
+    return window.flatpickr(el, {
+        minDate: 'today',
+        dateFormat: 'M j, Y',
+        monthSelectorType: 'dropdown',
+        disableMobile: true,
+        onChange: (dates) => onSelect(dates[0] || null),
+        onReady: (_s, _d, fp) => mountYearDropdown(fp),
+        onYearChange: (_s, _d, fp) => syncYearDropdown(fp),
+        onMonthChange: (_s, _d, fp) => syncYearDropdown(fp),
+    });
+};
+
+/**
  * Entrance + scroll-reveal animations with GSAP.
  *
  * GSAP is loaded via dynamic import so the page still works if the package
