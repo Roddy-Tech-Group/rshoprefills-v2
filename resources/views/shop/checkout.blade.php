@@ -410,7 +410,7 @@
                                     type="text" 
                                     inputmode="numeric" 
                                     autocomplete="cc-csc" 
-                                    placeholder="123" 
+                                    placeholder="•••"
                                     x-model="cardDetails.cvv"
                                     maxlength="4"
                                     class="{{ $fieldClass }} tabular-nums"
