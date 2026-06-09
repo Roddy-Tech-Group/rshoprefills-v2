@@ -534,7 +534,10 @@ Route::middleware(['auth'])->group(function () {
 
     Volt::route('dashboard/notifications', 'dashboard.notifications')->name('dashboard.notifications');
 
-    Route::view('dashboard/saved-cards', 'dashboard.saved-cards')->name('dashboard.saved-cards');
+    // Saved Cards hidden until the card-vault / gateway tokenisation backend ships.
+    // The view is only an empty-state shell today; the nav links are also commented
+    // out in components/layouts/dashboard.blade.php. Uncomment both to re-enable.
+    // Route::view('dashboard/saved-cards', 'dashboard.saved-cards')->name('dashboard.saved-cards');
 
     Route::view('dashboard/wallet', 'dashboard.wallet')->name('dashboard.wallet');
 
