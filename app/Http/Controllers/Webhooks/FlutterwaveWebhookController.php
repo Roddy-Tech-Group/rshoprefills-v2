@@ -77,10 +77,22 @@ class FlutterwaveWebhookController extends Controller
             return $att;
         });
 
-        if ($attempt && ($attempt->payable_type === Order::class || ! empty($attempt->order_id))) {
-            VerifyPaymentJob::dispatch($attempt);
+        if ($attempt) {
+            if ($attempt->payable_type === Order::class || ! empty($attempt->order_id)) {
+                VerifyPaymentJob::dispatch($attempt);
+            } elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                ProcessFundingWebhookJob::dispatch($webhook->id);
+            } else {
+                $webhook->update([
+                    'processing_status' => 'ignored',
+                    'exception_traces' => 'Unhandled payable_type: ' . $attempt->payable_type,
+                ]);
+            }
         } else {
-            ProcessFundingWebhookJob::dispatch($webhook->id);
+            $webhook->update([
+                'processing_status' => 'ignored',
+                'exception_traces' => 'No matching PaymentAttempt found for tx_ref: ' . $txRef,
+            ]);
         }
 
         Log::info('Flutterwave webhook queued successfully.', [
