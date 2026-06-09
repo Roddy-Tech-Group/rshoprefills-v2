@@ -367,7 +367,7 @@
                                     type="text" 
                                     inputmode="numeric" 
                                     autocomplete="cc-number" 
-                                    placeholder="1234 1234 1234 1234" 
+                                    placeholder="4929 5012 3456 7890"
                                     x-model="cardDetails.card_number"
                                     @input="detectCardType"
                                     class="{{ $fieldClass }} pr-16 tabular-nums"
