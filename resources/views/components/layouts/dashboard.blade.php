@@ -436,6 +436,9 @@
                     @endif
                 </a>
 
+                {{-- Saved Cards hidden until the card-vault / gateway tokenisation
+                     backend ships (the page is only an empty-state shell today).
+                     Restore this block + the route in routes/web.php to re-enable.
                 @php $active = request()->routeIs('dashboard.saved-cards'); @endphp
                 <a href="{{ route('dashboard.saved-cards') }}" wire:navigate data-tip="Saved Cards" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
@@ -443,6 +446,7 @@
                         Saved Cards
                     </span>
                 </a>
+                --}}
 
                 <a href="{{ route('dashboard.rewards') }}" wire:navigate data-tip="Referrals" class="{{ $navItem(request()->routeIs('dashboard.rewards')) }}">
                     <span class="flex items-center gap-3">
@@ -1323,7 +1327,8 @@
                 ['label' => 'Security',      'href' => route('dashboard.password'),  'icon' => 'admin access.svg',   'tone' => 'bg-violet-500',   'nav' => true],
                 ['label' => 'Appearance',    'href' => route('dashboard.appearance'),'icon' => 'Appearance.svg',     'tone' => 'bg-fuchsia-500',  'nav' => true],
                 ['label' => 'Notifications', 'href' => route('dashboard.notifications'), 'icon' => 'notification 2.svg', 'tone' => 'bg-amber-500',    'nav' => true],
-                ['label' => 'Saved Cards',   'href' => route('dashboard.saved-cards'),   'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => true],
+                // Saved Cards hidden until the card-vault backend ships (see routes/web.php).
+                // ['label' => 'Saved Cards',   'href' => route('dashboard.saved-cards'),   'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => true],
                 ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.webp',       'tone' => 'bg-orange-500',   'nav' => true],
                 ['label' => 'Support',       'href' => 'https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'icon' => 'support.svg', 'tone' => 'bg-cyan-500', 'nav' => false],
             ];
