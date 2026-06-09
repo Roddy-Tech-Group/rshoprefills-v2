@@ -67,6 +67,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => request()->is('admin*') ? route('admin.dashboard') : route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // Guard: duplicate failed_jobs UUID insert is a harmless race condition,
+        // not a real application error. Downgrade to a warning so Sentry doesn't
+        // fire alerts on it.
+        $exceptions->report(function (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            if (str_contains($e->getMessage(), 'failed_jobs')) {
+                \Illuminate\Support\Facades\Log::warning('Duplicate failed_jobs UUID — race condition (harmless)', [
+                    'message' => $e->getMessage(),
+                ]);
+
+                return false; // Stop propagation — don't report to Sentry.
+            }
+        });
+
         $exceptions->dontFlash([
             'password',
             'password_confirmation',

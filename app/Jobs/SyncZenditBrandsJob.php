@@ -20,6 +20,13 @@ class SyncZenditBrandsJob implements ShouldQueue
     use Queueable;
 
     public $timeout = 1800; // 30 minutes; brand catalogue can be hundreds of brands.
+    public int $tries = 1;          // One-shot sync — idempotent, re-dispatched on next schedule cycle.
+    public int $maxExceptions = 1;  // Fail immediately on unhandled exception.
+
+    public function __construct()
+    {
+        $this->onQueue('long-running');
+    }
 
     public function handle(): void
     {
@@ -39,5 +46,12 @@ class SyncZenditBrandsJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('SyncZenditBrandsJob: permanently failed', [
+            'error' => $exception->getMessage(),
+        ]);
     }
 }

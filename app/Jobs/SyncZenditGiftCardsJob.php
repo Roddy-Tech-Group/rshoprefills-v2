@@ -14,6 +14,8 @@ class SyncZenditGiftCardsJob implements ShouldQueue
     use Queueable;
 
     public $timeout = 600; // 10 minutes max for large catalogs
+    public int $tries = 3;
+    public int $maxExceptions = 1;
 
     public function __construct(private int $page = 1) {}
 
