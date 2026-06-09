@@ -6,44 +6,114 @@ import 'flatpickr/dist/flatpickr.css';
 window.flatpickr = flatpickr;
 
 /**
- * Replace Flatpickr's numeric year stepper with a real <select> dropdown
- * (Flatpickr ships a month dropdown but not a year one). Lists the current year
- * through +10. Styling lives in app.css under `.flatpickr-yearDropdown`.
+ * Build a custom dropdown (trigger button + styled options panel) to replace one
+ * of Flatpickr's native month/year selectors so they match the admin's other
+ * custom dropdowns. The panel is appended to <body> and fixed-positioned so
+ * Flatpickr's `overflow:hidden` month strip can't clip it.
+ *
+ * @param {Array<{value:number,label:string}>} items
+ * @param {number} current  currently selected value
+ * @param {(value:number)=>void} onPick
+ * @returns {{btn:HTMLElement, setValue:(v:number)=>void, cleanup:()=>void}}
  */
-function mountYearDropdown(fp, range = 10) {
-    const yearInput = fp.currentYearElement;
-    if (!yearInput) return;
-    const numWrapper = yearInput.closest('.numInputWrapper');
-    if (!numWrapper || numWrapper.dataset.yearDropdown) return;
+function buildFlatpickrDropdown(items, current, onPick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'flatpickr-modernSelect-btn';
+    const label = document.createElement('span');
+    label.textContent = items.find((i) => i.value === current)?.label ?? '';
+    btn.appendChild(label);
+    btn.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flatpickr-modernSelect-chev"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>');
 
-    const select = document.createElement('select');
-    select.className = 'flatpickr-yearDropdown';
-    const base = new Date().getFullYear();
-    for (let y = base; y <= base + range; y++) {
-        const opt = document.createElement('option');
-        opt.value = String(y);
-        opt.textContent = String(y);
-        select.appendChild(opt);
-    }
-    select.value = String(fp.currentYear);
-    select.addEventListener('change', () => fp.changeYear(parseInt(select.value, 10)));
+    const panel = document.createElement('div');
+    panel.className = 'flatpickr-modernSelect-panel';
+    const mark = (v) => panel.querySelectorAll('.flatpickr-modernSelect-opt').forEach((o) => o.classList.toggle('is-selected', Number(o.dataset.value) === v));
+    const hide = () => panel.classList.remove('is-open');
 
-    numWrapper.style.display = 'none';
-    numWrapper.dataset.yearDropdown = '1';
-    numWrapper.parentNode.insertBefore(select, numWrapper.nextSibling);
-    numWrapper._yearDropdown = select;
+    items.forEach((it) => {
+        const opt = document.createElement('button');
+        opt.type = 'button';
+        opt.className = 'flatpickr-modernSelect-opt';
+        opt.dataset.value = String(it.value);
+        opt.textContent = it.label;
+        if (it.value === current) opt.classList.add('is-selected');
+        opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            onPick(it.value);
+            label.textContent = it.label;
+            mark(it.value);
+            hide();
+        });
+        panel.appendChild(opt);
+    });
+    document.body.appendChild(panel);
+
+    const show = () => {
+        const r = btn.getBoundingClientRect();
+        panel.style.top = `${r.bottom + 4}px`;
+        panel.style.left = `${r.left + r.width / 2}px`;
+        panel.classList.add('is-open');
+        panel.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
+    };
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        panel.classList.contains('is-open') ? hide() : show();
+    });
+    document.addEventListener('click', hide);
+
+    return {
+        btn,
+        setValue: (v) => {
+            const it = items.find((i) => i.value === v);
+            if (it) label.textContent = it.label;
+            mark(v);
+        },
+        cleanup: () => {
+            document.removeEventListener('click', hide);
+            panel.remove();
+        },
+    };
 }
 
-function syncYearDropdown(fp) {
-    const numWrapper = fp.currentYearElement?.closest('.numInputWrapper');
-    if (numWrapper?._yearDropdown) {
-        numWrapper._yearDropdown.value = String(fp.currentYear);
+/** Swap Flatpickr's native month <select> and numeric year stepper for custom dropdowns. */
+function mountFlatpickrDropdowns(fp, range = 10) {
+    if (fp.__modernMounted) return;
+    fp.__modernMounted = true;
+    const controllers = [];
+
+    const monthSelect = fp.monthsDropdownContainer || fp.calendarContainer.querySelector('.flatpickr-monthDropdown-months');
+    if (monthSelect) {
+        monthSelect.style.display = 'none';
+        const months = fp.l10n.months.longhand.map((label, value) => ({ value, label }));
+        const monthCtl = buildFlatpickrDropdown(months, fp.currentMonth, (m) => fp.changeMonth(m - fp.currentMonth));
+        monthSelect.parentNode.insertBefore(monthCtl.btn, monthSelect.nextSibling);
+        fp.__monthCtl = monthCtl;
+        controllers.push(monthCtl);
     }
+
+    const yearWrapper = fp.currentYearElement?.closest('.numInputWrapper');
+    if (yearWrapper) {
+        yearWrapper.style.display = 'none';
+        const base = new Date().getFullYear();
+        const years = [];
+        for (let y = base; y <= base + range; y++) years.push({ value: y, label: String(y) });
+        const yearCtl = buildFlatpickrDropdown(years, fp.currentYear, (y) => fp.changeYear(y));
+        yearWrapper.parentNode.insertBefore(yearCtl.btn, yearWrapper.nextSibling);
+        fp.__yearCtl = yearCtl;
+        controllers.push(yearCtl);
+    }
+
+    fp.__cleanupDropdowns = () => controllers.forEach((c) => c.cleanup());
+}
+
+function syncFlatpickrDropdowns(fp) {
+    fp.__monthCtl?.setValue(fp.currentMonth);
+    fp.__yearCtl?.setValue(fp.currentYear);
 }
 
 /**
- * Flatpickr for an expiry date field: date-only, future dates only, month +
- * year dropdowns. `onSelect` receives the chosen Date (or null when cleared).
+ * Flatpickr for an expiry date field: date-only, future dates only, with custom
+ * month + year dropdowns. `onSelect` receives the chosen Date (or null cleared).
  */
 window.initExpiryFlatpickr = function (el, onSelect) {
     return window.flatpickr(el, {
@@ -52,9 +122,10 @@ window.initExpiryFlatpickr = function (el, onSelect) {
         monthSelectorType: 'dropdown',
         disableMobile: true,
         onChange: (dates) => onSelect(dates[0] || null),
-        onReady: (_s, _d, fp) => mountYearDropdown(fp),
-        onYearChange: (_s, _d, fp) => syncYearDropdown(fp),
-        onMonthChange: (_s, _d, fp) => syncYearDropdown(fp),
+        onReady: (_s, _d, fp) => mountFlatpickrDropdowns(fp),
+        onYearChange: (_s, _d, fp) => syncFlatpickrDropdowns(fp),
+        onMonthChange: (_s, _d, fp) => syncFlatpickrDropdowns(fp),
+        onDestroy: (_s, _d, fp) => fp.__cleanupDropdowns?.(),
     });
 };
 
