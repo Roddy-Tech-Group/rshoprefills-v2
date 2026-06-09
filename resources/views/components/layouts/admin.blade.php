@@ -10,6 +10,13 @@
          without rewriting the markup; <svg> and <img> have explicit sizes so
          they keep rendering. Mobile is unaffected (stash already covers it). --}}
     <style>
+        /* Slide-out drawers (e.g. the product details panel) dim the page content,
+           but the desktop sidebar must stay bright and usable, so lift it above the
+           drawer's z-50 backdrop. Mobile is unaffected (the sidebar stashes away). */
+        @media (min-width: 1024px) {
+            [data-flux-sidebar] { z-index: 60 !important; }
+        }
+
         @media (min-width: 1024px) {
             html.admin-sidebar-collapsed [data-flux-sidebar] {
                 width: 72px !important;
