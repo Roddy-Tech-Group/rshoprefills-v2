@@ -106,6 +106,34 @@ class WalletFundingSystemTest extends TestCase
         Queue::fake();
         config(['services.flutterwave.webhook_hash' => 'FLW_SECURE_HASH']);
 
+        $user = User::factory()->create();
+        $wallet = Wallet::create([
+            'user_id' => $user->id,
+            'currency' => Currency::USD,
+            'balance' => 0.0,
+        ]);
+
+        $funding = WalletFunding::create([
+            'user_id' => $user->id,
+            'wallet_id' => $wallet->id,
+            'reference' => 'FUND-USD-12345',
+            'currency' => 'USD',
+            'amount' => 50.0,
+            'gateway' => 'flutterwave',
+            'status' => FundingStatus::Pending,
+        ]);
+
+        PaymentAttempt::create([
+            'user_id' => $user->id,
+            'payable_type' => WalletFunding::class,
+            'payable_id' => $funding->id,
+            'gateway' => 'flutterwave',
+            'idempotency_key' => 'FUND-USD-12345',
+            'currency' => 'USD',
+            'amount' => 50.0,
+            'payment_status' => PaymentStatus::Pending,
+        ]);
+
         $payload = [
             'event' => 'charge.completed',
             'data' => [
