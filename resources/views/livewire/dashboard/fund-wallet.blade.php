@@ -948,23 +948,15 @@ new class extends Component
 
                 <!-- Success state -->
                 <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
-                        <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                        </svg>
-                    </span>
-                    <h3 class="mt-4 text-base font-bold text-zinc-950">Deposit Complete!</h3>
+                    <x-success-tick />
+                    <h3 class="mt-5 text-base font-bold text-zinc-950">Deposit Complete!</h3>
                     <p class="mt-1.5 text-xs text-zinc-600">Your wallet balance is being updated now.</p>
                 </div>
 
                 <!-- Error state -->
                 <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
-                        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </span>
-                    <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
+                    <x-error-cross />
+                    <h3 class="mt-5 text-sm font-bold text-zinc-900">Payment Failed</h3>
                     <p class="mt-1.5 text-xs text-red-600 px-4" x-text="errorMessage"></p>
 
                     <button type="button" @click="paymentState = 'select_method'" class="mt-6 rounded-[10px] bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">

@@ -479,7 +479,9 @@ Route::prefix('cart')->name('cart.')->group(function () {
 // and renders the checkout page. Order creation + payment-gateway initiation are backend
 // territory; the POST below is a validation-only stub the backend replaces with a
 // CheckoutController that builds the Order/OrderItem rows and kicks off the gateway.
-Route::get('checkout', function (CartManager $cartManager, CartPricingService $pricing) {
+// Shared by the storefront route below and the dashboard mirror (dashboard.shop.checkout)
+// so logged-in users can check out without leaving the dashboard/PWA chrome.
+$renderCheckout = function (CartManager $cartManager, CartPricingService $pricing) {
     $userId = auth()->id();
     $guestToken = request()->cookie('guest_token') ?? request()->header('X-Guest-Token');
 
@@ -502,7 +504,8 @@ Route::get('checkout', function (CartManager $cartManager, CartPricingService $p
     $rate = CurrencyRate::resolve(request('currency'));
 
     return view('shop.checkout', ['cart' => $cart, 'totals' => $totals, 'rate' => $rate]);
-})->name('shop.checkout');
+};
+Route::get('checkout', $renderCheckout)->name('shop.checkout');
 
 // Checkout submission - creates the Order + OrderItems + a pending Payment from the
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
@@ -608,7 +611,7 @@ Route::middleware(['auth'])->group(function () {
 // differs. The public storefront URLs above stay open to everyone (guests AND
 // authed users), so users can shop on either side.
 Route::middleware(['auth'])->prefix('dashboard/shop')->name('dashboard.shop.')
-    ->group(function () use ($resolveGiftCardBrand, $resolveTopupBrand, $resolveBillBrand) {
+    ->group(function () use ($resolveGiftCardBrand, $resolveTopupBrand, $resolveBillBrand, $renderCheckout) {
         Route::view('gift-cards', 'shop.gift-cards')->name('gift-cards');
         Route::get('gift-cards/{brandSlug}', $resolveGiftCardBrand)->name('brand');
 
@@ -624,6 +627,18 @@ Route::middleware(['auth'])->prefix('dashboard/shop')->name('dashboard.shop.')
 
         Route::view('flights', 'shop.coming-soon', ['service' => 'flights'])->name('flights');
         Route::view('stays', 'shop.coming-soon', ['service' => 'stays'])->name('stays');
+
+        // Transactional flow mirrored under the dashboard so the cart -> checkout
+        // -> order journey keeps the customer inside the dashboard/PWA chrome
+        // instead of bouncing out to the public storefront. Same controllers and
+        // views; the views auto-detect the dashboard URL via <x-shop.layout>.
+        Route::get('cart', [CartWebController::class, 'page'])->name('cart');
+        Route::get('checkout', $renderCheckout)->name('checkout');
+        Route::post('checkout', [CheckoutController::class, 'process'])
+            ->middleware(['not-suspended', 'maintenance-guard', 'throttle:10,1'])
+            ->name('checkout.process');
+        Route::get('checkout/return/{session}', [CheckoutController::class, 'hostedReturn'])->name('checkout.return');
+        Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])->name('order');
     });
 
 // Legacy /settings/* URLs redirect to the new /dashboard/* paths so old bookmarks keep working.

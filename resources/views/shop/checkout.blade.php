@@ -50,9 +50,15 @@
         'redemption_min'     => (int) \App\Models\Setting::get('redemption_min_rcoin', 2000),
         'redemption_max_pct' => (float) \App\Models\Setting::get('redemption_max_percentage', 30.0),
     ];
+
+    // Under /dashboard/shop/* the flow stays in the dashboard chrome: links and
+    // the POST endpoint resolve to the dashboard mirror routes.
+    $inDashboard = request()->is('dashboard/shop*');
+    $shopRoute = fn (string $name, $params = []) => route(($inDashboard ? 'dashboard.shop.' : 'shop.').$name, $params);
+    $checkoutPostUrl = $inDashboard ? route('dashboard.shop.checkout.process') : route('checkout.process');
 @endphp
 
-<x-layouts.app.header :title="'Checkout | RshopRefills'">
+<x-shop.layout :title="'Checkout | RshopRefills'">
 
     <div class="min-h-full bg-zinc-100">
     <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -88,7 +94,7 @@
                 <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                <a href="{{ $shopRoute('gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                     Browse gift cards
                 </a>
             </div>
@@ -504,7 +510,9 @@
                         <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4">
                             <div class="flex justify-between items-center">
                                 <span class="text-sm font-medium text-zinc-600">Available Balance</span>
-                                <span class="text-base font-bold text-zinc-900" x-text="$store.cart.pay(walletBalances[$store.cart.currency] || 0)"></span>
+                                {{-- Keep the "$" only for USD; non-USD wallets (e.g. XAF) show a bare
+                                     number here - the "Available Balance" label already gives it context. --}}
+                                <span class="text-base font-bold text-zinc-900" x-text="$store.cart.currency === 'USD' ? $store.cart.usd(walletBalances[$store.cart.currency] || 0) : Number(walletBalances[$store.cart.currency] || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })"></span>
                             </div>
                             <div x-show="!hasSufficientWalletBalance()" class="mt-3 text-xs text-red-600 font-medium">
                                 Insufficient balance to pay for this order. Please fund your wallet or select a different payment method.
@@ -845,23 +853,15 @@
 
                         <!-- Success state -->
                         <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
-                                <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                </svg>
-                            </span>
-                            <h3 class="mt-4 text-base font-bold text-zinc-950">Payment Complete!</h3>
+                            <x-success-tick />
+                            <h3 class="mt-5 text-base font-bold text-zinc-950">Payment Complete!</h3>
                             <p class="mt-1.5 text-xs text-zinc-600 font-medium">Your order is confirmed. Redirecting now...</p>
                         </div>
 
                         <!-- Error state -->
                         <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
-                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </span>
-                            <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
+                            <x-error-cross />
+                            <h3 class="mt-5 text-sm font-bold text-zinc-900">Payment Failed</h3>
                             <p class="mt-1.5 text-xs text-red-600 px-4" x-html="errorMessage"></p>
                             
                             <button type="button" @click="closeModal()" class="mt-6 rounded-[10px] bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
@@ -1158,7 +1158,7 @@
                     this.errorMessage = '';
                     try {
                         const formData = new FormData(e.target);
-                        const response = await fetch('/checkout', {
+                        const response = await fetch('{{ $checkoutPostUrl }}', {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
@@ -1533,4 +1533,4 @@
         };
     </script>
 
-</x-layouts.app.header>
+</x-shop.layout>
