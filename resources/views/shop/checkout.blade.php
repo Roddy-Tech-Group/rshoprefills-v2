@@ -50,49 +50,11 @@
         'redemption_min'     => (int) \App\Models\Setting::get('redemption_min_rcoin', 2000),
         'redemption_max_pct' => (float) \App\Models\Setting::get('redemption_max_percentage', 30.0),
     ];
-
-    // Under /dashboard/shop/* the flow stays in the dashboard chrome: links and
-    // the POST endpoint resolve to the dashboard mirror routes.
-    $inDashboard = request()->is('dashboard/shop*');
-    $shopRoute = fn (string $name, $params = []) => route(($inDashboard ? 'dashboard.shop.' : 'shop.').$name, $params);
-    $checkoutPostUrl = $inDashboard ? route('dashboard.shop.checkout.process') : route('checkout.process');
-
-    // Per-method processing-fee rates (% of the charge amount) for the live
-    // "Processing fee" line. Domestic transaction rate only - any international
-    // surcharge + Flutterwave's VAT are reconciled from the gateway's actual
-    // response on the receipt. Methods absent here (wallet, crypto) show no fee.
-    $processingFeeRates = collect(config('payment_fees.methods', []))
-        ->map(fn ($r) => (float) ($r['transaction'] ?? 0))
-        ->toArray();
-
-    // Methods whose Flutterwave rail only exists in one currency. Selecting one
-    // charges in THAT currency (a USD shopper paying MTN/Orange momo is billed in
-    // XAF), regardless of the browsing currency - which is what lets every method
-    // be used from any region. Methods not listed charge in the display currency.
-    $methodCurrencyMap = [
-        'mobile_money' => 'XAF',
-        'ussd' => 'NGN',
-        'bank_transfer' => 'NGN',
-        'pay_with_bank' => 'NGN',
-        'bank_qr' => 'NGN',
-        'mobile_wallet' => 'NGN',
-    ];
-    $methodCurrencySymbols = ['XAF' => 'FCFA', 'NGN' => '₦'];
-    $methodCurrencyRates = CurrencyRate::query()
-        ->where('is_active', true)
-        ->whereIn('code', array_values(array_unique($methodCurrencyMap)))
-        ->pluck('rate_per_usd', 'code');
-    $methodCurrencies = [];
-    foreach ($methodCurrencyMap as $method => $code) {
-        $methodCurrencies[$method] = [
-            'code' => $code,
-            'perUsd' => (float) ($methodCurrencyRates[$code] ?? 1),
-            'symbol' => $methodCurrencySymbols[$code] ?? $code,
-        ];
-    }
 @endphp
 
-<x-shop.layout :title="'Checkout | RshopRefills'">
+<x-layouts.app.header :title="'Checkout | RshopRefills'">
+
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
 
     <div class="min-h-full bg-zinc-100">
     <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -113,7 +75,7 @@
             class="mt-4"
         />
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false), @js($processingFeeRates), @js($methodCurrencies))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
             <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white py-24 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -125,10 +87,10 @@
 
             {{-- Empty cart --}}
             <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white px-6 py-20 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <x-illo name="emptyCart" class="mx-auto w-full max-w-sm" />
+                <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
-                <a href="{{ $shopRoute('gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                     Browse gift cards
                 </a>
             </div>
@@ -297,7 +259,7 @@
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
-                    <input type="hidden" name="currency" :value="effectiveCurrency().code">
+                    <input type="hidden" name="currency" :value="$store.cart.currency">
 
                     <h2 class="text-lg font-bold text-zinc-900">Select payment method</h2>
 
@@ -394,72 +356,84 @@
 
                     {{-- Card --}}
                     <div x-show="method === 'card'" x-collapse class="mt-5 space-y-3">
-                        <div>
-                            <label for="card_name" class="text-sm font-semibold text-zinc-900">Name on card</label>
-                            <input id="card_name" name="card_name" type="text" autocomplete="cc-name" placeholder="Full name" x-model="cardDetails.card_holder" class="{{ $fieldClass }}">
-                        </div>
-                        <div>
-                            <label for="card_number" class="text-sm font-semibold text-zinc-900">Card number</label>
-                            <div class="relative">
-                                <input 
-                                    id="card_number" 
-                                    name="card_number" 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-number" 
-                                    placeholder="4929 5012 3456 7890"
-                                    x-model="cardDetails.card_number"
-                                    @input="detectCardType"
-                                    class="{{ $fieldClass }} pr-16 tabular-nums"
-                                >
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none mt-1.5">
-                                    {{-- Detected brand: show the Visa / Mastercard logo; fall back to a
-                                         coloured text chip for the other networks. --}}
-                                    <img src="/assets/visa.svg" alt="Visa" x-show="cardBrand === 'visa'" x-cloak class="h-5 w-auto">
-                                    <img src="/assets/mastercard.svg" alt="Mastercard" x-show="cardBrand === 'mastercard'" x-cloak class="h-6 w-auto">
-                                    <span x-show="cardBrand !== 'visa' && cardBrand !== 'mastercard'"
-                                          class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200"
-                                          x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
-                                          :class="{
-                                              'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
-                                              'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
-                                              'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
-                                              'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
-                                          }"
-                                    ></span>
+                        @if(config('services.flutterwave.direct_charge_enabled', false))
+                            <div>
+                                <label for="card_name" class="text-sm font-semibold text-zinc-900">Name on card</label>
+                                <input id="card_name" name="card_name" type="text" autocomplete="cc-name" placeholder="Full name" x-model="cardDetails.card_holder" class="{{ $fieldClass }}">
+                            </div>
+                            <div>
+                                <label for="card_number" class="text-sm font-semibold text-zinc-900">Card number</label>
+                                <div class="relative">
+                                    <input 
+                                        id="card_number" 
+                                        name="card_number" 
+                                        type="text" 
+                                        inputmode="numeric" 
+                                        autocomplete="cc-number" 
+                                        placeholder="1234 1234 1234 1234" 
+                                        x-model="cardDetails.card_number"
+                                        @input="detectCardType"
+                                        class="{{ $fieldClass }} pr-16 tabular-nums"
+                                    >
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none mt-1.5">
+                                        <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
+                                              x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
+                                              :class="{
+                                                  'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
+                                                  'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
+                                                  'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
+                                                  'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
+                                                  'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
+                                                  'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
+                                              }"
+                                        ></span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label for="card_expiry" class="text-sm font-semibold text-zinc-900">Expiry</label>
-                                <input 
-                                    id="card_expiry" 
-                                    name="card_expiry" 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-exp" 
-                                    placeholder="MM / YY" 
-                                    x-model="cardExpiryRaw"
-                                    @input="formatExpiry"
-                                    class="{{ $fieldClass }} tabular-nums"
-                                >
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="card_expiry" class="text-sm font-semibold text-zinc-900">Expiry</label>
+                                    <input 
+                                        id="card_expiry" 
+                                        name="card_expiry" 
+                                        type="text" 
+                                        inputmode="numeric" 
+                                        autocomplete="cc-exp" 
+                                        placeholder="MM / YY" 
+                                        x-model="cardExpiryRaw"
+                                        @input="formatExpiry"
+                                        class="{{ $fieldClass }} tabular-nums"
+                                    >
+                                </div>
+                                <div>
+                                    <label for="card_cvc" class="text-sm font-semibold text-zinc-900">CVC</label>
+                                    <input 
+                                        id="card_cvc" 
+                                        name="card_cvc" 
+                                        type="text" 
+                                        inputmode="numeric" 
+                                        autocomplete="cc-csc" 
+                                        placeholder="123" 
+                                        x-model="cardDetails.cvv"
+                                        maxlength="4"
+                                        class="{{ $fieldClass }} tabular-nums"
+                                    >
+                                </div>
                             </div>
-                            <div>
-                                <label for="card_cvc" class="text-sm font-semibold text-zinc-900">CVC</label>
-                                <input 
-                                    id="card_cvc" 
-                                    name="card_cvc" 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-csc" 
-                                    placeholder="•••"
-                                    x-model="cardDetails.cvv"
-                                    maxlength="4"
-                                    class="{{ $fieldClass }} tabular-nums"
-                                >
+                        @else
+                            <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4 text-center">
+                                <div class="flex justify-center gap-3 mb-3">
+                                    <img src="/assets/visa.svg" alt="Visa" class="h-8 object-contain">
+                                    <img src="/assets/mastercard.svg" alt="Mastercard" class="h-8 object-contain">
+                                </div>
+                                <p class="text-sm font-medium text-zinc-700">
+                                    You'll enter your card details in a secure popup powered by Flutterwave.
+                                </p>
+                                <p class="mt-1 text-xs text-zinc-500">
+                                    Your card information never touches our servers.
+                                </p>
                             </div>
-                        </div>
+                        @endif
                     </div>
 
                     {{-- Mobile money --}}
@@ -547,9 +521,7 @@
                         <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4">
                             <div class="flex justify-between items-center">
                                 <span class="text-sm font-medium text-zinc-600">Available Balance</span>
-                                {{-- Keep the "$" only for USD; non-USD wallets (e.g. XAF) show a bare
-                                     number here - the "Available Balance" label already gives it context. --}}
-                                <span class="text-base font-bold text-zinc-900" x-text="$store.cart.currency === 'USD' ? $store.cart.usd(walletBalances[$store.cart.currency] || 0) : Number(walletBalances[$store.cart.currency] || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })"></span>
+                                <span class="text-base font-bold text-zinc-900" x-text="$store.cart.pay(walletBalances[$store.cart.currency] || 0)"></span>
                             </div>
                             <div x-show="!hasSufficientWalletBalance()" class="mt-3 text-xs text-red-600 font-medium">
                                 Insufficient balance to pay for this order. Please fund your wallet or select a different payment method.
@@ -590,31 +562,11 @@
 
                     @error('payment_method') <p class="mt-3 text-xs text-red-600">{{ $message }}</p> @enderror
 
-                    {{-- Subtotal + processing fee breakdown - only when a Flutterwave
-                         method that carries a fee is selected (hidden for wallet/crypto).
-                         Amounts are in the method's charge currency. --}}
-                    <div x-show="processingFee() > 0" x-cloak class="mt-5 space-y-2">
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="font-medium text-zinc-600">Subtotal</span>
-                            <span class="tabular-nums text-zinc-700" x-text="money(effectiveAmount())"></span>
-                        </div>
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="font-medium text-zinc-600">Processing fee</span>
-                            <span class="tabular-nums text-zinc-700" x-text="money(processingFee())"></span>
-                        </div>
-                    </div>
-
                     {{-- Total --}}
                     <div class="mt-5 flex items-center justify-between border-t border-zinc-100 pt-5">
                         <span class="text-base font-bold text-zinc-900">Total amount to pay</span>
                         <span x-data="valueFlip()" x-effect="totalLabel(); flash()" class="inline-block text-lg font-extrabold tabular-nums text-zinc-900" x-text="totalLabel()">0.00</span>
                     </div>
-
-                    {{-- Currency note when the chosen method charges in a different
-                         currency than the one the customer is browsing in. --}}
-                    <p x-show="method !== 'crypto' && effectiveCurrency().code !== $store.cart.currency" x-cloak class="mt-2 text-xs text-zinc-500">
-                        This method is charged in <span class="font-semibold" x-text="effectiveCurrency().code"></span>, converted from the item price.
-                    </p>
 
                     {{-- Crypto safety warning --}}
                     <div x-show="method === 'crypto'" x-cloak class="mt-3 flex items-start gap-2 rounded-[10px] bg-red-50 px-3.5 py-3">
@@ -910,15 +862,23 @@
 
                         <!-- Success state -->
                         <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                            <x-success-tick />
-                            <h3 class="mt-5 text-base font-bold text-zinc-950">Payment Complete!</h3>
+                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
+                                <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                </svg>
+                            </span>
+                            <h3 class="mt-4 text-base font-bold text-zinc-950">Payment Complete!</h3>
                             <p class="mt-1.5 text-xs text-zinc-600 font-medium">Your order is confirmed. Redirecting now...</p>
                         </div>
 
                         <!-- Error state -->
                         <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                            <x-error-cross />
-                            <h3 class="mt-5 text-sm font-bold text-zinc-900">Payment Failed</h3>
+                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
+                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </span>
+                            <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
                             <p class="mt-1.5 text-xs text-red-600 px-4" x-html="errorMessage"></p>
                             
                             <button type="button" @click="closeModal()" class="mt-6 rounded-[10px] bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
@@ -935,7 +895,7 @@
     </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin, feeRates, methodCurrencies) {
+        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin) {
             return {
                 method: 'card',
                 crypto: '',
@@ -944,8 +904,6 @@
                 walletBalances: walletBalances || {},
                 isLoggedIn: isLoggedIn || false,
                 hasTransactionPin: hasTransactionPin || false,
-                feeRates: feeRates || {},
-                methodCurrencies: methodCurrencies || {},
 
                 // Rcoin redemption state — three values:
                 //   ''     = off (default)
@@ -978,19 +936,38 @@
                 ],
 
                 getFilteredMethods() {
-                    // Every method is available in every region and for any item.
-                    // Methods whose rail is currency-specific (momo, USSD, bank)
-                    // switch the charge currency when chosen (see effectiveCurrency),
-                    // so e.g. momo works for a US item and a US shopper alike. Only
-                    // sign-in (wallet) and device support (Apple Pay) hide a tile.
+                    const currency = this.$store.cart.currency;
+                    // Currency -> allowed method keys. Mirrors what's enabled on
+                    // the Flutterwave dashboard so we never offer a method that
+                    // their modal would then reject. Order matters: it's the
+                    // order tabs render in the grid.
+                    // Ordering is by DOMINANT local method first so the customer
+                    // sees their familiar option at top-left of the grid:
+                    //   - Francophone Africa (XAF/XOF) → MTN MoMo first
+                    //   - Nigeria (NGN) → Bank Transfer first (most-used FW method)
+                    //   - Ghana / Kenya / Uganda / Rwanda → Mobile money first
+                    //   - US / EU / UK → Card first, crypto for the savvy users
+                    const mapping = {
+                        'USD': ['card', 'crypto', 'apple_pay', 'wallet'],
+                        'EUR': ['card', 'pay_with_bank', 'crypto', 'apple_pay', 'wallet'],
+                        'GBP': ['card', 'pay_with_bank', 'crypto', 'apple_pay', 'wallet'],
+                        'NGN': ['bank_transfer', 'card', 'pay_with_bank', 'ussd', 'bank_qr', 'mobile_wallet', 'apple_pay', 'crypto', 'wallet'],
+                        'GHS': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'XAF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'XOF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'KES': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'UGX': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                        'RWF': ['mobile_money', 'card', 'apple_pay', 'crypto', 'wallet'],
+                    };
+                    const allowedKeys = mapping[currency] || ['card', 'apple_pay', 'crypto'];
                     return this.allMethods.filter(m => {
-                        if (m.key === 'wallet' && ! this.isLoggedIn) {
+                        if (m.key === 'wallet' && !this.isLoggedIn) {
                             return false;
                         }
-                        if (m.key === 'apple_pay' && ! this.applePayAvailable) {
+                        if (m.key === 'apple_pay' && !this.applePayAvailable) {
                             return false;
                         }
-                        return true;
+                        return allowedKeys.includes(m.key);
                     });
                 },
 
@@ -1150,55 +1127,16 @@
                     return this.cryptoRates[this.crypto] || null;
                 },
 
-                // The currency this method actually charges in. Some Flutterwave
-                // rails only exist in one currency (momo -> XAF, USSD/bank -> NGN),
-                // so picking them bills in that currency no matter the browsing
-                // currency or the item's region. Everything else uses the display
-                // currency. This is what lets any method be used from any region.
-                effectiveCurrency() {
-                    return this.methodCurrencies[this.method] || {
-                        code: this.$store.cart.currency,
-                        perUsd: Number(this.$store.cart.rate || 1),
-                        symbol: this.$store.cart.currencySymbol || '$',
-                    };
-                },
-
-                // Order amount converted into the effective currency, from the USD
-                // settlement base (so the item's display region is irrelevant).
-                effectiveAmount() {
-                    return Number(this.$store.cart.subtotalUsd || 0) * Number(this.effectiveCurrency().perUsd || 1);
-                },
-
-                // Format a value in the effective currency.
-                money(value) {
-                    const cur = this.effectiveCurrency();
-                    const n = Number(value || 0);
-                    if (cur.code === 'USD') {
-                        return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    }
-                    return cur.symbol + ' ' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
-                },
-
-                // Flutterwave's transaction + processing fee, passed to the customer
-                // (the gateway adds it on top). 0 for wallet/crypto, which don't
-                // route through Flutterwave.
-                processingFee() {
-                    const rate = Number(this.feeRates[this.method] || 0);
-                    if (rate <= 0) {
-                        return 0;
-                    }
-                    return this.effectiveAmount() * (rate / 100);
-                },
-
                 totalLabel() {
+                    const usd = Number(this.$store.cart.subtotalUsd || 0);
                     if (this.method === 'crypto') {
                         const coin = this.coinMeta();
                         if (! coin) {
                             return 'Select a coin';
                         }
-                        return (Number(this.$store.cart.subtotalUsd || 0) * coin.perUsd).toFixed(coin.decimals) + ' ' + coin.code;
+                        return (usd * coin.perUsd).toFixed(coin.decimals) + ' ' + coin.code;
                     }
-                    return this.money(this.effectiveAmount() + this.processingFee());
+                    return this.$store.cart.pay(this.$store.cart.subtotal);
                 },
 
                 points() {
@@ -1237,7 +1175,7 @@
                     this.errorMessage = '';
                     try {
                         const formData = new FormData(e.target);
-                        const response = await fetch('{{ $checkoutPostUrl }}', {
+                        const response = await fetch('/checkout', {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
@@ -1299,32 +1237,39 @@
                         }
 
                         if (this.method === 'card') {
-                            const cardHolder = document.getElementById('card_name')?.value || '';
-                            const cardNumber = document.getElementById('card_number')?.value || '';
-                            const cardExpiry = document.getElementById('card_expiry')?.value || '';
-                            const cardCvc = document.getElementById('card_cvc')?.value || '';
-                            
-                            let expiryMonth = '';
-                            let expiryYear = '';
-                            if (cardExpiry.includes('/')) {
-                                const parts = cardExpiry.split('/');
-                                expiryMonth = parts[0].trim();
-                                expiryYear = parts[1].trim();
-                            } else if (cardExpiry.length === 4) {
-                                expiryMonth = cardExpiry.substring(0, 2);
-                                expiryYear = cardExpiry.substring(2, 4);
-                            }
-
-                            this.cardDetails = {
-                                card_number: cardNumber.replace(/\s+/g, ''),
-                                cvv: cardCvc,
-                                expiry_month: expiryMonth,
-                                expiry_year: expiryYear,
-                                card_holder: cardHolder
-                            };
-
                             this.paymentState = 'processing';
-                            await this.paySession('card', this.cardDetails);
+                            
+                            // If the custom card form is present (direct charge enabled), collect its data.
+                            // Otherwise, the backend will return inline initialization data.
+                            const cardNameEl = document.getElementById('card_name');
+                            if (cardNameEl) {
+                                const cardHolder = cardNameEl.value || '';
+                                const cardNumber = document.getElementById('card_number')?.value || '';
+                                const cardExpiry = document.getElementById('card_expiry')?.value || '';
+                                const cardCvc = document.getElementById('card_cvc')?.value || '';
+                                
+                                let expiryMonth = '';
+                                let expiryYear = '';
+                                if (cardExpiry.includes('/')) {
+                                    const parts = cardExpiry.split('/');
+                                    expiryMonth = parts[0].trim();
+                                    expiryYear = parts[1].trim();
+                                } else if (cardExpiry.length === 4) {
+                                    expiryMonth = cardExpiry.substring(0, 2);
+                                    expiryYear = cardExpiry.substring(2, 4);
+                                }
+    
+                                this.cardDetails = {
+                                    card_number: cardNumber.replace(/\s+/g, ''),
+                                    cvv: cardCvc,
+                                    expiry_month: expiryMonth,
+                                    expiry_year: expiryYear,
+                                    card_holder: cardHolder
+                                };
+                                await this.paySession('card', this.cardDetails);
+                            } else {
+                                await this.paySession('card', {});
+                            }
                         } else if (this.method === 'mobile_money') {
                             const networkInput = document.querySelector('input[name="momo_network"]')?.value || 'MTN';
                             const phoneInput = document.getElementById('momo_phone')?.value || '';
@@ -1477,6 +1422,14 @@
                     } else if (status === 'failed') {
                         this.paymentState = 'error';
                         this.errorMessage = sessionData.payment_payload?.failure_reason || 'Transaction could not be completed.';
+                    } else if (status === 'awaiting_payment') {
+                        const inlineData = sessionData.payment_payload?.inline;
+                        if (inlineData) {
+                            this.openFlutterwaveInline(inlineData);
+                        } else {
+                            this.paymentState = 'error';
+                            this.errorMessage = 'Could not initialize card payment.';
+                        }
                     } else if (status === 'awaiting_customer_action') {
                         const action = sessionData.payment_payload?.action;
                         if (action === 'pin') {
@@ -1504,6 +1457,59 @@
                         this.startStatusPolling();
                         this.startCountdown();
                     }
+                },
+
+                openFlutterwaveInline(data) {
+                    this.paymentState = 'processing';
+                    const self = this;
+
+                    FlutterwaveCheckout({
+                        public_key: data.public_key,
+                        tx_ref: data.tx_ref,
+                        amount: data.amount,
+                        currency: data.currency,
+                        customer: data.customer,
+                        customizations: data.customizations,
+                        callback: async function(response) {
+                            // Payment completed inside the popup
+                            self.paymentState = 'processing';
+                            try {
+                                let verifyRes = await fetch(
+                                    `/api/payment-sessions/${self.session.id}/verify`,
+                                    {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                        },
+                                        body: JSON.stringify({
+                                            transaction_id: response.transaction_id
+                                        })
+                                    }
+                                );
+                                let verifyData = await verifyRes.json();
+                                if (verifyData.status === 'confirmed') {
+                                    self.paymentState = 'success';
+                                    setTimeout(() => { window.location.href = self.redirectUrl; }, 2000);
+                                } else {
+                                    self.paymentState = 'error';
+                                    self.errorMessage = verifyData.message || 'Payment could not be verified.';
+                                }
+                            } catch (e) {
+                                self.paymentState = 'error';
+                                self.errorMessage = 'Could not verify payment. Please check your connection.';
+                            }
+                        },
+                        onclose: function() {
+                            // User closed the popup without completing
+                            if (self.paymentState !== 'success') {
+                                self.paymentState = 'idle';
+                                self.open = false;
+                                self.submitting = false;
+                            }
+                        }
+                    });
                 },
 
                 startStatusPolling() {
@@ -1612,4 +1618,4 @@
         };
     </script>
 
-</x-shop.layout>
+</x-layouts.app.header>
