@@ -793,10 +793,7 @@ new class extends Component
                                 <img src="/assets/mastercard.svg" alt="Mastercard" class="h-8 object-contain">
                             </div>
                             <p class="text-sm font-medium text-zinc-700">
-                                You'll enter your card details in a secure popup powered by Flutterwave.
-                            </p>
-                            <p class="mt-1 text-xs text-zinc-500">
-                                Your card information never touches our servers.
+                                Secure and encrypted payment with bank-level security.
                             </p>
                         </div>
                         <button type="button" @click="paySession('card', {})" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-4">
