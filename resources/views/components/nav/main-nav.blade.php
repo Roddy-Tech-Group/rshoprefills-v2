@@ -299,16 +299,16 @@
                 </div>
 
                 {{-- Wallet — authed users see their balance, guests see "Wallet" and get prompted to log in.
-                     Symbol resolution: prefers App\Domain\Shared\Enums\Currency::symbol() when the case exists,
-                     otherwise falls back to the raw code so any backend-added currency (KES, ZAR, EUR, etc.)
-                     renders gracefully without a frontend change. --}}
+                     A user can hold one wallet per currency: navWalletSummary() shows a lone funded
+                     wallet in its own currency, or combines several into one USD figure (see User model). --}}
                 @php
                     use App\Domain\Shared\Enums\Currency;
 
-                    $walletBalance = auth()->check() ? (float) (auth()->user()->wallet?->balance ?? 0) : null;
-                    // wallet->currency is cast to the Currency enum — use it directly (no tryFrom on an enum).
-                    $currencyCase = auth()->check() ? (auth()->user()->wallet?->currency ?? Currency::USD) : null;
-                    $currencySymbol = $currencyCase?->symbol() ?? '';
+                    $walletSummary = auth()->check() ? auth()->user()->navWalletSummary() : null;
+                    $currencyCase = $walletSummary['currency'] ?? Currency::USD;
+                    $currencySymbol = $currencyCase->symbol();
+                    $walletBalance = $walletSummary['amount'] ?? 0;
+                    $walletDecimals = $currencyCase->decimalPrecision();
 
                     // Real photo if set, otherwise a deterministic initials avatar.
                     $authUser = auth()->user();
@@ -319,10 +319,10 @@
                         href="{{ route('dashboard') }}"
                         wire:navigate
                         class="hidden md:inline-flex h-10 items-center gap-2 rounded-[8px] bg-zinc-200 px-4 text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
-                        aria-label="Wallet balance"
+                        aria-label="{{ $walletSummary['combined'] ? 'Total wallet balance in USD' : 'Wallet balance' }}"
                     >
                         <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-4 w-4 shrink-0" loading="lazy">
-                        {{ $currencySymbol }}{{ number_format($walletBalance, 2) }}
+                        {{ $currencySymbol }}{{ number_format($walletBalance, $walletDecimals) }}
                     </a>
                 @else
                     <button

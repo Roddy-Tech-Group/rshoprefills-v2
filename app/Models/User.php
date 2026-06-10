@@ -212,6 +212,53 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Balance figure for the nav wallet chip.
+     *
+     * A user can hold one wallet per currency. The chip stays glanceable:
+     *  - no funded wallet  -> USD at zero, so the chip still renders;
+     *  - one funded wallet -> shown in its own currency;
+     *  - several funded    -> every balance converted to USD and summed into a
+     *                         single dollar figure.
+     *
+     * @return array{currency: Currency, amount: float, combined: bool}
+     */
+    public function navWalletSummary(): array
+    {
+        $funded = $this->wallets
+            ->filter(fn (Wallet $wallet) => (float) $wallet->balance > 0)
+            ->values();
+
+        if ($funded->isEmpty()) {
+            return ['currency' => Currency::USD, 'amount' => 0.0, 'combined' => false];
+        }
+
+        if ($funded->count() === 1) {
+            $wallet = $funded->first();
+
+            return [
+                'currency' => $wallet->currency instanceof Currency ? $wallet->currency : Currency::USD,
+                'amount' => (float) $wallet->balance,
+                'combined' => false,
+            ];
+        }
+
+        // rate_per_usd is "currency units per 1 USD", so USD = balance / rate.
+        // Unknown/zero-rate currencies fall back to 1:1 rather than break the chip.
+        $ratesPerUsd = CurrencyRate::query()
+            ->where('is_active', true)
+            ->pluck('rate_per_usd', 'code');
+
+        $usdTotal = $funded->reduce(function (float $carry, Wallet $wallet) use ($ratesPerUsd): float {
+            $code = $wallet->currency instanceof Currency ? $wallet->currency->value : (string) $wallet->currency;
+            $rate = (float) ($ratesPerUsd[$code] ?? 1.0);
+
+            return $carry + ($rate > 0 ? (float) $wallet->balance / $rate : 0.0);
+        }, 0.0);
+
+        return ['currency' => Currency::USD, 'amount' => round($usdTotal, 2), 'combined' => true];
+    }
+
+    /**
      * Get all wallet transactions for this user.
      *
      * Denormalized relationship — wallet_transactions has a direct
