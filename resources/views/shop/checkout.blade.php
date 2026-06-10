@@ -90,7 +90,7 @@
                 <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                <a href="{{ request()->routeIs('dashboard.*') ? route('dashboard.shop.gift-cards') : route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                     Browse gift cards
                 </a>
             </div>
