@@ -69,7 +69,10 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $secret = $this->secretKey;
         $secMD5 = md5($secret);
 
-        return substr($secret, 0, 12).substr($secMD5, 12);
+        // Strip the standard Flutterwave prefixes before extracting the first 12 chars
+        $secretAdjusted = str_replace(['FLWSECK-', 'FLWSECK_TEST-'], '', $secret);
+
+        return substr($secretAdjusted, 0, 12).substr($secMD5, -12);
     }
 
     public function encryptPayload(array $payload): string
