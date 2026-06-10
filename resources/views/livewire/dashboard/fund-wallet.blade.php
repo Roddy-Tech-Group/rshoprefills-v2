@@ -370,6 +370,7 @@ new class extends Component
 
         openFlutterwaveInline(data) {
             this.paymentState = 'processing';
+            this.open = false; // Hide our modal to prevent z-index/click interception issues
             const self = this;
 
             FlutterwaveCheckout({
@@ -403,16 +404,18 @@ new class extends Component
                         } else {
                             self.paymentState = 'error';
                             self.errorMessage = verifyData.message || 'Payment could not be verified.';
+                            self.open = true; // Re-open modal to show error
                         }
                     } catch (e) {
                         self.paymentState = 'error';
                         self.errorMessage = 'Could not verify payment. Please check your connection.';
+                        self.open = true; // Re-open modal to show error
                     }
                 },
                 onclose: function() {
                     if (self.paymentState !== 'success') {
                         self.paymentState = 'idle';
-                        self.open = false;
+                        self.open = true; // Re-open our modal if user cancelled
                     }
                 }
             });
