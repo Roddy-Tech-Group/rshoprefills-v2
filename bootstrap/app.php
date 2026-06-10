@@ -6,6 +6,7 @@ use App\Http\Middleware\CaptureReferralCookie;
 use App\Http\Middleware\EnforceMaintenanceMode;
 use App\Http\Middleware\EnsureAccountActive;
 use App\Http\Middleware\EnsureAccountNotSuspended;
+use App\Http\Middleware\NegotiateMarkdown;
 use App\Http\Middleware\ResolveRegion;
 use App\Http\Middleware\TraceRequestMiddleware;
 use App\Http\Middleware\VerifyTurnstile;
@@ -59,6 +60,10 @@ return Application::configure(basePath: dirname(__DIR__))
             ResolveRegion::class,
             EnsureAccountActive::class,
             CaptureReferralCookie::class,
+            // Order matters on the response unwind: AdvertiseDiscoveryLinks runs
+            // first (while the body is still HTML) so it can set the Link header,
+            // then NegotiateMarkdown converts the body for agents while keeping it.
+            NegotiateMarkdown::class,
             AdvertiseDiscoveryLinks::class,
         ]);
 
