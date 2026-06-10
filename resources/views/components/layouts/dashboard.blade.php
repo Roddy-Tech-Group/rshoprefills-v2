@@ -1010,22 +1010,28 @@
                  Welcome back" greeting so the wallet card sits closer to the
                  top and the product categories get more vertical room. --}}
             <div class="flex items-center justify-between gap-3 text-white">
-                <a href="{{ route('dashboard.profile') }}" wire:navigate aria-label="Open profile" class="relative inline-flex shrink-0 items-center">
-                    <span class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/15 text-sm font-bold uppercase ring-2 ring-white/30">
-                        @if ($user?->avatar_url)
-                            <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" class="h-full w-full object-cover" loading="lazy">
+                @php $mobileFirstName = strtok(trim((string) ($user?->name ?? '')), ' ') ?: ''; @endphp
+                <div class="flex min-w-0 items-center gap-2.5">
+                    {{-- The avatar doubles as a refresh control on mobile: tapping it
+                         reloads the dashboard to pull fresh wallet / order data. --}}
+                    <button type="button" onclick="window.location.reload()" aria-label="Refresh dashboard" class="relative inline-flex shrink-0 items-center transition-transform active:scale-95">
+                        <span class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/15 text-sm font-bold uppercase ring-2 ring-white/30">
+                            @if ($user?->avatar_url)
+                                <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" class="h-full w-full object-cover" loading="lazy">
+                            @else
+                                {{ str($user?->name ?? '?')->substr(0, 1) }}
+                            @endif
+                        </span>
+                        @if (($user?->kyc_status ?? null) === 'verified')
+                            {{-- KYC verified: small blue tick over the avatar. The badge
+                                 has its own white edge so it pops on the blue hero. --}}
+                            <x-ui.verified-badge class="absolute -bottom-0.5 -right-0.5 h-4 w-4 drop-shadow-sm" />
                         @else
-                            {{ str($user?->name ?? '?')->substr(0, 1) }}
+                            <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-blue-600" aria-label="Online"></span>
                         @endif
-                    </span>
-                    @if (($user?->kyc_status ?? null) === 'verified')
-                        {{-- KYC verified: small blue tick over the avatar. The badge
-                             has its own white edge so it pops on the blue hero. --}}
-                        <x-ui.verified-badge class="absolute -bottom-0.5 -right-0.5 h-4 w-4 drop-shadow-sm" />
-                    @else
-                        <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-blue-600" aria-label="Online"></span>
-                    @endif
-                </a>
+                    </button>
+                    <span class="truncate text-base font-semibold">Hi {{ $mobileFirstName }}</span>
+                </div>
                 <div class="flex items-center gap-2" x-data>
                     {{-- Cart — links to the cart page with a live count from the
                          global $store.cart (kept in sync with the shop pages). --}}
