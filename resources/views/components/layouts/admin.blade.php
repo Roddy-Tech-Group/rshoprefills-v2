@@ -14,7 +14,10 @@
            but the desktop sidebar must stay bright and usable, so lift it above the
            drawer's z-50 backdrop. Mobile is unaffected (the sidebar stashes away). */
         @media (min-width: 1024px) {
-            [data-flux-sidebar] { z-index: 60 !important; }
+            /* `html` prefix raises specificity above Flux's own `z-20!` so this
+               actually wins — otherwise the z-40 header covers the collapse arrow
+               that straddles the sidebar's right edge. */
+            html [data-flux-sidebar] { z-index: 60 !important; }
         }
 
         @media (min-width: 1024px) {
@@ -246,7 +249,7 @@
                 :aria-label="$store.adminSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.adminSidebar.collapsed.toString()"
                 class="sidebar-collapse-toggle absolute right-0 z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
-                style="top: 24px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
+                style="top: 22px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
             >
                 <svg
                     class="h-3 w-3 transition-transform duration-200"
