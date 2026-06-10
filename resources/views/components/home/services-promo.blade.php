@@ -19,25 +19,21 @@
     aria-label="Our services"
     class="relative overflow-hidden rounded-[40px] bg-zinc-950 text-white ring-1 ring-white/10 shadow-xl shadow-zinc-900/30"
 >
-    {{-- Ambient looping background — YouTube embed (unlisted). The wrapper
-         covers the section; the iframe is sized 16:9 then scaled with
-         object-cover semantics via min-width/min-height so it always fills
-         the panel without letterboxing. A transparent click-shield sits ON
-         TOP of the iframe to fully block hover/click so YouTube never pops
-         its overlay controls (controls=0 alone isn't enough — Chrome still
-         renders hover buttons over the player surface). --}}
+    {{-- Ambient looping background — self-hosted storefront video (replaces the
+         old YouTube embed). object-cover fills the panel without letterboxing.
+         Muted + playsinline so mobile browsers allow autoplay; no controls, so
+         no click-shield is needed (unlike the YouTube player). --}}
     <div class="absolute inset-0 overflow-hidden" aria-hidden="true">
-        <iframe
-            class="absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[100vw] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2"
-            src="https://www.youtube-nocookie.com/embed/1DgJ-THcf-Y?autoplay=1&mute=1&loop=1&playlist=1DgJ-THcf-Y&controls=0&showinfo=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0&cc_load_policy=0&hd=1&vq=hd1080"
-            title="Background video"
-            frameborder="0"
-            allow="autoplay; encrypted-media"
-        ></iframe>
-        {{-- Transparent shield — captures every mouse / touch event so the
-             YouTube player below never receives hover state. Same trick used
-             by every "ambient video background" pattern online. --}}
-        <div class="absolute inset-0 z-10"></div>
+        <video
+            class="absolute inset-0 h-full w-full object-cover"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="auto"
+        >
+            <source src="{{ asset('assets/'.rawurlencode('store front video youtube replacement.mp4')) }}" type="video/mp4">
+        </video>
     </div>
 
     {{-- Pure-black overlay so the copy stays readable on every frame of the
@@ -102,7 +98,7 @@
                         }"
                         class="w-full sm:w-auto"
                     >
-                        <div class="inline-flex w-full items-center gap-2 rounded-[25px] px-2 py-2 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150 sm:w-auto"
+                        <div class="flex w-full items-center gap-2 rounded-[25px] px-2 py-2 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150 sm:inline-flex sm:w-auto"
                              style="background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);"
                         >
                             <a
