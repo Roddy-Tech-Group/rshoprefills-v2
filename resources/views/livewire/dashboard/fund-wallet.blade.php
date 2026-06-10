@@ -123,8 +123,6 @@ new class extends Component
     }
 }; ?>
 
-<script src="https://checkout.flutterwave.com/v3.js"></script>
-
 <div
     x-data="{
         open: false,
@@ -158,6 +156,12 @@ new class extends Component
         applePayAvailable: false,
 
         init() {
+            if (!document.getElementById('flutterwave-v3')) {
+                let script = document.createElement('script');
+                script.id = 'flutterwave-v3';
+                script.src = 'https://checkout.flutterwave.com/v3.js';
+                document.head.appendChild(script);
+            }
             try {
                 this.applePayAvailable = !! (
                     window.ApplePaySession
