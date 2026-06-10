@@ -355,7 +355,7 @@ Route::get('robots.txt', function () {
 // pages + one URL per product brand (gift cards / top-ups / bill payments).
 // Cached for 6 hours so the brand query never runs on a hot crawl.
 Route::get('sitemap.xml', function () {
-    $xml = Cache::remember('sitemap.xml.v2', now()->addHours(6), function () {
+    $xml = Cache::remember('sitemap.xml.v3', now()->addHours(6), function () {
         $urls = [];
         $push = function (string $loc, string $priority = '0.7', string $freq = 'weekly') use (&$urls) {
             $urls[$loc] = ['loc' => $loc, 'priority' => $priority, 'freq' => $freq];
@@ -399,6 +399,15 @@ Route::get('sitemap.xml', function () {
                 }
             });
 
+        // eSIMs don't key off brand_key like the catalogue above - each country /
+        // region is its own store page (esims/{slug}). Reuse the same deduped
+        // summary the storefront renders so the sitemap covers every sold location.
+        EsimStoreController::catalogSummary()->each(function ($entry) use ($push) {
+            if (! empty($entry['slug'])) {
+                $push(route('shop.esim', $entry['slug']), '0.8');
+            }
+        });
+
         // Blog posts + press releases: prime content for organic ranking, so
         // every published article gets its own sitemap entry.
         BlogPost::published()->get(['slug'])->each(function ($post) use ($push) {
@@ -420,6 +429,39 @@ Route::get('sitemap.xml', function () {
     return response($xml, 200, ['Content-Type' => 'application/xml']);
 })->name('sitemap.xml');
 
+// Machine-readable API catalogue (RFC 9727 / RFC 9264 linkset). The AdvertiseDiscoveryLinks
+// middleware advertises this URL via a `Link` header on every HTML page so agents and
+// crawlers can discover the storefront's navigable surfaces without scraping. We expose no
+// public REST API, so the catalogue points at the human/machine sitemaps that index every
+// rankable page.
+Route::get('.well-known/api-catalog', function () {
+    $linkset = [
+        'linkset' => [
+            [
+                'anchor' => url('/'),
+                'service-doc' => [
+                    [
+                        'href' => route('shop.sitemap'),
+                        'type' => 'text/html',
+                        'title' => 'Site index of every public section',
+                    ],
+                ],
+                'describedby' => [
+                    [
+                        'href' => route('sitemap.xml'),
+                        'type' => 'application/xml',
+                        'title' => 'XML sitemap of every rankable page',
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    return response()->json($linkset, 200, [
+        'Content-Type' => 'application/linkset+json',
+    ]);
+})->name('well-known.api-catalog');
+
 // Cart page (HTML). Store-driven - it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 
@@ -437,7 +479,9 @@ Route::prefix('cart')->name('cart.')->group(function () {
 // and renders the checkout page. Order creation + payment-gateway initiation are backend
 // territory; the POST below is a validation-only stub the backend replaces with a
 // CheckoutController that builds the Order/OrderItem rows and kicks off the gateway.
-Route::get('checkout', function (CartManager $cartManager, CartPricingService $pricing) {
+// Shared by the storefront route below and the dashboard mirror (dashboard.shop.checkout)
+// so logged-in users can check out without leaving the dashboard/PWA chrome.
+$renderCheckout = function (CartManager $cartManager, CartPricingService $pricing) {
     $userId = auth()->id();
     $guestToken = request()->cookie('guest_token') ?? request()->header('X-Guest-Token');
 
@@ -460,7 +504,8 @@ Route::get('checkout', function (CartManager $cartManager, CartPricingService $p
     $rate = CurrencyRate::resolve(request('currency'));
 
     return view('shop.checkout', ['cart' => $cart, 'totals' => $totals, 'rate' => $rate]);
-})->name('shop.checkout');
+};
+Route::get('checkout', $renderCheckout)->name('shop.checkout');
 
 // Checkout submission - creates the Order + OrderItems + a pending Payment from the
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
@@ -566,7 +611,7 @@ Route::middleware(['auth'])->group(function () {
 // differs. The public storefront URLs above stay open to everyone (guests AND
 // authed users), so users can shop on either side.
 Route::middleware(['auth'])->prefix('dashboard/shop')->name('dashboard.shop.')
-    ->group(function () use ($resolveGiftCardBrand, $resolveTopupBrand, $resolveBillBrand) {
+    ->group(function () use ($resolveGiftCardBrand, $resolveTopupBrand, $resolveBillBrand, $renderCheckout) {
         Route::view('gift-cards', 'shop.gift-cards')->name('gift-cards');
         Route::get('gift-cards/{brandSlug}', $resolveGiftCardBrand)->name('brand');
 
@@ -582,6 +627,18 @@ Route::middleware(['auth'])->prefix('dashboard/shop')->name('dashboard.shop.')
 
         Route::view('flights', 'shop.coming-soon', ['service' => 'flights'])->name('flights');
         Route::view('stays', 'shop.coming-soon', ['service' => 'stays'])->name('stays');
+
+        // Transactional flow mirrored under the dashboard so the cart -> checkout
+        // -> order journey keeps the customer inside the dashboard/PWA chrome
+        // instead of bouncing out to the public storefront. Same controllers and
+        // views; the views auto-detect the dashboard URL via <x-shop.layout>.
+        Route::get('cart', [CartWebController::class, 'page'])->name('cart');
+        Route::get('checkout', $renderCheckout)->name('checkout');
+        Route::post('checkout', [CheckoutController::class, 'process'])
+            ->middleware(['not-suspended', 'maintenance-guard', 'throttle:10,1'])
+            ->name('checkout.process');
+        Route::get('checkout/return/{session}', [CheckoutController::class, 'hostedReturn'])->name('checkout.return');
+        Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])->name('order');
     });
 
 // Legacy /settings/* URLs redirect to the new /dashboard/* paths so old bookmarks keep working.

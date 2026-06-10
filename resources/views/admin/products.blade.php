@@ -1423,7 +1423,24 @@
                                 </div>
                                 <input type="number" step="0.01" min="0.01" x-model="couponForm.discount_value" :placeholder="couponForm.discount_type === 'percent' ? '10' : '5.00'" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
                                 <input type="number" min="1" x-model="couponForm.max_uses" placeholder="Max uses (blank = ∞)" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] tabular-nums text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
-                                <input type="datetime-local" x-model="couponForm.valid_until" class="rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white">
+                                {{-- Flatpickr expiry picker. Date-only, future dates only (the API
+                                     requires valid_until > now), stored as end-of-day. flatpickr is
+                                     exposed on window in app.js; the dark calendar theme lives in
+                                     app.css. Writes the ISO value to couponForm.valid_until and
+                                     clears itself when the form resets. --}}
+                                <input
+                                    type="text"
+                                    x-ref="couponExpiry"
+                                    placeholder="Expiry (optional)"
+                                    readonly
+                                    x-init="
+                                        const pad = (n) => String(n).padStart(2, '0');
+                                        const fp = window.initExpiryFlatpickr($refs.couponExpiry, (d) => {
+                                            couponForm.valid_until = d ? d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T23:59' : '';
+                                        });
+                                        $watch('couponForm.valid_until', (v) => { if (!v && fp.selectedDates.length) { fp.clear(); } });
+                                    "
+                                    class="cursor-pointer rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-[12px] text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-700/60 dark:bg-[#26416b] dark:text-white dark:placeholder:text-zinc-500">
                             </div>
                             <p x-show="couponError" x-text="couponError" class="text-[11px] text-red-600"></p>
                             <button type="button" @click="createCoupon()" :disabled="creatingCoupon" class="w-full rounded-[10px] bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
@@ -1518,11 +1535,16 @@
                             this.markupValue = '';
                         }
                         this.isOpen = true;
+                        // Lock page scroll while the drawer is open. The admin page scrolls
+                        // on the root <html> (body is min-h-screen), so body-only overflow
+                        // isn't enough — lock both the documentElement and body.
+                        document.documentElement.style.overflow = 'hidden';
                         document.body.style.overflow = 'hidden';
                         this.loadCoupons();
                     },
                     close() {
                         this.isOpen = false;
+                        document.documentElement.style.overflow = '';
                         document.body.style.overflow = '';
                     },
 

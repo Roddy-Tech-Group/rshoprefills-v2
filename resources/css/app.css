@@ -9,6 +9,92 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Flatpickr dark theme ─────────────────────────────────────────────────
+   The base flatpickr.css (imported in app.js) themes light mode; these rules
+   repaint the calendar to the admin navy palette (#1d3252 surface, blue accent)
+   when <html> has the .dark class. */
+html.dark .flatpickr-calendar {
+    background: #1d3252;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    color: #e5e7eb;
+}
+html.dark .flatpickr-calendar.arrowTop::before,
+html.dark .flatpickr-calendar.arrowTop::after { border-bottom-color: #1d3252; }
+html.dark .flatpickr-calendar.arrowBottom::before,
+html.dark .flatpickr-calendar.arrowBottom::after { border-top-color: #1d3252; }
+html.dark .flatpickr-months .flatpickr-month,
+html.dark .flatpickr-current-month input.cur-year,
+html.dark .flatpickr-current-month .flatpickr-monthDropdown-months { color: #fff; }
+html.dark .flatpickr-monthDropdown-months { background: #1d3252; }
+html.dark .flatpickr-weekday { color: #9ca3af; }
+html.dark .flatpickr-day { color: #e5e7eb; }
+html.dark .flatpickr-day:hover,
+html.dark .flatpickr-day:focus { background: rgba(255, 255, 255, 0.08); border-color: transparent; }
+html.dark .flatpickr-day.today { border-color: #60a5fa; }
+html.dark .flatpickr-day.selected,
+html.dark .flatpickr-day.selected:hover { background: #2563eb; border-color: #2563eb; color: #fff; }
+html.dark .flatpickr-day.flatpickr-disabled,
+html.dark .flatpickr-day.prevMonthDay,
+html.dark .flatpickr-day.nextMonthDay { color: #4b5563; }
+html.dark .flatpickr-months .flatpickr-prev-month svg,
+html.dark .flatpickr-months .flatpickr-next-month svg { fill: #cbd5e1; }
+html.dark .flatpickr-months .flatpickr-prev-month:hover svg,
+html.dark .flatpickr-months .flatpickr-next-month:hover svg { fill: #fff; }
+
+/* Custom month + year selectors injected by initExpiryFlatpickr (app.js): a
+   trigger button plus a body-mounted options panel, replacing Flatpickr's native
+   month <select> and numeric year stepper so they match the admin's other custom
+   dropdowns. */
+.flatpickr-modernSelect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    margin: 0 0.15rem;
+    padding: 0 0.15rem;
+    background: transparent;
+    border: none;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+}
+.flatpickr-modernSelect-chev { width: 0.85rem; height: 0.85rem; opacity: 0.55; }
+.flatpickr-modernSelect-panel {
+    display: none;
+    position: fixed;
+    z-index: 99999;
+    transform: translateX(-50%);
+    min-width: 6.5rem;
+    max-height: 13rem;
+    overflow-y: auto;
+    padding: 0.25rem;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e4e4e7;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+.flatpickr-modernSelect-panel.is-open { display: block; }
+.flatpickr-modernSelect-opt {
+    display: block;
+    width: 100%;
+    padding: 0.3rem 0.6rem;
+    text-align: center;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    font: inherit;
+    color: #3f3f46;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.flatpickr-modernSelect-opt:hover { background: #eff6ff; color: #2563eb; }
+.flatpickr-modernSelect-opt.is-selected { background: #2563eb; color: #fff; font-weight: 600; }
+html.dark .flatpickr-modernSelect-panel { background: #1d3252; border-color: rgba(255, 255, 255, 0.1); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+html.dark .flatpickr-modernSelect-opt { color: #e5e7eb; }
+html.dark .flatpickr-modernSelect-opt:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+html.dark .flatpickr-modernSelect-opt.is-selected { background: #2563eb; color: #fff; }
+
 /* ── Effortless-feel baseline ─────────────────────────────────────────────
    Native-app touch feel: no grey tap-flash on touch, no iOS auto text-resizing
    when rotating. (Momentum scrolling is native on iOS 13+; smooth modal scroll

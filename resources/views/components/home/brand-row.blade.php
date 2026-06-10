@@ -143,10 +143,13 @@
         >
             {{-- pl-* / --card-w fallbacks: setup() overrides paddingLeft and sets
                  --card-w inline at runtime; these keep a sane layout pre-JS. --}}
+            {{-- Mobile-first --card-w fallback so every row is a stable 160px on
+                 mobile even before setup() runs (or if it misfires on a row);
+                 setup() then bumps it to 200/280 on larger breakpoints. --}}
             <ul
                 x-ref="list"
                 data-reveal-group
-                style="--card-w: 280px;"
+                style="--card-w: 160px;"
                 class="carousel-list flex w-max gap-4 pl-4 pr-4 sm:gap-5 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 [&>*]:shrink-0 [&>*]:snap-start"
             >
                 {{ $slot }}

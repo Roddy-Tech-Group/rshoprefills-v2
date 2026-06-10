@@ -212,6 +212,41 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * USD balance figure for the storefront nav wallet chip. A user can hold one
+     * wallet per currency; every funded wallet is converted to USD and summed so
+     * the chip always shows a single dollar amount (formatted compactly by
+     * {@see Wallet::compactUsd()}). `combined` flags that more than one wallet
+     * contributed, for the aria-label.
+     *
+     * @return array{amount: float, combined: bool}
+     */
+    public function navWalletSummary(): array
+    {
+        $funded = $this->wallets
+            ->filter(fn (Wallet $wallet) => (float) $wallet->balance > 0)
+            ->values();
+
+        if ($funded->isEmpty()) {
+            return ['amount' => 0.0, 'combined' => false];
+        }
+
+        // rate_per_usd is "currency units per 1 USD", so USD = balance / rate.
+        // Unknown/zero-rate currencies fall back to 1:1 rather than break the chip.
+        $ratesPerUsd = CurrencyRate::query()
+            ->where('is_active', true)
+            ->pluck('rate_per_usd', 'code');
+
+        $usdTotal = $funded->reduce(function (float $carry, Wallet $wallet) use ($ratesPerUsd): float {
+            $code = $wallet->currency instanceof Currency ? $wallet->currency->value : (string) $wallet->currency;
+            $rate = (float) ($ratesPerUsd[$code] ?? 1.0);
+
+            return $carry + ($rate > 0 ? (float) $wallet->balance / $rate : 0.0);
+        }, 0.0);
+
+        return ['amount' => round($usdTotal, 2), 'combined' => $funded->count() > 1];
+    }
+
+    /**
      * Get all wallet transactions for this user.
      *
      * Denormalized relationship — wallet_transactions has a direct

@@ -14,7 +14,10 @@
            but the desktop sidebar must stay bright and usable, so lift it above the
            drawer's z-50 backdrop. Mobile is unaffected (the sidebar stashes away). */
         @media (min-width: 1024px) {
-            [data-flux-sidebar] { z-index: 60 !important; }
+            /* `html` prefix raises specificity above Flux's own `z-20!` so this
+               actually wins — otherwise the z-40 header covers the collapse arrow
+               that straddles the sidebar's right edge. */
+            html [data-flux-sidebar] { z-index: 60 !important; }
         }
 
         @media (min-width: 1024px) {
@@ -109,6 +112,18 @@
             html.admin-sidebar-collapsed [data-flux-sidebar] .brand-full { display: none !important; }
             html.admin-sidebar-collapsed [data-flux-sidebar] .brand-mark { display: flex !important; }
             html.admin-sidebar-collapsed [data-flux-sidebar] > a { margin-right: 0 !important; }
+
+            /* Collapsed brand favicon ships blue (correct on the light sidebar);
+               recolor it to white in dark mode for contrast on the dark sidebar. */
+            html.dark [data-flux-sidebar] .brand-mark img { filter: brightness(0) invert(1); }
+
+            /* Sidebar collapse arrow: hidden until the sidebar is hovered (or the
+               button is keyboard-focused), so it only appears when wanted. */
+            @media (min-width: 1024px) {
+                .sidebar-collapse-toggle { opacity: 0; }
+                [data-flux-sidebar]:hover .sidebar-collapse-toggle,
+                .sidebar-collapse-toggle:focus-visible { opacity: 1; }
+            }
 
             /* Collapsed: inline sub-menus disappear inline AND reappear as a
                polished floating popup on hover, positioned to the right of
@@ -233,11 +248,11 @@
                 @click="$store.adminSidebar.toggle()"
                 :aria-label="$store.adminSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.adminSidebar.collapsed.toString()"
-                class="absolute right-0 top-[88px] z-30 hidden h-8 w-8 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
-                style="box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
+                class="sidebar-collapse-toggle absolute right-0 z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
+                style="top: 22px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
             >
                 <svg
-                    class="h-4 w-4 transition-transform duration-200"
+                    class="h-3 w-3 transition-transform duration-200"
                     :class="$store.adminSidebar.collapsed ? 'rotate-180' : 'rotate-0'"
                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
                     aria-hidden="true"
@@ -257,14 +272,15 @@
                         class="h-full w-auto object-contain"
                     />
                 </span>
-                <span class="brand-mark hidden h-14 w-14 items-center justify-center">
+                <span class="brand-mark hidden w-14 flex-col items-center justify-center">
                     <img
                         src="{{ asset('assets/favicon.ico') }}"
                         alt="RshopRefills"
                         class="h-12 w-12 rounded-[10px] object-contain"
                     />
+                    <span class="mt-0.5 text-[9px] font-medium italic leading-none text-zinc-600 dark:text-zinc-400">Est. 2024</span>
                 </span>
-                <span class="brand-full mt-0.5 pl-1 text-[10px] font-medium italic leading-none text-zinc-600">Est. 2024</span>
+                <span class="brand-full mt-0.5 pl-1 text-[10px] font-medium italic leading-none text-zinc-600 dark:text-zinc-400">Est. 2024</span>
             </a>
 
             {{--
@@ -312,7 +328,7 @@
                 @endphp
                 <div
                     x-data="{ expanded: {{ $productActive ? 'true' : 'false' }} }"
-                    x-effect="if ($store.adminSidebar?.collapsed) { expanded = true }"
+                    x-effect="expanded = $store.adminSidebar?.collapsed ? true : {{ $productActive ? 'true' : 'false' }}"
                     @click.outside="if (! $store.adminSidebar?.collapsed) { expanded = false }"
                     class="nav-group flex flex-col gap-1"
                 >
@@ -409,7 +425,10 @@
                 @php $contentActive = $isCurrent('admin.content.*'); @endphp
                 <div
                     x-data="{ open: {{ $contentActive ? 'true' : 'false' }} }"
-                    x-effect="if ($store.adminSidebar?.collapsed) { open = true }"
+                    {{-- Force open while collapsed (so the hover popup renders) but restore
+                         to the closed/active state when expanded — otherwise re-opening the
+                         sidebar would leave this dropdown stuck open. --}}
+                    x-effect="open = $store.adminSidebar?.collapsed ? true : {{ $contentActive ? 'true' : 'false' }}"
                     class="nav-group flex flex-col"
                 >
                     <button

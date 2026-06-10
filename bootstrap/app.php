@@ -1,18 +1,23 @@
 <?php
 
 use App\Http\Middleware\AdminAuth;
+use App\Http\Middleware\AdvertiseDiscoveryLinks;
 use App\Http\Middleware\CaptureReferralCookie;
 use App\Http\Middleware\EnforceMaintenanceMode;
 use App\Http\Middleware\EnsureAccountActive;
 use App\Http\Middleware\EnsureAccountNotSuspended;
+use App\Http\Middleware\NegotiateMarkdown;
 use App\Http\Middleware\ResolveRegion;
 use App\Http\Middleware\TraceRequestMiddleware;
 use App\Http\Middleware\VerifyTurnstile;
 use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Log;
+use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -55,6 +60,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ResolveRegion::class,
             EnsureAccountActive::class,
             CaptureReferralCookie::class,
+            // Order matters on the response unwind: AdvertiseDiscoveryLinks runs
+            // first (while the body is still HTML) so it can set the Link header,
+            // then NegotiateMarkdown converts the body for agents while keeping it.
+            NegotiateMarkdown::class,
+            AdvertiseDiscoveryLinks::class,
         ]);
 
         // Enable stateful sessions for API routes so AJAX requests can resolve the authenticated user
@@ -70,9 +80,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Guard: duplicate failed_jobs UUID insert is a harmless race condition,
         // not a real application error. Downgrade to a warning so Sentry doesn't
         // fire alerts on it.
-        $exceptions->report(function (\Illuminate\Database\UniqueConstraintViolationException $e) {
+        $exceptions->report(function (UniqueConstraintViolationException $e) {
             if (str_contains($e->getMessage(), 'failed_jobs')) {
-                \Illuminate\Support\Facades\Log::warning('Duplicate failed_jobs UUID — race condition (harmless)', [
+                Log::warning('Duplicate failed_jobs UUID — race condition (harmless)', [
                     'message' => $e->getMessage(),
                 ]);
 
@@ -88,5 +98,5 @@ return Application::configure(basePath: dirname(__DIR__))
             'secret',
             'credentials',
         ]);
-        \Sentry\Laravel\Integration::handles($exceptions);
+        Integration::handles($exceptions);
     })->create();

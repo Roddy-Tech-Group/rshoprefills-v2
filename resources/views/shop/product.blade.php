@@ -227,12 +227,78 @@
         ->get(['id', 'name', 'slug', 'brand_key', 'country_code', 'logo_url', 'featured_image', 'brand_color']);
 @endphp
 
+@php
+    /*
+     * Structured data for this brand page. A Product schema (with an
+     * AggregateOffer spanning the cheapest -> priciest denomination) lets search
+     * engines and AI crawlers surface the page as a buyable product, and a
+     * BreadcrumbList gives the listing -> brand trail. Prices use the catalog's
+     * own retail_price + currency so the schema is internally consistent
+     * regardless of the visitor's display currency.
+     */
+    $schemaPrices = $variants
+        ->pluck('retail_price')
+        ->map(fn ($p) => round((float) $p, 2))
+        ->filter(fn ($p) => $p > 0)
+        ->values();
+
+    $productJsonLd = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Product',
+        'name' => $brandName.' '.$kindTitle,
+        'description' => 'Buy a '.$brandName.' '.strtolower($kindTitle).' on RshopRefills with instant digital delivery, great prices and 24/7 support.',
+        'brand' => ['@type' => 'Brand', 'name' => $brandName],
+        'category' => $kindTitle,
+        'url' => url()->current(),
+    ];
+
+    if ($logoSrc) {
+        $productJsonLd['image'] = $logoSrc;
+    }
+
+    if ($schemaPrices->isNotEmpty()) {
+        $productJsonLd['offers'] = [
+            '@type' => 'AggregateOffer',
+            'priceCurrency' => $currency,
+            'lowPrice' => (string) $schemaPrices->min(),
+            'highPrice' => (string) $schemaPrices->max(),
+            'offerCount' => (string) $schemaPrices->count(),
+            'availability' => 'https://schema.org/InStock',
+            'url' => url()->current(),
+        ];
+    }
+
+    $crumbLabel = match ($categorySlug) {
+        'mobile-airtime' => 'Mobile Top-ups',
+        'bill-payments' => 'Bill Payments',
+        default => 'Gift Cards',
+    };
+    $crumbListing = match ($categorySlug) {
+        'mobile-airtime' => 'shop.topups',
+        'bill-payments' => 'shop.bills',
+        default => 'shop.gift-cards',
+    };
+
+    $breadcrumbJsonLd = [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => url('/')],
+            ['@type' => 'ListItem', 'position' => 2, 'name' => $crumbLabel, 'item' => route($crumbListing)],
+            ['@type' => 'ListItem', 'position' => 3, 'name' => $brandName.' '.$kindTitle, 'item' => url()->current()],
+        ],
+    ];
+
+    $pageJsonLd = [$productJsonLd, $breadcrumbJsonLd];
+@endphp
+
 <x-shop.layout
     :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'"
     :description="'Buy a ' . $brandName . ' ' . strtolower($kindTitle) . ' on RshopRefills - instant delivery, great prices and 24/7 support. Pay with cards, mobile money, crypto and more.'"
     :keywords="$brandName . ', ' . $brandName . ' ' . strtolower($kindTitle) . ', buy ' . $brandName . ' ' . strtolower($kindTitle) . ' online, RshopRefills'"
     :og-image="$logoSrc ?: asset('assets/og-image.png')"
     og-type="product"
+    :json-ld="$pageJsonLd"
 >
 
     <div
@@ -275,7 +341,7 @@
                     <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#e8e8f7] p-10 sm:p-14 dark:bg-[#1d3252]">
                         <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-[10px] bg-[#ffffff] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
                             @if ($logoSrc)
-                                <img src="{{ $logoSrc }}" alt="{{ $brandName }} {{ $kindNoun }}" class="h-full w-full object-cover" loading="eager">
+                                <img src="{{ $logoSrc }}" alt="{{ $brandName }} {{ $kindNoun }}" class="h-full w-full object-cover" loading="eager" fetchpriority="high">
                             @else
                                 {{-- No logo (e.g. mobile-airtime operators) — a branded name tile. --}}
                                 <div class="flex h-full w-full items-center justify-center" style="background-color: {{ Product::tileColor($brandKey) }}">
