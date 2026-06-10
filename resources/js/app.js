@@ -130,6 +130,49 @@ window.initExpiryFlatpickr = function (el, onSelect) {
 };
 
 /**
+ * Looping typewriter for the dashboard greeting: types a phrase, holds, deletes,
+ * then moves to the next phrase and repeats. Used via:
+ *   x-data="typewriterGreeting(['Hi Roddy', 'Welcome', 'Your shop is ready'])"
+ * with <span x-text="display"></span>.
+ */
+window.typewriterGreeting = function (phrases, { typeMs = 80, deleteMs = 40, holdMs = 10000, pauseMs = 400 } = {}) {
+    return {
+        phrases,
+        display: '',
+        _i: 0,
+        _c: 0,
+        _timer: null,
+        init() {
+            this._type();
+        },
+        _type() {
+            const word = this.phrases[this._i] ?? '';
+            if (this._c <= word.length) {
+                this.display = word.slice(0, this._c);
+                this._c++;
+                this._timer = setTimeout(() => this._type(), typeMs);
+            } else {
+                this._timer = setTimeout(() => this._delete(), holdMs);
+            }
+        },
+        _delete() {
+            const word = this.phrases[this._i] ?? '';
+            if (this._c > 0) {
+                this._c--;
+                this.display = word.slice(0, this._c);
+                this._timer = setTimeout(() => this._delete(), deleteMs);
+            } else {
+                this._i = (this._i + 1) % this.phrases.length;
+                this._timer = setTimeout(() => this._type(), pauseMs);
+            }
+        },
+        destroy() {
+            clearTimeout(this._timer);
+        },
+    };
+};
+
+/**
  * Entrance + scroll-reveal animations with GSAP.
  *
  * GSAP is loaded via dynamic import so the page still works if the package
