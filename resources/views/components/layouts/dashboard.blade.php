@@ -283,8 +283,8 @@
                 @click="$store.dashboardSidebar.toggle()"
                 :aria-label="$store.dashboardSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.dashboardSidebar.collapsed.toString()"
-                class="sidebar-collapse-toggle absolute right-0 z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
-                style="top: 24px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
+                class="sidebar-collapse-toggle absolute right-2 z-30 hidden h-6 w-6 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
+                style="top: 22px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
             >
                 <svg
                     class="h-3 w-3 transition-transform duration-200"
@@ -415,13 +415,8 @@
                     </span>
                 </a>
 
-                @php $active = $isCurrent('dashboard.profile'); @endphp
-                <a href="{{ route('dashboard.profile') }}" wire:navigate data-tip="Profile" class="{{ $navItem($active) }}">
-                    <span class="flex items-center gap-3">
-                        <img src="{{ asset('assets/user.svg') }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
-                        Profile
-                    </span>
-                </a>
+                {{-- Profile intentionally omitted from the desktop sidebar — it's
+                     reachable via the avatar dropdown (and the mobile menu). --}}
 
                 @php $active = $isCurrent('dashboard.kyc'); @endphp
                 <a href="{{ route('dashboard.kyc') }}" wire:navigate data-tip="Verify Identity" class="{{ $navItem($active) }}">
