@@ -420,6 +420,39 @@ Route::get('sitemap.xml', function () {
     return response($xml, 200, ['Content-Type' => 'application/xml']);
 })->name('sitemap.xml');
 
+// Machine-readable API catalogue (RFC 9727 / RFC 9264 linkset). The AdvertiseDiscoveryLinks
+// middleware advertises this URL via a `Link` header on every HTML page so agents and
+// crawlers can discover the storefront's navigable surfaces without scraping. We expose no
+// public REST API, so the catalogue points at the human/machine sitemaps that index every
+// rankable page.
+Route::get('.well-known/api-catalog', function () {
+    $linkset = [
+        'linkset' => [
+            [
+                'anchor' => url('/'),
+                'service-doc' => [
+                    [
+                        'href' => route('shop.sitemap'),
+                        'type' => 'text/html',
+                        'title' => 'Site index of every public section',
+                    ],
+                ],
+                'describedby' => [
+                    [
+                        'href' => route('sitemap.xml'),
+                        'type' => 'application/xml',
+                        'title' => 'XML sitemap of every rankable page',
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    return response()->json($linkset, 200, [
+        'Content-Type' => 'application/linkset+json',
+    ]);
+})->name('well-known.api-catalog');
+
 // Cart page (HTML). Store-driven - it hydrates from the /cart/data JSON endpoint.
 Route::get('cart', [CartWebController::class, 'page'])->name('shop.cart');
 
