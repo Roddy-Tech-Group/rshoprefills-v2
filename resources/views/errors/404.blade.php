@@ -12,12 +12,7 @@
         {{-- Self-contained 404 — no app layout, so it renders even when the
              request never reached the storefront middleware/region resolution. --}}
         <main class="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-12 text-center">
-            <img
-                src="{{ asset('assets/' . rawurlencode('404 it seems like you missed your wa go back to shop.webp')) }}"
-                alt="404"
-                class="h-56 w-auto object-contain sm:h-72"
-                loading="eager"
-            >
+            <x-illo name="notFound" class="w-full max-w-sm" />
 
             <h1 class="mt-8 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
                 It seems like you missed your way

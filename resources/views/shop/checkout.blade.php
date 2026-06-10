@@ -125,7 +125,7 @@
 
             {{-- Empty cart --}}
             <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white px-6 py-20 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
+                <x-illo name="emptyCart" class="mx-auto w-full max-w-sm" />
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
                 <a href="{{ $shopRoute('gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
@@ -413,11 +413,14 @@
                                     class="{{ $fieldClass }} pr-16 tabular-nums"
                                 >
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none mt-1.5">
-                                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
+                                    {{-- Detected brand: show the Visa / Mastercard logo; fall back to a
+                                         coloured text chip for the other networks. --}}
+                                    <img src="/assets/visa.svg" alt="Visa" x-show="cardBrand === 'visa'" x-cloak class="h-5 w-auto">
+                                    <img src="/assets/mastercard.svg" alt="Mastercard" x-show="cardBrand === 'mastercard'" x-cloak class="h-6 w-auto">
+                                    <span x-show="cardBrand !== 'visa' && cardBrand !== 'mastercard'"
+                                          class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200"
                                           x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
                                           :class="{
-                                              'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
-                                              'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
                                               'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
                                               'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
                                               'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',

@@ -19,21 +19,43 @@
     aria-label="Our services"
     class="relative overflow-hidden rounded-[40px] bg-zinc-950 text-white ring-1 ring-white/10 shadow-xl shadow-zinc-900/30"
 >
-    {{-- Ambient looping background — self-hosted storefront video (replaces the
-         old YouTube embed). object-cover fills the panel without letterboxing.
-         Muted + playsinline so mobile browsers allow autoplay; no controls, so
-         no click-shield is needed (unlike the YouTube player). --}}
+    {{-- Ambient looping background — self-hosted storefront video. LAZY by design:
+         it carries no src and never preloads, so the (heavy) file stays OFF the
+         critical path and can't hurt LCP or jank the main thread. We attach the
+         source and start playback only once the page has fully loaded AND the
+         section scrolls within 300px of the viewport. Before that the panel just
+         shows its black background, which is fine for a decorative layer. --}}
     <div class="absolute inset-0 overflow-hidden" aria-hidden="true">
         <video
+            x-data="{
+                started: false,
+                start() {
+                    if (this.started) { return; }
+                    this.started = true;
+                    const v = this.$el;
+                    const s = document.createElement('source');
+                    s.src = v.dataset.src;
+                    s.type = 'video/mp4';
+                    v.appendChild(s);
+                    v.load();
+                    v.play().catch(() => {});
+                },
+                init() {
+                    const io = new IntersectionObserver((entries) => {
+                        entries.forEach((e) => { if (e.isIntersecting) { this.start(); io.disconnect(); } });
+                    }, { rootMargin: '300px' });
+                    const arm = () => io.observe(this.$el);
+                    if (document.readyState === 'complete') { arm(); }
+                    else { window.addEventListener('load', arm, { once: true }); }
+                },
+            }"
             class="absolute inset-0 h-full w-full object-cover"
-            autoplay
             muted
             loop
             playsinline
-            preload="auto"
-        >
-            <source src="{{ asset('assets/'.rawurlencode('store front video youtube replacement.mp4')) }}" type="video/mp4">
-        </video>
+            preload="none"
+            data-src="{{ asset('assets/'.rawurlencode('store front video youtube replacement.mp4')) }}"
+        ></video>
     </div>
 
     {{-- Pure-black overlay so the copy stays readable on every frame of the

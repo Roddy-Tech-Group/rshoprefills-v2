@@ -531,7 +531,7 @@
                         {{-- Empty state --}}
                         <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
                             <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
-                            <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
+                            <x-illo name="emptyCart" class="mx-auto mt-4 w-full max-w-[230px]" />
                             <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
                         </div>
 

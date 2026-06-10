@@ -183,7 +183,8 @@ async function initAnimations() {
     try {
         ({ default: gsap } = await import('gsap'));
         ({ ScrollTrigger } = await import('gsap/ScrollTrigger'));
-        gsap.registerPlugin(ScrollTrigger);
+        const { MotionPathPlugin } = await import('gsap/MotionPathPlugin');
+        gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
     } catch (err) {
         console.warn('[animations] gsap not available — skipping animations. Run `npm i gsap`.');
         return;
@@ -250,6 +251,199 @@ async function initAnimations() {
 
     // Recalculate positions after the page settles.
     requestAnimationFrame(() => ScrollTrigger.refresh());
+
+    // Animated inline-SVG illustrations (hero chips, 404, empty cart).
+    initIllos(gsap);
+}
+
+/* ------------------------------------------------------------------ *
+ * Animated inline-SVG illustrations. The SVGs ship inline in the HTML
+ * (zero image requests, instant paint); GSAP only enhances them and
+ * honours prefers-reduced-motion. Drive any one via <div data-illo="gift">.
+ * Each entry: targets (for cleanup), set (initial state), build (entrance
+ * timeline), idle (looping ambient tweens). Selectors are namespaced per
+ * illustration, so several can share a page.
+ * ------------------------------------------------------------------ */
+const ILLOS = {
+    notFound: {
+        set: (g) => g.set('.i404-char', { y: -150, opacity: 0 }),
+        build: (tl) => tl.to('.i404-char', { y: 0, opacity: 1, duration: 0.85, ease: 'bounce.out', stagger: 0.16 }),
+        idle: (g) => [
+            g.to('.i404-char', { y: -6, duration: 1.5, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.25 }),
+            g.timeline({ repeat: -1, repeatDelay: 2.4 }).to('.i404-eye', { scaleY: 0.15, transformOrigin: '50% 60%', duration: 0.07, yoyo: true, repeat: 1 }),
+            g.to('.i404-pupil', { x: -4, duration: 1.2, yoyo: true, repeat: -1, repeatDelay: 0.8, ease: 'sine.inOut' }),
+        ],
+    },
+    globe: {
+        set: (g) => { g.set('#igc-globe', { scale: 0, transformOrigin: '50% 50%' }); g.set('#igc-pin', { y: -140, opacity: 0 }); g.set('#igc-plane', { opacity: 0 }); },
+        build: (tl) => tl.to('#igc-globe', { scale: 1, duration: 0.7, ease: 'back.out(1.6)' }).to('#igc-pin', { y: 0, opacity: 1, duration: 0.8, ease: 'bounce.out' }, '-=0.2').to('#igc-plane', { opacity: 1, duration: 0.3 }),
+        idle: (g) => [
+            g.to('#igc-plane', { motionPath: { path: '#igc-orbit', align: '#igc-orbit', alignOrigin: [0.5, 0.5], autoRotate: true }, duration: 7, repeat: -1, ease: 'none' }),
+            g.to('#igc-pin', { y: -5, duration: 1.6, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+        ],
+    },
+    gift: {
+        set: (g) => { g.set('#igift-all', { scale: 0, transformOrigin: '50% 100%' }); g.set('#igift-tag', { rotation: -24, svgOrigin: '104 75' }); },
+        build: (tl) => tl.to('#igift-all', { scale: 1, duration: 0.7, ease: 'back.out(1.7)' }).to('#igift-all', { y: -14, scaleY: 1.05, scaleX: 0.96, duration: 0.22, ease: 'power2.out', yoyo: true, repeat: 1 }, '+=0.1').to('#igift-tag', { rotation: 0, duration: 1.6, ease: 'elastic.out(1,0.3)' }, '-=0.3'),
+        idle: (g) => [
+            g.to('#igift-all', { y: -5, duration: 1.8, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('#igift-tag', { rotation: 7, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('.igift-spark', { opacity: 0.25, duration: 0.9, yoyo: true, repeat: -1, stagger: 0.3 }),
+        ],
+    },
+    search: {
+        set: (g) => { g.set('.isr-bag', { y: 26, opacity: 0 }); g.set('#isr-glass', { x: 70, y: -70, rotation: 18, opacity: 0, svgOrigin: '118 118' }); },
+        build: (tl) => tl.to('.isr-bag', { y: 0, opacity: 1, duration: 0.6, ease: 'back.out(1.8)', stagger: 0.14 }).to('#isr-glass', { x: 0, y: 0, rotation: 0, opacity: 1, duration: 0.7, ease: 'power3.out' }, '-=0.2').to('#isr-glass', { x: -30, duration: 0.9, ease: 'sine.inOut', yoyo: true, repeat: 3 }, '+=0.2'),
+        idle: (g) => [
+            g.to('#isr-glass', { y: -5, rotation: 3, duration: 1.7, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('#isr-glint', { opacity: 0.15, duration: 0.8, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+        ],
+    },
+    shield: {
+        set: (g) => { g.set('#ishield-check', { strokeDasharray: 90, strokeDashoffset: 90 }); g.set('#ishield-shield', { scale: 0, transformOrigin: '50% 50%' }); g.set('#ishield-user', { scale: 0, transformOrigin: '50% 50%' }); },
+        build: (tl) => tl.to('#ishield-shield', { scale: 1, duration: 0.65, ease: 'back.out(1.7)' }).to('#ishield-check', { strokeDashoffset: 0, duration: 0.55, ease: 'power2.out' }).to('#ishield-user', { scale: 1, duration: 0.6, ease: 'back.out(2)' }, '-=0.15'),
+        idle: (g) => [
+            g.to('#ishield-shield', { scale: 1.025, transformOrigin: '50% 50%', duration: 1.6, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('#ishield-user', { y: -4, duration: 1.8, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('.ishield-spark', { opacity: 0.25, duration: 0.9, yoyo: true, repeat: -1, stagger: 0.3 }),
+        ],
+    },
+    mobile: {
+        set: (g) => {
+            g.set('#imob-phone', { scale: 0, transformOrigin: '50% 100%' });
+            g.set('.imob-ui', { opacity: 0, y: 6 });
+            g.set('#imob-gift', { x: 64, y: -46, rotation: 18, opacity: 0, svgOrigin: '142 86' });
+            g.set('.imob-trail', { scaleX: 0, opacity: 0, transformOrigin: '100% 50%' });
+            g.set('.imob-star', { scale: 0, transformOrigin: '50% 50%' });
+        },
+        build: (tl) => tl.to('#imob-phone', { scale: 1, duration: 0.65, ease: 'back.out(1.7)' })
+            .to('.imob-ui', { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: 'power2.out' }, '-=0.15')
+            .to('#imob-gift', { x: 0, y: 0, rotation: 0, opacity: 1, duration: 0.7, ease: 'power3.out' }, '-=0.3')
+            .to('.imob-trail', { scaleX: 1, opacity: 1, duration: 0.25, stagger: 0.05 }, '<+0.1')
+            .to('.imob-trail', { opacity: 0, duration: 0.35 }, '+=0.1')
+            .to('.imob-star', { scale: 1, duration: 0.5, ease: 'back.out(2.5)', stagger: 0.1 }, '-=0.3'),
+        idle: (g) => [
+            g.to('#imob-gift', { y: -4, rotation: 3, duration: 1.7, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('.imob-star', { opacity: 0.35, duration: 0.9, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.25 }),
+        ],
+    },
+    emptyCart: {
+        set: (g) => { g.set('#ec-cart', { x: 230, opacity: 0 }); g.set('.ec-bag', { scale: 0, transformOrigin: '50% 100%' }); g.set('#ec-bubble', { scale: 0, transformOrigin: '50% 100%' }); g.set('#ec-tumbleweed', { x: 170 }); },
+        build: (tl) => tl.to('#ec-cart', { x: 0, opacity: 1, duration: 1.1, ease: 'power2.out' }).to('#ec-wheel-1, #ec-wheel-2', { rotation: -520, transformOrigin: '50% 50%', duration: 1.1, ease: 'power2.out' }, '<').to('#ec-tumbleweed', { x: 0, rotation: -680, transformOrigin: '50% 50%', duration: 1.5, ease: 'power2.out' }, 0.15).to('.ec-bag', { scale: 1, duration: 0.5, stagger: 0.12, ease: 'back.out(2.2)' }, '-=0.55').to('#ec-bubble', { scale: 1, duration: 0.8, ease: 'elastic.out(1, 0.45)' }, '-=0.15'),
+        idle: (g) => [
+            g.to('#ec-bubble', { y: -7, duration: 1.8, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('#ec-cactus', { rotation: 2.2, transformOrigin: '50% 100%', duration: 2.4, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('#ec-tumbleweed', { rotation: '-=14', duration: 2.2, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('.ec-bag', { y: -3, duration: 1.6, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.2 }),
+        ],
+    },
+    cardFan: {
+        set: () => {},
+        build: (tl) => tl.from('.gc-card', { scale: 0, opacity: 0, rotation: '-=18', transformOrigin: '50% 50%', duration: 0.7, ease: 'back.out(1.6)', stagger: 0.09 }),
+        idle: (g) => [
+            g.to('.gc-card', { y: -5, duration: 1.7, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.18 }),
+            g.to('.gc-spark', { opacity: 0.25, duration: 0.9, yoyo: true, repeat: -1, stagger: 0.3 }),
+        ],
+    },
+    payWeb: {
+        // The connecting links are drawn on via stroke-dash; payment dots then run
+        // along each link path. Queries are scoped to el so instances are isolated.
+        set: (g, el) => {
+            el.querySelectorAll('.ipay-link').forEach((p) => {
+                const len = p.getTotalLength();
+                p.style.strokeDasharray = len;
+                p.style.strokeDashoffset = len;
+            });
+            g.set('#ipay-hub', { scale: 0, transformOrigin: '50% 50%' });
+            g.set('.ipay-node', { scale: 0, transformOrigin: '50% 50%' });
+            g.set('.ipay-dot', { opacity: 0 });
+        },
+        build: (tl) => tl.to('#ipay-hub', { scale: 1, duration: 0.6, ease: 'back.out(1.8)' })
+            .to('.ipay-link', { strokeDashoffset: 0, duration: 0.5, stagger: 0.06, ease: 'power1.out' }, '-=0.1')
+            .to('.ipay-node', { scale: 1, duration: 0.5, ease: 'back.out(1.8)', stagger: 0.06 }, '-=0.35'),
+        idle: (g, el) => {
+            const links = Array.from(el.querySelectorAll('.ipay-link'));
+            const dots = Array.from(el.querySelectorAll('.ipay-dot'));
+            const tweens = links.map((p, i) => g.fromTo(dots[i], { opacity: 0 }, { opacity: 1, motionPath: { path: p, start: 1, end: 0 }, duration: 1.4, repeat: -1, repeatDelay: 0.6, delay: i * 0.18, ease: 'none' }));
+            tweens.push(g.to('#ipay-hub', { scale: 1.04, duration: 1.5, yoyo: true, repeat: -1, ease: 'sine.inOut' }));
+            tweens.push(g.to('.ipay-node', { y: -3, duration: 1.8, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.12 }));
+            return tweens;
+        },
+    },
+    payout: {
+        set: (g) => {
+            g.set('#isx-card', { y: 46, opacity: 0 });
+            g.set('#isx-medal', { scale: 0, transformOrigin: '50% 50%' });
+            g.set('#isx-check', { strokeDasharray: 52, strokeDashoffset: 52 });
+            g.set('.isx-line-l', { scaleX: 0, transformOrigin: '100% 50%' });
+            g.set('.isx-line-r', { scaleX: 0, transformOrigin: '0% 50%' });
+            g.set('.isx-dot', { scale: 0, transformOrigin: '50% 50%' });
+        },
+        build: (tl) => tl.to('#isx-card', { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' })
+            .to('#isx-medal', { scale: 1, duration: 0.55, ease: 'back.out(2)' }, '-=0.25')
+            .to('#isx-check', { strokeDashoffset: 0, duration: 0.45, ease: 'power2.out' })
+            .to('.isx-line-l, .isx-line-r', { scaleX: 1, duration: 0.4, ease: 'power3.out', stagger: 0.05 }, '-=0.2')
+            .to('.isx-dot', { scale: 1, duration: 0.4, ease: 'back.out(2)', stagger: 0.08 }, '-=0.2'),
+        idle: (g) => [
+            // Pulse the medal + shimmer the speed lines, but DON'T float the card:
+            // it holds the <text>, and continuously sub-pixel-transforming text makes
+            // the letters shimmer/shake. Keeping the card still keeps the text crisp.
+            g.to('#isx-medal', { scale: 1.04, duration: 1.5, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+            g.to('.isx-line-l, .isx-line-r', { opacity: 0.5, duration: 1, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: 0.15 }),
+        ],
+    },
+};
+
+function mountIllo(gsap, el) {
+    const def = ILLOS[el.dataset.illo];
+    if (! def || el.__illoMounted) {
+        return;
+    }
+    el.__illoMounted = true;
+
+    let ctx;
+    // Entrance + idle. gsap.context scopes every selector to THIS element, so the
+    // same illustration can appear more than once on a page (e.g. emptyCart in the
+    // nav popup AND on the cart page) without instances colliding. The idle loop is
+    // added through the context too so it stays scoped + killable.
+    const run = (speed) => {
+        def.set(gsap, el);
+        const tl = gsap.timeline({
+            onComplete: () => ctx && ctx.add(() => def.idle(gsap, el)),
+        });
+        tl.timeScale(speed || 1);
+        def.build(tl, gsap, el);
+    };
+    ctx = gsap.context(() => run(1), el);
+
+    // Replay from the start on hover, sped up so it feels snappy/reactive.
+    el.addEventListener('mouseenter', () => {
+        ctx.revert();
+        ctx.add(() => run(2.2));
+    });
+}
+
+function initIllos(gsap) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+    // Play each illustration's entrance the moment it scrolls into view, so the
+    // animation is visible on its own (no hover required). Above-the-fold ones
+    // are intersecting on load and play immediately.
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                io.unobserve(entry.target);
+                mountIllo(gsap, entry.target);
+            }
+        });
+    }, { rootMargin: '0px 0px -8% 0px' });
+
+    document.querySelectorAll('[data-illo]').forEach((el) => {
+        if (! el.__illoMounted) {
+            io.observe(el);
+        }
+    });
 }
 
 /**
