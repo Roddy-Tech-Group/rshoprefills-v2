@@ -247,19 +247,35 @@ class PaymentSessionController extends Controller
             if ($method === 'card') {
                 $flwProvider = $gatewayFactory->getProvider('flutterwave');
 
-                if ($otp = $request->input('otp')) {
-                    $flwRef = $request->input('flw_ref') ?: ($session->payment_payload['flw_ref'] ?? '');
-                    $result = $flwProvider->validateOTP($attempt, $otp, $flwRef);
-                } elseif ($pin = $request->input('pin')) {
-                    $result = $flwProvider->chargeCard($attempt, $details, ['pin' => $pin]);
+                if (config('services.flutterwave.direct_charge_enabled', false)) {
+                    if ($otp = $request->input('otp')) {
+                        $flwRef = $request->input('flw_ref') ?: ($session->payment_payload['flw_ref'] ?? '');
+                        $result = $flwProvider->validateOTP($attempt, $otp, $flwRef);
+                    } elseif ($pin = $request->input('pin')) {
+                        $result = $flwProvider->chargeCard($attempt, $details, ['pin' => $pin]);
+                    } else {
+                        $request->validate([
+                            'details.card_number' => 'required|string',
+                            'details.cvv' => 'required|string',
+                            'details.expiry_month' => 'required|string',
+                            'details.expiry_year' => 'required|string',
+                        ]);
+                        $result = $flwProvider->chargeCard($attempt, $details);
+                    }
                 } else {
-                    $request->validate([
-                        'details.card_number' => 'required|string',
-                        'details.cvv' => 'required|string',
-                        'details.expiry_month' => 'required|string',
-                        'details.expiry_year' => 'required|string',
-                    ]);
-                    $result = $flwProvider->chargeCard($attempt, $details);
+                    // Flutterwave Inline: return initialization data for the frontend
+                    // to open Flutterwave's secure popup. Card details are entered
+                    // directly into Flutterwave's UI — our server never touches them.
+                    $inlineData = $flwProvider->initializePayment($attempt);
+
+                    $session->transitionTo('awaiting_payment');
+                    $session->payment_payload = array_merge(
+                        $session->payment_payload ?? [],
+                        ['inline' => $inlineData]
+                    );
+                    $session->save();
+
+                    return new PaymentSessionResource($session->fresh());
                 }
             } elseif ($method === 'bank_transfer') {
                 $flwProvider = $gatewayFactory->getProvider('flutterwave');

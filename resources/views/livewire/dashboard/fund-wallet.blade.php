@@ -123,6 +123,8 @@ new class extends Component
     }
 }; ?>
 
+<script src="https://checkout.flutterwave.com/v3.js"></script>
+
 <div
     x-data="{
         open: false,
@@ -322,6 +324,14 @@ new class extends Component
             } else if (status === 'failed') {
                 this.paymentState = 'error';
                 this.errorMessage = sessionData.payment_payload?.failure_reason || 'Transaction could not be completed.';
+            } else if (status === 'awaiting_payment') {
+                const inlineData = sessionData.payment_payload?.inline;
+                if (inlineData) {
+                    this.openFlutterwaveInline(inlineData);
+                } else {
+                    this.paymentState = 'error';
+                    this.errorMessage = 'Could not initialize card payment.';
+                }
             } else if (status === 'awaiting_redirect') {
                 const url = sessionData.payment_payload?.redirect_url;
                 if (url) {
@@ -352,6 +362,56 @@ new class extends Component
                 this.actionMessage = sessionData.payment_payload?.message || 'Please accept the billing prompt on your device.';
                 this.startStatusPolling();
             }
+        },
+
+        openFlutterwaveInline(data) {
+            this.paymentState = 'processing';
+            const self = this;
+
+            FlutterwaveCheckout({
+                public_key: data.public_key,
+                tx_ref: data.tx_ref,
+                amount: data.amount,
+                currency: data.currency,
+                customer: data.customer,
+                customizations: data.customizations,
+                callback: async function(response) {
+                    self.paymentState = 'processing';
+                    try {
+                        let verifyRes = await fetch(
+                            `/api/payment-sessions/${self.session.id}/verify`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                },
+                                body: JSON.stringify({
+                                    transaction_id: response.transaction_id
+                                })
+                            }
+                        );
+                        let verifyData = await verifyRes.json();
+                        if (verifyData.status === 'confirmed') {
+                            self.paymentState = 'success';
+                            setTimeout(() => { window.location.reload(); }, 2000);
+                        } else {
+                            self.paymentState = 'error';
+                            self.errorMessage = verifyData.message || 'Payment could not be verified.';
+                        }
+                    } catch (e) {
+                        self.paymentState = 'error';
+                        self.errorMessage = 'Could not verify payment. Please check your connection.';
+                    }
+                },
+                onclose: function() {
+                    if (self.paymentState !== 'success') {
+                        self.paymentState = 'idle';
+                        self.open = false;
+                    }
+                }
+            });
         },
 
         startStatusPolling() {
@@ -650,73 +710,95 @@ new class extends Component
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg> Back
                         </button>
                     </div>
-                    <h3 class="text-sm font-bold text-zinc-900 mb-4">Enter Card Details</h3>
                     
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-zinc-700">Name on card</label>
-                            <input type="text" x-model="cardDetails.card_holder" autocomplete="cc-name" placeholder="Full name" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                        </div>
+                    @if(config('services.flutterwave.direct_charge_enabled', false))
+                        <h3 class="text-sm font-bold text-zinc-900 mb-4">Enter Card Details</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-700">Name on card</label>
+                                <input type="text" id="wallet_card_name" x-model="cardDetails.card_holder" autocomplete="cc-name" placeholder="Full name" class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                            </div>
 
-                        <div>
-                            <label class="block text-xs font-semibold text-zinc-700">Card number</label>
-                            <div class="relative mt-1.5">
-                                <input 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-number" 
-                                    placeholder="1234 1234 1234 1234" 
-                                    x-model="cardDetails.card_number"
-                                    @input="detectCardType"
-                                    class="w-full rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 pr-16 tabular-nums"
-                                >
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
-                                          x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
-                                          :class="{
-                                              'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
-                                              'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
-                                              'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
-                                              'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
-                                              'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
-                                              'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
-                                          }"
-                                    ></span>
+                            <div>
+                                <label class="block text-xs font-semibold text-zinc-700">Card number</label>
+                                <div class="relative mt-1.5">
+                                    <input 
+                                        type="text" 
+                                        id="wallet_card_number"
+                                        inputmode="numeric" 
+                                        autocomplete="cc-number" 
+                                        placeholder="1234 1234 1234 1234" 
+                                        x-model="cardDetails.card_number"
+                                        @input="detectCardType"
+                                        class="w-full rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 pr-16 tabular-nums"
+                                    >
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
+                                              x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
+                                              :class="{
+                                                  'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
+                                                  'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
+                                                  'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
+                                                  'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
+                                                  'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
+                                                  'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
+                                              }"
+                                        ></span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-700">Expiry</label>
-                                <input 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-exp" 
-                                    placeholder="MM / YY" 
-                                    x-model="cardExpiryRaw"
-                                    @input="formatExpiry"
-                                    class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 tabular-nums"
-                                >
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-zinc-700">Expiry</label>
+                                    <input 
+                                        type="text" 
+                                        id="wallet_card_expiry"
+                                        inputmode="numeric" 
+                                        autocomplete="cc-exp" 
+                                        placeholder="MM / YY" 
+                                        x-model="cardExpiryRaw"
+                                        @input="formatExpiry"
+                                        class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 tabular-nums"
+                                    >
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-zinc-700">CVV</label>
+                                    <input 
+                                        type="password" 
+                                        id="wallet_card_cvc"
+                                        inputmode="numeric" 
+                                        autocomplete="cc-csc" 
+                                        placeholder="123" 
+                                        x-model="cardDetails.cvv"
+                                        maxlength="4"
+                                        class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 tabular-nums"
+                                    >
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-zinc-700">CVV</label>
-                                <input 
-                                    type="password" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-csc" 
-                                    placeholder="123" 
-                                    x-model="cardDetails.cvv"
-                                    maxlength="4"
-                                    class="w-full mt-1.5 rounded-[10px] border border-zinc-200 px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 tabular-nums"
-                                >
-                            </div>
-                        </div>
 
-                        <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-2">
+                            <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-2">
+                                Pay <span x-text="session?.display_currency + ' ' + Number(session?.amount).toFixed(2)"></span>
+                            </button>
+                        </div>
+                    @else
+                        <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4 text-center">
+                            <div class="flex justify-center gap-3 mb-3">
+                                <img src="/assets/visa.svg" alt="Visa" class="h-8 object-contain">
+                                <img src="/assets/mastercard.svg" alt="Mastercard" class="h-8 object-contain">
+                            </div>
+                            <p class="text-sm font-medium text-zinc-700">
+                                You'll enter your card details in a secure popup powered by Flutterwave.
+                            </p>
+                            <p class="mt-1 text-xs text-zinc-500">
+                                Your card information never touches our servers.
+                            </p>
+                        </div>
+                        <button type="button" @click="paySession('card', {})" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 mt-4">
                             Pay <span x-text="session?.display_currency + ' ' + Number(session?.amount).toFixed(2)"></span>
                         </button>
-                    </div>
+                    @endif
                 </div>
 
                 <!-- Card Auth: PIN Challenge -->

@@ -26,11 +26,10 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $txRef = $attempt->idempotency_key;
         $payable = $attempt->payable;
 
-        $title = 'RshopRefills Order Refill';
+        $title = 'RshopRefills';
         $description = $attempt->order ? "Order #{$attempt->order->order_number}" : "Payment Ref #{$txRef}";
 
         if ($payable instanceof WalletFunding) {
-            $title = 'RshopRefills Wallet Deposit';
             $description = "Wallet Funding Ref #{$payable->reference}";
         }
 
@@ -55,6 +54,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             'customizations' => [
                 'title' => $title,
                 'description' => $description,
+                'logo' => asset('assets/Rshoprefillslogo.webp'),
             ],
             'gateway_reference' => $txRef,
         ];
