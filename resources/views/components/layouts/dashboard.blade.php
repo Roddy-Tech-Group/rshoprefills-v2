@@ -124,6 +124,10 @@
             /* Sidebar collapse arrow: hidden until the sidebar is hovered (or the
                button is keyboard-focused), so it only appears when wanted. */
             @media (min-width: 1024px) {
+                /* `html` prefix raises specificity above Flux's `z-20!` so the
+                   sidebar (and the arrow straddling its right edge) sits above the
+                   page header instead of being covered by it. */
+                html [data-flux-sidebar] { z-index: 60 !important; }
                 .sidebar-collapse-toggle { opacity: 0; }
                 [data-flux-sidebar]:hover .sidebar-collapse-toggle,
                 .sidebar-collapse-toggle:focus-visible { opacity: 1; }
@@ -283,7 +287,7 @@
                 @click="$store.dashboardSidebar.toggle()"
                 :aria-label="$store.dashboardSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.dashboardSidebar.collapsed.toString()"
-                class="sidebar-collapse-toggle absolute right-2 z-30 hidden h-6 w-6 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
+                class="sidebar-collapse-toggle absolute right-0 z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
                 style="top: 22px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
             >
                 <svg
