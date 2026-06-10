@@ -4,6 +4,7 @@
     'ogImage' => null,
     'ogType' => null,
     'keywords' => null,
+    'jsonLd' => null,
 ])
 
 @php
@@ -40,7 +41,7 @@
         {{ $slot }}
     </x-layouts.dashboard>
 @else
-    <x-layouts.app.header :title="$title" :description="$description" :og-image="$ogImage" :og-type="$ogType" :keywords="$keywords">
+    <x-layouts.app.header :title="$title" :description="$description" :og-image="$ogImage" :og-type="$ogType" :keywords="$keywords" :json-ld="$jsonLd">
         {{ $slot }}
     </x-layouts.app.header>
 @endif

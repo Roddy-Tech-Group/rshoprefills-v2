@@ -355,7 +355,7 @@ Route::get('robots.txt', function () {
 // pages + one URL per product brand (gift cards / top-ups / bill payments).
 // Cached for 6 hours so the brand query never runs on a hot crawl.
 Route::get('sitemap.xml', function () {
-    $xml = Cache::remember('sitemap.xml.v2', now()->addHours(6), function () {
+    $xml = Cache::remember('sitemap.xml.v3', now()->addHours(6), function () {
         $urls = [];
         $push = function (string $loc, string $priority = '0.7', string $freq = 'weekly') use (&$urls) {
             $urls[$loc] = ['loc' => $loc, 'priority' => $priority, 'freq' => $freq];
@@ -398,6 +398,15 @@ Route::get('sitemap.xml', function () {
                     $push(route($name, ['brandSlug' => Product::brandSlug($row->brand_key)]), '0.8');
                 }
             });
+
+        // eSIMs don't key off brand_key like the catalogue above - each country /
+        // region is its own store page (esims/{slug}). Reuse the same deduped
+        // summary the storefront renders so the sitemap covers every sold location.
+        EsimStoreController::catalogSummary()->each(function ($entry) use ($push) {
+            if (! empty($entry['slug'])) {
+                $push(route('shop.esim', $entry['slug']), '0.8');
+            }
+        });
 
         // Blog posts + press releases: prime content for organic ranking, so
         // every published article gets its own sitemap entry.

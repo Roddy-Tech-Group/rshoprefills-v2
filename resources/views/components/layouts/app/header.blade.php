@@ -4,6 +4,7 @@
     'ogImage' => null,
     'ogType' => null,
     'keywords' => null,
+    'jsonLd' => null,
 ])
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
