@@ -39,40 +39,48 @@ V2 is not a patch on V1 - it is a rebuild around reliability, money-safety and s
 
 ## What it sells
 
-| Product | Description |
-| --- | --- |
-| **Gift cards** | Hundreds of global brands, one card per brand, region-aware pricing. |
-| **eSIMs** | Travel data plans with QR + manual activation, top-ups and low-data alerts. |
-| **Mobile top-ups** | Airtime and data bundles for operators worldwide. |
-| **Bill payments** | Prepaid utilities and services. |
-| **Flights & stays** | Travel booking surfaces. |
+| Product             | Description                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| **Gift cards**      | Hundreds of global brands, one card per brand, region-aware pricing.        |
+| **eSIMs**           | Travel data plans with QR + manual activation, top-ups and low-data alerts. |
+| **Mobile top-ups**  | Airtime and data bundles for operators worldwide.                           |
+| **Bill payments**   | Prepaid utilities and services.                                             |
+| **Flights & stays** | Travel booking surfaces.                                                    |
 
 ## Key features
 
 **Wallet & money**
+
 - Multi-currency wallets (USD, NGN, GBP, GHS, XAF and RCOIN) with live FX conversion.
 - Lock/debit ledger flow, manual admin credit/debit with mandatory reason + audit, and automated balance reconciliation jobs.
 - Transaction PIN required on every wallet payment, with attempt lockout protection.
 
 **Payments**
+
 - Flutterwave (cards + mobile money), NowPayments (crypto) and Wallet, plus RCOIN, coupons and saved cards - with webhook verification and pending-funding recovery.
 
 **Rewards (RCOIN)**
+
 - Cashback on purchases, referral credits, redemption, withdrawal and conversion, with a per-user earnings multiplier admin control.
 
 **Catalog & fulfillment**
+
 - Synced catalog from suppliers (Zendit gift cards / top-ups / eSIMs, Airalo eSIMs), one-card-per-brand normalization, and asynchronous fulfillment with webhooks, polling and retries on dedicated queues.
 
 **Accounts & trust**
+
 - Email + KYC verification tiers with a Facebook-style verified badge, social login (Socialite), and suspension / ban / funds-hold controls.
 
 **Admin operations**
+
 - Customer management (edit, ban, suspend, hold funds, set KYC, reset transaction PIN, send password reset, log in as customer), catalog / commerce / fintech / notification dashboards, plus a CMS for blog, press, FAQs and reviews.
 
 **Notifications**
+
 - Multi-channel delivery (in-app database + email via Resend) with preferences, async dispatch, delivery monitoring and auto-retry.
 
 **Experience**
+
 - Country / language / currency switching, dark mode, installable PWA, and a unified design system (10px radius, shared badge + component library).
 
 ## Tech stack
@@ -144,11 +152,11 @@ vendor/bin/pint                       # fix code style
 ## Deployment
 
 - Run `npm run build`, then cache config / routes / views:
-  ```bash
-  php artisan config:cache
-  php artisan route:cache
-  php artisan view:cache
-  ```
+    ```bash
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    ```
 - Run **Horizon** as the queue worker (requires the `pcntl` extension - available on Linux, not Windows local dev).
 - Serve over **HTTPS** so the PWA is installable and the service worker is active.
 - Submit `/sitemap.xml` to Google and Bing Search Console.
@@ -174,6 +182,6 @@ tests/                # PHPUnit feature + unit tests
 Built by **Roddy Technologies**.
 
 - **Divine Ofeh** - Chief Executive Officer (CEO)
-- **Johnpaul** - Chief Technology Officer (CTO)
+- **Madueke Johnpaul** - Chief Technology Officer (CTO)
 
 Building an Africa-to-international digital ecosystem, from Cameroon to the world. RshopRefills is the team's first product, with continuous updates shipping to solve real problems for the community.
