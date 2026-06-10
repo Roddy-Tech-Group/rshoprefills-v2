@@ -69,6 +69,41 @@ class Wallet extends Model
     }
 
     /**
+     * Format a USD amount for the compact nav wallet chip: exact cents below
+     * $1,000, then abbreviated as $1.2k / $3.4M above so the chip stays narrow.
+     * Truncated (never rounded up) to one decimal so a balance is never shown
+     * larger than it actually is.
+     */
+    public static function compactUsd(float $amount): string
+    {
+        $abs = abs($amount);
+
+        if ($abs >= 1_000_000) {
+            return '$'.self::abbreviate($amount, 1_000_000).'M';
+        }
+
+        if ($abs >= 1_000) {
+            return '$'.self::abbreviate($amount, 1_000).'k';
+        }
+
+        return '$'.number_format($amount, 2);
+    }
+
+    /**
+     * One-decimal, truncated-toward-zero abbreviation of `$amount` in `$unit`s,
+     * with a trailing `.0` dropped (so $1,000 -> "1", $1,200 -> "1.2"). Works in
+     * integer tenths to dodge binary-float rounding (1.2 * 10 != 12.0).
+     */
+    private static function abbreviate(float $amount, int $unit): string
+    {
+        $tenths = (int) floor($amount / ($unit / 10));
+        $whole = intdiv($tenths, 10);
+        $fraction = $tenths % 10;
+
+        return $fraction === 0 ? (string) $whole : $whole.'.'.$fraction;
+    }
+
+    /**
      * Get the user who owns this wallet.
      */
     public function user(): BelongsTo

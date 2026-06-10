@@ -212,15 +212,13 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Balance figure for the nav wallet chip.
+     * USD balance figure for the storefront nav wallet chip. A user can hold one
+     * wallet per currency; every funded wallet is converted to USD and summed so
+     * the chip always shows a single dollar amount (formatted compactly by
+     * {@see Wallet::compactUsd()}). `combined` flags that more than one wallet
+     * contributed, for the aria-label.
      *
-     * A user can hold one wallet per currency. The chip stays glanceable:
-     *  - no funded wallet  -> USD at zero, so the chip still renders;
-     *  - one funded wallet -> shown in its own currency;
-     *  - several funded    -> every balance converted to USD and summed into a
-     *                         single dollar figure.
-     *
-     * @return array{currency: Currency, amount: float, combined: bool}
+     * @return array{amount: float, combined: bool}
      */
     public function navWalletSummary(): array
     {
@@ -229,17 +227,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->values();
 
         if ($funded->isEmpty()) {
-            return ['currency' => Currency::USD, 'amount' => 0.0, 'combined' => false];
-        }
-
-        if ($funded->count() === 1) {
-            $wallet = $funded->first();
-
-            return [
-                'currency' => $wallet->currency instanceof Currency ? $wallet->currency : Currency::USD,
-                'amount' => (float) $wallet->balance,
-                'combined' => false,
-            ];
+            return ['amount' => 0.0, 'combined' => false];
         }
 
         // rate_per_usd is "currency units per 1 USD", so USD = balance / rate.
@@ -255,7 +243,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return $carry + ($rate > 0 ? (float) $wallet->balance / $rate : 0.0);
         }, 0.0);
 
-        return ['currency' => Currency::USD, 'amount' => round($usdTotal, 2), 'combined' => true];
+        return ['amount' => round($usdTotal, 2), 'combined' => $funded->count() > 1];
     }
 
     /**
