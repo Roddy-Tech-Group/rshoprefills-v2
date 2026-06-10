@@ -117,6 +117,18 @@
             html.dashboard-sidebar-collapsed [data-flux-sidebar] .brand-mark { display: flex !important; }
             html.dashboard-sidebar-collapsed [data-flux-sidebar] > a { margin-right: 0 !important; }
 
+            /* Collapsed brand favicon ships blue (correct on the light sidebar);
+               recolor it to white in dark mode for contrast on the dark sidebar. */
+            html.dark [data-flux-sidebar] .brand-mark img { filter: brightness(0) invert(1); }
+
+            /* Sidebar collapse arrow: hidden until the sidebar is hovered (or the
+               button is keyboard-focused), so it only appears when wanted. */
+            @media (min-width: 1024px) {
+                .sidebar-collapse-toggle { opacity: 0; }
+                [data-flux-sidebar]:hover .sidebar-collapse-toggle,
+                .sidebar-collapse-toggle:focus-visible { opacity: 1; }
+            }
+
             /* Collapsed: inline sub-menus disappear inline AND reappear as a
                polished floating popup on hover, positioned to the right of
                the icon with a 10px radius matching the project standard. */
@@ -271,11 +283,11 @@
                 @click="$store.dashboardSidebar.toggle()"
                 :aria-label="$store.dashboardSidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                 :aria-pressed="$store.dashboardSidebar.collapsed.toString()"
-                class="absolute right-0 top-[88px] z-30 hidden h-8 w-8 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
-                style="box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
+                class="sidebar-collapse-toggle absolute right-0 z-30 hidden h-6 w-6 translate-x-1/2 items-center justify-center rounded-full bg-white/25 text-blue-600 border-[2px] border-blue-500 backdrop-blur-2xl backdrop-saturate-200 transition-all hover:bg-white/40 hover:text-blue-700 hover:border-blue-600 active:scale-95 lg:flex dark:bg-transparent dark:text-blue-300 dark:border-blue-400/80 dark:hover:bg-transparent dark:hover:text-blue-200 dark:hover:border-blue-300"
+                style="top: 24px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.55);"
             >
                 <svg
-                    class="h-4 w-4 transition-transform duration-200"
+                    class="h-3 w-3 transition-transform duration-200"
                     :class="$store.dashboardSidebar.collapsed ? 'rotate-180' : 'rotate-0'"
                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
                     aria-hidden="true"
@@ -293,14 +305,15 @@
                         class="h-full w-auto object-contain"
                     />
                 </span>
-                <span class="brand-mark hidden h-14 w-14 items-center justify-center">
+                <span class="brand-mark hidden w-14 flex-col items-center justify-center">
                     <img
                         src="{{ asset('assets/favicon.ico') }}"
                         alt="RshopRefills"
                         class="h-12 w-12 rounded-full object-contain"
                     />
+                    <span class="mt-0.5 text-[9px] font-medium italic leading-none text-zinc-600 dark:text-zinc-400">Est. 2024</span>
                 </span>
-                <span class="brand-full mt-0.5 pl-1 text-[10px] font-medium italic leading-none text-zinc-600">Est. 2024</span>
+                <span class="brand-full mt-0.5 pl-1 text-[10px] font-medium italic leading-none text-zinc-600 dark:text-zinc-400">Est. 2024</span>
             </a>
 
             {{-- Scrollable middle: only the nav links scroll. Logo above + Newsletter/Need-Help
@@ -329,7 +342,9 @@
             <nav class="mt-2 flex flex-col gap-1" aria-label="Shop">
                 <div
                     x-data="{ expanded: false, locked: false }"
-                    x-effect="if ($store.dashboardSidebar?.collapsed) { expanded = true }"
+                    {{-- Force open while collapsed (popup), but restore to closed when
+                         expanded so re-opening the sidebar doesn't leave it stuck open. --}}
+                    x-effect="expanded = $store.dashboardSidebar?.collapsed ? true : false"
                     @mouseenter="if (! $store.dashboardSidebar?.collapsed) expanded = true"
                     @mouseleave="if (! locked && ! $store.dashboardSidebar?.collapsed) expanded = false"
                     @click.outside="if (! $store.dashboardSidebar?.collapsed) { locked = false; expanded = false }"
