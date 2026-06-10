@@ -14,8 +14,10 @@
         "flatpickr": "^4.6.13",
         "gsap": "^3.15.0",
         "jsvectormap": "^1.7.0",
+        "laravel-echo": "^2.3.7",
         "laravel-vite-plugin": "^1.0",
         "lottie-web": "^5.13.0",
+        "pusher-js": "^8.5.0",
         "tailwindcss": "^4.0.7",
         "vite": "^6.0"
     },

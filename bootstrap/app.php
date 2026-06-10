@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ],
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     // Console commands live under domain folders, which are NOT auto-discovered

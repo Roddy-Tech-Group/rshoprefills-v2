@@ -1,3 +1,7 @@
+// Real-time websockets (Laravel Echo + Reverb). Imported first so window.Echo is
+// set before Livewire boots and can pick it up for broadcast listeners.
+import './echo';
+
 // Flatpickr — modern date picker used by admin forms (e.g. coupon expiry).
 // Exposed on window so Alpine x-init expressions can call flatpickr() directly.
 import flatpickr from 'flatpickr';
