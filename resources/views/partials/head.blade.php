@@ -163,6 +163,16 @@
 <script type="application/ld+json">{!! json_encode($orgJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 <script type="application/ld+json">{!! json_encode($siteJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
+{{-- Per-page structured data (e.g. Product + BreadcrumbList on brand pages).
+     Pages pass $jsonLd through x-shop.layout; it may be a single schema array
+     or a list of them. Guarded with empty() so the layouts that never set it
+     (admin, auth, dashboard) emit nothing. --}}
+@if (! empty($jsonLd))
+    @foreach ((array_is_list($jsonLd) ? $jsonLd : [$jsonLd]) as $pageSchema)
+        <script type="application/ld+json">{!! json_encode($pageSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    @endforeach
+@endif
+
 <link rel="icon" type="image/x-icon" href="{{ asset('assets/favicon.ico') }}">
 
 {{-- ───────────────────────── PWA / installable app ─────────────────────────

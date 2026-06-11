@@ -160,33 +160,35 @@
 
             // Each chip's `href` resolves to the storefront surface that best
             // matches the teaser, so clicking "200+ countries" lands on /esims.
+            // `illo` swaps the webp for an inline animated SVG (no image request);
+            // chips without one keep their webp.
             $heroChips = [
                 [
-                    'image'    => 'hero gift.webp',
+                    'illo'     => 'gift',
                     'title'    => $productsRounded.'+ digital products',
                     'subtitle' => 'Gift cards, eSIMs, top-ups and bill payments worldwide',
                     'href'     => route('shop.gift-cards'),
                 ],
                 [
-                    'image'    => 'global coverage.webp',
+                    'illo'     => 'globe',
                     'title'    => $countriesRounded.'+ countries covered',
                     'subtitle' => 'Travel eSIMs and local top-ups in over '.$countriesRounded.' destinations',
                     'href'     => route('shop.esims'),
                 ],
                 [
-                    'image'    => 'secured users.webp',
+                    'illo'     => 'shield',
                     'title'    => 'Verified customer reviews',
                     'subtitle' => 'Real feedback from buyers on Trustpilot and Google',
                     'href'     => route('shop.reviews'),
                 ],
                 [
-                    'image'    => 'compactible on all devices.webp',
+                    'illo'     => 'mobile',
                     'title'    => 'Works on every device',
                     'subtitle' => 'Compatible with laptop, iPad and mobile',
                     'href'     => route('shop.mobile-app'),
                 ],
                 [
-                    'image'    => 'seach products.webp',
+                    'illo'     => 'search',
                     'title'    => 'Find what you need fast',
                     'subtitle' => 'Search gift cards, eSIMs and top-ups in seconds',
                     'href'     => route('shop.topups'),
@@ -265,18 +267,23 @@
                         @mouseenter="hovered = true"
                         @mouseleave="hovered = false"
                         :class="[
-                            current === {{ $i }} ? 'pr-4 sm:pr-5 lg:pr-8' : 'pr-2 sm:pr-2.5',
+                            current === {{ $i }} ? 'pl-1.5 pr-4 sm:pl-2 sm:pr-5 lg:pr-8' : 'aspect-square justify-center',
                             (current === {{ $i }} && hovered) ? '-translate-y-0.5' : '',
                             current === {{ $i }} ? 'max-lg:w-full' : 'max-lg:hidden',
                             current === {{ $i }} && direction < 0 ? 'rshop-chip-from-left' : '',
                             current === {{ $i }} && direction > 0 ? 'rshop-chip-from-right' : ''
                         ]"
-                        class="group inline-flex h-[72px] shrink-0 items-center rounded-[10px] bg-white pl-2 shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200 lg:transition-all lg:duration-500 lg:ease-out sm:h-[88px] sm:pl-2.5"
+                        class="group inline-flex h-[84px] shrink-0 items-center rounded-full bg-white shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200 lg:transition-all lg:duration-500 lg:ease-out sm:h-[100px]"
                         aria-label="{{ $chip['title'] }}"
                     >
-                        {{-- Icon (always visible) --}}
-                        <span class="flex h-14 w-14 shrink-0 items-center justify-center sm:h-[68px] sm:w-[68px]">
-                            <img src="{{ asset('assets/' . rawurlencode($chip['image'])) }}" alt="" class="h-14 w-14 object-contain sm:h-[68px] sm:w-[68px]" loading="lazy">
+                        {{-- Icon (always visible) — inline animated SVG when available
+                             (no image request), else the webp. The SVG fills the chip. --}}
+                        <span class="flex h-[72px] w-[72px] shrink-0 items-center justify-center sm:h-[92px] sm:w-[92px]">
+                            @if (! empty($chip['illo']))
+                                <x-illo :name="$chip['illo']" class="h-full w-full" />
+                            @else
+                                <img src="{{ asset('assets/' . rawurlencode($chip['image'])) }}" alt="" class="h-full w-full object-contain" loading="lazy">
+                            @endif
                         </span>
 
                         {{-- Title + subtitle (revealed when this chip is active).
@@ -291,38 +298,21 @@
                             <span class="block truncate text-[13px] leading-tight text-zinc-600">{{ $chip['subtitle'] }}</span>
                         </span>
 
-                        {{-- Arrow / Show-more button.
-                             Default (chip active, not hovered): just the arrow icon.
-                             On chip hover: a white pill rolls out with "Show more" + arrow. --}}
-                        {{-- Show-more area: reserved width when the chip is open, so the
-                             white pill can slide IN from the right on hover without
-                             changing the chip's overall size. Bare arrow is always shown
-                             at the right edge as the resting state. --}}
+                        {{-- Reserved area when the chip is active, so the "Show more" can fade in
+                             on hover WITHOUT changing the chip's width (which would shift/jitter the
+                             whole row). Flat label, single arrow after the text, hover-only. --}}
                         <span
-                            :class="current === {{ $i }} ? 'w-[180px] ml-4 opacity-100' : 'w-0 ml-0 opacity-0'"
-                            class="relative hidden h-14 shrink-0 items-center justify-end overflow-visible transition-all duration-500 ease-out lg:flex"
+                            :class="current === {{ $i }} ? 'w-[150px] ml-4 opacity-100' : 'w-0 ml-0 opacity-0'"
+                            class="relative hidden h-14 shrink-0 items-center justify-end overflow-hidden transition-all duration-500 ease-out lg:flex"
                         >
-                            {{-- Resting state: bare arrow pinned to the right --}}
-                            <span class="flex h-14 w-14 shrink-0 items-center justify-center text-zinc-800">
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
-                                </svg>
-                            </span>
-
-                            {{-- "Show more" pill slides in from the right on hover.
-                                 Pops slightly past the chip's right edge (translate-x-3 = 12px)
-                                 so the chip's gap accommodates it without overlapping neighbours.
-                                 Solid blue capsule in light mode (chip background is white, so a
-                                 white frosted-glass pill would be invisible); frosted glass in
-                                 dark mode where the chip ring picks up the contrast. --}}
                             <span
-                                :class="(current === {{ $i }} && hovered) ? 'translate-x-3 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'"
-                                class="absolute right-0 top-1/2 z-10 inline-flex h-9 -translate-y-1/2 items-center justify-center rounded-full bg-blue-600 px-3 text-white shadow-lg shadow-blue-900/30 ring-1 ring-blue-700/40 backdrop-blur-xl backdrop-saturate-150 transition-all duration-400 ease-out dark:bg-white/15 dark:shadow-zinc-900/30 dark:ring-white/30"
+                                :class="(current === {{ $i }} && hovered) ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-2 pointer-events-none'"
+                                class="inline-flex items-center pr-2 text-[15px] font-semibold text-zinc-900 transition-all duration-300 ease-out dark:text-white"
                             >
-                                <svg class="mr-1.5 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                                <span class="whitespace-nowrap">Show more</span>
+                                <svg class="ml-1.5 h-[18px] w-[18px] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M9 6l6 6-6 6"/>
                                 </svg>
-                                <span class="whitespace-nowrap text-xs font-semibold">Show more</span>
                             </span>
                         </span>
                     </a>

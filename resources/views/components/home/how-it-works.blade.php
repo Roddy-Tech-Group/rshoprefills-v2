@@ -2,6 +2,24 @@
     How it works. 3-step buying process: Pick a product, Pay with crypto, Receive instantly.
     Mobile: horizontal scroll carousel. Desktop (sm+): 3 cards side-by-side.
 --}}
+@php
+    // Live product count, reusing the same 10-minute cache the hero fills so the
+    // figure stays in sync and never hard-codes a number. Floored to the nearest
+    // thousand for clean marketing copy.
+    $catalogStats = \Illuminate\Support\Facades\Cache::remember(
+        'hero.catalog_stats',
+        now()->addMinutes(10),
+        fn () => [
+            'variants'  => (int) \App\Models\ProductVariant::where('is_available', true)->count(),
+            'countries' => (int) \App\Models\Product::where('is_active', true)
+                ->whereNotNull('country_code')
+                ->distinct('country_code')
+                ->count('country_code'),
+        ],
+    );
+    $productsRounded = number_format(max(1000, intdiv($catalogStats['variants'], 1000) * 1000));
+@endphp
+
 <section data-reveal aria-label="How it works">
 
     <h2 class="mb-5 text-xl font-bold text-zinc-900 sm:text-2xl">How it works</h2>
@@ -13,17 +31,12 @@
         {{-- Step 1 — Pick a product --}}
         <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
-                <img
-                    src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
-                    alt=""
-                    class="h-full w-full object-cover"
-                    loading="lazy"
-                >
+                <x-illo name="cardFan" class="h-full w-full" />
             </div>
             <div class="bg-zinc-100 p-5">
                 <h3 class="text-base font-semibold text-zinc-900">1. Pick a product or service</h3>
                 <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
-                    Choose from 14000+ gift cards, eSIMs, flights, stays and mobile top-ups made ready for you to simplify your shopping experience.
+                    Choose from {{ $productsRounded }}+ gift cards, eSIMs, flights, stays and mobile top-ups made ready for you to simplify your shopping experience.
                 </p>
             </div>
         </article>
@@ -31,17 +44,12 @@
         {{-- Step 2 — Pay with crypto --}}
         <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
-                <img
-                    src="{{ asset('assets/' . rawurlencode('pay with crypto momo +.webp')) }}"
-                    alt=""
-                    class="h-full w-full object-cover"
-                    loading="lazy"
-                >
+                <x-illo name="payWeb" class="h-full w-full" />
             </div>
             <div class="bg-zinc-100 p-5">
-                <h3 class="text-base font-semibold text-zinc-900">2. Pay with Cards, Crypto, MoMo etc</h3>
+                <h3 class="text-base font-semibold text-zinc-900">2. Pay with Cards, Crypto, Mobile Money, Bank Transfers etc</h3>
                 <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
-                    Access 14,000+ digital products including gift cards, eSIMs, flights, hotel stays, mobile top-ups, and more, all in one seamless platform.
+                    Access {{ $productsRounded }}+ digital products including gift cards, eSIMs, flights, hotel stays, mobile top-ups, and more, all in one seamless platform.
                 </p>
             </div>
         </article>
@@ -49,12 +57,7 @@
         {{-- Step 3 — Receive instantly --}}
         <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
             <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
-                <img
-                    src="{{ asset('assets/' . rawurlencode('step 3.webp')) }}"
-                    alt=""
-                    class="h-full w-full object-cover"
-                    loading="lazy"
-                >
+                <x-illo name="payout" class="h-full w-full" />
             </div>
             <div class="bg-zinc-100 p-5">
                 <h3 class="text-base font-semibold text-zinc-900">3. Receive instantly</h3>

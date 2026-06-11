@@ -259,7 +259,7 @@ new #[Lazy] class extends Component
                         <x-home.brand-card
                             :name="$label"
                             :price-range="$p->priceRangeLabel()"
-                            :href="route('shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
+                            :href="route('dashboard.shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
                             :card-class="$logo ? 'bg-[#ffffff]' : ($brandColor ? '' : 'bg-zinc-100')"
                             :style="! $logo && $brandColor ? 'background-color: ' . $brandColor . ';' : false"
                         >
@@ -865,7 +865,7 @@ new #[Lazy] class extends Component
                             <x-home.brand-row
                                 title="Popular Gift Cards"
                                 subtitle="Top-rated gift cards in your region"
-                                :view-all-href="route('shop.gift-cards')"
+                                :view-all-href="route('dashboard.shop.gift-cards')"
                                 :cols="5"
                             >
                                 @foreach ($popularProducts as $p)
@@ -877,7 +877,7 @@ new #[Lazy] class extends Component
                                     <x-home.brand-card
                                         :name="$label"
                                         :price-range="$p->priceRangeLabel()"
-                                        :href="route('shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
+                                        :href="route('dashboard.shop.brand', ['brandSlug' => Product::brandSlug($p->brand_key)])"
                                         :card-class="$logo ? 'bg-[#ffffff]' : ($brandColor ? '' : 'bg-zinc-100')"
                                         :style="! $logo && $brandColor ? 'background-color: ' . $brandColor . ';' : false"
                                     >

@@ -36,11 +36,10 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $txRef = $attempt->idempotency_key;
         $payable = $attempt->payable;
 
-        $title = 'RshopRefills Order Refill';
+        $title = 'RshopRefills';
         $description = $attempt->order ? "Order #{$attempt->order->order_number}" : "Payment Ref #{$txRef}";
 
         if ($payable instanceof WalletFunding) {
-            $title = 'RshopRefills Wallet Deposit';
             $description = "Wallet Funding Ref #{$payable->reference}";
         }
 
@@ -69,6 +68,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             'customizations' => [
                 'title' => $title,
                 'description' => $description,
+                'logo' => asset('assets/Rshoprefillslogo.webp'),
             ],
             'gateway_reference' => $txRef,
         ];
@@ -83,7 +83,10 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
         $secret = $this->secretKey;
         $secMD5 = md5($secret);
 
-        return substr($secret, 0, 12).substr($secMD5, 12);
+        // Strip the standard Flutterwave prefixes before extracting the first 12 chars
+        $secretAdjusted = str_replace(['FLWSECK-', 'FLWSECK_TEST-'], '', $secret);
+
+        return substr($secretAdjusted, 0, 12).substr($secMD5, -12);
     }
 
     public function encryptPayload(array $payload): string
@@ -426,7 +429,7 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
             if ($status === 'success') {
                 return [
                     'status' => 'awaiting_confirmation',
-                    'message' => $data['message'] ?? 'Mobile money request sent. Please authorize on your phone.',
+                    'message' => $this->mobileMoneyInstruction($data, $phoneNumber),
                 ];
             }
 
@@ -440,6 +443,41 @@ class FlutterwavePaymentProvider implements PaymentProviderInterface
                 'message' => 'Failed to initialize mobile money: '.$e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Build the on-screen confirmation instruction for a Francophone mobile-money
+     * charge. Flutterwave returns the operator's own "dial *126# / approve the
+     * prompt" wording in the authorization note (or processor_response), while the
+     * top-level `message` is usually a terse "Charge initiated". Prefer the
+     * actionable instruction so our modal mirrors what Flutterwave's hosted page
+     * shows; fall back to a clear dial/approve prompt when none is present.
+     *
+     * @param  array<string, mixed>  $data  Decoded Flutterwave charge response.
+     */
+    private function mobileMoneyInstruction(array $data, string $phoneNumber): string
+    {
+        $auth = $data['meta']['authorization']
+            ?? $data['data']['meta']['authorization']
+            ?? [];
+
+        $candidates = [
+            $auth['note'] ?? null,
+            $auth['instruction'] ?? null,
+            $data['data']['processor_response'] ?? null,
+            $data['processor_response'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $candidate = is_string($candidate) ? trim($candidate) : '';
+            // A real instruction is a sentence ("Dial *126# ..."), not a status
+            // word like "initiated" / "pending" that some operators echo back.
+            if (strlen($candidate) >= 12) {
+                return $candidate;
+            }
+        }
+
+        return "Dial your mobile money menu and approve the payment prompt sent to {$phoneNumber} to confirm. Keep this window open - it updates automatically once you approve.";
     }
 
     public function chargeApplePay(PaymentAttempt $attempt, array $details = []): array

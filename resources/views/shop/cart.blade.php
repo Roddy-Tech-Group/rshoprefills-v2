@@ -4,7 +4,14 @@
     The store hydrates from /cart/data on load; `hydrated` gates the empty state
     so an empty cart never flashes before the real data arrives.
 --}}
-<x-layouts.app.header :title="'Your Cart | RshopRefills'">
+@php
+    // When reached under /dashboard/shop/* keep links inside the dashboard chrome
+    // (x-shop.layout renders the dashboard layout for that URL prefix).
+    $inDashboard = request()->is('dashboard/shop*');
+    $shopRoute = fn (string $name, $params = []) => route(($inDashboard ? 'dashboard.shop.' : 'shop.').$name, $params);
+@endphp
+
+<x-shop.layout :title="'Your Cart | RshopRefills'">
 
     <div class="min-h-full bg-zinc-100">
     <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
@@ -21,10 +28,10 @@
 
         {{-- Empty state --}}
         <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="mt-8 rounded-[20px] bg-white px-6 py-16 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-44 w-auto object-contain animate-float" loading="lazy">
+            <x-illo name="emptyCart" class="mx-auto w-full max-w-sm" />
             <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
             <p class="mt-1 text-sm text-zinc-600">Browse the catalog and add a gift card to get started.</p>
-            <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+            <a href="{{ $shopRoute('gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                 Browse gift cards
             </a>
         </div>
@@ -92,7 +99,7 @@
                     </ul>
                 </div>
 
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700">
+                <a href="{{ $shopRoute('gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
                     </svg>
@@ -123,7 +130,7 @@
                     </div>
 
                     <a
-                        :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')"
+                        :href="'{{ $shopRoute('checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')"
                         wire:navigate
                         class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700"
                     >
@@ -141,4 +148,4 @@
     </div>
     </div>
 
-</x-layouts.app.header>
+</x-shop.layout>

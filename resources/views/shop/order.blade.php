@@ -95,9 +95,14 @@
     $latestAttempt = $order->paymentAttempts->sortByDesc('created_at')->first();
     $paymentSession = $latestAttempt?->paymentSession;
     $sessionActive = $paymentSession && in_array($paymentSession->status->value ?? $paymentSession->status, ['pending', 'awaiting_payment']);
+
+    // Keep "continue shopping" inside the dashboard chrome when the order page is
+    // reached under /dashboard/shop/* (x-shop.layout renders dashboard chrome there).
+    $inDashboard = request()->is('dashboard/shop*');
+    $shopRoute = fn (string $name, $params = []) => route(($inDashboard ? 'dashboard.shop.' : 'shop.').$name, $params);
 @endphp
 
-<x-layouts.app.header :title="'Order ' . $order->order_number . ' | RshopRefills'">
+<x-shop.layout :title="'Order ' . $order->order_number . ' | RshopRefills'">
 
 @if ($status->value === 'completed')
     {{-- ── Clean success view for completed orders ──────────────────────
@@ -111,69 +116,11 @@
     <div class="min-h-full bg-zinc-50 dark:bg-[#0c1a36]">
         <div class="mx-auto w-full max-w-sm px-4 py-8 sm:py-10">
 
-            {{-- Hero with confetti splash. Tick pops in with a bouncy scale,
-                 and a ring of coloured particles bursts outward then fades.
-                 Pure CSS + inline custom properties; runs once on page load. --}}
-            <style>
-                @keyframes rshop-tick-pop {
-                    0%   { transform: scale(0); }
-                    60%  { transform: scale(1.2); }
-                    100% { transform: scale(1); }
-                }
-                @keyframes rshop-confetti-burst {
-                    0%   { transform: translate(-50%, -50%) rotate(var(--rshop-angle, 0deg)) translateX(0) scale(1); opacity: 1; }
-                    80%  { opacity: 1; }
-                    100% { transform: translate(-50%, -50%) rotate(var(--rshop-angle, 0deg)) translateX(var(--rshop-distance, 70px)) scale(0.3); opacity: 0; }
-                }
-                .rshop-tick {
-                    animation: rshop-tick-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-                }
-                .rshop-confetti {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    width: 8px;
-                    height: 8px;
-                    background: var(--rshop-color, #fbbf24);
-                    border-radius: 2px;
-                    pointer-events: none;
-                    opacity: 0;
-                    animation: rshop-confetti-burst 1.1s ease-out 0.15s forwards;
-                }
-                .rshop-confetti.is-round { border-radius: 9999px; }
-                .rshop-confetti.is-bar   { width: 10px; height: 3px; border-radius: 2px; }
-                @media (prefers-reduced-motion: reduce) {
-                    .rshop-tick { animation: none; }
-                    .rshop-confetti { display: none; }
-                }
-            </style>
-
+            {{-- Hero with confetti splash: a bouncy green tick + particle burst.
+                 Shared component so the order page and the payment-success modals
+                 all celebrate identically. --}}
             <div class="text-center">
-                <div class="relative mx-auto inline-block">
-                    {{-- Confetti particles - 14 around the tick, angles spread
-                         evenly, mixed shapes + festive colour palette. --}}
-                    <span class="rshop-confetti"          style="--rshop-angle:   0deg; --rshop-distance: 70px; --rshop-color:#ef4444;"></span>
-                    <span class="rshop-confetti is-round" style="--rshop-angle:  26deg; --rshop-distance: 80px; --rshop-color:#f97316;"></span>
-                    <span class="rshop-confetti is-bar"   style="--rshop-angle:  52deg; --rshop-distance: 65px; --rshop-color:#fbbf24;"></span>
-                    <span class="rshop-confetti"          style="--rshop-angle:  78deg; --rshop-distance: 85px; --rshop-color:#84cc16;"></span>
-                    <span class="rshop-confetti is-round" style="--rshop-angle: 104deg; --rshop-distance: 75px; --rshop-color:#10b981;"></span>
-                    <span class="rshop-confetti is-bar"   style="--rshop-angle: 130deg; --rshop-distance: 90px; --rshop-color:#06b6d4;"></span>
-                    <span class="rshop-confetti"          style="--rshop-angle: 156deg; --rshop-distance: 70px; --rshop-color:#3b82f6;"></span>
-                    <span class="rshop-confetti is-round" style="--rshop-angle: 182deg; --rshop-distance: 80px; --rshop-color:#8b5cf6;"></span>
-                    <span class="rshop-confetti is-bar"   style="--rshop-angle: 208deg; --rshop-distance: 65px; --rshop-color:#ec4899;"></span>
-                    <span class="rshop-confetti"          style="--rshop-angle: 234deg; --rshop-distance: 85px; --rshop-color:#f43f5e;"></span>
-                    <span class="rshop-confetti is-round" style="--rshop-angle: 260deg; --rshop-distance: 75px; --rshop-color:#fbbf24;"></span>
-                    <span class="rshop-confetti is-bar"   style="--rshop-angle: 286deg; --rshop-distance: 90px; --rshop-color:#22c55e;"></span>
-                    <span class="rshop-confetti"          style="--rshop-angle: 312deg; --rshop-distance: 70px; --rshop-color:#0ea5e9;"></span>
-                    <span class="rshop-confetti is-round" style="--rshop-angle: 338deg; --rshop-distance: 80px; --rshop-color:#a855f7;"></span>
-
-                    {{-- The tick itself --}}
-                    <span class="rshop-tick relative flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30">
-                        <svg class="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                        </svg>
-                    </span>
-                </div>
+                <x-success-tick />
                 <h1 class="mt-5 text-2xl font-bold text-zinc-900 dark:text-white">Order completed</h1>
                 <p class="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">Thank you for your purchase</p>
             </div>
@@ -1147,7 +1094,7 @@
             class="flex items-center justify-center rounded-[10px] border-2 border-blue-600 bg-white px-4 py-3 text-base font-semibold text-blue-600 transition-colors hover:bg-blue-600 hover:text-white">
             Go to orders
         </a>
-        <a href="{{ route('shop.gift-cards') }}" wire:navigate
+        <a href="{{ $shopRoute('gift-cards') }}" wire:navigate
             class="flex items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700">
             Continue shopping
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1167,4 +1114,4 @@
 </div>
 
 @endif
-</x-layouts.app.header>
+</x-shop.layout>

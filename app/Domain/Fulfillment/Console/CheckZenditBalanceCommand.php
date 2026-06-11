@@ -52,7 +52,7 @@ class CheckZenditBalanceCommand extends Command
 
                 // Alert Admin via CriticalSystemAlert
                 // Retrieve the admin email from config, fallback to a default if not set
-                $adminEmail = config('mail.admin_address', 'admin@roddytechgroup.com');
+                $adminEmail = config('mail.admin_address', 'dev@roddytechgroup.com');
 
                 Notification::route('mail', $adminEmail)
                     ->notify(new CriticalSystemAlert(

@@ -54,6 +54,8 @@
 
 <x-layouts.app.header :title="'Checkout | RshopRefills'">
 
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
+
     <div class="min-h-full bg-zinc-100">
     <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
 
@@ -88,7 +90,7 @@
                 <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
-                <a href="{{ route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                <a href="{{ request()->routeIs('dashboard.*') ? route('dashboard.shop.gift-cards') : route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                     Browse gift cards
                 </a>
             </div>
@@ -354,69 +356,81 @@
 
                     {{-- Card --}}
                     <div x-show="method === 'card'" x-collapse class="mt-5 space-y-3">
-                        <div>
-                            <label for="card_name" class="text-sm font-semibold text-zinc-900">Name on card</label>
-                            <input id="card_name" name="card_name" type="text" autocomplete="cc-name" placeholder="Full name" x-model="cardDetails.card_holder" class="{{ $fieldClass }}">
-                        </div>
-                        <div>
-                            <label for="card_number" class="text-sm font-semibold text-zinc-900">Card number</label>
-                            <div class="relative">
-                                <input 
-                                    id="card_number" 
-                                    name="card_number" 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-number" 
-                                    placeholder="4929 5012 3456 7890"
-                                    x-model="cardDetails.card_number"
-                                    @input="detectCardType"
-                                    class="{{ $fieldClass }} pr-16 tabular-nums"
-                                >
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none mt-1.5">
-                                    <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
-                                          x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
-                                          :class="{
-                                              'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
-                                              'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
-                                              'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
-                                              'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
-                                              'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
-                                              'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
-                                          }"
-                                    ></span>
+                        @if(config('services.flutterwave.direct_charge_enabled', false))
+                            <div>
+                                <label for="card_name" class="text-sm font-semibold text-zinc-900">Name on card</label>
+                                <input id="card_name" name="card_name" type="text" autocomplete="cc-name" placeholder="Full name" x-model="cardDetails.card_holder" class="{{ $fieldClass }}">
+                            </div>
+                            <div>
+                                <label for="card_number" class="text-sm font-semibold text-zinc-900">Card number</label>
+                                <div class="relative">
+                                    <input 
+                                        id="card_number" 
+                                        name="card_number" 
+                                        type="text" 
+                                        inputmode="numeric" 
+                                        autocomplete="cc-number" 
+                                        placeholder="1234 1234 1234 1234" 
+                                        x-model="cardDetails.card_number"
+                                        @input="detectCardType"
+                                        class="{{ $fieldClass }} pr-16 tabular-nums"
+                                    >
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none mt-1.5">
+                                        <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-[10px] tracking-wider uppercase bg-zinc-100 text-zinc-500 border border-zinc-200" 
+                                              x-text="cardBrand === 'unknown' ? 'Card' : cardBrand"
+                                              :class="{
+                                                  'bg-blue-50 text-blue-600 border-blue-200': cardBrand === 'visa',
+                                                  'bg-amber-50 text-amber-700 border-amber-200': cardBrand === 'mastercard',
+                                                  'bg-emerald-50 text-emerald-600 border-emerald-200': cardBrand === 'verve',
+                                                  'bg-indigo-50 text-indigo-600 border-indigo-200': cardBrand === 'amex',
+                                                  'bg-purple-50 text-purple-600 border-purple-200': cardBrand === 'discover',
+                                                  'bg-rose-50 text-rose-600 border-rose-200': cardBrand === 'jcb'
+                                              }"
+                                        ></span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label for="card_expiry" class="text-sm font-semibold text-zinc-900">Expiry</label>
-                                <input 
-                                    id="card_expiry" 
-                                    name="card_expiry" 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-exp" 
-                                    placeholder="MM / YY" 
-                                    x-model="cardExpiryRaw"
-                                    @input="formatExpiry"
-                                    class="{{ $fieldClass }} tabular-nums"
-                                >
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="card_expiry" class="text-sm font-semibold text-zinc-900">Expiry</label>
+                                    <input 
+                                        id="card_expiry" 
+                                        name="card_expiry" 
+                                        type="text" 
+                                        inputmode="numeric" 
+                                        autocomplete="cc-exp" 
+                                        placeholder="MM / YY" 
+                                        x-model="cardExpiryRaw"
+                                        @input="formatExpiry"
+                                        class="{{ $fieldClass }} tabular-nums"
+                                    >
+                                </div>
+                                <div>
+                                    <label for="card_cvc" class="text-sm font-semibold text-zinc-900">CVC</label>
+                                    <input 
+                                        id="card_cvc" 
+                                        name="card_cvc" 
+                                        type="text" 
+                                        inputmode="numeric" 
+                                        autocomplete="cc-csc" 
+                                        placeholder="123" 
+                                        x-model="cardDetails.cvv"
+                                        maxlength="4"
+                                        class="{{ $fieldClass }} tabular-nums"
+                                    >
+                                </div>
                             </div>
-                            <div>
-                                <label for="card_cvc" class="text-sm font-semibold text-zinc-900">CVC</label>
-                                <input 
-                                    id="card_cvc" 
-                                    name="card_cvc" 
-                                    type="text" 
-                                    inputmode="numeric" 
-                                    autocomplete="cc-csc" 
-                                    placeholder="•••"
-                                    x-model="cardDetails.cvv"
-                                    maxlength="4"
-                                    class="{{ $fieldClass }} tabular-nums"
-                                >
+                        @else
+                            <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4 text-center">
+                                <div class="flex justify-center gap-3 mb-3">
+                                    <img src="/assets/visa.svg" alt="Visa" class="h-8 object-contain">
+                                    <img src="/assets/mastercard.svg" alt="Mastercard" class="h-8 object-contain">
+                                </div>
+                                <p class="text-sm font-medium text-zinc-700">
+                                    Secure and encrypted payment with bank-level security.
+                                </p>
                             </div>
-                        </div>
+                        @endif
                     </div>
 
                     {{-- Mobile money --}}
@@ -1220,32 +1234,39 @@
                         }
 
                         if (this.method === 'card') {
-                            const cardHolder = document.getElementById('card_name')?.value || '';
-                            const cardNumber = document.getElementById('card_number')?.value || '';
-                            const cardExpiry = document.getElementById('card_expiry')?.value || '';
-                            const cardCvc = document.getElementById('card_cvc')?.value || '';
-                            
-                            let expiryMonth = '';
-                            let expiryYear = '';
-                            if (cardExpiry.includes('/')) {
-                                const parts = cardExpiry.split('/');
-                                expiryMonth = parts[0].trim();
-                                expiryYear = parts[1].trim();
-                            } else if (cardExpiry.length === 4) {
-                                expiryMonth = cardExpiry.substring(0, 2);
-                                expiryYear = cardExpiry.substring(2, 4);
-                            }
-
-                            this.cardDetails = {
-                                card_number: cardNumber.replace(/\s+/g, ''),
-                                cvv: cardCvc,
-                                expiry_month: expiryMonth,
-                                expiry_year: expiryYear,
-                                card_holder: cardHolder
-                            };
-
                             this.paymentState = 'processing';
-                            await this.paySession('card', this.cardDetails);
+                            
+                            // If the custom card form is present (direct charge enabled), collect its data.
+                            // Otherwise, the backend will return inline initialization data.
+                            const cardNameEl = document.getElementById('card_name');
+                            if (cardNameEl) {
+                                const cardHolder = cardNameEl.value || '';
+                                const cardNumber = document.getElementById('card_number')?.value || '';
+                                const cardExpiry = document.getElementById('card_expiry')?.value || '';
+                                const cardCvc = document.getElementById('card_cvc')?.value || '';
+                                
+                                let expiryMonth = '';
+                                let expiryYear = '';
+                                if (cardExpiry.includes('/')) {
+                                    const parts = cardExpiry.split('/');
+                                    expiryMonth = parts[0].trim();
+                                    expiryYear = parts[1].trim();
+                                } else if (cardExpiry.length === 4) {
+                                    expiryMonth = cardExpiry.substring(0, 2);
+                                    expiryYear = cardExpiry.substring(2, 4);
+                                }
+    
+                                this.cardDetails = {
+                                    card_number: cardNumber.replace(/\s+/g, ''),
+                                    cvv: cardCvc,
+                                    expiry_month: expiryMonth,
+                                    expiry_year: expiryYear,
+                                    card_holder: cardHolder
+                                };
+                                await this.paySession('card', this.cardDetails);
+                            } else {
+                                await this.paySession('card', {});
+                            }
                         } else if (this.method === 'mobile_money') {
                             const networkInput = document.querySelector('input[name="momo_network"]')?.value || 'MTN';
                             const phoneInput = document.getElementById('momo_phone')?.value || '';
@@ -1398,6 +1419,14 @@
                     } else if (status === 'failed') {
                         this.paymentState = 'error';
                         this.errorMessage = sessionData.payment_payload?.failure_reason || 'Transaction could not be completed.';
+                    } else if (status === 'awaiting_payment') {
+                        const inlineData = sessionData.payment_payload?.inline;
+                        if (inlineData) {
+                            this.openFlutterwaveInline(inlineData);
+                        } else {
+                            this.paymentState = 'error';
+                            this.errorMessage = 'Could not initialize card payment.';
+                        }
                     } else if (status === 'awaiting_customer_action') {
                         const action = sessionData.payment_payload?.action;
                         if (action === 'pin') {
@@ -1425,6 +1454,62 @@
                         this.startStatusPolling();
                         this.startCountdown();
                     }
+                },
+
+                openFlutterwaveInline(data) {
+                    this.paymentState = 'processing';
+                    this.open = false; // Hide our modal to prevent z-index/click interception issues
+                    const self = this;
+
+                    FlutterwaveCheckout({
+                        public_key: data.public_key,
+                        tx_ref: data.tx_ref,
+                        amount: data.amount,
+                        currency: data.currency,
+                        customer: data.customer,
+                        customizations: data.customizations,
+                        callback: async function(response) {
+                            // Payment completed inside the popup
+                            self.paymentState = 'processing';
+                            try {
+                                let verifyRes = await fetch(
+                                    `/api/payment-sessions/${self.session.id}/verify`,
+                                    {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || ''
+                                        },
+                                        body: JSON.stringify({
+                                            transaction_id: response.transaction_id
+                                        })
+                                    }
+                                );
+                                let verifyData = await verifyRes.json();
+                                if (verifyData.status === 'confirmed') {
+                                    self.paymentState = 'success';
+                                    setTimeout(() => { window.location.href = self.redirectUrl; }, 2000);
+                                } else {
+                                    self.paymentState = 'error';
+                                    self.errorMessage = verifyData.message || 'Payment could not be verified.';
+                                    self.open = true; // Re-open modal to show error
+                                }
+                            } catch (e) {
+                                self.paymentState = 'error';
+                                self.errorMessage = 'Could not verify payment. Please check your connection.';
+                                self.open = true; // Re-open modal to show error
+                            }
+                        },
+                        onclose: function() {
+                            // User closed the popup without completing
+                            if (self.paymentState !== 'success') {
+                                self.paymentState = 'idle';
+                                self.open = true; // Re-open our modal if user cancelled
+                                self.submitting = false;
+                            }
+                        }
+                    });
                 },
 
                 startStatusPolling() {

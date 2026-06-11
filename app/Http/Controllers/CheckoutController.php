@@ -9,7 +9,6 @@ use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Payment\Providers\FlutterwavePaymentProvider;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
-
 use App\Domain\Wallet\Exceptions\InsufficientBalanceException;
 use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Exceptions\WalletOnHoldException;
@@ -34,6 +33,18 @@ class CheckoutController extends Controller
         private CartManager $cartManager,
         private CheckoutService $checkoutService,
     ) {}
+
+    /**
+     * Resolve a storefront route to its dashboard mirror when the request arrived
+     * under /dashboard/shop/* — keeps the cart -> checkout -> order flow inside the
+     * dashboard/PWA chrome instead of redirecting back to the public storefront.
+     */
+    private function shopRoute(Request $request, string $name, mixed $params = []): string
+    {
+        $prefix = $request->is('dashboard/shop*') ? 'dashboard.shop.' : 'shop.';
+
+        return route($prefix.$name, $params);
+    }
 
     public function process(Request $request)
     {
@@ -66,14 +77,13 @@ class CheckoutController extends Controller
         $cart->load('items.product', 'items.variant');
 
         if ($cart->items->isEmpty()) {
-            return redirect()->route('shop.checkout')
+            return redirect($this->shopRoute($request, 'checkout'))
                 ->with('checkout_status', 'Your cart is empty.');
         }
 
         $fraudService = app(FraudDetectionService::class);
         $cartTotals = app(CartPricingService::class)->calculateCartTotals($cart->items);
         $amount = $cartTotals['total'];
-
 
         // Display currency comes from the customer's locale (hidden field on the
         // checkout form). Settlement is always USD; this is presentation only.
@@ -105,7 +115,7 @@ class CheckoutController extends Controller
                 return response()->json(['message' => $msg], 422);
             }
 
-            return redirect()->route('shop.checkout')
+            return redirect($this->shopRoute($request, 'checkout'))
                 ->with('checkout_status', $msg);
         }
 
@@ -122,7 +132,7 @@ class CheckoutController extends Controller
                 return response()->json(['message' => $msg], 403);
             }
 
-            return redirect()->route('shop.checkout')->with('checkout_status', $msg);
+            return redirect($this->shopRoute($request, 'checkout'))->with('checkout_status', $msg);
         }
 
         try {
@@ -151,7 +161,7 @@ class CheckoutController extends Controller
                 return response()->json(['message' => $message], 422);
             }
 
-            return redirect()->route('shop.checkout')->with('checkout_status', $message);
+            return redirect($this->shopRoute($request, 'checkout'))->with('checkout_status', $message);
         } catch (WalletOnHoldException|InsufficientBalanceException|MissingTransactionPinException $e) {
             // Customer-facing wallet errors carry their own polished message —
             // surface them verbatim so the user sees the "wallet on hold /
@@ -162,7 +172,7 @@ class CheckoutController extends Controller
                 return response()->json(['message' => $message], 422);
             }
 
-            return redirect()->route('shop.checkout')->with('checkout_status', $message);
+            return redirect($this->shopRoute($request, 'checkout'))->with('checkout_status', $message);
         } catch (Throwable $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
@@ -170,7 +180,7 @@ class CheckoutController extends Controller
                 ], 422);
             }
 
-            return redirect()->route('shop.checkout')
+            return redirect($this->shopRoute($request, 'checkout'))
                 ->with('checkout_status', 'Checkout could not be completed: '.$e->getMessage());
         }
 
@@ -179,12 +189,12 @@ class CheckoutController extends Controller
 
             return response()->json([
                 'order_number' => $order->order_number,
-                'redirect_url' => route('shop.order', $order->order_number),
+                'redirect_url' => $this->shopRoute($request, 'order', $order->order_number),
                 'payment_session' => $session ? new PaymentSessionResource($session) : null,
             ]);
         }
 
-        return redirect()->route('shop.order', $order->order_number);
+        return redirect($this->shopRoute($request, 'order', $order->order_number));
     }
 
     /**
@@ -216,7 +226,7 @@ class CheckoutController extends Controller
     {
         $attempt = $session->paymentAttempt;
         if (! $attempt) {
-            return redirect()->route('shop.checkout')->with('checkout_status', 'Payment session has expired.');
+            return redirect($this->shopRoute($request, 'checkout'))->with('checkout_status', 'Payment session has expired.');
         }
 
         // payment_sessions has no user_id of its own - ownership lives on the
@@ -236,13 +246,13 @@ class CheckoutController extends Controller
             $verified = $flw->verifyPayment($attempt);
 
             if ($verified && $attempt->order) {
-                return redirect()->route('shop.order', $attempt->order->order_number);
+                return redirect($this->shopRoute($request, 'order', $attempt->order->order_number));
             }
         }
 
         // Anything else (cancelled, failed, or unverified) returns the
         // customer to the checkout page with the cart intact for a retry.
-        return redirect()->route('shop.checkout')
+        return redirect($this->shopRoute($request, 'checkout'))
             ->with('checkout_status', 'Payment was not completed. Please try again or pick a different method.');
     }
 

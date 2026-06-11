@@ -35,6 +35,7 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
             'services.zendit.api_key' => 'ZENDIT_API_KEY_MOCK',
             'services.flutterwave.secret_key' => 'FLW_SECRET_KEY_MOCK',
             'services.flutterwave.public_key' => 'FLW_PUB_KEY_MOCK',
+            'services.flutterwave.direct_charge_enabled' => true,
             'services.nowpayments.api_key' => 'NOWPAYMENTS_KEY_MOCK',
             'pricing.safety_markup_percent' => 10.0,
             'pricing.min_margin_percent' => 1.0,
@@ -591,5 +592,46 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
         ]);
         $payCrypto->assertStatus(200)
             ->assertJsonPath('data.status', 'awaiting_transfer');
+    }
+
+    /**
+     * Test card payment inline initialization flow.
+     */
+    public function test_card_payment_inline_flow(): void
+    {
+        $this->withoutExceptionHandling();
+        config(['services.flutterwave.direct_charge_enabled' => false]);
+
+        $response = $this->actingAs($this->user)->postJson(route('api.wallets.fund.initiate'), [
+            'currency' => 'USD',
+            'amount' => 10.0,
+            'display_currency' => 'USD',
+        ]);
+
+        $sessionId = $response->json('payment_session.id');
+
+        $payResponse = $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $sessionId), [
+            'method' => 'card',
+            'details' => [], // Inline flow doesn't send card details
+        ]);
+
+        $payResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'awaiting_payment')
+            ->assertJsonStructure([
+                'data' => [
+                    'payment_payload' => [
+                        'inline' => [
+                            'public_key',
+                            'tx_ref',
+                            'amount',
+                            'currency',
+                            'customer' => [
+                                'email',
+                                'name'
+                            ]
+                        ]
+                    ],
+                ],
+            ]);
     }
 }

@@ -819,7 +819,7 @@
                     {{-- Empty state --}}
                     <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
                         <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
-                        <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mt-4 h-40 w-auto object-contain animate-float" loading="lazy">
+                        <x-illo name="emptyCart" class="mx-auto mt-4 w-full max-w-[230px]" />
                         <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
                     </div>
 
@@ -859,10 +859,10 @@
                         </ul>
 
                         <div class="mt-3 flex gap-2 rounded-[10px] bg-zinc-50 px-3 py-3">
-                            <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
+                            <a href="{{ route('dashboard.shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
                                 View cart
                             </a>
-                            <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                            <a :href="'{{ route('dashboard.shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                                 Checkout
                             </a>
                         </div>
@@ -1036,7 +1036,7 @@
                     {{-- Cart — links to the cart page with a live count from the
                          global $store.cart (kept in sync with the shop pages). --}}
                     <a
-                        href="{{ route('shop.cart') }}"
+                        href="{{ route('dashboard.shop.cart') }}"
                         wire:navigate
                         aria-label="Cart"
                         class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 transition-colors hover:bg-white/25"
@@ -1100,7 +1100,7 @@
                 <div class="flex items-center gap-1" x-data>
                     {{-- Cart — live count from the global $store.cart, taps through to the cart page. --}}
                     <a
-                        href="{{ route('shop.cart') }}"
+                        href="{{ route('dashboard.shop.cart') }}"
                         wire:navigate
                         aria-label="Cart"
                         class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-white/40 active:scale-95 dark:hover:bg-white/10"
@@ -1165,7 +1165,7 @@
                 {{-- Cart + notification chips (right) - same glass treatment, pinned. --}}
                 <div class="pointer-events-auto flex items-center gap-2" x-data>
                     <a
-                        href="{{ route('shop.cart') }}"
+                        href="{{ route('dashboard.shop.cart') }}"
                         wire:navigate
                         aria-label="Cart"
                         class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
