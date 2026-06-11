@@ -222,8 +222,12 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function navWalletSummary(): array
     {
+        // Rcoin is the rewards points balance, not spendable cash — it has its
+        // own display on the rewards/dashboard pages and converts to USD via a
+        // deliberate flow, so it never inflates the cash chip here.
         $funded = $this->wallets
             ->filter(fn (Wallet $wallet) => (float) $wallet->balance > 0)
+            ->reject(fn (Wallet $wallet) => $this->walletCurrencyCode($wallet) === Currency::RCOIN->value)
             ->values();
 
         if ($funded->isEmpty()) {
@@ -231,19 +235,39 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         // rate_per_usd is "currency units per 1 USD", so USD = balance / rate.
-        // Unknown/zero-rate currencies fall back to 1:1 rather than break the chip.
         $ratesPerUsd = CurrencyRate::query()
             ->where('is_active', true)
             ->pluck('rate_per_usd', 'code');
 
         $usdTotal = $funded->reduce(function (float $carry, Wallet $wallet) use ($ratesPerUsd): float {
-            $code = $wallet->currency instanceof Currency ? $wallet->currency->value : (string) $wallet->currency;
-            $rate = (float) ($ratesPerUsd[$code] ?? 1.0);
+            $code = $this->walletCurrencyCode($wallet);
+
+            // A dollar wallet is already dollars. Never divide it by the USD
+            // row, which carries the platform's pricing spread (e.g. 1.04).
+            if ($code === 'USD') {
+                return $carry + (float) $wallet->balance;
+            }
+
+            // No active rate for the currency = no honest conversion. Skip it
+            // rather than pass the raw figure through 1:1 (4000 XAF is not
+            // $4000 just because the rates table is missing a row).
+            $rate = (float) ($ratesPerUsd[$code] ?? 0.0);
 
             return $carry + ($rate > 0 ? (float) $wallet->balance / $rate : 0.0);
         }, 0.0);
 
         return ['amount' => round($usdTotal, 2), 'combined' => $funded->count() > 1];
+    }
+
+    /**
+     * Uppercase ISO code of a wallet's currency, whether the cast returned the
+     * enum or a raw string.
+     */
+    private function walletCurrencyCode(Wallet $wallet): string
+    {
+        $code = $wallet->currency instanceof Currency ? $wallet->currency->value : (string) $wallet->currency;
+
+        return strtoupper($code);
     }
 
     /**

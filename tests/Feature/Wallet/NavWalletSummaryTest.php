@@ -59,18 +59,49 @@ class NavWalletSummaryTest extends TestCase
         $this->assertTrue($summary['combined']);
     }
 
-    public function test_unknown_rate_falls_back_to_one_to_one(): void
+    public function test_unknown_rate_currency_is_skipped_not_counted_one_to_one(): void
     {
         CurrencyRate::create(['code' => 'USD', 'name' => 'US Dollar', 'type' => 'fiat', 'rate_per_usd' => 1, 'is_active' => true]);
 
         $user = User::factory()->create();
         Wallet::factory()->for($user)->create(['currency' => 'USD', 'balance' => 5]);
+        // No GHS rate row: the balance can't be converted honestly, so it must
+        // not leak into the chip at face value as if cedis were dollars.
         Wallet::factory()->for($user)->create(['currency' => 'GHS', 'balance' => 5]);
 
         $summary = $user->navWalletSummary();
 
-        $this->assertSame(10.0, $summary['amount']);
+        $this->assertSame(5.0, $summary['amount']);
         $this->assertTrue($summary['combined']);
+    }
+
+    public function test_usd_wallet_counts_at_face_value_despite_usd_spread_rate(): void
+    {
+        // The seeded USD row carries the platform pricing spread (1.04). A
+        // dollar wallet is already dollars and must never be divided by it.
+        CurrencyRate::create(['code' => 'USD', 'name' => 'US Dollar', 'type' => 'fiat', 'rate_per_usd' => 1.04, 'is_active' => true]);
+
+        $user = User::factory()->create();
+        Wallet::factory()->for($user)->create(['currency' => 'USD', 'balance' => 100]);
+
+        $summary = $user->navWalletSummary();
+
+        $this->assertSame(100.0, $summary['amount']);
+    }
+
+    public function test_rcoin_wallet_never_inflates_the_cash_chip(): void
+    {
+        $this->usdAndXafRates();
+
+        $user = User::factory()->create();
+        Wallet::factory()->for($user)->create(['currency' => 'USD', 'balance' => 12]);
+        // 4373 reward points are not $4373 of spendable cash.
+        Wallet::factory()->for($user)->create(['currency' => 'RCOIN', 'balance' => 4373]);
+
+        $summary = $user->navWalletSummary();
+
+        $this->assertSame(12.0, $summary['amount']);
+        $this->assertFalse($summary['combined']);
     }
 
     /**

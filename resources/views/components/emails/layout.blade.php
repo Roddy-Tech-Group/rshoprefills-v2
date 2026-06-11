@@ -42,10 +42,13 @@
                     {{-- Brand accent bar --}}
                     <tr><td style="height:5px; background:#2563eb; line-height:5px; font-size:5px;">&nbsp;</td></tr>
 
-                    {{-- Logo header --}}
+                    {{-- Logo header. Flattened-on-white PNG, NOT the transparent
+                         webp the site uses: email image proxies (Gmail) convert
+                         webp to jpeg, which has no alpha — the transparency
+                         renders as a solid black box behind the logo. --}}
                     <tr>
                         <td align="center" class="em-pad" style="padding:32px 40px 4px;">
-                            <img src="{{ asset('assets/Rshoprefillslogo.webp') }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block;">
+                            <img src="{{ asset('assets/email-logo.png') }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block; background:#ffffff;">
                         </td>
                     </tr>
 
