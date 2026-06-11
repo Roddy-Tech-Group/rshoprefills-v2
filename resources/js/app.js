@@ -1480,6 +1480,10 @@ window.bestSellingCountriesMap = function (payload) {
             const bg = dark ? '#26416b' : '#e5e7eb';
             const stroke = dark ? '#34507a' : '#cbd5e1';
 
+            // Initial fill, kept so _refresh() can un-shade countries that
+            // drop out when a filter narrows the window.
+            this._baseFill = bg;
+
             // Cursor affordance: grab on idle, grabbing during a drag pan.
             el.style.cursor = 'grab';
             el.addEventListener('mousedown', () => { el.style.cursor = 'grabbing'; });
@@ -1521,6 +1525,10 @@ window.bestSellingCountriesMap = function (payload) {
                         : name, true);
                 },
             });
+
+            // Seed the shaded-codes memory with the initial paint so the first
+            // filter change can reset countries that drop out.
+            this._lastShaded = Object.keys(this._values());
 
             this.$watch('view', () => this._refresh());
             this.$watch('continent', () => this._refresh());
@@ -1567,15 +1575,18 @@ window.bestSellingCountriesMap = function (payload) {
         },
 
         _scale() {
-            // Two near-identical brand blues — jsvectormap collapses to black
-            // when both ends of the scale are exactly equal, so we use a
-            // hairline gradient (#1d4ed8 → #0044FF) that reads as uniform blue
-            // but keeps the interpolator happy.
-            return ['#1d4ed8', '#0044FF'];
+            // jsvectormap's Series only understands an ORDINAL scale: an
+            // object of named keys -> colors, with values mapping each region
+            // to one of those keys. (An array scale + numeric values makes
+            // every lookup return undefined, which SVG paints BLACK - the
+            // "black country" bug.) Four brand-blue intensity tiers; _values()
+            // buckets each country's USD total into one of them.
+            return { t1: '#93c5fd', t2: '#60a5fa', t3: '#3b82f6', t4: '#1d4ed8' };
         },
 
-        _values() {
-            // Country mode: shade per-country, filtered by continent scope.
+        // Numeric USD totals per country for the current view + continent
+        // scope. The tooltip reads these directly.
+        _numericValues() {
             if (this.view === 'country') {
                 const out = {};
                 Object.keys(this.countries).forEach((cc) => {
@@ -1595,6 +1606,19 @@ window.bestSellingCountriesMap = function (payload) {
             return out;
         },
 
+        // Bucket the numeric totals into the ordinal tier keys the scale
+        // understands: top seller gets the deepest blue, others scale down.
+        _values() {
+            const nums = this._numericValues();
+            const max = Math.max(0, ...Object.values(nums));
+            const out = {};
+            Object.keys(nums).forEach((cc) => {
+                const ratio = max > 0 ? nums[cc] / max : 0;
+                out[cc] = ratio > 0.75 ? 't4' : (ratio > 0.5 ? 't3' : (ratio > 0.25 ? 't2' : 't1'));
+            });
+            return out;
+        },
+
         _tooltipValue(code) {
             if (!this._inScope(code)) { return null; }
             if (this.view === 'country') { return this.countries[code] ?? null; }
@@ -1604,7 +1628,20 @@ window.bestSellingCountriesMap = function (payload) {
 
         _refresh() {
             if (!this.map) { return; }
-            this.map.series.regions[0].setValues(this._values());
+            const series = this.map.series.regions[0];
+            const tiers = this._values();
+
+            // setValues() only paints the codes it is given - countries shaded
+            // by the previous filter would keep their old blue, so reset any
+            // that dropped out of the new window back to the base fill first.
+            const reset = {};
+            (this._lastShaded || []).forEach((cc) => {
+                if (!(cc in tiers)) { reset[cc] = this._baseFill; }
+            });
+            series.setAttributes(reset);
+
+            series.setValues(tiers);
+            this._lastShaded = Object.keys(tiers);
         },
     };
 };
