@@ -221,8 +221,9 @@
                         </div>
                     </div>
 
-                    {{-- Options --}}
-                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain p-1">
+                    {{-- Options - capped at ~8 rows so the dropdown never
+                         spills past the modal; the list itself scrolls. --}}
+                    <div class="max-h-80 overflow-y-auto overscroll-contain p-1">
                         <template x-for="[name, flag] in Object.entries(options).filter(([n]) => n.toLowerCase().includes(search.toLowerCase()))" :key="name">
                             <button
                                 type="button"
@@ -303,8 +304,9 @@
                         </div>
                     </div>
 
-                    {{-- Options --}}
-                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain p-1">
+                    {{-- Options - capped at ~8 rows so the dropdown never
+                         spills past the modal; the list itself scrolls. --}}
+                    <div class="max-h-80 overflow-y-auto overscroll-contain p-1">
                         <template x-for="lang in options.filter(l => l.toLowerCase().includes(search.toLowerCase()))" :key="lang">
                             <button
                                 type="button"
