@@ -79,14 +79,17 @@
     } elseif ($sort === 'name-desc') {
         $productsQuery->orderByDesc('name');
     } else {
-        // Default (Popularity): curated popular brands lead the page, then the
-        // is_popular / is_featured flags, then alphabetical.
+        // Default (Popularity): the admin's is_popular / is_featured flags
+        // lead the page - those are set per product on the admin dashboard
+        // and outrank the hand-curated config list, which only breaks ties
+        // among unflagged brands. Alphabetical last.
+        $productsQuery->orderByDesc('is_popular')->orderByDesc('is_featured');
         $popularKeys = config('popular_brands.keys', []);
         if (! empty($popularKeys)) {
             $placeholders = implode(',', array_fill(0, count($popularKeys), '?'));
             $productsQuery->orderByRaw("CASE WHEN brand_key IN ({$placeholders}) THEN 0 ELSE 1 END", $popularKeys);
         }
-        $productsQuery->orderByDesc('is_popular')->orderByDesc('is_featured')->orderBy('name');
+        $productsQuery->orderBy('name');
     }
 
     // The listing shows every matching brand on one page — no pagination.

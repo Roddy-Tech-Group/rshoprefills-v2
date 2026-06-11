@@ -56,33 +56,37 @@
             ->get();
     };
 
-    // "Popular Gift Cards" is a hand-curated brand list (config/popular_brands.php) —
-    // the same list floats these brands to the top of the /gift-cards listing.
-    $popularKeys = config('popular_brands.keys', []);
-    $popularIdByKey = Product::query()
-        ->where('is_active', true)
-        ->where('country_code', $region)
-        ->whereIn('brand_key', $popularKeys)
-        ->select('brand_key', DB::raw('MIN(id) as id'))
-        ->groupBy('brand_key')
-        ->pluck('id');
-    // Take the full curated popular list (was capped at 5, which dropped
-    // Steam off some regions). With 7 brands and 5 grid columns, the row
-    // wraps cleanly into 5 + 2 on desktop and stays a single horizontal
-    // scroll on mobile.
-    $popularBrands = Product::query()
-        ->whereIn('id', $popularIdByKey)
-        ->with('variants:id,product_id,retail_price,is_variable,is_available')
-        ->get()
-        ->sortBy(fn ($p) => array_search($p->brand_key, $popularKeys))
-        ->take(count($popularKeys))
-        ->values();
+    // "Popular Gift Cards" is admin-driven: products flagged is_popular on the
+    // admin products page lead the row. The hand-curated list in
+    // config/popular_brands.php is only a fallback for regions where nothing
+    // has been flagged yet, so the row never renders empty.
+    $popularBrands = $brandPicks('is_popular', 7);
 
+    if ($popularBrands->isEmpty()) {
+        $popularKeys = config('popular_brands.keys', []);
+        $popularIdByKey = Product::query()
+            ->where('is_active', true)
+            ->where('country_code', $region)
+            ->whereIn('brand_key', $popularKeys)
+            ->select('brand_key', DB::raw('MIN(id) as id'))
+            ->groupBy('brand_key')
+            ->pluck('id');
+        $popularBrands = Product::query()
+            ->whereIn('id', $popularIdByKey)
+            ->with('variants:id,product_id,retail_price,is_variable,is_available')
+            ->get()
+            ->sortBy(fn ($p) => array_search($p->brand_key, $popularKeys))
+            ->take(count($popularKeys))
+            ->values();
+    }
+
+    // Featured row renders at the very top of the storefront, and ONLY from
+    // real admin flags - no fallback filler, so an empty flag set simply
+    // hides the row instead of duplicating the browse list.
     $featuredBrands = $brandPicks('is_featured', 5);
     $browseBrands   = $brandPicks(null, 5);
 
-    // Fallbacks so a row never renders empty (e.g. a small region, or no popular/featured flags).
-    if ($featuredBrands->isEmpty()) { $featuredBrands = $browseBrands; }
+    // Last-resort fallback so the Popular row never renders empty.
     if ($popularBrands->isEmpty()) { $popularBrands = $browseBrands; }
 @endphp
 
@@ -110,6 +114,7 @@
         // 5 columns on desktop (lg) for larger, less cramped cards. Each row's
         // brand list is capped at 5 above so the desktop row stays clean.
         $renderRow = [
+            ['title' => 'Featured Gift Cards',     'subtitle' => 'Hand-picked highlights from our catalog',        'cols' => 5, 'carousel' => true, 'brands' => $featuredBrands, 'href' => route('shop.gift-cards')],
             ['title' => 'Popular Gift Cards',      'subtitle' => 'Top-rated gift cards across categories',         'cols' => 5, 'carousel' => true, 'brands' => $popularBrands],
             ['title' => 'Gaming & Entertainment',  'subtitle' => 'Game credit, console codes and streaming passes', 'cols' => 5, 'carousel' => true, 'brands' => $brandPicksBySubcategory('gaming-entertainment', 20), 'href' => route('shop.gift-cards', ['subcategory' => 'gaming-entertainment'])],
             ['title' => 'Digital Apps',            'subtitle' => 'App store credit and subscription gift cards',    'cols' => 5, 'carousel' => true, 'brands' => $brandPicksBySubcategory('digital-apps', 20),         'href' => route('shop.gift-cards', ['subcategory' => 'digital-apps'])],

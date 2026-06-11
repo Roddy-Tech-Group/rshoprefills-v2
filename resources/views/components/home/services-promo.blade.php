@@ -120,7 +120,11 @@
                         }"
                         class="w-full sm:w-auto"
                     >
-                        <div class="flex w-full items-center gap-2 rounded-[25px] px-2 py-2 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150 sm:inline-flex sm:w-auto"
+                        {{-- overflow-hidden + max-w-full hard-contain the pill so the
+                             Copy chip can never hang past the rounded edge on narrow
+                             phones; the URL truncates first. Mobile gets slightly
+                             tighter padding/type than sm+. --}}
+                        <div class="flex w-full max-w-full items-center gap-1.5 overflow-hidden rounded-[25px] py-1.5 pl-1 pr-1.5 ring-1 ring-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150 sm:inline-flex sm:w-auto sm:gap-2 sm:px-2 sm:py-2"
                              style="background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);"
                         >
                             <a
@@ -129,13 +133,13 @@
                                 data-url="{{ $referralUrl }}"
                                 target="_blank"
                                 rel="noopener"
-                                class="min-w-0 flex-1 truncate pl-3 font-mono text-xs text-blue-300 underline-offset-4 transition-colors hover:text-blue-200 hover:underline sm:flex-initial sm:text-sm"
+                                class="min-w-0 flex-1 truncate pl-2.5 font-mono text-[11px] text-blue-300 underline-offset-4 transition-colors hover:text-blue-200 hover:underline sm:flex-initial sm:pl-3 sm:text-sm"
                             >{{ $referralUrl }}</a>
                             <button
                                 type="button"
                                 @click="copy()"
                                 aria-label="Copy your referral link"
-                                class="inline-flex shrink-0 items-center gap-1.5 rounded-[20px] bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 transition-colors hover:bg-zinc-100"
+                                class="inline-flex shrink-0 items-center gap-1 rounded-[20px] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-zinc-900 transition-colors hover:bg-zinc-100 sm:gap-1.5 sm:px-3 sm:text-xs"
                             >
                                 <svg x-show="! copied" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25"/>
