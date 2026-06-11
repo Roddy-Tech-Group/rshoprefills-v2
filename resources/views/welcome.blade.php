@@ -60,7 +60,7 @@
     // admin products page lead the row. The hand-curated list in
     // config/popular_brands.php is only a fallback for regions where nothing
     // has been flagged yet, so the row never renders empty.
-    $popularBrands = $brandPicks('is_popular', 7);
+    $popularBrands = $brandPicks('is_popular', 10);
 
     if ($popularBrands->isEmpty()) {
         $popularKeys = config('popular_brands.keys', []);
@@ -83,7 +83,7 @@
     // Featured row renders at the very top of the storefront, and ONLY from
     // real admin flags - no fallback filler, so an empty flag set simply
     // hides the row instead of duplicating the browse list.
-    $featuredBrands = $brandPicks('is_featured', 5);
+    $featuredBrands = $brandPicks('is_featured', 10);
     $browseBrands   = $brandPicks(null, 5);
 
     // Last-resort fallback so the Popular row never renders empty.

@@ -306,9 +306,11 @@
                                                         Out of stock
                                                     </span>
                                                 @elseif ($product->is_popular)
-                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-fuchsia-500 bg-fuchsia-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-600 backdrop-blur-sm">Popular</span>
+                                                    {{-- Round pill with a soft fuchsia glow halo. --}}
+                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-fuchsia-500 bg-fuchsia-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-600 shadow-[0_0_12px_rgba(217,70,239,0.55)] backdrop-blur-sm">Popular</span>
                                                 @elseif ($product->is_featured)
-                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-amber-500 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-600 backdrop-blur-sm">Featured</span>
+                                                    {{-- Round pill with a soft amber glow halo. --}}
+                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-amber-500 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-600 shadow-[0_0_12px_rgba(245,158,11,0.6)] backdrop-blur-sm">Featured</span>
                                                 @endif
 
                                             </div>
