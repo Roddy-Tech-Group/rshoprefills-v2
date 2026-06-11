@@ -143,16 +143,19 @@ new class extends Component {
     <div class="relative flex items-center">
         {{-- Compact popover. Anchored just left of the button, only slightly
              wider than it - no backdrop, no scroll lock. Tap outside to close. --}}
+        {{-- Springy pop-out: scales up from the edge tab with a bouncy
+             overshoot (same easing family as the theme-toggle spin-pop and
+             the locale modal sheet) instead of the old flat fade. --}}
         <div
             x-show="open"
             x-cloak
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0 translate-x-2 scale-95"
+            x-transition:enter="transition duration-[450ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            x-transition:enter-start="opacity-0 translate-x-8 scale-50"
             x-transition:enter-end="opacity-100 translate-x-0 scale-100"
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100 translate-x-0 scale-100"
-            x-transition:leave-end="opacity-0 translate-x-2 scale-95"
-            class="absolute right-full mr-2 w-72 origin-right rounded-[10px] bg-white p-4 shadow-2xl shadow-zinc-900/25 ring-1 ring-zinc-200 dark:bg-[#0c1a36] dark:ring-white/15"
+            x-transition:leave-end="opacity-0 translate-x-4 scale-75"
+            class="absolute right-full mr-2 w-72 origin-right rounded-[10px] bg-white p-4 shadow-2xl shadow-zinc-900/25 ring-1 ring-zinc-200 motion-reduce:transition-none dark:bg-[#0c1a36] dark:ring-white/15"
             role="dialog"
             aria-modal="false"
             aria-labelledby="feedback-title"

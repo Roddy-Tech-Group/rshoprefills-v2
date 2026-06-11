@@ -535,9 +535,9 @@ new #[Lazy] class extends Component
                         >
                             <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Appearance</p>
                             @foreach ([
-                                ['value' => 'light',  'label' => 'Light',  'png' => 'Light mode respects theme.webp'],
-                                ['value' => 'dark',   'label' => 'Dark',   'png' => 'Dark mode respects light and dark mode.webp'],
-                                ['value' => 'system', 'label' => 'System', 'png' => 'Auto Mode.webp'],
+                                ['value' => 'light',  'label' => 'Light',  'icon' => 'icons.theme-light'],
+                                ['value' => 'dark',   'label' => 'Dark',   'icon' => 'icons.theme-dark'],
+                                ['value' => 'system', 'label' => 'System', 'icon' => 'icons.theme-auto'],
                             ] as $opt)
                                 <button
                                     type="button"
@@ -547,12 +547,7 @@ new #[Lazy] class extends Component
                                     role="menuitem"
                                 >
                                     <span class="inline-flex items-center gap-2.5">
-                                        <img
-                                            src="{{ asset('assets/' . rawurlencode($opt['png'])) }}"
-                                            alt=""
-                                            class="h-4 w-4 shrink-0 brightness-0 dark:invert"
-                                            loading="lazy"
-                                        >
+                                        <x-dynamic-component :component="$opt['icon']" class="h-4 w-4" />
                                         {{ $opt['label'] }}
                                     </span>
                                     <svg x-show="theme === '{{ $opt['value'] }}'" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">

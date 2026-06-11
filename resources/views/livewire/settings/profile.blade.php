@@ -711,13 +711,13 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                 </div>
             </div>
 
-            {{-- Modern segmented selector — uses the project-canonical PNG theme
-                 icons (brightness-0 + dark:invert so they adapt to the surface). --}}
+            {{-- Modern segmented selector — animated inline-SVG theme icons
+                 (currentColor, so they adapt to the surface automatically). --}}
             @php
                 $themeOptions = [
-                    ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.webp'],
-                    ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.webp'],
-                    ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.webp'],
+                    ['value' => 'light',  'label' => 'Light', 'icon' => 'icons.theme-light'],
+                    ['value' => 'dark',   'label' => 'Dark',  'icon' => 'icons.theme-dark'],
+                    ['value' => 'system', 'label' => 'Auto',  'icon' => 'icons.theme-auto'],
                 ];
             @endphp
 
@@ -730,7 +730,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         class="flex flex-col items-center gap-1.5 rounded-[10px] px-2 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-95"
                         :aria-pressed="theme === '{{ $opt['value'] }}'"
                     >
-                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-4 w-4 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
+                        <x-dynamic-component :component="$opt['icon']" class="h-4 w-4" />
                         {{ $opt['label'] }}
                     </button>
                 @endforeach
