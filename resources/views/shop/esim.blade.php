@@ -775,7 +775,7 @@
         {{-- Networks modal --}}
         <div x-show="showNetworks" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="networks-title">
             <div x-show="showNetworks" @click="showNetworks = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showNetworks" x-transition class="relative w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showNetworks" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="networks-title" class="text-lg font-bold text-zinc-900 dark:text-white">{{ $coverageCount > 1 ? 'Countries & Networks' : 'Networks' }}</h2>
                     <button type="button" @click="showNetworks = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
@@ -791,19 +791,24 @@
                     </div>
                 @else
                     <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">This eSIM may switch between the following networks based on availability and speed. You can adjust this in your device settings.</p>
-                    <ul class="mt-4 space-y-2.5">
-                        @forelse ($carrierNetworks as $net)
-                            <li class="flex items-center gap-2.5 text-sm font-semibold text-zinc-900 dark:text-white">
-                                <img src="{{ asset('assets/'.rawurlencode('Network Svg.svg')) }}" alt="" class="h-4 w-4 dark:invert" aria-hidden="true">
-                                {{ $net['name'] }}
-                                @if (! empty($net['speed']))
-                                    <span class="rounded-[5px] bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 dark:bg-[#26416b] dark:text-zinc-200">{{ $net['speed'] }}</span>
-                                @endif
-                            </li>
-                        @empty
-                            <li class="text-sm text-zinc-600 dark:text-zinc-300">Your device connects automatically to the best available local network in {{ $regionLabel }}.</li>
-                        @endforelse
-                    </ul>
+                    {{-- Global eSIMs can list 100+ carriers - cap the list like
+                         the countries branch so the modal never outgrows the
+                         screen; the list itself scrolls. --}}
+                    <div class="mt-4 max-h-72 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] pr-1">
+                        <ul class="space-y-2.5">
+                            @forelse ($carrierNetworks as $net)
+                                <li class="flex items-center gap-2.5 text-sm font-semibold text-zinc-900 dark:text-white">
+                                    <img src="{{ asset('assets/'.rawurlencode('Network Svg.svg')) }}" alt="" class="h-4 w-4 dark:invert" aria-hidden="true">
+                                    {{ $net['name'] }}
+                                    @if (! empty($net['speed']))
+                                        <span class="rounded-[5px] bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600 dark:bg-[#26416b] dark:text-zinc-200">{{ $net['speed'] }}</span>
+                                    @endif
+                                </li>
+                            @empty
+                                <li class="text-sm text-zinc-600 dark:text-zinc-300">Your device connects automatically to the best available local network in {{ $regionLabel }}.</li>
+                            @endforelse
+                        </ul>
+                    </div>
                 @endif
             </div>
         </div>
