@@ -159,13 +159,6 @@
                         </table>
                     @endforeach
 
-                    @if ($esim['lpa'])
-                        {{-- The SM-DP+ value looks like a URL, and mail clients
-                             auto-link it - but it is a provisioning server the
-                             phone talks to, not a web page. Say so before a
-                             customer taps it and lands on an error. --}}
-                        <p style="margin:8px 0 0; font-size:10px; line-height:1.5; color:#a1a1aa;">The SM-DP+ address is not a website. Enter it together with the activation code in Settings &gt; Cellular &gt; Add eSIM &gt; Enter Details Manually.</p>
-                    @endif
                 @else
                     {{-- Code + PIN. No copy button (email clients strip JS); values are
                          select-all so a tap highlights them, and the dashboard button
@@ -202,8 +195,9 @@
         </tr>
     </table>
 
+    {{-- Cashback callout - immediately after the card / access code,
+         replacing the dedicated Rcoin email. --}}
     @if ($rcoinEarned > 0)
-        {{-- Cashback callout - replaces the dedicated Rcoin email. --}}
         <x-emails.panel title="Rcoin cashback" background="#fffbeb" border="#fde68a" accent="#b45309">
             <p style="margin:0; font-size:14px; line-height:1.6; color:#3f3f46;">
                 You earned <strong style="color:#b45309;">+{{ number_format($rcoinEarned) }} Rcoin</strong> on this order.
@@ -212,34 +206,42 @@
         </x-emails.panel>
     @endif
 
-    @if ($redeemHtml)
-        <x-emails.panel title="How to redeem">
-            <div style="font-size:14px; line-height:1.6; color:#3f3f46;">{!! $redeemHtml !!}</div>
-        </x-emails.panel>
-    @endif
-
     @if ($esim)
+        {{-- Action stack: install on iPhone > Manage your eSIM > Top up eSIM >
+             View in your dashboard. Plain block <a> tags sized to the card
+             column so they read as one unit with it across email clients. --}}
         @if ($esim['install'])
-            {{-- iOS tap-to-install: opens the eSIM provisioning flow directly
-                 on iPhone, no QR scan needed. --}}
-            <x-emails.button :url="$esim['install']" align="center" color="#18181b">install on iPhone</x-emails.button>
+            <a href="{{ $esim['install'] }}" style="display:block; max-width:320px; margin:14px auto 0; background:#18181b; color:#ffffff; font-family:'Inter',-apple-system,Helvetica,Arial,sans-serif; font-size:14px; font-weight:600; line-height:1.2; text-align:center; text-decoration:none; padding:13px 16px; border-radius:10px;">install on iPhone</a>
         @endif
-
-        {{-- Branded eSIM page: live data usage, compatible devices, manual
-             setup, and downloadable PDF instructions all live there. Falls
-             back to the dashboard when the hosted link is not available. --}}
-        <x-emails.button :url="$esim['manage'] ?? url('/dashboard/orders')" align="center">Manage your eSIM</x-emails.button>
-
-        <p style="margin:0; font-size:13px; line-height:1.65; color:#71717a; text-align:center;">Your eSIM page has everything else you need: installation steps for your exact device, the compatible-device list, manual setup values and a downloadable PDF guide.</p>
-
+        <a href="{{ $esim['manage'] ?? url('/dashboard/orders') }}" style="display:block; max-width:320px; margin:8px auto 0; background:#2563eb; color:#ffffff; font-family:'Inter',-apple-system,Helvetica,Arial,sans-serif; font-size:14px; font-weight:600; line-height:1.2; text-align:center; text-decoration:none; padding:13px 16px; border-radius:10px;">Manage your eSIM</a>
         @if ($item->provider_name === 'airalo')
-            <x-emails.button :url="route('dashboard.esim.topup', $item)" align="center" color="#0f766e">Top up eSIM</x-emails.button>
+            <a href="{{ route('dashboard.esim.topup', $item) }}" style="display:block; max-width:320px; margin:8px auto 0; background:#0f766e; color:#ffffff; font-family:'Inter',-apple-system,Helvetica,Arial,sans-serif; font-size:14px; font-weight:600; line-height:1.2; text-align:center; text-decoration:none; padding:13px 16px; border-radius:10px;">Top up eSIM</a>
+        @endif
+        <a href="{{ url('/dashboard/orders') }}" style="display:block; max-width:320px; margin:8px auto 0; background:#64748b; color:#ffffff; font-family:'Inter',-apple-system,Helvetica,Arial,sans-serif; font-size:14px; font-weight:600; line-height:1.2; text-align:center; text-decoration:none; padding:13px 16px; border-radius:10px;">View in your dashboard</a>
+
+        @if ($esim['lpa'])
+            {{-- The SM-DP+ value looks like a URL, and mail clients auto-link
+                 it - but it is a provisioning server the phone talks to, not a
+                 web page. Say so before a customer taps it. --}}
+            <p style="margin:14px 0 0; font-size:11px; line-height:1.6; color:#a1a1aa; text-align:center;">The SM-DP+ address is not a website. Enter it together with the activation code in Settings &gt; Cellular &gt; Add eSIM &gt; Enter Details Manually.</p>
         @endif
 
-        <x-emails.button :url="url('/dashboard/orders')" align="center" color="#64748b">View in your dashboard</x-emails.button>
+        @if ($redeemHtml)
+            <x-emails.panel title="How to redeem">
+                <div style="font-size:14px; line-height:1.6; color:#3f3f46;">{!! $redeemHtml !!}</div>
+            </x-emails.panel>
+        @endif
+
+        <p style="margin:14px 0 0; font-size:13px; line-height:1.65; color:#71717a; text-align:center;">Your eSIM page has everything else you need: installation steps for your exact device, the compatible-device list, manual setup values and a downloadable PDF guide.</p>
 
         <p style="margin:18px 0 0; font-size:13px; line-height:1.6; color:#a1a1aa;">Treat these installation details like cash. Do not share them with anyone you do not trust.</p>
     @else
+        @if ($redeemHtml)
+            <x-emails.panel title="How to redeem">
+                <div style="font-size:14px; line-height:1.6; color:#3f3f46;">{!! $redeemHtml !!}</div>
+            </x-emails.panel>
+        @endif
+
         <x-emails.button :url="url('/dashboard/orders')" align="center">View &amp; copy your code</x-emails.button>
 
         <p style="margin:18px 0 0; font-size:13px; line-height:1.6; color:#a1a1aa;">Treat this code like cash. Do not share it with anyone you do not trust.</p>

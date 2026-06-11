@@ -78,10 +78,12 @@ class OrderFulfilledMailTest extends TestCase
             'iccid' => '8944465400000000000',
             'sharing_link' => 'https://esims.cloud/rshoprefill/test-share/instructions',
             'sharing_access_code' => 'ACCESS-1234',
+            'direct_install_url' => 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=test',
             'esim' => [
                 'iccid' => '8944465400000000000',
                 'lpaUrl' => 'wbg.prod.ondemandconnectivity.com',
                 'manualActivationCode' => 'K2-1ABCDE-3FGHIJ',
+                'directInstallUrl' => 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=test',
                 'sharingLink' => 'https://esims.cloud/rshoprefill/test-share/instructions',
                 'sharingAccessCode' => 'ACCESS-1234',
             ],
@@ -95,11 +97,25 @@ class OrderFulfilledMailTest extends TestCase
         $this->assertStringContainsString('SM-DP+ Address', $html);
         $this->assertStringContainsString('wbg.prod.ondemandconnectivity.com', $html);
         $this->assertStringContainsString('K2-1ABCDE-3FGHIJ', $html);
-        $this->assertStringContainsString('Access code', $html);
-        $this->assertStringContainsString('ACCESS-1234', $html);
-        $this->assertStringContainsString('Manage your eSIM', $html);
         $this->assertStringContainsString('https://esims.cloud/rshoprefill/test-share/instructions', $html);
-        $this->assertStringContainsString('Top up eSIM', $html);
+
+        // Layout contract: Access code row > Rcoin earned > action buttons
+        // (install on iPhone > Manage your eSIM > Top up eSIM > View in your
+        // dashboard) > SM-DP+ note > footer text.
+        $positions = [
+            'Access code' => strpos($html, 'Access code'),
+            'Rcoin cashback' => strpos($html, 'Rcoin cashback'),
+            'install on iPhone' => strpos($html, 'install on iPhone'),
+            'Manage your eSIM' => strpos($html, 'Manage your eSIM'),
+            'Top up eSIM' => strpos($html, 'Top up eSIM'),
+            'View in your dashboard' => strpos($html, 'View in your dashboard'),
+            'The SM-DP+ address is not a website' => strpos($html, 'The SM-DP+ address is not a website'),
+            'Treat these installation details' => strpos($html, 'Treat these installation details'),
+        ];
+        foreach ($positions as $label => $pos) {
+            $this->assertNotFalse($pos, "Expected '{$label}' in the eSIM email");
+        }
+        $this->assertSame(array_keys($positions), array_keys(collect($positions)->sort()->all()), 'eSIM email actions are out of order');
     }
 
     public function test_esim_email_without_sharing_link_falls_back_to_dashboard(): void
