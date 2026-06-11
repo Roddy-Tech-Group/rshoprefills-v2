@@ -527,6 +527,11 @@ Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])
     ->middleware('auth')
     ->name('shop.order');
 
+// Status probe polled by the order page while fulfillment is in flight.
+Route::get('order/{orderNumber}/status.json', [CheckoutController::class, 'orderStatus'])
+    ->middleware('auth')
+    ->name('shop.order.status');
+
 // Downloadable receipts for the order success view.
 Route::get('order/{orderNumber}/codes.csv', [CheckoutController::class, 'codesCsv'])
     ->middleware('auth')

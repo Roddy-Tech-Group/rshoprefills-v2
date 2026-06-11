@@ -86,10 +86,10 @@
     // Render against settlement_currency so the symbol and number agree.
     $sym   = Product::currencySymbol($order->settlement_currency ?: 'USD');
     $money = fn ($v) => $sym . number_format((float) $v, 2);
-    $engine = app(\App\Domain\Rewards\Services\RewardEngine::class);
     $rcoinEnabled = (bool) \App\Models\Setting::get('rcoin_enabled', true);
-    $cashbackPercentage = (float) \App\Models\Setting::get('cashback_percentage', 1.0);
-    $points = $engine->usdToRcoin((float) $order->total_amount * ($cashbackPercentage / 100));
+    // Settlement USD via the engine's preview - total_amount is the
+    // display-currency figure (1249.60 XAF must not show as 1249 points).
+    $points = app(\App\Domain\Rewards\Services\RewardEngine::class)->cashbackPreviewFor($order);
     $isPending = in_array($status->value, ['pending', 'processing'], true);
 
     $latestAttempt = $order->paymentAttempts->sortByDesc('created_at')->first();
@@ -863,25 +863,17 @@
                 <p class="mt-1 text-xs text-zinc-500">Please do not close this window.</p>
             </div>
 
-            <!-- Success state: matches the post-order-complete hero so the
-                 customer sees a consistent green tick across both moments. -->
+            <!-- Success state: the same animated tick as the order-complete
+                 hero so the customer sees one consistent celebration. -->
             <div x-show="paymentState === 'success'" class="flex flex-col items-center py-10 text-center">
-                <span class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30">
-                    <svg class="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                    </svg>
-                </span>
+                <x-success-tick />
                 <h3 class="mt-5 text-2xl font-bold text-zinc-900 dark:text-white">Payment complete</h3>
                 <p class="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">Your order status is refreshing now.</p>
             </div>
 
-            <!-- Error state -->
+            <!-- Error state: animated red cross, the tick's counterpart. -->
             <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
-                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </span>
+                <x-error-cross />
                 <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
                 <p class="mt-1.5 text-xs text-red-600 px-4" x-text="errorMessage"></p>
                 
@@ -1113,5 +1105,30 @@
 </div>
 </div>
 
+@endif
+
+@if ($isPending)
+    {{-- Fulfillment watcher: while the order is pending/processing, poll the
+         status probe and swap this page for the completed (or failed) view
+         the moment fulfillment lands - the customer never reloads by hand.
+         Capped at ~10 minutes; past that the email/dashboard take over. --}}
+    <script>
+        (function () {
+            const url = @js(route('shop.order.status', $order->order_number));
+            let ticks = 0;
+            const timer = setInterval(async () => {
+                if (++ticks > 150) { clearInterval(timer); return; }
+                try {
+                    const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                    if (! res.ok) { return; }
+                    const data = await res.json();
+                    if (data.order_status && ! ['pending', 'processing'].includes(data.order_status)) {
+                        clearInterval(timer);
+                        window.location.reload();
+                    }
+                } catch (e) { /* transient network blip - keep polling */ }
+            }, 4000);
+        })();
+    </script>
 @endif
 </x-shop.layout>
