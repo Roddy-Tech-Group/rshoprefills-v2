@@ -1,6 +1,10 @@
 @props([
     'title' => 'RshopRefills',
     'preheader' => null,
+    // The Illuminate\Mail\Message for the send in progress. Blade components
+    // do not inherit the parent view's $message variable, so templates pass
+    // it in (:mail-message="$message ?? null") to enable CID inline images.
+    'mailMessage' => null,
 ])
 {{--
     Shared branded email shell. Table-based + inline styles for broad email-client
@@ -45,10 +49,24 @@
                     {{-- Logo header. Flattened-on-white PNG, NOT the transparent
                          webp the site uses: email image proxies (Gmail) convert
                          webp to jpeg, which has no alpha — the transparency
-                         renders as a solid black box behind the logo. --}}
+                         renders as a solid black box behind the logo. Embedded
+                         inline (CID) on real sends because remote fetches
+                         through those proxies are unreliable; $message is only
+                         set while actually sending, so render()/previews fall
+                         back to the public URL. --}}
+                    @php
+                        $emailLogoSrc = asset('assets/email-logo.png');
+                        if ($mailMessage instanceof \Illuminate\Mail\Message && is_file(public_path('assets/email-logo.png'))) {
+                            try {
+                                $emailLogoSrc = $mailMessage->embed(public_path('assets/email-logo.png'));
+                            } catch (\Throwable $e) {
+                                // Keep the URL; a missing logo must never block the email.
+                            }
+                        }
+                    @endphp
                     <tr>
                         <td align="center" class="em-pad" style="padding:32px 40px 4px;">
-                            <img src="{{ asset('assets/email-logo.png') }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block; background:#ffffff;">
+                            <img src="{{ $emailLogoSrc }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block; background:#ffffff;">
                         </td>
                     </tr>
 

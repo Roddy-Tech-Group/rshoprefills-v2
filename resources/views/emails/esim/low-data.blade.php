@@ -9,7 +9,7 @@
     $bgTint = $isExpiry ? '#fef3c7' : '#fee2e2';   // amber-100 / red-100
     $badge  = $isExpiry ? 'Expires soon' : 'Low data';
 @endphp
-<x-emails.layout :title="$headline" :preheader="$preheader">
+<x-emails.layout :mail-message="$message ?? null" :title="$headline" :preheader="$preheader">
     <p style="margin:0 0 12px;">
         <span style="display:inline-block; padding:4px 10px; border-radius:5px; background:{{ $bgTint }}; color:{{ $accent }}; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">{{ $badge }}</span>
     </p>

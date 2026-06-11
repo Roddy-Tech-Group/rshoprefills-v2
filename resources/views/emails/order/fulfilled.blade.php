@@ -74,7 +74,7 @@
         ? 'Your eSIM and installation details are ready to use.'
         : 'Your gift card and redemption code are ready to use.';
 @endphp
-<x-emails.layout :title="$emailTitle" :preheader="$emailPreheader">
+<x-emails.layout :mail-message="$message ?? null" :title="$emailTitle" :preheader="$emailPreheader">
 
     <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">{{ $emailTitle }}, {{ $name }}.</h1>
 
@@ -118,11 +118,30 @@
                 @if ($esim)
                     {{-- QR for scan-to-install. Email clients strip JS, so the
                          manual rows below cover devices that can't scan. --}}
-                    @if ($esim['qr'])
+                    @php
+                        // Embed the QR PNG inline (CID attachment) instead of
+                        // hot-linking the provider's signed URL: image proxies
+                        // (Gmail) routinely fail on it, and the URL leaks the
+                        // supplier's domain to the customer. $message is only
+                        // set during a real send; render()/previews keep the
+                        // remote URL as a best-effort fallback.
+                        $esimQrSrc = $esim['qr'];
+                        if ($esimQrSrc && isset($message)) {
+                            try {
+                                $qrDownload = \Illuminate\Support\Facades\Http::timeout(8)->get($esimQrSrc);
+                                if ($qrDownload->successful() && $qrDownload->body() !== '') {
+                                    $esimQrSrc = $message->embedData($qrDownload->body(), 'esim-qr.png', 'image/png');
+                                }
+                            } catch (\Throwable $e) {
+                                // Keep the remote URL; a missing QR must never block the email.
+                            }
+                        }
+                    @endphp
+                    @if ($esimQrSrc)
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff; border:1px solid #e4e4e7; border-radius:8px;">
                             <tr>
                                 <td align="center" style="padding:14px; font-family:'Inter',-apple-system,Helvetica,Arial,sans-serif;">
-                                    <img src="{{ $esim['qr'] }}" alt="eSIM installation QR code" width="170" height="170" style="width:170px; height:170px; display:block;">
+                                    <img src="{{ $esimQrSrc }}" alt="eSIM installation QR code" width="170" height="170" style="width:170px; height:170px; display:block;">
                                     <p style="margin:10px 0 0; font-size:11px; color:#71717a;">Scan this QR from another device to install your eSIM.</p>
                                 </td>
                             </tr>
@@ -139,6 +158,14 @@
                             </tr>
                         </table>
                     @endforeach
+
+                    @if ($esim['lpa'])
+                        {{-- The SM-DP+ value looks like a URL, and mail clients
+                             auto-link it - but it is a provisioning server the
+                             phone talks to, not a web page. Say so before a
+                             customer taps it and lands on an error. --}}
+                        <p style="margin:8px 0 0; font-size:10px; line-height:1.5; color:#a1a1aa;">The SM-DP+ address is not a website. Enter it together with the activation code in Settings &gt; Cellular &gt; Add eSIM &gt; Enter Details Manually.</p>
+                    @endif
                 @else
                     {{-- Code + PIN. No copy button (email clients strip JS); values are
                          select-all so a tap highlights them, and the dashboard button

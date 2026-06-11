@@ -1534,6 +1534,13 @@ window.bestSellingCountriesMap = function (payload) {
         setView(v) { this.view = v; },
         setContinent(c) { this.continent = c; },
 
+        // No sales in the selected window — drives the client-side empty
+        // overlay; the map SVG stays mounted (wire:ignore) so a later filter
+        // with data re-shades it in place instead of facing a dead canvas.
+        isEmpty() {
+            return Object.keys(this.countries || {}).length === 0;
+        },
+
         // Called from the dashboard's Livewire layer (via the
         // map-data-updated browser event) when the Period or Product filter
         // changes. Swaps in the new aggregates and re-shades the SVG in
@@ -1815,6 +1822,33 @@ window.salesCostChart = function (series) {
             return this.mode === 'sales' ? 'Sales' : (this.mode === 'cost' ? 'Cost' : 'Sales / Cost');
         },
 
+        // No data in the selected window — drives the client-side empty
+        // overlay so the canvas can stay in the DOM (wire:ignore) across
+        // filter changes instead of being swapped out by a server re-render.
+        isEmpty() {
+            return !this.series
+                || this.series.length === 0
+                || this.series.every((p) => !Number(p.sales) && !Number(p.cost));
+        },
+
+        // Called via the trends-data-updated browser event when the period
+        // filter changes server-side. Swaps the series into the live chart -
+        // no page reload, no re-init. Livewire 3 wraps named params in
+        // different detail shapes depending on the consumer; accept both.
+        updateData(detail) {
+            if (! detail) return;
+            const payload = Array.isArray(detail?.params)
+                ? (detail.params[0] || {})
+                : detail;
+            this.series = payload.series || [];
+            if (! this.chart) return; // init() will pick the series up when it lands
+
+            this.chart.updateSeries([
+                { name: 'Sales', data: this.series.map((p) => [new Date(p.date).getTime(), p.sales]) },
+                { name: 'Cost',  data: this.series.map((p) => [new Date(p.date).getTime(), p.cost])  },
+            ]);
+        },
+
         _update() {
             const wanted = this.mode === 'both' ? ['Sales', 'Cost'] : (this.mode === 'sales' ? ['Sales'] : ['Cost']);
             ['Sales', 'Cost'].forEach((name) => {
@@ -1854,7 +1888,11 @@ window.salesCostChart = function (series) {
                     type: 'datetime',
                     labels: {
                         style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
-                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                        // The series is daily buckets, but with a short data
+                        // window Apex zooms to hour-level ticks whose default
+                        // format is HH:mm — every label reads "00:00". Override
+                        // hour/minute so sub-day ticks still print the day.
+                        datetimeFormatter: { day: 'MMM dd, ddd', hour: 'MMM dd', minute: 'MMM dd' },
                     },
                     axisBorder: { show: false },
                     axisTicks: { show: false },
@@ -2037,7 +2075,10 @@ window.reportChart = function (series, chartType) {
                     type: 'datetime',
                     labels: {
                         style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
-                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                        // Same fix as the dashboard Trends chart: short data
+                        // windows make Apex pick hour-level ticks, whose
+                        // default HH:mm format prints "00:00" everywhere.
+                        datetimeFormatter: { day: 'MMM dd, ddd', hour: 'MMM dd', minute: 'MMM dd' },
                     },
                     axisBorder: { show: false },
                     axisTicks: { show: false },

@@ -9,7 +9,7 @@
         default => 'Wallet',
     };
 @endphp
-<x-emails.layout :title="$headline" preheader="Your Rcoin withdrawal update.">
+<x-emails.layout :mail-message="$message ?? null" :title="$headline" preheader="Your Rcoin withdrawal update.">
     <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">{{ $headline }}</h1>
 
     <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">

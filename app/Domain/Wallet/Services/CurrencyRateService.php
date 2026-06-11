@@ -66,6 +66,53 @@ class CurrencyRateService
     }
 
     /**
+     * Same live exchange_rates resolution chain as resolveRate(), but stale
+     * rows never throw - an old rate is better than a $0 headline on a
+     * read-only admin display. Transactional paths (checkout, funding) must
+     * keep using resolveRate()/convert() so the staleness guard still bites
+     * where money moves.
+     */
+    public function resolveRateForDisplay(string $baseCurrency, string $targetCurrency): float
+    {
+        $base = strtoupper(trim($baseCurrency));
+        $target = strtoupper(trim($targetCurrency));
+
+        if ($base === $target) {
+            return 1.0;
+        }
+
+        $rateRow = ExchangeRate::active()
+            ->where('base_currency', $base)
+            ->where('target_currency', $target)
+            ->orderBy('fetched_at', 'desc')
+            ->first();
+
+        if ($rateRow) {
+            return (float) $rateRow->rate;
+        }
+
+        $inverseRateRow = ExchangeRate::active()
+            ->where('base_currency', $target)
+            ->where('target_currency', $base)
+            ->orderBy('fetched_at', 'desc')
+            ->first();
+
+        if ($inverseRateRow && (float) $inverseRateRow->rate > 0) {
+            return 1.0 / (float) $inverseRateRow->rate;
+        }
+
+        return $this->resolveFallbackRate($base, $target);
+    }
+
+    /**
+     * Display-safe conversion for read-only views. See resolveRateForDisplay().
+     */
+    public function convertForDisplay(float $amount, string $from, string $to): float
+    {
+        return round($amount * $this->resolveRateForDisplay($from, $to), 4);
+    }
+
+    /**
      * Generate an audit snapshot array for a currency pair.
      */
     public function generateSnapshot(string $base, string $target): array

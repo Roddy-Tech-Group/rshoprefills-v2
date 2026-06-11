@@ -8,7 +8,9 @@
     use App\Domain\Shared\Enums\Currency;
 
     $user = auth()->user();
-    $allWallets = $user->wallets()->where('is_active', true)->get();
+    // Rcoin is rewards points, not a spendable wallet - it lives on its own
+    // rewards section and never renders as a wallet card here.
+    $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get();
 
     // Symbol/label map covering fiat + crypto.
     $symbolFor = function (string $code): string {

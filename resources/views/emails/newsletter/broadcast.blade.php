@@ -4,7 +4,7 @@
     the content is rendered raw ({!! !!}); when false, plain text is split
     into paragraphs on blank lines so editors can write naturally.
 --}}
-<x-emails.layout :title="$subjectLine">
+<x-emails.layout :mail-message="$message ?? null" :title="$subjectLine">
 
     @if ($isHtml)
         {!! $bodyContent !!}

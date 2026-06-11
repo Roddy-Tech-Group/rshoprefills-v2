@@ -14,6 +14,8 @@ use App\Models\ProductVariant;
 use App\Models\Subcategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class OrderFulfilledMailTest extends TestCase
@@ -143,6 +145,40 @@ class OrderFulfilledMailTest extends TestCase
         $this->assertStringContainsString('Rcoin cashback', $html);
         $this->assertStringContainsString('+7 Rcoin', $html);
         $this->assertStringContainsString('lands in your Rcoin wallet', $html);
+    }
+
+    public function test_esim_qr_is_embedded_inline_on_a_real_send(): void
+    {
+        // Hot-linking the provider's signed QR URL fails through email image
+        // proxies (and leaks the supplier domain), so a real send must fetch
+        // the PNG and embed it as an inline CID attachment instead.
+        Http::fake([
+            'www.airalo.com/*' => Http::response('fake-png-bytes', 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        $item = $this->makeFulfilledItem([
+            'qrcode_url' => 'https://www.airalo.com/qr?id=123&signature=abc',
+            'lpa' => 'wbg.prod.ondemandconnectivity.com',
+            'iccid' => '8944465400000000000',
+        ]);
+
+        Mail::to('customer@example.test')->send(new OrderFulfilledMail($item));
+
+        $sent = app('mail.manager')->mailer('array')->getSymfonyTransport()->messages();
+        $this->assertCount(1, $sent);
+
+        $email = $sent->first()->getOriginalMessage();
+        $this->assertStringContainsString('cid:', $email->getHtmlBody());
+        $this->assertStringNotContainsString('www.airalo.com', $email->getHtmlBody());
+
+        $inline = collect($email->getAttachments())->first(fn ($part) => $part->getFilename() === 'esim-qr.png');
+        $this->assertNotNull($inline, 'Expected the QR PNG to be attached inline as esim-qr.png');
+        $this->assertSame('fake-png-bytes', $inline->getBody());
+
+        // The brand logo must ride inside the email as well - remote fetches
+        // through mail-client image proxies are what broke it in production.
+        $logo = collect($email->getAttachments())->first(fn ($part) => $part->getFilename() === 'email-logo.png');
+        $this->assertNotNull($logo, 'Expected the logo to be attached inline as email-logo.png');
     }
 
     public function test_delivery_email_shows_the_credited_rcoin_amount_when_available(): void

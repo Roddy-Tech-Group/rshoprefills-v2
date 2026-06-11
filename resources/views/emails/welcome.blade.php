@@ -1,4 +1,4 @@
-<x-emails.layout title="Welcome to RshopRefills" preheader="Your account is ready. Explore gift cards, eSIMs, top-ups and bills.">
+<x-emails.layout :mail-message="$message ?? null" title="Welcome to RshopRefills" preheader="Your account is ready. Explore gift cards, eSIMs, top-ups and bills.">
     <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">Welcome aboard, {{ $name }}.</h1>
 
     @if ($isGoogleAuth)
