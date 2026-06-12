@@ -14,32 +14,29 @@
 
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
 
-        {{-- eSIM (auto-fades between Esim.webp and Esim2.webp every 4 seconds, pauses on hover) --}}
+        {{-- eSIM (auto-fades between the two animated eSIM scenes every 4
+             seconds, pauses on hover). Inline SVGs - no image fetch. --}}
         <article
             x-data="{
-                images: ['{{ asset('assets/Esim.webp') }}', '{{ asset('assets/Esim2.webp') }}'],
                 current: 0,
                 paused: false,
                 init() {
                     setInterval(() => {
                         if (this.paused) return;
-                        this.current = (this.current + 1) % this.images.length;
+                        this.current = (this.current + 1) % 2;
                     }, 4000);
                 }
             }"
             @mouseenter="paused = true"
             @mouseleave="paused = false"
-            class="group relative aspect-[16/10] overflow-hidden rounded-[10px] ring-1 ring-zinc-200 shadow-sm"
+            class="group relative aspect-[16/10] overflow-hidden rounded-[10px] bg-[#070D1A] ring-1 ring-zinc-200 shadow-sm"
         >
-            <template x-for="(src, i) in images" :key="src">
-                <img
-                    :src="src"
-                    alt="eSIM"
-                    :class="current === i ? 'opacity-100' : 'opacity-0'"
-                    class="absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-in-out group-hover:scale-105"
-                    loading="lazy"
-                >
-            </template>
+            <div :class="current === 0 ? 'opacity-100' : 'opacity-0'" class="absolute inset-0 transition-opacity duration-700 ease-in-out group-hover:scale-105">
+                <x-illos.esim-people class="h-full w-full object-cover" preserveAspectRatio="xMidYMid slice" />
+            </div>
+            <div :class="current === 1 ? 'opacity-100' : 'opacity-0'" class="absolute inset-0 transition-opacity duration-700 ease-in-out group-hover:scale-105">
+                <x-illos.esim-travelers class="h-full w-full object-cover" preserveAspectRatio="xMidYMid slice" />
+            </div>
             <div class="absolute inset-x-0 bottom-0 h-[35%] bg-black/55 backdrop-blur-[2px]" aria-hidden="true"></div>
             <div class="absolute inset-x-0 bottom-0 p-5 text-white">
                 <div class="flex items-center gap-2">

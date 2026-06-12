@@ -99,8 +99,9 @@
             </div>
 
             <div class="relative flex flex-col items-center gap-6 lg:flex-row lg:justify-between lg:gap-8">
-                {{-- Desktop: both illustrations sit either side of the heading. --}}
-                <img src="{{ asset('assets/'.rawurlencode('Esim stay connectd.webp')) }}" alt="" class="hidden w-64 shrink-0 object-contain lg:block xl:w-80" loading="eager">
+                {{-- Desktop: the two animated eSIM scenes sit either side of
+                     the heading (custom inline SVGs, no image fetch). --}}
+                <x-illos.esim-travelers class="hidden w-64 shrink-0 rounded-[20px] lg:block xl:w-80" aria-hidden="true" />
 
                 <div class="max-w-xl text-center">
                     <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Feel the freedom of unlimited data</h1>
@@ -109,39 +110,43 @@
                     </p>
                 </div>
 
-                {{-- Mobile: cycle between both illustrations every 5s with a fade. --}}
+                {{-- Mobile: cycle between both scenes every 5s with a fade. --}}
                 <div
                     x-data="{
-                        slides: [
-                            '{{ asset('assets/'.rawurlencode('Esim 1.webp')) }}',
-                            '{{ asset('assets/'.rawurlencode('Esim stay connectd.webp')) }}',
-                        ],
                         idx: 0,
                         timer: null,
-                        init() { this.timer = setInterval(() => { this.idx = (this.idx + 1) % this.slides.length; }, 5000); },
+                        init() { this.timer = setInterval(() => { this.idx = (this.idx + 1) % 2; }, 5000); },
                         destroy() { clearInterval(this.timer); },
                     }"
-                    class="relative h-56 w-56 shrink-0 sm:h-72 sm:w-72 lg:hidden"
+                    class="relative w-64 shrink-0 sm:w-80 lg:hidden"
                     aria-hidden="true"
                 >
-                    <template x-for="(src, i) in slides" :key="i">
-                        <img
-                            :src="src"
-                            alt=""
-                            x-show="idx === i"
-                            x-transition:enter="transition-opacity duration-500 ease-out"
-                            x-transition:enter-start="opacity-0"
-                            x-transition:enter-end="opacity-100"
-                            x-transition:leave="absolute inset-0 transition-opacity duration-500 ease-out"
-                            x-transition:leave-start="opacity-100"
-                            x-transition:leave-end="opacity-0"
-                            class="h-full w-full object-contain"
-                            loading="eager"
-                        >
-                    </template>
+                    <div
+                        x-show="idx === 0"
+                        x-transition:enter="transition-opacity duration-500 ease-out"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="absolute inset-0 transition-opacity duration-500 ease-out"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                    >
+                        <x-illos.esim-people class="h-auto w-full rounded-[20px]" />
+                    </div>
+                    <div
+                        x-show="idx === 1"
+                        x-cloak
+                        x-transition:enter="transition-opacity duration-500 ease-out"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="absolute inset-0 transition-opacity duration-500 ease-out"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                    >
+                        <x-illos.esim-travelers class="h-auto w-full rounded-[20px]" />
+                    </div>
                 </div>
 
-                <img src="{{ asset('assets/'.rawurlencode('Esim 1.webp')) }}" alt="" class="hidden shrink-0 object-contain lg:block lg:w-64 xl:w-80" loading="eager">
+                <x-illos.esim-people class="hidden shrink-0 rounded-[20px] lg:block lg:w-64 xl:w-80" aria-hidden="true" />
             </div>
         </section>
 
