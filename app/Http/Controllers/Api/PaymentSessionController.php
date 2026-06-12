@@ -308,7 +308,7 @@ class PaymentSessionController extends Controller
                 $session->session_type = 'crypto';
                 $session->save();
 
-                if ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                if ($attempt->payable_type === WalletFunding::class) {
                     $funding = $attempt->payable;
                     if ($funding) {
                         $funding->gateway = 'nowpayments';

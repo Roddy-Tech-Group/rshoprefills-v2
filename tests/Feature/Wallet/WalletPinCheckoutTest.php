@@ -6,6 +6,7 @@ use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Shared\Enums\Currency;
+use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Services\TransactionPinService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Models\Cart;
@@ -148,7 +149,7 @@ class WalletPinCheckoutTest extends TestCase
         Queue::fake([FulfillOrderItemJob::class]);
         $wallet = $this->fundedWallet();
 
-        $this->expectException(\App\Domain\Wallet\Exceptions\MissingTransactionPinException::class);
+        $this->expectException(MissingTransactionPinException::class);
         $this->placeWalletOrder();
     }
 

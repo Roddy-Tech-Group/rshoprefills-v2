@@ -5,6 +5,7 @@ namespace App\Domain\Payment\Providers;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Interfaces\PaymentProviderInterface;
 use App\Domain\Payment\Support\MockMode;
+use App\Domain\Wallet\Services\CurrencyRateService;
 use App\Models\PaymentAttempt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -67,8 +68,8 @@ class NowPaymentsProvider implements PaymentProviderInterface
 
         // Convert to USD if the currency is not supported by NowPayments.
         $supportedFiats = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'CZK', 'DKK', 'HKD', 'HUF', 'ILS', 'INR', 'JPY', 'MXN', 'NOK', 'NZD', 'PLN', 'RUB', 'SEK', 'SGD', 'THB', 'TRY', 'ZAR'];
-        if (!in_array($priceCurrency, $supportedFiats)) {
-            $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
+        if (! in_array($priceCurrency, $supportedFiats)) {
+            $rateService = app(CurrencyRateService::class);
             $rate = $rateService->resolveRate($priceCurrency, 'USD');
             $priceAmount = round($priceAmount * $rate, 2);
             $priceCurrency = 'USD';
@@ -181,8 +182,8 @@ class NowPaymentsProvider implements PaymentProviderInterface
         // NowPayments supported fiat currencies (approximate main list).
         // If it's an African local currency or unsupported fiat, we fall back to USD.
         $supportedFiats = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'CZK', 'DKK', 'HKD', 'HUF', 'ILS', 'INR', 'JPY', 'MXN', 'NOK', 'NZD', 'PLN', 'RUB', 'SEK', 'SGD', 'THB', 'TRY', 'ZAR'];
-        if (!in_array($priceCurrency, $supportedFiats)) {
-            $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
+        if (! in_array($priceCurrency, $supportedFiats)) {
+            $rateService = app(CurrencyRateService::class);
             $rate = $rateService->resolveRate($priceCurrency, 'USD');
             $priceAmount = round($priceAmount * $rate, 2);
             $priceCurrency = 'USD';

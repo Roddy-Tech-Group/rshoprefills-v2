@@ -627,9 +627,9 @@ class EmbeddedPaymentOrchestrationTest extends TestCase
                             'currency',
                             'customer' => [
                                 'email',
-                                'name'
-                            ]
-                        ]
+                                'name',
+                            ],
+                        ],
                     ],
                 ],
             ]);

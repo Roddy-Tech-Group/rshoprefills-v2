@@ -34,6 +34,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
             }
 
             $admin = Auth::guard('admin')->user();
+
             return $admin && $admin->isActive();
         });
     }
