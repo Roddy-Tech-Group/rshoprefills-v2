@@ -1024,19 +1024,17 @@
                             <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-blue-600" aria-label="Online"></span>
                         @endif
                     </button>
-                    {{-- The greeting doubles as a storefront shortcut. A tiny
-                         pulsing guide chip teaches the tap once - it persists
-                         in localStorage after the first use so it never nags. --}}
+                    {{-- The greeting doubles as a storefront shortcut. The tiny
+                         chip stays visible permanently so PWA users always have
+                         an obvious door back to the storefront. --}}
                     <a
                         href="{{ route('home') }}"
                         wire:navigate
-                        x-data="{ hint: ! localStorage.getItem('rshop-hi-store-hint') }"
-                        @click="localStorage.setItem('rshop-hi-store-hint', '1'); hint = false"
                         class="flex min-w-0 items-center gap-2 transition-transform active:scale-95"
                         aria-label="Go to the storefront"
                     >
                         <span class="truncate text-base font-semibold">Hi {{ $mobileFirstName }}</span>
-                        <span x-show="hint" x-transition.opacity class="shrink-0 animate-pulse rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-white/30">Tap for store</span>
+                        <span class="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-white/30">Visit store</span>
                     </a>
                 </div>
                 <div class="flex items-center gap-2" x-data>

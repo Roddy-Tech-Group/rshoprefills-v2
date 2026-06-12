@@ -421,11 +421,8 @@ new #[Lazy] class extends Component
 
             @if ($recentTransactions->isNotEmpty())
                 <a href="{{ route('dashboard.transactions') }}" wire:navigate
-                    class="mt-4 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
+                    class="mt-4 flex w-full items-center justify-center rounded-[10px] bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
                     View more
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                    </svg>
                 </a>
             @endif
         </div>

@@ -7,39 +7,47 @@
 @if ($chatwayWidgetId)
     <script id="chatway" async="true" src="https://cdn.chatway.app/widget.js?id={{ $chatwayWidgetId }}"></script>
     <script>
-        // wire:navigate swaps the <body>, which deletes the chat bubble DOM the
-        // widget injected and can re-run the loader, leaving the chat flickering,
-        // duplicated or gone. After each SPA navigation: drop any duplicate
-        // mounts, and remount once if the bubble vanished entirely.
+        // Chatway's loader mounts a div.chatway--container onto <body> about
+        // one second after the script runs. wire:navigate swaps the <body>,
+        // which silently deletes that container. Keep a reference to the real
+        // container and re-attach the SAME node after each SPA navigation.
+        // Never remove or re-inject the loader script: the mount is delayed,
+        // so "nothing mounted yet" is not "broken" - acting on it mid-flight
+        // is what kills the widget.
         (function () {
-            if (window.__chatwayNavigateGuard) {
+            if (window.__chatwayKeepAlive) {
                 return;
             }
-            window.__chatwayNavigateGuard = true;
+            window.__chatwayKeepAlive = true;
 
-            const mounts = () => document.querySelectorAll('iframe[src*="chatway"], [id^="chatway-container"], [class*="chatway-widget"]');
+            let container = null;
+            const capture = () => {
+                const el = document.querySelector('.chatway--container');
+                if (el) {
+                    container = el;
+                }
+            };
+
+            // Grab the container once the loader mounts it (~1s, slower on bad
+            // networks). Poll gently, stop once captured or after 30s.
+            const captureTimer = setInterval(() => {
+                capture();
+                if (container) {
+                    clearInterval(captureTimer);
+                }
+            }, 750);
+            setTimeout(() => clearInterval(captureTimer), 30000);
 
             document.addEventListener('livewire:navigated', () => {
-                // Give the swapped body a beat to settle before inspecting.
+                // Give the swap a moment to settle, then restore the widget if
+                // the new body lost it. Re-attaching the same node keeps all of
+                // Chatway's listeners; the iframe reloads itself.
                 setTimeout(() => {
-                    const found = mounts();
-
-                    if (found.length > 1) {
-                        for (let i = 1; i < found.length; i++) {
-                            found[i].remove();
-                        }
-                        return;
+                    capture();
+                    if (container && !document.body.contains(container)) {
+                        document.body.appendChild(container);
                     }
-
-                    if (found.length === 0) {
-                        document.getElementById('chatway')?.remove();
-                        const s = document.createElement('script');
-                        s.id = 'chatway';
-                        s.async = true;
-                        s.src = 'https://cdn.chatway.app/widget.js?id={{ $chatwayWidgetId }}';
-                        document.body.appendChild(s);
-                    }
-                }, 300);
+                }, 400);
             });
         })();
     </script>
