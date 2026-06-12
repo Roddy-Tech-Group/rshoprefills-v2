@@ -99,9 +99,9 @@
             <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white px-6 py-20 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <x-illo name="emptyCart" class="mx-auto w-full max-w-[280px]" />
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
-                <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
+                <p class="mt-1 text-sm text-zinc-600">Add a Product before heading to checkout.</p>
                 <a href="{{ request()->routeIs('dashboard.*') ? route('dashboard.shop.gift-cards') : route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
-                    Browse gift cards
+                    Visit Shop
                 </a>
             </div>
 
@@ -120,16 +120,25 @@
                                     <template x-if="item.logo">
                                         <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                     </template>
-                                    <template x-if="!item.logo">
+                                    {{-- No logo (eSIMs): country flag, globe for Global plans. --}}
+                                    <template x-if="!item.logo && item.flag">
+                                        <img :src="item.flag" alt="" class="h-12 w-[72px] rounded-[6px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                    </template>
+                                    <template x-if="!item.logo && !item.flag && item.is_global">
+                                        <svg class="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a9.004 9.004 0 018.716 6.747M12 3a9.004 9.004 0 00-8.716 6.747M21.75 12H2.25"/>
+                                        </svg>
+                                    </template>
+                                    <template x-if="!item.logo && !item.flag && !item.is_global">
                                         <span class="text-lg font-black uppercase text-zinc-700" x-text="item.name.substring(0,2).toUpperCase()"></span>
                                     </template>
                                 </span>
 
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-bold text-zinc-900" x-text="item.name"></p>
-                                    <p class="mt-0.5 truncate text-xs text-zinc-500" x-text="item.country"></p>
+                                    <p class="mt-0.5 truncate text-xs text-zinc-500" x-text="item.country_name || item.country"></p>
                                     <p class="mt-0.5 text-xs text-zinc-600">
-                                        <span x-show="item.face_label" x-text="item.face_label + ' card'"></span>
+                                        <span x-show="item.face_label" x-text="$store.cart.unitLabel(item)"></span>
                                     </p>
                                     {{-- Top-up: show the recipient phone the buyer entered. --}}
                                     <p
@@ -180,12 +189,12 @@
                     <div
                         x-show="$store.cart.items.some((i) => ! ['mobile-airtime', 'esims', 'bill-payments'].includes(i.category_slug))"
                         x-cloak
-                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5"
+                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5 dark:bg-amber-500/10"
                     >
-                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
                         </svg>
-                        <p class="text-sm text-amber-800">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
+                        <p class="text-sm text-amber-800 dark:text-amber-200">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
                     </div>
 
                     {{-- eSIM coverage notice — eSIMs only have service inside
@@ -195,12 +204,12 @@
                     <div
                         x-show="$store.cart.items.some((i) => i.category_slug === 'esims')"
                         x-cloak
-                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-blue-50 px-4 py-3.5"
+                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-blue-50 px-4 py-3.5 dark:bg-blue-500/10"
                     >
-                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a9.004 9.004 0 018.716 6.747M12 3a9.004 9.004 0 00-8.716 6.747M21.75 12H2.25"/>
                         </svg>
-                        <p class="text-sm text-blue-800">eSIMs are region-based and only work inside their coverage area. Pick the plan for the country or region you are traveling to, or choose a Global plan for worldwide connectivity. You can install it from anywhere; it connects once you arrive.</p>
+                        <p class="text-sm text-blue-800 dark:text-blue-200">eSIMs are region-based and only work inside their coverage area. Pick the plan for the country or region you are traveling to, or choose a Global plan for worldwide connectivity. You can install it from anywhere; it connects once you arrive.</p>
                     </div>
 
                     {{-- Points + total --}}
@@ -927,7 +936,6 @@
             </div>
 
         </div>
-    </div>
     </div>
     </div>
 

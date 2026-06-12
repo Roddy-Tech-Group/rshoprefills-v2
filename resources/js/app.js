@@ -683,6 +683,21 @@ document.addEventListener('alpine:init', () => {
             return this.currency !== 'USD';
         },
 
+        // Human unit label for a cart line: face value plus what the item IS.
+        // "$2.50 eSIM", "$25.00 card", "$10.00 top-up" - an eSIM must never
+        // read as "card".
+        unitLabel(item) {
+            if (!item || !item.face_label) {
+                return '';
+            }
+            const suffix = {
+                'esims': ' eSIM',
+                'mobile-airtime': ' top-up',
+                'bill-payments': ' bill payment',
+            }[item.category_slug] ?? ' card';
+            return item.face_label + suffix;
+        },
+
         // Format an amount already in the customer's display currency.
         pay(value) {
             const n = Number(value || 0);
@@ -1158,6 +1173,14 @@ window.storefrontLocale = function () {
         return path === '/' || SHOP_PATH_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
     };
 
+    // Checkout renders its rate, crypto prices and fee math server-side, so a
+    // currency flip must re-render the whole page - a store-only refresh leaves
+    // the totals half in the old currency. Always a HARD reload: the gateway
+    // script and payment state don't survive an SPA body swap.
+    const isCheckoutPath = (path) => {
+        return path === '/checkout' || path === '/dashboard/shop/checkout';
+    };
+
     const read = (key, fallback) => {
         try {
             const v = localStorage.getItem('locale.' + key);
@@ -1196,7 +1219,8 @@ window.storefrontLocale = function () {
             // navigate to the same path with the updated URL params so the catalog reloads.
             const reloadIfShop = () => {
                 const path = window.location.pathname;
-                if (!isShopPath(path)) return;
+                const checkout = isCheckoutPath(path);
+                if (!isShopPath(path) && !checkout) return;
 
                 const url = new URL(window.location.href);
                 if (this.countryCode) url.searchParams.set('country', this.countryCode);
@@ -1205,8 +1229,9 @@ window.storefrontLocale = function () {
                 if (this.currency) url.searchParams.set('currency', this.currency);
                 else url.searchParams.delete('currency');
 
-                // Livewire's SPA navigation if available, otherwise hard reload.
-                if (window.Livewire && typeof window.Livewire.navigate === 'function') {
+                // Checkout always hard-reloads (payment scripts + server-side
+                // rate math). Shop pages use Livewire's SPA navigation if available.
+                if (!checkout && window.Livewire && typeof window.Livewire.navigate === 'function') {
                     window.Livewire.navigate(url.toString());
                 } else {
                     window.location.href = url.toString();

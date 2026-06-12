@@ -32,7 +32,7 @@
             <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
             <p class="mt-1 text-sm text-zinc-600">Browse the catalog and add a gift card to get started.</p>
             <a href="{{ $shopRoute('gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
-                Browse gift cards
+                Visit Shop
             </a>
         </div>
 
@@ -55,7 +55,16 @@
                                     <template x-if="item.logo">
                                         <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                     </template>
-                                    <template x-if="!item.logo">
+                                    {{-- No logo (eSIMs): country flag, globe for Global plans. --}}
+                                    <template x-if="!item.logo && item.flag">
+                                        <img :src="item.flag" alt="" class="h-7 w-10 rounded-[4px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                    </template>
+                                    <template x-if="!item.logo && !item.flag && item.is_global">
+                                        <svg class="h-7 w-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a9.004 9.004 0 018.716 6.747M12 3a9.004 9.004 0 00-8.716 6.747M21.75 12H2.25"/>
+                                        </svg>
+                                    </template>
+                                    <template x-if="!item.logo && !item.flag && !item.is_global">
                                         <span class="text-xs font-black text-zinc-700" x-text="item.name.substring(0,2).toUpperCase()"></span>
                                     </template>
                                 </span>
@@ -64,7 +73,7 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-bold text-zinc-900" x-text="item.name"></p>
                                     <p class="mt-0.5 truncate text-xs text-zinc-500">
-                                        <span x-show="item.face_label" x-text="item.face_label + ' card'"></span><span x-show="item.face_label && item.country"> &middot; </span><span x-text="item.country"></span>
+                                        <span x-show="item.face_label" x-text="$store.cart.unitLabel(item)"></span><span x-show="item.face_label && item.country"> &middot; </span><span x-text="item.country_name || item.country"></span>
                                     </p>
                                     <p class="mt-0.5 text-xs text-zinc-600">
                                         <span x-text="$store.cart.pay(item.unit_price)"></span>

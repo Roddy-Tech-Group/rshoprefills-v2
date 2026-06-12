@@ -163,20 +163,34 @@ class CartWebController extends Controller
             $rateStale = true;
         }
 
-        $items = $cart->items->map(function ($item) use ($exchangeRate) {
+        // ISO -> country name, for human labels next to flags ("US" reads as
+        // "United States", "WW" as "Global").
+        $countryNames = array_flip(config('countries.codes', []));
+
+        $items = $cart->items->map(function ($item) use ($exchangeRate, $countryNames) {
             $product = $item->product;
             $variant = $item->variant;
+            // eSIM products carry no brand_key, so brandDisplayName comes back
+            // empty - fall through to the product name ("US Data eSIM").
             $name = $product
-                ? Product::brandDisplayName($product->brand_key)
+                ? (Product::brandDisplayName($product->brand_key) ?: $product->name)
                 : ($item->metadata_snapshot['product_name'] ?? 'Item');
 
             $unitUsd = (float) $item->unit_price_snapshot;
             $lineUsd = (float) $item->subtotal_snapshot;
 
+            $countryCode = strtoupper((string) ($product?->country_code ?? ''));
+            $isGlobal = $countryCode === 'WW';
+
             return [
                 'id' => $item->id,
                 'name' => $name,
                 'country' => $product?->country_code,
+                'country_name' => $isGlobal ? 'Global' : ($countryNames[$countryCode] ?? $product?->country_code),
+                // Tile fallback when the product has no logo (eSIMs): the
+                // country flag, or a globe for worldwide coverage.
+                'flag' => $isGlobal ? null : Product::flagUrl($countryCode),
+                'is_global' => $isGlobal,
                 'logo' => $product ? Product::brandLogoUrl($product->brand_key, $product->logo_url) : null,
                 'face_label' => $this->faceLabel($variant),
                 'quantity' => (int) $item->quantity,
