@@ -1621,6 +1621,8 @@
             </div>
         </div>
 
+        <x-chatway-widget />
+
         @fluxScripts
     </body>
 </html>

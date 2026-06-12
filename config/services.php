@@ -54,6 +54,12 @@ return [
         ],
     ],
 
+    // Chatway live-chat widget (customer-facing pages only). The widget stays
+    // off until the ID is set, so non-production environments render clean.
+    'chatway' => [
+        'widget_id' => env('CHATWAY_WIDGET_ID'),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
