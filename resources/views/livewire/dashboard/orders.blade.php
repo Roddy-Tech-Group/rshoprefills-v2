@@ -77,7 +77,13 @@ class extends Component {
                 return (string) $payload[$key];
             }
         }
-        foreach ($payload as $value) {
+        foreach ($payload as $key => $value) {
+            // eSIM/topup payload fields are never redemption codes - without
+            // this skip, an eSIM payload leaks its SM-DP+ address as "CODE".
+            if (str_starts_with((string) $key, 'esim') || str_starts_with((string) $key, 'topup')
+                || in_array($key, ['lpa', 'iccid', 'qrcode_url', 'qr_manual_code', 'network', 'provider_reference'], true)) {
+                continue;
+            }
             if (is_scalar($value) && $value !== '') {
                 return (string) $value;
             }
@@ -126,7 +132,10 @@ class extends Component {
             @foreach ($orders as $order)
                 @php
                     [$statusLabel, $statusPillClass] = $statusUi[$order->order_status->value] ?? ['Placed', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
-                    $points = app(\App\Domain\Rewards\Services\RewardEngine::class)->usdToRcoin((float) $order->total_amount * ((float) \App\Models\Setting::get('cashback_percentage', 1.0) / 100));
+                    // Rcoin is earned on the USD settlement total, never the
+                    // display-currency figure (a XAF 1,561 order is ~$2.75,
+                    // which earns ~3 Rcoin - not 1,561).
+                    $points = app(\App\Domain\Rewards\Services\RewardEngine::class)->cashbackPreviewFor($order);
                 @endphp
                 <div wire:key="order-{{ $order->id }}">
                     {{-- Header (always visible). Toggling sets openId to this order or null. --}}

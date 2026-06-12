@@ -410,6 +410,24 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
             $flat['esim_iccid'] = $esimData['iccid'];
             $flat['esim_lpa'] = $esimData['lpaUrl'];
             $flat['esim_activation_code'] = $esimData['manualActivationCode'];
+
+            // Mirror the Airalo normalizer's flat contract (qrcode_url / lpa /
+            // iccid) so every eSIM surface - dashboard orders, order page,
+            // delivery email - renders Zendit eSIMs through the same template
+            // branch instead of falling back to the gift-card code picker.
+            $activation = (string) ($esimData['manualActivationCode'] ?? '');
+            $lpaString = match (true) {
+                str_starts_with($activation, 'LPA:') => $activation,
+                $activation !== '' && ! empty($esimData['lpaUrl']) => 'LPA:1$'.$esimData['lpaUrl'].'$'.$activation,
+                default => null,
+            };
+
+            $flat['iccid'] = $esimData['iccid'];
+            $flat['lpa'] = $esimData['lpaUrl'];
+            if ($lpaString !== null) {
+                $flat['qr_manual_code'] = $lpaString;
+                $flat['qrcode_url'] = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='.urlencode($lpaString);
+            }
         }
 
         // Top-up receipt: Zendit returns receipt.topupId + operator + recipientPhone
