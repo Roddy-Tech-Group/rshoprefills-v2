@@ -11,6 +11,14 @@
     // admin sees in this grid matches what the customer would pay.
     $pricing = app(CartPricingService::class);
 
+    // Face values are stored in each card's own currency (a £1000 Amazon GB
+    // card stores 1000/GBP) while cost_price is USD — these rates convert the
+    // value before any USD comparison in the grid.
+    $ratesPerUsd = \App\Models\CurrencyRate::query()
+        ->where('is_active', true)
+        ->pluck('rate_per_usd', 'code')
+        ->map(fn ($r) => (float) $r);
+
     $search = request()->query('q', '');
     $categorySlug = request()->query('category', 'all');                   // Product Type filter
     $subtypeFilter = (string) request()->query('subtype', '');             // eSIM sub-type: 'data' | 'voice'
@@ -831,21 +839,34 @@
 
                     // Value (supplier-suggested retail). Stored on the variant
                     // at sync time as `retail_price` — falls back to face_value
-                    // when retail is missing. This is what the customer receives
-                    // and is the BASE we mark up against (not cost).
-                    $valueUsd = (float) ($variant->retail_price ?: $variant->face_value ?: $costUsd);
+                    // when retail is missing. It lives in the CARD's currency,
+                    // so convert to USD before comparing against the USD cost;
+                    // mixing units made strong-currency cards read as negative
+                    // discounts and weak-currency ones as ~100%. Currencies
+                    // without an active rate fall back to the USD cost — the
+                    // same authority the cart pricing uses.
+                    $valueNative = (float) ($variant->retail_price ?: $variant->face_value ?: $costUsd);
+                    $valueCurrency = strtoupper((string) ($variant->currency ?: 'USD'));
+                    if ($valueCurrency === '' || $valueCurrency === 'USD') {
+                        $valueUsd = $valueNative;
+                    } else {
+                        $valueRate = (float) ($ratesPerUsd[$valueCurrency] ?? 0);
+                        $valueUsd = $valueRate > 0 ? round($valueNative / $valueRate, 4) : $costUsd;
+                    }
 
-                    // SALES PRICE — markup applied to VALUE, not cost. The
-                    // pricing engine takes a base + walks the product →
-                    // subcategory → category → global rule hierarchy; here we
-                    // pass the value so "my rates plus the value" is what the
-                    // customer pays. Falls back to value when no rule matches.
-                    $retailUsd = $product ? $pricing->resolveRetailPrice($product, $valueUsd) : $valueUsd;
+                    // SALES PRICE — mirrors CartPricingService exactly: USD
+                    // face values are the markup base; non-USD denominations
+                    // base on the supplier's USD cost. What this column shows
+                    // is what checkout actually charges.
+                    $retailBase = ($valueCurrency === 'USD' || $valueCurrency === '') && $valueNative > 0 ? $valueNative : $costUsd;
+                    $retailUsd = $product ? $pricing->resolveRetailPrice($product, $retailBase) : $retailBase;
 
                     // Discount % — the supplier's wholesale discount: the gap
                     // between the face Value (what the customer receives) and
                     // the Cost (what the supplier charges us), as a % of Value.
-                    // e.g. Value $12.50, Cost $3.30 → 73.6% off face.
+                    // e.g. Value $12.50, Cost $3.30 → 73.6% off face. A negative
+                    // figure is now honest data: the supplier charges a premium
+                    // above face for that card (common cross-currency).
                     $discountPct = $valueUsd > 0
                         ? round((($valueUsd - $costUsd) / $valueUsd) * 100, 2)
                         : null;
