@@ -17,6 +17,7 @@ class PricingRule extends Model
         'category_id',
         'subcategory_id',
         'product_id',
+        'provider_name',
         'markup_type',
         'markup_value',
         'is_active',

@@ -242,16 +242,13 @@ class extends Component {
                     $sym = $txn->currency?->symbol() ?? '';
                 @endphp
                 <div class="flex items-center gap-3 px-4 py-3.5" wire:key="txn-{{ $txn->id }}">
-                    {{-- Direction icon — money in = arrow down, money out = arrow up. --}}
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            @if ($isCredit)
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
-                            @else
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l6 6m-6-6l-6 6"/>
-                            @endif
-                        </svg>
-                    </span>
+                    {{-- Animated direction icon - green incoming arrow for
+                         money in, red outgoing for money out. --}}
+                    @if ($isCredit)
+                        <x-icons.txn-credit class="h-10 w-10" />
+                    @else
+                        <x-icons.txn-debit class="h-10 w-10" />
+                    @endif
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-bold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
                         <p class="truncate text-xs text-zinc-500">

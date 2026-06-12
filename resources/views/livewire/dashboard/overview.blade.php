@@ -392,15 +392,11 @@ new #[Lazy] class extends Component
                         $sym = $txn->currency?->symbol() ?? '';
                     @endphp
                     <li class="flex items-center gap-3">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                @if ($isCredit)
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-                                @else
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/>
-                                @endif
-                            </svg>
-                        </span>
+                        @if ($isCredit)
+                            <x-icons.txn-credit class="h-11 w-11" />
+                        @else
+                            <x-icons.txn-debit class="h-11 w-11" />
+                        @endif
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
                             <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>
@@ -978,15 +974,11 @@ new #[Lazy] class extends Component
                                 $sym = $txn->currency?->symbol() ?? '';
                             @endphp
                             <li class="flex items-center gap-3">
-                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        @if ($isCredit)
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-                                        @else
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/>
-                                        @endif
-                                    </svg>
-                                </span>
+                                @if ($isCredit)
+                                    <x-icons.txn-credit class="h-11 w-11" />
+                                @else
+                                    <x-icons.txn-debit class="h-11 w-11" />
+                                @endif
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
                                     <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>

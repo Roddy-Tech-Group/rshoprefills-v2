@@ -154,19 +154,40 @@ class CartPricingService
      * product > subcategory > category > global. Each tier is searched in full
      * before falling through, so a product override always beats a category
      * rule regardless of row order.
+     *
+     * Within a tier, a rule scoped to the product's supplier outranks the
+     * provider-agnostic rule - suppliers price the same category very
+     * differently (Airalo eSIMs carry ~50% built-in margin, Zendit eSIMs are
+     * thin), so "eSIMs + airalo" wins over plain "eSIMs" for Airalo products
+     * while every other supplier stays on the generic rule. A provider-scoped
+     * rule NEVER applies to another supplier's products.
      */
     private function resolveRule(?Product $product): ?PricingRule
     {
         $rules = $this->activeRules();
+        $provider = $product ? strtolower(trim((string) $product->provider_name)) : '';
+
+        $firstAtTier = function (callable $tierMatch) use ($rules, $provider): ?PricingRule {
+            if ($provider !== '') {
+                $scoped = $rules->first(fn (PricingRule $r) => $tierMatch($r)
+                    && $r->provider_name !== null
+                    && strtolower(trim((string) $r->provider_name)) === $provider);
+                if ($scoped) {
+                    return $scoped;
+                }
+            }
+
+            return $rules->first(fn (PricingRule $r) => $tierMatch($r) && $r->provider_name === null);
+        };
 
         if ($product) {
-            $rule = $rules->first(fn (PricingRule $r) => $r->product_id !== null && $r->product_id === $product->id);
+            $rule = $firstAtTier(fn (PricingRule $r) => $r->product_id !== null && $r->product_id === $product->id);
             if ($rule) {
                 return $rule;
             }
 
             if ($product->subcategory_id !== null) {
-                $rule = $rules->first(fn (PricingRule $r) => $r->product_id === null
+                $rule = $firstAtTier(fn (PricingRule $r) => $r->product_id === null
                     && $r->subcategory_id !== null && $r->subcategory_id === $product->subcategory_id);
                 if ($rule) {
                     return $rule;
@@ -174,7 +195,7 @@ class CartPricingService
             }
 
             if ($product->category_id !== null) {
-                $rule = $rules->first(fn (PricingRule $r) => $r->product_id === null
+                $rule = $firstAtTier(fn (PricingRule $r) => $r->product_id === null
                     && $r->subcategory_id === null
                     && $r->category_id !== null && $r->category_id === $product->category_id);
                 if ($rule) {
@@ -184,7 +205,7 @@ class CartPricingService
         }
 
         // Global default — a rule with no product, subcategory or category.
-        return $rules->first(fn (PricingRule $r) => $r->product_id === null
+        return $firstAtTier(fn (PricingRule $r) => $r->product_id === null
             && $r->subcategory_id === null && $r->category_id === null);
     }
 

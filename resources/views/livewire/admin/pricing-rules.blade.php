@@ -19,6 +19,7 @@ class extends Component {
     public string $scope = 'category';
     public string $categoryId = '';
     public string $subcategoryId = '';
+    public string $providerName = '';
     public string $markupType = 'percentage';
     public string $markupValue = '';
     public bool $isActive = true;
@@ -36,6 +37,23 @@ class extends Component {
     public function categories()
     {
         return Category::orderBy('name')->get(['id', 'name']);
+    }
+
+    /**
+     * Suppliers present in the catalog, for the optional provider scope.
+     * Pulled from real product rows - never a hardcoded list.
+     */
+    #[Computed]
+    public function providers()
+    {
+        return \App\Models\Product::query()
+            ->whereNotNull('provider_name')
+            ->distinct()
+            ->orderBy('provider_name')
+            ->pluck('provider_name')
+            ->map(fn ($p) => strtolower((string) $p))
+            ->unique()
+            ->values();
     }
 
     #[Computed]
@@ -69,6 +87,7 @@ class extends Component {
             'scope'          => 'required|in:category,subcategory',
             'categoryId'     => 'required|exists:categories,id',
             'subcategoryId'  => $this->scope === 'subcategory' ? 'required|exists:subcategories,id' : 'nullable',
+            'providerName'   => ['nullable', 'string', \Illuminate\Validation\Rule::in($this->providers->all())],
             'markupType'     => 'required|in:percentage,fixed',
             'markupValue'    => 'required|numeric|min:0',
             'isActive'       => 'boolean',
@@ -93,6 +112,7 @@ class extends Component {
         $this->editingId    = $rule->id;
         $this->categoryId   = (string) ($rule->category_id ?? '');
         $this->subcategoryId = (string) ($rule->subcategory_id ?? '');
+        $this->providerName = strtolower((string) ($rule->provider_name ?? ''));
         $this->scope        = $rule->subcategory_id ? 'subcategory' : 'category';
         $this->markupType   = $rule->markup_type;
         $this->markupValue  = (string) $rule->markup_value;
@@ -110,6 +130,7 @@ class extends Component {
             'category_id'    => $this->categoryId ?: null,
             'subcategory_id' => $this->scope === 'subcategory' ? ($this->subcategoryId ?: null) : null,
             'product_id'     => null,
+            'provider_name'  => $this->providerName !== '' ? strtolower($this->providerName) : null,
             'markup_type'    => $this->markupType,
             'markup_value'   => $this->markupValue,
             'is_active'      => $this->isActive,
@@ -152,6 +173,7 @@ class extends Component {
         $this->scope         = 'category';
         $this->categoryId    = '';
         $this->subcategoryId = '';
+        $this->providerName  = '';
         $this->markupType    = 'percentage';
         $this->markupValue   = '';
         $this->isActive      = true;
@@ -247,6 +269,7 @@ class extends Component {
                             <th>Scope</th>
                             <th>Category</th>
                             <th class="hidden md:table-cell">Subcategory</th>
+                            <th>Supplier</th>
                             <th>Markup</th>
                             <th>Status</th>
                             <th class="text-right">Actions</th>
@@ -265,6 +288,13 @@ class extends Component {
                                 </td>
                                 <td class="hidden md:table-cell">
                                     {{ $rule->subcategory?->name ?? '-' }}
+                                </td>
+                                <td>
+                                    @if ($rule->provider_name)
+                                        <x-admin.badge tone="purple">{{ ucfirst($rule->provider_name) }}</x-admin.badge>
+                                    @else
+                                        <span class="text-zinc-500 dark:text-zinc-400">All</span>
+                                    @endif
                                 </td>
                                 <td class="whitespace-nowrap tabular-nums">
                                     @if ($rule->markup_type === 'percentage')
@@ -289,7 +319,7 @@ class extends Component {
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-5 py-16 text-center">
+                                <td colspan="7" class="px-5 py-16 text-center">
                                     <p class="text-base font-semibold text-zinc-900 dark:text-white">No pricing rules yet</p>
                                     <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Click "Add rule" to create the first markup rule.</p>
                                 </td>
@@ -338,6 +368,19 @@ class extends Component {
                         @php $categoryOptions = $this->categories->pluck('name', 'id')->all(); @endphp
                         <x-admin.select wire:model.live="categoryId" :options="$categoryOptions" placeholder="Select a category..." />
                         @error('categoryId') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Supplier scope - optional. Suppliers price the same
+                         category very differently (Airalo eSIMs vs Zendit
+                         eSIMs), so a rule can target one supplier's products
+                         within the scope. Leave on "All suppliers" for a
+                         normal rule; a supplier-scoped rule outranks the
+                         all-suppliers rule at the same level. --}}
+                    <div>
+                        <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Supplier</label>
+                        @php $providerOptions = $this->providers->mapWithKeys(fn ($p) => [$p => ucfirst($p)])->all(); @endphp
+                        <x-admin.select wire:model="providerName" :options="$providerOptions" placeholder="All suppliers" />
+                        @error('providerName') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                     </div>
 
                     {{-- Subcategory select (only when scope = subcategory) --}}
