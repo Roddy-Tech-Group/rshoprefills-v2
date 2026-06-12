@@ -5,6 +5,7 @@ namespace Tests\Feature\Checkout;
 use App\Domain\Order\Exceptions\InvalidCouponException;
 use App\Domain\Order\Services\CheckoutService;
 use App\Domain\Shared\Enums\Currency;
+use App\Domain\Wallet\Services\TransactionPinService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -98,7 +99,7 @@ class CouponRedemptionTest extends TestCase
         ]);
 
         Queue::fake([FulfillOrderItemJob::class]);
-        app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($this->user, '5283');
+        app(TransactionPinService::class)->setupPin($this->user, '5283');
     }
 
     public function test_percent_coupon_discounts_the_order_total_and_increments_used_count(): void
@@ -254,5 +255,70 @@ class CouponRedemptionTest extends TestCase
 
         $this->assertEqualsWithDelta(11.00, (float) $order->total_amount, 0.01);
         $this->assertNull($order->metadata['coupon_id']);
+    }
+
+    public function test_expired_coupon_is_rejected(): void
+    {
+        Coupon::create([
+            'product_variant_id' => $this->variant->id,
+            'code' => 'EXPIRED10',
+            'discount_type' => 'percent',
+            'discount_value' => 10,
+            'is_active' => true,
+            'valid_until' => now()->subDay(),
+        ]);
+
+        $this->expectException(InvalidCouponException::class);
+
+        app(CheckoutService::class)->placeOrder(
+            user: $this->user,
+            cart: $this->cart,
+            paymentMethod: 'wallet',
+            displayCurrency: 'USD',
+            couponCode: 'EXPIRED10',
+        );
+    }
+
+    public function test_not_yet_valid_coupon_is_rejected(): void
+    {
+        Coupon::create([
+            'product_variant_id' => $this->variant->id,
+            'code' => 'TOMORROW10',
+            'discount_type' => 'percent',
+            'discount_value' => 10,
+            'is_active' => true,
+            'valid_from' => now()->addDay(),
+        ]);
+
+        $this->expectException(InvalidCouponException::class);
+
+        app(CheckoutService::class)->placeOrder(
+            user: $this->user,
+            cart: $this->cart,
+            paymentMethod: 'wallet',
+            displayCurrency: 'USD',
+            couponCode: 'TOMORROW10',
+        );
+    }
+
+    public function test_oversized_percent_coupon_floors_the_total_at_zero_not_negative(): void
+    {
+        Coupon::create([
+            'product_variant_id' => $this->variant->id,
+            'code' => 'EVERYTHING',
+            'discount_type' => 'fixed',
+            'discount_value' => 999,
+            'is_active' => true,
+        ]);
+
+        $order = app(CheckoutService::class)->placeOrder(
+            user: $this->user,
+            cart: $this->cart,
+            paymentMethod: 'wallet',
+            displayCurrency: 'USD',
+            couponCode: 'EVERYTHING',
+        );
+
+        $this->assertSame(0.0, (float) $order->total_amount);
     }
 }

@@ -104,6 +104,46 @@ class NavWalletSummaryTest extends TestCase
         $this->assertFalse($summary['combined']);
     }
 
+    public function test_default_wallet_is_the_funded_one(): void
+    {
+        $this->usdAndXafRates();
+
+        $user = User::factory()->create();
+        Wallet::factory()->for($user)->create(['currency' => 'USD', 'balance' => 0]);
+        $xaf = Wallet::factory()->for($user)->create(['currency' => 'XAF', 'balance' => 5000]);
+
+        $this->assertTrue($user->defaultWallet()->is($xaf));
+    }
+
+    public function test_default_wallet_is_the_largest_usd_equivalent_when_several_are_funded(): void
+    {
+        $this->usdAndXafRates();
+
+        $user = User::factory()->create();
+        Wallet::factory()->for($user)->create(['currency' => 'USD', 'balance' => 10]);
+        // 12,000 XAF / 600 = $20 - beats the $10 USD wallet.
+        $xaf = Wallet::factory()->for($user)->create(['currency' => 'XAF', 'balance' => 12000]);
+
+        $this->assertTrue($user->defaultWallet()->is($xaf));
+
+        // Flip the weights: 3,000 XAF = $5 loses to $10 USD.
+        $xaf->update(['balance' => 3000]);
+        $this->assertSame('USD', $user->fresh()->defaultWallet()->currency->value);
+    }
+
+    public function test_default_wallet_falls_back_to_usd_when_nothing_is_funded_and_skips_rcoin(): void
+    {
+        $this->usdAndXafRates();
+
+        $user = User::factory()->create();
+        Wallet::factory()->for($user)->create(['currency' => 'XAF', 'balance' => 0]);
+        $usd = Wallet::factory()->for($user)->create(['currency' => 'USD', 'balance' => 0]);
+        // A fat Rcoin balance must never become the "default wallet".
+        Wallet::factory()->for($user)->create(['currency' => 'RCOIN', 'balance' => 99999]);
+
+        $this->assertTrue($user->defaultWallet()->is($usd));
+    }
+
     /**
      * @return array<string, array{0: float, 1: string}>
      */

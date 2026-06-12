@@ -260,6 +260,50 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * The wallet dashboards present first. A funded wallet always wins over an
+     * empty one; when several are funded, the largest USD-equivalent balance
+     * takes the spot (a 12,000 XAF wallet beats a $10 one only if it converts
+     * to more dollars). Rcoin is excluded - it is points, not cash. Falls back
+     * to the USD wallet, then any wallet, when nothing is funded.
+     */
+    public function defaultWallet(): ?Wallet
+    {
+        $wallets = $this->wallets
+            ->filter(fn (Wallet $wallet) => $wallet->is_active)
+            ->reject(fn (Wallet $wallet) => $this->walletCurrencyCode($wallet) === Currency::RCOIN->value)
+            ->values();
+
+        if ($wallets->isEmpty()) {
+            return null;
+        }
+
+        $funded = $wallets->filter(fn (Wallet $wallet) => (float) $wallet->balance > 0)->values();
+
+        if ($funded->isEmpty()) {
+            return $wallets->first(fn (Wallet $wallet) => $this->walletCurrencyCode($wallet) === 'USD')
+                ?? $wallets->first();
+        }
+
+        if ($funded->count() === 1) {
+            return $funded->first();
+        }
+
+        $ratesPerUsd = CurrencyRate::query()
+            ->where('is_active', true)
+            ->pluck('rate_per_usd', 'code');
+
+        return $funded->sortByDesc(function (Wallet $wallet) use ($ratesPerUsd): float {
+            $code = $this->walletCurrencyCode($wallet);
+            if ($code === 'USD') {
+                return (float) $wallet->balance;
+            }
+            $rate = (float) ($ratesPerUsd[$code] ?? 0);
+
+            return $rate > 0 ? (float) $wallet->balance / $rate : 0.0;
+        })->first();
+    }
+
+    /**
      * Uppercase ISO code of a wallet's currency, whether the cast returned the
      * enum or a raw string.
      */

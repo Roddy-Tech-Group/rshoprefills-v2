@@ -26,9 +26,9 @@ new #[Lazy] class extends Component
         $user = auth()->user();
 
         // ── Wallet data ──────────────────────────────────────────────
-        // Default to the user's USD wallet (auto-created on registration).
-        $primaryWallet = $user->wallets()->where('currency', 'USD')->first()
-            ?? $user->wallets()->first();
+        // The default wallet is the funded one; with several funded, the
+        // largest USD-equivalent balance leads (User::defaultWallet()).
+        $primaryWallet = $user->defaultWallet();
 
         $walletBalance = (float) ($primaryWallet?->balance ?? 0);
         $walletCurrencyCode = $primaryWallet?->currency?->value ?? 'USD';
@@ -37,8 +37,10 @@ new #[Lazy] class extends Component
 
         // Exclude RCOIN: it's a rewards balance shown via the loyalty/tier
         // section below ($rcoinWallet), not a fundable wallet, so it must not
-        // appear as a top-up-able wallet card.
-        $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get();
+        // appear as a top-up-able wallet card. The default wallet leads the list.
+        $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get()
+            ->sortByDesc(fn ($w) => $primaryWallet && $w->id === $primaryWallet->id)
+            ->values();
 
         // Recent wallet ledger movements - covers both top-ups (credits) and
         // purchases (debits) since they both write WalletTransaction rows. Latest 8

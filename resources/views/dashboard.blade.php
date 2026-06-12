@@ -17,8 +17,12 @@
     // Wallet data for the mobile hero carousel. The desktop wallet card lives inside
     // the lazy overview component, which computes its own copy of this payload.
     // Rcoin is rewards points, not a spendable wallet - it lives on its own
-    // rewards section and never renders as a wallet card.
-    $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get();
+    // rewards section and never renders as a wallet card. The default wallet
+    // (funded; largest USD-equivalent when several are funded) leads the carousel.
+    $defaultWallet = $user->defaultWallet();
+    $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get()
+        ->sortByDesc(fn ($w) => $defaultWallet && $w->id === $defaultWallet->id)
+        ->values();
 
     // Symbol/label map covering fiat + crypto.
     $symbolFor = function (string $code): string {

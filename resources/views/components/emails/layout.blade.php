@@ -55,7 +55,9 @@
                          set while actually sending, so render()/previews fall
                          back to the public URL. --}}
                     @php
-                        $emailLogoSrc = asset('assets/email-logo.png');
+                        // ?v= busts email-client image-proxy caches that may
+                        // still hold a 404 from before the logo file shipped.
+                        $emailLogoSrc = asset('assets/email-logo.png').'?v=2';
                         if ($mailMessage instanceof \Illuminate\Mail\Message && is_file(public_path('assets/email-logo.png'))) {
                             try {
                                 $emailLogoSrc = $mailMessage->embed(public_path('assets/email-logo.png'));
