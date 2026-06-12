@@ -88,7 +88,7 @@
         ['code' => 'EUR', 'symbol' => '€',   'name' => 'Euro'],
         ['code' => 'GBP', 'symbol' => '£',   'name' => 'British Pound'],
         ['code' => 'NGN', 'symbol' => '₦',   'name' => 'Nigerian Naira'],
-        ['code' => 'XAF', 'symbol' => 'FCFA','name' => 'Central African CFA Franc'],
+        ['code' => 'XAF', 'symbol' => 'XAF ','name' => 'Central African CFA Franc'],
         ['code' => 'ZAR', 'symbol' => 'R',   'name' => 'South African Rand'],
         ['code' => 'KES', 'symbol' => 'KSh', 'name' => 'Kenyan Shilling'],
         ['code' => 'GHS', 'symbol' => '₵',   'name' => 'Ghanaian Cedi'],

@@ -115,7 +115,7 @@ class Product extends Model
         $code = strtoupper((string) $code);
 
         return [
-            'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦', 'XAF' => 'FCFA', 'XOF' => 'CFA',
+            'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦', 'XAF' => 'XAF ', 'XOF' => 'CFA',
             'ZAR' => 'R', 'KES' => 'KSh', 'GHS' => '₵', 'EGP' => 'E£', 'MAD' => 'DH', 'CAD' => 'CA$',
             'AUD' => 'A$', 'JPY' => '¥', 'CNY' => '¥', 'INR' => '₹', 'BRL' => 'R$', 'AED' => 'AED',
             'SAR' => 'SAR', 'TRY' => '₺', 'CHF' => 'Fr', 'MXN' => 'MX$', 'KRW' => '₩', 'SGD' => 'S$',

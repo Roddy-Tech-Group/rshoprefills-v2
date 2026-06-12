@@ -143,7 +143,7 @@
         'PEN' => 'S/', 'NGN' => '₦',  'GHS' => '₵',  'KES' => 'KSh','UGX' => 'USh',
         'TZS' => 'TSh','ZAR' => 'R',  'EGP' => 'E£', 'MAD' => 'MAD','AED' => 'AED',
         'SAR' => 'SAR','TRY' => '₺',  'ILS' => '₪',  'PKR' => '₨',  'BDT' => '৳',
-        'RUB' => '₽',  'UAH' => '₴',  'XAF' => 'FCFA','XOF' => 'CFA',
+        'RUB' => '₽',  'UAH' => '₴',  'XAF' => 'XAF ','XOF' => 'CFA',
     ];
     $sym = fn (?string $code) => $code ? ($currencySymbols[strtoupper($code)] ?? $code) : '';
 

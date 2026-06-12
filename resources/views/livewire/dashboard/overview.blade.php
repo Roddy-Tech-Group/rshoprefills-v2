@@ -49,18 +49,18 @@ new #[Lazy] class extends Component
         // desktop card slices ->take(3) to keep its right-rail compact.
         $recentOrders = $user->orders()->with('items')->latest()->limit(5)->get();
 
-        // Popular gift cards - same source as the storefront's "Popular Gift Cards"
-        // row: the hand-curated config/popular_brands.php list, region-locked to the
-        // customer's resolved region (ResolveRegion middleware). One product per
-        // brand (MIN id dedupes the per-country rows), ordered by the curated list.
-        // (Admin-managed curation of this list is a planned follow-up.)
+        // Popular gift cards - same rule as the storefront's "Popular Gift Cards"
+        // row: products the admin flagged is_popular lead (region-locked via
+        // ResolveRegion, one product per brand). The hand-curated
+        // config/popular_brands.php list is only a fallback for regions where
+        // nothing has been flagged yet.
         $region = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
-        $popularKeys = config('popular_brands.keys', []);
 
         $popularIds = Product::query()
             ->where('is_active', true)
             ->where('country_code', $region)
-            ->whereIn('brand_key', $popularKeys)
+            ->where('is_popular', true)
+            ->whereNotNull('brand_key')
             ->groupBy('brand_key')
             ->selectRaw('MIN(id) as id')
             ->pluck('id');
@@ -68,10 +68,29 @@ new #[Lazy] class extends Component
         $popularProducts = Product::query()
             ->whereIn('id', $popularIds)
             ->with('variants')
-            ->get()
-            ->sortBy(fn ($p) => array_search($p->brand_key, $popularKeys))
+            ->orderBy('name')
             ->take(5)
-            ->values();
+            ->get();
+
+        if ($popularProducts->isEmpty()) {
+            $popularKeys = config('popular_brands.keys', []);
+
+            $curatedIds = Product::query()
+                ->where('is_active', true)
+                ->where('country_code', $region)
+                ->whereIn('brand_key', $popularKeys)
+                ->groupBy('brand_key')
+                ->selectRaw('MIN(id) as id')
+                ->pluck('id');
+
+            $popularProducts = Product::query()
+                ->whereIn('id', $curatedIds)
+                ->with('variants')
+                ->get()
+                ->sortBy(fn ($p) => array_search($p->brand_key, $popularKeys))
+                ->take(5)
+                ->values();
+        }
 
         // Fallback so the row never renders empty in a small region - any active
         // gift-card brands available there.
@@ -98,7 +117,7 @@ new #[Lazy] class extends Component
         $symbolFor = function (string $code): string {
             return match (strtoupper($code)) {
                 'USD' => '$',  'NGN'  => '₦', 'GHS'  => '₵', 'GBP' => '£',
-                'XAF' => 'FCFA','XOF' => 'CFA','EUR' => '€',
+                'XAF' => 'XAF ','XOF' => 'CFA','EUR' => '€',
                 'KES' => 'KSh','ZAR'  => 'R', 'UGX'  => 'USh','TZS' => 'TSh',
                 'RWF' => 'FRw','ZMW'  => 'K', 'MWK'  => 'MK', 'ETB' => 'Br',
                 'EGP' => 'E£', 'MAD'  => 'DH',
@@ -374,9 +393,9 @@ new #[Lazy] class extends Component
                         <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 @if ($isCredit)
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                                 @else
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l6 6m-6-6l-6 6"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/>
                                 @endif
                             </svg>
                         </span>
@@ -960,9 +979,9 @@ new #[Lazy] class extends Component
                                 <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                         @if ($isCredit)
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                                         @else
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l6 6m-6-6l-6 6"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/>
                                         @endif
                                     </svg>
                                 </span>

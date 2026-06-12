@@ -24,7 +24,7 @@
     $symbolFor = function (string $code): string {
         return match (strtoupper($code)) {
             'USD' => '$',  'NGN'  => '₦', 'GHS'  => '₵', 'GBP' => '£',
-            'XAF' => 'FCFA','XOF' => 'CFA','EUR' => '€',
+            'XAF' => 'XAF ','XOF' => 'CFA','EUR' => '€',
             'KES' => 'KSh','ZAR'  => 'R', 'UGX'  => 'USh','TZS' => 'TSh',
             'RWF' => 'FRw','ZMW'  => 'K', 'MWK'  => 'MK', 'ETB' => 'Br',
             'EGP' => 'E£', 'MAD'  => 'DH',

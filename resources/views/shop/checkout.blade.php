@@ -94,9 +94,10 @@
                 </svg>
             </div>
 
-            {{-- Empty cart --}}
+            {{-- Empty cart - same animated inline illustration as the cart
+                 page and the nav/dashboard cart popups. --}}
             <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white px-6 py-20 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
+                <x-illo name="emptyCart" class="mx-auto w-full max-w-[280px]" />
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
                 <a href="{{ request()->routeIs('dashboard.*') ? route('dashboard.shop.gift-cards') : route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">

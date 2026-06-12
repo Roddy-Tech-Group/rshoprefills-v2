@@ -21,7 +21,7 @@ enum Currency: string
             self::USD => '$',
             self::GBP => '£',
             self::GHS => '₵',
-            self::XAF => 'FCFA',
+            self::XAF => 'XAF ',
             self::RCOIN => 'R',
         };
     }

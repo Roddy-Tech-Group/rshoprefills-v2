@@ -339,7 +339,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                             {{-- Verification badge: ID-verified shows the Facebook-style
                                  blue tick; otherwise email-verified > basic pills. --}}
                             @if ($identityVerified)
-                                <a href="{{ route('dashboard.kyc') }}" wire:navigate title="Identity verified" class="shrink-0">
+                                {{-- -mt-0.5 lifts the seal to sit optically centered
+                                     against the name's cap height. --}}
+                                <a href="{{ route('dashboard.kyc') }}" wire:navigate title="Identity verified" class="-mt-0.5 shrink-0">
                                     <x-ui.verified-badge class="h-5 w-5" />
                                 </a>
                             @elseif ($emailVerified)
@@ -694,49 +696,8 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         </div>
     </section>
 
-    {{-- ─── Section 3: Appearance ─── --}}
-    <section>
-        <h2 class="mb-2.5 text-base font-bold text-zinc-900">Appearance</h2>
-
-        <div class="rounded-[10px] bg-white p-4 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-5">
-            <div class="mb-4 flex items-start gap-3">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#0a1729] text-white">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.61-1.611l-5.815 3.875a15.994 15.994 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42"/>
-                    </svg>
-                </span>
-                <div>
-                    <p class="text-sm font-semibold text-black">Theme</p>
-                    <p class="mt-0.5 text-[13px] text-zinc-600">Pick how RshopRefills looks for you</p>
-                </div>
-            </div>
-
-            {{-- Modern segmented selector — animated inline-SVG theme icons
-                 (currentColor, so they adapt to the surface automatically). --}}
-            @php
-                $themeOptions = [
-                    ['value' => 'light',  'label' => 'Light', 'icon' => 'icons.theme-light'],
-                    ['value' => 'dark',   'label' => 'Dark',  'icon' => 'icons.theme-dark'],
-                    ['value' => 'system', 'label' => 'Auto',  'icon' => 'icons.theme-auto'],
-                ];
-            @endphp
-
-            <div x-data="{ theme: localStorage.getItem('theme') || 'system' }" x-init="$watch('theme', v => window.setTheme(v))" class="grid grid-cols-3 gap-2 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#0c1a36]">
-                @foreach ($themeOptions as $opt)
-                    <button
-                        type="button"
-                        @click="theme = '{{ $opt['value'] }}'"
-                        :class="theme === '{{ $opt['value'] }}' ? 'bg-white text-black shadow-sm ring-1 ring-zinc-200 dark:bg-black dark:text-white dark:ring-white/10' : 'text-zinc-600 hover:bg-white/70 hover:text-black hover:shadow-sm dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white'"
-                        class="flex flex-col items-center gap-1.5 rounded-[10px] px-2 py-2.5 text-xs font-semibold transition-all duration-200 active:scale-95"
-                        :aria-pressed="theme === '{{ $opt['value'] }}'"
-                    >
-                        <x-dynamic-component :component="$opt['icon']" class="h-4 w-4" />
-                        {{ $opt['label'] }}
-                    </button>
-                @endforeach
-            </div>
-        </div>
-    </section>
+    {{-- Theme picking lives on the dedicated Appearance page
+         (dashboard/appearance) - not duplicated here. --}}
 
     {{-- ─── Section 4: Notifications ─── --}}
     <section>

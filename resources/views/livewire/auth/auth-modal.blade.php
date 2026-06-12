@@ -313,14 +313,14 @@ new class extends Component {
         x-transition:leave="transition duration-250 ease-in"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-8 scale-[0.98]"
-        class="pointer-events-auto relative flex w-full max-w-xl flex-col max-h-[95vh] min-h-[80vh] overflow-hidden rounded-[10px] bg-[#0c1a36] text-white shadow-2xl shadow-zinc-900/50 sm:max-w-3xl sm:min-h-[85vh]"
+        class="pointer-events-auto relative flex w-full max-w-md flex-col max-h-[92vh] overflow-hidden rounded-[10px] bg-[#0c1a36] text-white shadow-2xl shadow-zinc-900/50 sm:max-w-lg"
         role="dialog"
         aria-modal="true"
     >
         {{-- Header --}}
-        <div class="flex shrink-0 items-start justify-between gap-3 px-7 py-5 sm:px-10">
+        <div class="flex shrink-0 items-start justify-between gap-3 px-5 py-4 sm:px-7">
             <div class="leading-none">
-                <h2 class="text-xl font-bold leading-none text-white sm:text-2xl" x-text="mode === 'login' ? 'Log in' : 'Register'">Log in</h2>
+                <h2 class="text-lg font-bold leading-none text-white sm:text-xl" x-text="mode === 'login' ? 'Log in' : 'Register'">Log in</h2>
                 <p
                     x-show="mode === 'register'"
                     x-cloak
@@ -331,7 +331,7 @@ new class extends Component {
                 type="button"
                 @click="close()"
                 aria-label="Close"
-                class="flex h-10 w-10 items-center justify-center rounded-[10px] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                class="flex h-9 w-9 items-center justify-center rounded-[10px] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
             >
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
@@ -343,20 +343,20 @@ new class extends Component {
              passwords, gender, two checkboxes) so it gets tighter top/bottom
              padding than the leaner login view. --}}
         <div
-            class="flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-7 sm:px-10"
-            :class="mode === 'register' ? 'py-4 sm:py-5' : 'py-8 sm:py-10'"
+            class="flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] px-5 sm:px-7"
+            :class="mode === 'register' ? 'py-4 sm:py-5' : 'py-5 sm:py-6'"
         >
 
             {{-- ── LOGIN VIEW ───────────────────────────────────────────── --}}
             <div x-show="mode === 'login'" x-cloak>
-                <h3 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Welcome back</h3>
-                <p class="mt-2 text-base text-white/65">Sign in to your RshopRefills account</p>
+                <h3 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Welcome back</h3>
+                <p class="mt-1.5 text-sm text-white/65">Sign in to your RshopRefills account</p>
 
                 {{-- Google OAuth --}}
                 <a
                     href="{{ route('auth.google.redirect', ['popup' => 1]) }}"
                     @click.prevent="window.rshopOpenGoogleOAuth ? window.rshopOpenGoogleOAuth($el.href) : (window.location.href = $el.href)"
-                    class="mt-7 flex w-full items-center justify-center gap-3 rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10"
+                    class="mt-5 flex w-full items-center justify-center gap-3 rounded-[10px] border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                 >
                     <svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -375,7 +375,7 @@ new class extends Component {
 
                 <form wire:submit="login" class="flex flex-col gap-5">
                     <div>
-                        <label for="loginEmail" class="mb-2 block text-base font-medium text-white/85">Email</label>
+                        <label for="loginEmail" class="mb-1.5 block text-sm font-medium text-white/85">Email</label>
                         <input
                             wire:model="loginEmail"
                             id="loginEmail"
@@ -383,13 +383,13 @@ new class extends Component {
                             required
                             autocomplete="email"
                             placeholder="you@example.com"
-                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
                         >
                         @error('loginEmail') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <div x-data="{ show: false }">
-                        <label for="loginPassword" class="mb-2 block text-base font-medium text-white/85">Password</label>
+                        <label for="loginPassword" class="mb-1.5 block text-sm font-medium text-white/85">Password</label>
                         <div class="relative">
                             <input
                                 wire:model="loginPassword"
@@ -398,7 +398,7 @@ new class extends Component {
                                 required
                                 autocomplete="current-password"
                                 placeholder="••••••••"
-                                class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 pr-12 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                                class="w-full rounded-[10px] border border-white/15 bg-white/5 px-3.5 py-2.5 pr-12 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
                             >
                             <button type="button" @click="show = !show" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition-colors hover:text-white" :aria-label="show ? 'Hide password' : 'Show password'">
                                 <svg x-show="!show" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -411,10 +411,10 @@ new class extends Component {
                     <div class="flex items-center justify-between">
                         <label class="flex cursor-pointer select-none items-center gap-2.5">
                             <input wire:model="loginRemember" type="checkbox" class="h-5 w-5 rounded-[5px] border-white/30 bg-white/5 text-blue-500 focus:ring-blue-500/30">
-                            <span class="text-base text-white/75">Remember me</span>
+                            <span class="text-sm text-white/75">Remember me</span>
                         </label>
                         @if (Route::has('password.request'))
-                            <a href="{{ route('password.request') }}" wire:navigate class="text-base font-medium text-blue-400 hover:text-blue-300">Forgot password?</a>
+                            <a href="{{ route('password.request') }}" wire:navigate class="text-sm font-medium text-blue-400 hover:text-blue-300">Forgot password?</a>
                         @endif
                     </div>
 
@@ -427,7 +427,7 @@ new class extends Component {
 
                     <button
                         type="submit"
-                        class="mt-3 w-full rounded-[10px] bg-blue-600 px-4 py-4 text-base font-bold text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-700"
+                        class="mt-3 w-full rounded-[10px] bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-700"
                     >
                         <span wire:loading.remove wire:target="login">Log in</span>
                         <span wire:loading wire:target="login">Signing in...</span>
@@ -435,7 +435,7 @@ new class extends Component {
                 </form>
 
                 @feature('signup')
-                <p class="mt-5 border-t border-white pt-6 text-center text-base text-white/65">
+                <p class="mt-5 border-t border-white pt-5 text-center text-sm text-white/65">
                     Don't have an account?
                     <button type="button" @click="switchTo('register')" class="ml-1 font-semibold text-blue-400 underline-offset-4 hover:text-blue-300 hover:underline">Create one</button>
                 </p>
@@ -447,7 +447,7 @@ new class extends Component {
 
                 <form wire:submit="register" class="mt-7 flex flex-col gap-5">
                     <div>
-                        <label for="regName" class="mb-2 block text-base font-medium text-white/85">Full name</label>
+                        <label for="regName" class="mb-1.5 block text-sm font-medium text-white/85">Full name</label>
                         <input
                             wire:model="regName"
                             id="regName"
@@ -455,13 +455,13 @@ new class extends Component {
                             required
                             autocomplete="name"
                             placeholder="Your name"
-                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
                         >
                         @error('regName') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
-                        <label for="regEmail" class="mb-2 block text-base font-medium text-white/85">Email</label>
+                        <label for="regEmail" class="mb-1.5 block text-sm font-medium text-white/85">Email</label>
                         <input
                             wire:model="regEmail"
                             id="regEmail"
@@ -469,13 +469,13 @@ new class extends Component {
                             required
                             autocomplete="email"
                             placeholder="you@example.com"
-                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
                         >
                         @error('regEmail') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
                     </div>
 
                     <div x-data="{ show: false }">
-                        <label for="regPassword" class="mb-2 block text-base font-medium text-white/85">Password</label>
+                        <label for="regPassword" class="mb-1.5 block text-sm font-medium text-white/85">Password</label>
                         <div class="relative">
                             <input
                                 wire:model="regPassword"
@@ -484,7 +484,7 @@ new class extends Component {
                                 required
                                 autocomplete="new-password"
                                 placeholder="••••••••"
-                                class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 pr-12 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                                class="w-full rounded-[10px] border border-white/15 bg-white/5 px-3.5 py-2.5 pr-12 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
                             >
                             <button type="button" @click="show = !show" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition-colors hover:text-white" :aria-label="show ? 'Hide password' : 'Show password'">
                                 <svg x-show="!show" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -496,7 +496,7 @@ new class extends Component {
                     </div>
 
                     <div>
-                        <label for="regPasswordConfirmation" class="mb-2 block text-base font-medium text-white/85">Confirm password</label>
+                        <label for="regPasswordConfirmation" class="mb-1.5 block text-sm font-medium text-white/85">Confirm password</label>
                         <input
                             wire:model="regPasswordConfirmation"
                             id="regPasswordConfirmation"
@@ -504,7 +504,7 @@ new class extends Component {
                             required
                             autocomplete="new-password"
                             placeholder="••••••••"
-                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
                         >
                     </div>
 
@@ -513,7 +513,7 @@ new class extends Component {
                          Three-way segmented toggle - same pattern as the theme
                          picker so the UI reads as one family. --}}
                     <div>
-                        <span class="mb-2 block text-base font-medium text-white/85">Gender</span>
+                        <span class="mb-1.5 block text-sm font-medium text-white/85">Gender</span>
                         <div class="grid grid-cols-3 gap-1 rounded-[10px] bg-white/5 p-1 ring-1 ring-white/10">
                             @foreach ([
                                 ['value' => 'male',   'label' => 'Male'],
@@ -537,7 +537,7 @@ new class extends Component {
                          cookie when present, but always editable so a friend's
                          code can be pasted in by hand. --}}
                     <div>
-                        <label for="regReferral" class="mb-2 block text-base font-medium text-white/85">
+                        <label for="regReferral" class="mb-1.5 block text-sm font-medium text-white/85">
                             Referral code <span class="font-normal text-white/45">(optional)</span>
                         </label>
                         <input
@@ -546,12 +546,12 @@ new class extends Component {
                             type="text"
                             autocomplete="off"
                             placeholder="Enter a friend's referral code"
-                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-4 py-3.5 text-base text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
+                            class="w-full rounded-[10px] border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none transition-colors focus:border-blue-400 focus:bg-white/10 focus:ring-2 focus:ring-blue-500/20"
                         >
                         @error('regReferral') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
                     </div>
 
-                    <label class="flex cursor-pointer items-start gap-3 text-base text-white/75">
+                    <label class="flex cursor-pointer items-start gap-3 text-sm text-white/75">
                         <input wire:model="regAcceptedTerms" type="checkbox" required class="mt-1 h-5 w-5 shrink-0 rounded-full border-white/30 bg-white/5 text-blue-500 focus:ring-blue-500/30">
                         <span>* I declare that I have read and agree to the <a href="{{ route('shop.terms') }}" target="_blank" class="underline underline-offset-2 text-blue-400 hover:text-blue-300">terms of use</a> and <a href="{{ route('shop.privacy') }}" target="_blank" class="underline underline-offset-2 text-blue-400 hover:text-blue-300">privacy notice</a></span>
                     </label>
@@ -559,7 +559,7 @@ new class extends Component {
 
                     {{-- Newsletter opt-in. Hidden when features.newsletter_signup_enabled is off. --}}
                     @feature('newsletter_signup')
-                    <label class="flex cursor-pointer items-start gap-3 text-base text-white/75">
+                    <label class="flex cursor-pointer items-start gap-3 text-sm text-white/75">
                         <input wire:model="regNewsletterOptIn" type="checkbox" class="mt-1 h-5 w-5 shrink-0 rounded-full border-white/30 bg-white/5 text-blue-500 focus:ring-blue-500/30">
                         <span>Don't miss out on our next coupon drop! Sign me up for exclusive discounts and promo codes</span>
                     </label>
@@ -574,14 +574,14 @@ new class extends Component {
 
                     <button
                         type="submit"
-                        class="mt-3 w-full rounded-[10px] bg-white px-4 py-4 text-base font-bold text-blue-700 shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-50"
+                        class="mt-3 w-full rounded-[10px] bg-white px-4 py-3 text-sm font-bold text-blue-700 shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-50"
                     >
                         <span wire:loading.remove wire:target="register">Create account</span>
                         <span wire:loading wire:target="register">Creating account...</span>
                     </button>
                 </form>
 
-                <p class="mt-5 border-t border-white pt-6 text-center text-base text-white/65">
+                <p class="mt-5 border-t border-white pt-5 text-center text-sm text-white/65">
                     Already have an account?
                     <button type="button" @click="switchTo('login')" class="ml-1 font-semibold text-blue-400 underline-offset-4 hover:text-blue-300 hover:underline">Log in</button>
                 </p>

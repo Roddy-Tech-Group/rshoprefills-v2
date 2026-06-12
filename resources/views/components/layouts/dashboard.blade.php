@@ -367,20 +367,20 @@
                         </span>
                     </button>
 
+                    {{-- Submenu rows are text-only: the parent Shop item carries
+                         the icon, repeating one per child just adds noise. --}}
                     <div x-show="expanded" x-collapse class="nav-submenu ml-5 flex flex-col gap-1 border-l border-zinc-200 pl-3">
                         <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="{{ $subItem(false) }}">
-                            <img src="{{ asset('assets/' . rawurlencode('Shop.svg')) }}" alt="" class="h-4 w-4 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
                             All Categories
                         </a>
                         @foreach ([
-                            ['Gift Cards',     'gift cards.svg', route('dashboard.shop.gift-cards'), true],
-                            ['eSIMs',          'esim.svg',       route('dashboard.shop.esims'),      true],
-                            ['Flights',        'flight 2.svg',   route('dashboard.shop.flights'),    true],
-                            ['Stays',          'stay 2.svg',     route('dashboard.shop.stays'),      true],
-                            ['Topups & Bills', 'Bills 2.svg',    route('dashboard.shop.topups'),     true],
-                        ] as [$label, $icon, $href, $live])
+                            ['Gift Cards',     route('dashboard.shop.gift-cards'), true],
+                            ['eSIMs',          route('dashboard.shop.esims'),      true],
+                            ['Flights',        route('dashboard.shop.flights'),    true],
+                            ['Stays',          route('dashboard.shop.stays'),      true],
+                            ['Topups & Bills', route('dashboard.shop.topups'),     true],
+                        ] as [$label, $href, $live])
                             <a href="{{ $href }}" @if ($live) wire:navigate @endif class="{{ $subItem(false) }}">
-                                <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-4 w-4 shrink-0" style="{{ $imgIconBlack }}" loading="lazy">
                                 {{ $label }}
                             </a>
                         @endforeach
@@ -572,9 +572,6 @@
                                     <span class="block text-sm font-semibold text-emerald-900 dark:text-emerald-200">Chat on WhatsApp</span>
                                     <span class="mt-0.5 block text-[11px] text-emerald-800/80 dark:text-emerald-300/80">Usually replies in a few minutes</span>
                                 </span>
-                                <svg class="h-4 w-4 text-emerald-700 transition-transform group-hover:translate-x-0.5 dark:text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                                </svg>
                             </a>
 
                             {{-- Support ticket pill: routes to the storefront
@@ -595,9 +592,6 @@
                                     <span class="block text-sm font-semibold text-blue-900 dark:text-blue-200">Create a support ticket</span>
                                     <span class="mt-0.5 block text-[11px] text-blue-800/80 dark:text-blue-300/80">Best for billing or order issues</span>
                                 </span>
-                                <svg class="h-4 w-4 text-blue-700 transition-transform group-hover:translate-x-0.5 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                                </svg>
                             </a>
                         </div>
                     </div>
@@ -914,7 +908,7 @@
 
                 {{-- KYC verified tick on the desktop header avatar. --}}
                 @if (($user?->kyc_status ?? null) === 'verified')
-                    <x-ui.verified-badge class="pointer-events-none absolute -bottom-1 -right-1 h-3.5 w-3.5 drop-shadow-sm" />
+                    <x-ui.verified-badge class="pointer-events-none absolute -bottom-1.5 -right-1.5 h-3.5 w-3.5 drop-shadow-sm" />
                 @endif
 
                 <div
@@ -1025,12 +1019,25 @@
                         @if (($user?->kyc_status ?? null) === 'verified')
                             {{-- KYC verified: small blue tick over the avatar. The badge
                                  has its own white edge so it pops on the blue hero. --}}
-                            <x-ui.verified-badge class="absolute -bottom-0.5 -right-0.5 h-4 w-4 drop-shadow-sm" />
+                            <x-ui.verified-badge class="absolute -bottom-1 -right-1 h-4 w-4 drop-shadow-sm" />
                         @else
                             <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-blue-600" aria-label="Online"></span>
                         @endif
                     </button>
-                    <span class="truncate text-base font-semibold">Hi {{ $mobileFirstName }}</span>
+                    {{-- The greeting doubles as a storefront shortcut. A tiny
+                         pulsing guide chip teaches the tap once - it persists
+                         in localStorage after the first use so it never nags. --}}
+                    <a
+                        href="{{ route('home') }}"
+                        wire:navigate
+                        x-data="{ hint: ! localStorage.getItem('rshop-hi-store-hint') }"
+                        @click="localStorage.setItem('rshop-hi-store-hint', '1'); hint = false"
+                        class="flex min-w-0 items-center gap-2 transition-transform active:scale-95"
+                        aria-label="Go to the storefront"
+                    >
+                        <span class="truncate text-base font-semibold">Hi {{ $mobileFirstName }}</span>
+                        <span x-show="hint" x-transition.opacity class="shrink-0 animate-pulse rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-white/30">Tap for store</span>
+                    </a>
                 </div>
                 <div class="flex items-center gap-2" x-data>
                     {{-- Cart — links to the cart page with a live count from the
