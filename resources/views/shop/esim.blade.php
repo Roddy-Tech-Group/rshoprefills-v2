@@ -163,6 +163,64 @@
         ->unique(fn ($n) => $n['name'])
         ->values();
 
+    // Per-country network map for the Countries & Networks modal - Airalo
+    // ships this inside plan details (operator coverages), captured by the
+    // sync as metadata.coverage_networks. First variant with data wins.
+    $nameToIso = config('countries.codes', []);
+    $countryNetworks = collect();
+    foreach ($variants as $v) {
+        $rows = (array) (($v->metadata ?? [])['coverage_networks'] ?? []);
+        if ($rows === []) {
+            continue;
+        }
+        $countryNetworks = collect($rows)
+            ->filter(fn ($r) => is_array($r) && ! empty($r['country']))
+            ->map(function ($r) use ($isoToName) {
+                $raw = trim((string) $r['country']);
+                $iso = strlen($raw) === 2 ? strtoupper($raw) : null;
+
+                return [
+                    'name' => $iso ? ($isoToName[$iso] ?? $raw) : $raw,
+                    'iso' => $iso,
+                    'networks' => array_values(array_filter((array) ($r['networks'] ?? []), fn ($n) => is_array($n) && ! empty($n['name']))),
+                ];
+            })
+            ->unique('name')
+            ->sortBy('name')
+            ->values();
+        break;
+    }
+
+    // The per-country map is the richest coverage source - when present it
+    // supersedes the legacy coverage list (Airalo products often have an
+    // empty metadata.coverage, which used to leave coverageCount at 0 and
+    // route the modal to the flat carrier list).
+    if ($countryNetworks->isNotEmpty()) {
+        $coverageList = $countryNetworks->pluck('name');
+        $coverageCount = $coverageList->count();
+    }
+
+    // Supplier plan-policy details for the Package details modal - activation
+    // policy, rechargeability and the provider's own info bullets, all pulled
+    // from the synced plan metadata (no invented copy: sections without real
+    // data simply don't render).
+    $planPolicy = ['activation' => null, 'rechargeable' => null, 'bullets' => collect(), 'other' => null];
+    foreach ($variants as $v) {
+        $m = $v->metadata ?? [];
+        $planPolicy['activation'] = $planPolicy['activation'] ?? ($m['activation_policy'] ?? null);
+        $planPolicy['rechargeable'] = $planPolicy['rechargeable'] ?? (array_key_exists('is_rechargeable', $m) ? (bool) $m['is_rechargeable'] : null);
+        if ($planPolicy['bullets']->isEmpty() && ! empty($m['operator_info'])) {
+            $planPolicy['bullets'] = collect((array) $m['operator_info'])->filter(fn ($b) => is_scalar($b) && trim((string) $b) !== '')->values();
+        }
+        $planPolicy['other'] = $planPolicy['other'] ?? (is_scalar($m['other_info'] ?? null) ? trim((string) $m['other_info']) : null);
+    }
+    $activationText = match ($planPolicy['activation']) {
+        'first-usage' => 'The validity period starts when the eSIM connects to a supported network in its coverage area - not at purchase. If you install it outside the coverage area, it activates when you arrive.',
+        'installation' => 'The validity period starts as soon as the eSIM is installed on your device.',
+        'automatic' => 'The eSIM activates automatically once installed and connected to a supported network.',
+        default => null,
+    };
+
     $anyTopUp = $plans->contains(fn ($p) => $p['top_up']);
 
     // Region picker — one entry per country (deduped across suppliers); regional and
@@ -692,7 +750,9 @@
                  iOS safe area) also pins to bottom-0, so on those screens we lift the
                  buy bar clear of it (6.5rem leaves a comfortable gap above the nav);
                  lg has no tab bar, so it drops back to bottom-0. --}}
-            <div x-show="selectedId" x-transition.opacity style="display:none;" class="fixed inset-x-0 {{ $inDash ? 'bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0' : 'bottom-0' }} z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-md shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)] dark:border-zinc-700/60 dark:bg-[#1d3252]/95">
+            {{-- Glassmorphism buy bar: translucent frosted surface with a soft
+                 inner highlight, matching the referral pill / locale modal glass. --}}
+            <div x-show="selectedId" x-transition.opacity style="display:none;" class="fixed inset-x-0 {{ $inDash ? 'bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0' : 'bottom-0' }} z-40 border-t border-white/40 bg-white/60 shadow-[0_-8px_32px_-12px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#1d3252]/60">
                 {{-- Centered close chip: deselects the current plan, which collapses
                      the bar. Sits half-out-of-bar so the X is visible without crowding
                      the buy controls. --}}
@@ -705,15 +765,15 @@
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
 
-                <div class="mx-auto flex w-full max-w-[800px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-                    <button type="button" @click="showDetails = true" class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">
+                <div class="mx-auto flex w-full max-w-[840px] flex-wrap items-center gap-3 px-4 py-4 sm:px-6">
+                    <button type="button" @click="showDetails = true" class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-400/60 backdrop-blur-md transition-colors hover:bg-white/60 dark:text-white dark:ring-white/60 dark:hover:bg-white/10">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                         Package details
                     </button>
 
                     {{-- Currency selector --}}
                     <div x-data="{ open: false }" @click.outside="open = false" class="relative">
-                        <button type="button" @click="open = ! open" class="flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-300 transition-colors hover:bg-zinc-50 dark:text-white dark:ring-white dark:hover:bg-[#26416b]">
+                        <button type="button" @click="open = ! open" class="flex items-center gap-1.5 rounded-[10px] px-3.5 py-2.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-400/60 backdrop-blur-md transition-colors hover:bg-white/60 dark:text-white dark:ring-white/60 dark:hover:bg-white/10">
                             <template x-if="cryptos[selectedCrypto]?.icon"><img :src="cryptos[selectedCrypto].icon" :alt="selectedCrypto" class="h-4 w-4 rounded-[10px]"></template>
                             <template x-if="!cryptos[selectedCrypto]?.icon && cryptos[selectedCrypto]?.flag"><img :src="cryptos[selectedCrypto].flag" :alt="selectedCrypto" class="h-4 w-4 rounded-[10px] object-cover"></template>
                             <span x-text="selectedCrypto"></span>
@@ -735,7 +795,7 @@
                     <div class="ml-auto flex items-center gap-4">
                         <div class="text-right">
                             <p class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Total</p>
-                            <p class="text-lg font-extrabold tabular-nums text-zinc-900 dark:text-white" x-text="totalLabel()">0.00</p>
+                            <p class="text-xl font-extrabold tabular-nums text-zinc-900 dark:text-white" x-text="totalLabel()">0.00</p>
                         </div>
                         <span x-show="rcoinConfig.enabled" class="hidden items-center gap-1 text-xs font-semibold text-zinc-600 sm:flex dark:text-zinc-400">
                             <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-5 w-5 object-contain">
@@ -745,8 +805,8 @@
                             type="button"
                             @click="addToCart()"
                             :disabled="! selectedId"
-                            :class="cartState === 'success' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-blue-600 bg-white text-blue-600 hover:bg-blue-600 hover:text-white dark:bg-[#1d3252] dark:text-blue-300 dark:hover:text-white'"
-                            class="hidden h-11 items-center justify-center rounded-[10px] border-2 px-5 text-sm font-semibold transition-colors disabled:opacity-50 sm:flex"
+                            :class="cartState === 'success' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-blue-600 bg-white/70 text-blue-600 backdrop-blur-md hover:bg-blue-600 hover:text-white dark:bg-white/10 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white'"
+                            class="hidden h-12 items-center justify-center rounded-[10px] border-2 px-6 text-sm font-semibold transition-colors disabled:opacity-50 sm:flex"
                         >
                             <span x-show="cartState !== 'success'">Add to cart</span>
                             <span x-show="cartState === 'success'" style="display:none;">Added</span>
@@ -755,7 +815,7 @@
                             type="button"
                             @click="buyNow()"
                             :disabled="! selectedId || $store.cart.loading"
-                            class="flex h-11 items-center justify-center rounded-[10px] bg-blue-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-50 disabled:hover:bg-blue-600"
+                            class="flex h-12 items-center justify-center rounded-[10px] bg-blue-600 px-7 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-50 disabled:hover:bg-blue-600"
                         >
                             Buy now
                         </button>
@@ -782,13 +842,52 @@
                 </div>
                 @if ($coverageCount > 1)
                     <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">This eSIM works across {{ $coverageCount }} countries and connects to a local network automatically in each.</p>
-                    <div class="mt-4 max-h-72 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] pr-1">
-                        <ul class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-zinc-700 sm:grid-cols-3 dark:text-zinc-300">
-                            @foreach ($coverageList as $c)
-                                <li class="truncate">{{ $c }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
+                    @if ($countryNetworks->isNotEmpty())
+                        {{-- Per-country networks straight from the supplier's plan
+                             details: flag + country left, its carriers and speeds
+                             right. Searchable, scrolls inside the modal. --}}
+                        <div class="mt-4" x-data="{ netQ: '' }">
+                            <div class="relative">
+                                <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <input x-model="netQ" type="text" placeholder="Search by country" aria-label="Search by country" class="w-full rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:bg-[#26416b] dark:text-white dark:placeholder:text-zinc-400">
+                            </div>
+                            <div class="mt-3 max-h-80 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+                                <ul class="divide-y divide-zinc-100 dark:divide-zinc-700/60">
+                                    @foreach ($countryNetworks as $cn)
+                                        @php $cnIso = $cn['iso'] ?? ($nameToIso[$cn['name']] ?? null); @endphp
+                                        <li data-name="{{ Str::lower($cn['name']) }}" x-show="netQ === '' || $el.dataset.name.includes(netQ.toLowerCase())" class="flex items-center justify-between gap-3 py-2.5">
+                                            <span class="flex min-w-0 items-center gap-2.5 text-sm font-bold text-zinc-900 dark:text-white">
+                                                @if ($cnIso)
+                                                    <img src="{{ Product::flagUrl($cnIso) }}" alt="" class="h-4 w-6 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200 dark:ring-zinc-700" loading="lazy">
+                                                @endif
+                                                <span class="truncate">{{ $cn['name'] }}</span>
+                                            </span>
+                                            <span class="flex shrink-0 flex-col items-end gap-1">
+                                                @foreach ($cn['networks'] as $net)
+                                                    <span class="flex items-center gap-1.5 text-xs text-zinc-700 dark:text-zinc-300">
+                                                        {{ $net['name'] }}
+                                                        @if (! empty($net['speed']))
+                                                            <span class="rounded-[4px] border border-zinc-300 px-1 py-px text-[9px] font-bold text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">{{ $net['speed'] }}</span>
+                                                        @endif
+                                                    </span>
+                                                @endforeach
+                                            </span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    @else
+                        {{-- Fallback (supplier sent no per-country networks):
+                             plain country grid. --}}
+                        <div class="mt-4 max-h-72 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] pr-1">
+                            <ul class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-zinc-700 sm:grid-cols-3 dark:text-zinc-300">
+                                @foreach ($coverageList as $c)
+                                    <li class="truncate">{{ $c }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                 @else
                     <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">This eSIM may switch between the following networks based on availability and speed. You can adjust this in your device settings.</p>
                     {{-- Global eSIMs can list 100+ carriers - cap the list like
@@ -874,7 +973,7 @@
         {{-- Package details modal --}}
         <div x-show="showDetails" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="details-title">
             <div x-show="showDetails" @click="showDetails = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showDetails" x-transition class="relative w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showDetails" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="details-title" class="flex items-center gap-2.5 text-lg font-bold text-zinc-900 dark:text-white">
                         @if ($flag)
@@ -908,6 +1007,55 @@
                             <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="(plan()?.days > 0 ? plan().days + ' days' : 'Flexible')"></span>
                         </span>
                     </div>
+                    {{-- Supplier plan policies - every section below renders only
+                         when the synced plan data carries it (no invented copy). --}}
+                    <div class="mt-5 space-y-4 border-t border-zinc-100 pt-5 dark:border-zinc-700/60">
+                        @if ($activationText)
+                            <div>
+                                <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
+                                    <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Activation policy
+                                </p>
+                                <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $activationText }}</p>
+                            </div>
+                        @endif
+
+                        @if ($planPolicy['rechargeable'] !== null)
+                            <div>
+                                <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
+                                    <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                                    Top-up option
+                                </p>
+                                <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                                    @if ($planPolicy['rechargeable'])
+                                        You can top up this eSIM when your data or validity runs out - top-ups are available once the eSIM is installed.
+                                    @else
+                                        This package is not rechargeable - when it runs out, purchase a new plan for the same device.
+                                    @endif
+                                </p>
+                            </div>
+                        @endif
+
+                        @if ($planPolicy['bullets']->isNotEmpty() || $planPolicy['other'])
+                            <div>
+                                <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
+                                    <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+                                    Other info
+                                </p>
+                                @if ($planPolicy['bullets']->isNotEmpty())
+                                    <ul class="mt-1 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                                        @foreach ($planPolicy['bullets'] as $bullet)
+                                            <li>{{ $bullet }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                                @if ($planPolicy['other'])
+                                    <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $planPolicy['other'] }}</p>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+
                     <p class="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">To complete your order, confirm your device is eSIM-compatible and network-unlocked.</p>
                 </div>
             </div>

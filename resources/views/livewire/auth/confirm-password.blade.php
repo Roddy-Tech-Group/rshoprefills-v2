@@ -34,23 +34,23 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
 
 <div class="flex flex-col sm:flex-1">
     {{-- Centered form --}}
-    <div class="mx-auto flex w-full max-w-md flex-col py-3 sm:flex-1 sm:justify-center sm:py-8">
+    <div class="mx-auto flex w-full max-w-sm flex-col py-3 sm:flex-1 sm:justify-center sm:py-6">
 
-        <h1 class="flex items-center justify-center gap-2 text-3xl font-bold tracking-tight text-zinc-900">
+        <h1 class="flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-zinc-900">
             <span>Confirm your password</span>
             <svg class="h-7 w-7 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
             </svg>
         </h1>
-        <p class="mt-2 text-center text-base text-zinc-600">This is a secure area. Please confirm your password to continue.</p>
+        <p class="mt-2 text-center text-sm text-zinc-600">This is a secure area. Please confirm your password to continue.</p>
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 
-        <form wire:submit="confirmPassword" class="mt-4 flex flex-col gap-3 sm:mt-6 sm:gap-4">
+        <form wire:submit="confirmPassword" class="mt-4 flex flex-col gap-3 sm:gap-4">
 
             {{-- Password --}}
             <div x-data="{ show: false }">
-                <label for="password" class="mb-1.5 block text-base font-medium text-zinc-700">Password</label>
+                <label for="password" class="mb-1.5 block text-sm font-medium text-zinc-700">Password</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -66,7 +66,7 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
                         autofocus
                         autocomplete="current-password"
                         placeholder="Enter your password"
-                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-12 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                     <button
                         type="button"
@@ -89,7 +89,7 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
             {{-- Submit --}}
             <button
                 type="submit"
-                class="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                class="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
             >
                 <span>Confirm</span>
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
