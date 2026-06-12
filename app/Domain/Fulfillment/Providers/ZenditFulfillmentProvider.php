@@ -46,7 +46,14 @@ class ZenditFulfillmentProvider implements FulfillmentProviderInterface
         $firstName = 'Rshop';
         $lastName = 'Refills';
 
-        $customTransactionId = 'RSR-'.str_replace('-', '', (string) $item->id);
+        // Zendit treats transactionId as unique forever - a failed transaction
+        // burns its ID ("transaction_duplicate_id" on reuse). Manual retries
+        // bump `fulfillment_retry` in the item metadata (RetryFulfillmentCommand),
+        // producing a fresh ID per attempt, while automatic queue retries within
+        // the same attempt reuse the ID so a timed-out request can't double-buy.
+        $retrySequence = (int) data_get($item->metadata, 'fulfillment_retry', 0);
+        $customTransactionId = 'RSR-'.str_replace('-', '', (string) $item->id)
+            .($retrySequence > 0 ? '-R'.$retrySequence : '');
 
         if ($isEsim) {
             $requestPayload = [

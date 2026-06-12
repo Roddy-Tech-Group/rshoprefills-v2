@@ -96,6 +96,8 @@ class FulfillOrderItemJob implements ShouldQueue
                 if ($status === FulfillmentStatus::Fulfilled) {
                     $item->fulfillment_payload = $provider->normalizeResponse($result['payload'] ?? []);
                     $item->delivered_at = now();
+                    // A recovered retry must not keep advertising its old failure
+                    $item->failed_at = null;
                     $item->save();
 
                     FulfillmentSucceeded::dispatch($item);
