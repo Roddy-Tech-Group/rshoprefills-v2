@@ -1,7 +1,7 @@
 @php
     // Accessibility Statement. Dark-mode safe: bg-white/bg-zinc-50/bg-blue-50 remap
     // to navy in dark; coloured accents (text-blue-700) read in both themes.
-    $supportEmail = 'info@rshoprefill.com';
+    $supportEmail = 'support@rshoprefill.com';
     $lastUpdated = 'May 23, 2026';
 @endphp
 

@@ -1481,9 +1481,9 @@
                     'cta' => 'Open Facebook',
                 ],
                 [
-                    'type' => 'email', 'url' => 'mailto:info@rshoprefill.com', 'bg' => 'bg-amber-500', 'external' => false,
+                    'type' => 'email', 'url' => 'mailto:support@rshoprefill.com', 'bg' => 'bg-amber-500', 'external' => false,
                     'heading' => 'Email our team',
-                    'tagline' => 'Reach info@rshoprefill.com. We reply within 24 hours.',
+                    'tagline' => 'Reach support@rshoprefill.com. Support is available 24/7.',
                     'cta' => 'Send email',
                 ],
                 [

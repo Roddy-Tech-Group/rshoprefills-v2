@@ -5,7 +5,7 @@
     //
     // FAQ entries are CMS-managed (faqs table). Topic icons stay in code: they
     // pair with brand visuals, not editorial content, so they live with the view.
-    $supportEmail = 'info@rshoprefill.com';
+    $supportEmail = 'support@rshoprefill.com';
 
     $faqs = \App\Models\Faq::published()->ordered()->get()->map(fn ($faq) => [
         'cat' => $faq->topic,
@@ -170,7 +170,7 @@
                     <div>
                         <h2 class="text-2xl font-bold text-white sm:text-3xl">Still need a hand?</h2>
                         <p class="mt-2 max-w-md text-sm leading-relaxed text-blue-100">
-                            Send us a message with your order number and we will get back to you quickly. Our team is available 7 days a week.
+                            Open Live Chat any time for the fastest help, or send us a message with your order number. Our support team is available 24/7, and you never lose money - every payment is delivered or refunded to your wallet.
                         </p>
                         <div class="mt-6 flex flex-wrap gap-3">
                             <a href="mailto:{{ $supportEmail }}" class="inline-flex items-center gap-2 rounded-[6px] bg-white px-5 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50">
@@ -192,12 +192,12 @@
                                 <dd><a href="mailto:{{ $supportEmail }}" class="font-semibold text-white hover:underline">{{ $supportEmail }}</a></dd>
                             </div>
                             <div class="flex items-center justify-between gap-4">
-                                <dt class="text-blue-100">Response time</dt>
-                                <dd class="font-semibold text-white">Within 24 hours</dd>
+                                <dt class="text-blue-100">Live chat</dt>
+                                <dd class="font-semibold text-white">24/7, around the clock</dd>
                             </div>
                             <div class="flex items-center justify-between gap-4">
-                                <dt class="text-blue-100">Availability</dt>
-                                <dd class="font-semibold text-white">7 days a week</dd>
+                                <dt class="text-blue-100">Email response</dt>
+                                <dd class="font-semibold text-white">Within 24 hours</dd>
                             </div>
                         </dl>
                         <div class="mt-5 flex items-center gap-2 border-t border-white/15 pt-5">

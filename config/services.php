@@ -64,6 +64,9 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+        // Google Analytics 4 measurement ID (gtag.js). Empty = analytics off,
+        // so local/dev and any deploy without the key render no tag.
+        'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
     ],
 
     // Master switch allowing the payment providers to fall back to mock

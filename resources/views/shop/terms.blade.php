@@ -2,7 +2,7 @@
     // Terms of Service — customer-facing legal page. Dark-mode safe: backgrounds use
     // remapped classes (bg-white/bg-zinc-50/bg-blue-50 -> navy in dark) while
     // coloured accents (text-red-600 / text-blue-700) read in both themes.
-    $supportEmail = 'info@rshoprefill.com';
+    $supportEmail = 'support@rshoprefill.com';
     $lastUpdated = 'May 23, 2026';
 @endphp
 
