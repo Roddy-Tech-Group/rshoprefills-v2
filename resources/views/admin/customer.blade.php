@@ -484,7 +484,7 @@
                     \App\Domain\Shared\Enums\TransactionCategory::RewardReferral->value,
                 ])
                 ->sum('amount');
-            $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.0001);
+            $rcoinUsdRate = (float) \App\Models\Setting::rcoinUsdRate();
         @endphp
 
         {{-- Wallet balances + manual credit/debit. Admin can pick any of
@@ -817,7 +817,7 @@
             // rates cron lagged. Rcoin is points, not cash: it converts at the
             // platform's rcoin_usd_rate, never via FX (the FX fallback would
             // count it 1:1 as dollars).
-            $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.01);
+            $rcoinUsdRate = (float) \App\Models\Setting::rcoinUsdRate();
             $walletTotalUsd = 0.0;
             $walletTotalApprox = false;
             foreach ($user->wallets as $w) {

@@ -43,7 +43,7 @@
         // no redemption toggle - the programme is invisible storefront-side.
         'enabled' => (bool) \App\Models\Setting::get('rcoin_enabled', true),
         'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
-        'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+        'usd_rate' => (float) \App\Models\Setting::rcoinUsdRate(),
         // Redemption rules - checkout toggle reads these to decide whether to
         // show the "Use Rcoin" switch and how many Rcoin can be applied.
         'redemption_enabled' => (bool) \App\Models\Setting::get('redemption_enabled', true),

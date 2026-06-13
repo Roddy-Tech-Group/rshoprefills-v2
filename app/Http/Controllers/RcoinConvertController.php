@@ -41,7 +41,7 @@ class RcoinConvertController extends Controller
         }
 
         $minUsd = (float) Setting::get('wallet_conversion_min_usd', 2.00);
-        $rate = (float) Setting::get('rcoin_usd_rate', 0.0001);
+        $rate = (float) Setting::rcoinUsdRate();
         $minRcoin = $rate > 0 ? (int) ceil($minUsd / $rate) : 0;
 
         $validated = $request->validate([

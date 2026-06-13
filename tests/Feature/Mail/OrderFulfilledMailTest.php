@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Setting;
 use App\Models\Subcategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -153,7 +154,10 @@ class OrderFulfilledMailTest extends TestCase
 
     public function test_delivery_email_previews_rcoin_cashback_before_the_reward_lands(): void
     {
-        // $7 order x 1% default cashback at the $0.01 rate = 7 Rcoin.
+        // Pin the rate so the preview is independent of the default: $7 order
+        // x 1% cashback = $0.07, at $0.01/Rcoin = 7 Rcoin.
+        Setting::set('rcoin_usd_rate', 0.01);
+        Setting::set('cashback_percentage', 1.0);
         $item = $this->makeFulfilledItem(['code' => 'GC-TEST-12345']);
 
         $html = (new OrderFulfilledMail($item))->render();

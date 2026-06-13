@@ -100,12 +100,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 'walletTransactions' => fn ($query) => $query->latest()->limit(10),
             ]);
 
+            // Total spent must be the USD settlement sum, NOT raw total_amount:
+            // total_amount is stored in each order's display currency, so summing
+            // it directly and labelling it USD mixes currencies (a XAF order's
+            // 4000 would read as $4000). usdTotal() reads the settlement figure.
+            $totalSpentUsd = $user->orders()
+                ->whereIn('order_status', ['completed', 'partially_completed'])
+                ->get(['id', 'total_amount', 'metadata'])
+                ->sum(fn ($order) => $order->usdTotal());
+
             return view('admin.customer', [
                 'user' => $user,
                 'ordersCount' => $user->orders()->count(),
-                'totalSpent' => (float) $user->orders()
-                    ->whereIn('order_status', ['completed', 'partially_completed'])
-                    ->sum('total_amount'),
+                'totalSpent' => (float) $totalSpentUsd,
                 'unreadNotifications' => $user->notifications()->whereNull('read_at')->count(),
                 'kyc' => $user->kycSubmissions()->first(),
             ]);

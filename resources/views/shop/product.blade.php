@@ -320,7 +320,7 @@
             rcoinConfig: @js([
                 'enabled' => (bool) \App\Models\Setting::get('rcoin_enabled', true),
                 'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
-                'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+                'usd_rate' => (float) \App\Models\Setting::rcoinUsdRate(),
             ]),
         })"
         x-init="init()"

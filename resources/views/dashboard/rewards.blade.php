@@ -27,7 +27,7 @@
         ->whereIn('type', [\App\Domain\Shared\Enums\WalletTransactionType::Credit->value])
         ->sum('amount');
         
-    $rcoinPerUsd = 1 / Setting::get('rcoin_usd_rate', 0.005);
+    $rcoinPerUsd = 1 / Setting::rcoinUsdRate();
     $convertMinUsd = (float) Setting::get('wallet_conversion_min_usd', 2.00);
     $convertEnabled = (bool) Setting::get('wallet_conversion_enabled', true);
     // Minimum Rcoin needed to clear the USD floor - used to gate the form.

@@ -11,7 +11,7 @@
         ->where('is_active', true)
         ->pluck('rate_per_usd', 'code')
         ->map(fn ($r) => (float) $r);
-    $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005);
+    $rcoinUsdRate = (float) \App\Models\Setting::rcoinUsdRate();
 
     $walletUsdTotal = function (User $user) use ($ratesPerUsd, $rcoinUsdRate): ?float {
         if ($user->wallets->isEmpty()) {

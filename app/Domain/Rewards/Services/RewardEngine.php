@@ -304,7 +304,7 @@ class RewardEngine
      */
     public function usdToRcoin(float $usdAmount): int
     {
-        $rate = (float) Setting::get('rcoin_usd_rate', 0.01);
+        $rate = (float) Setting::rcoinUsdRate();
         if ($rate <= 0) {
             return 0;
         }
@@ -317,7 +317,7 @@ class RewardEngine
      */
     public function rcoinToUsd(int $rcoinAmount): float
     {
-        $rate = (float) Setting::get('rcoin_usd_rate', 0.01);
+        $rate = (float) Setting::rcoinUsdRate();
 
         return round($rcoinAmount * $rate, 4);
     }

@@ -28,6 +28,18 @@ class Setting extends Model
     }
 
     /**
+     * Rcoin-to-USD conversion rate, the single source of truth for valuing
+     * Rcoin in dollars. Previously every caller hardcoded its own fallback
+     * (0.0001 / 0.005 / 0.01 were all in use), so the same balance could be
+     * valued 100x differently page to page when the DB setting was unset.
+     * One default lives here now: 0.005 (1 Rcoin = half a US cent).
+     */
+    public static function rcoinUsdRate(): float
+    {
+        return (float) static::get('rcoin_usd_rate', 0.005);
+    }
+
+    /**
      * Set a setting value and clear its cache.
      */
     public static function set(string $key, mixed $value, string $type = 'string', ?string $description = null): void
