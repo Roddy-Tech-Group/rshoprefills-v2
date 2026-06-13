@@ -85,6 +85,9 @@
 
         <x-chatway-widget />
 
+        {{-- PWA pull-to-refresh (standalone mode only). --}}
+        <x-pull-to-refresh />
+
         @fluxScripts
     </body>
 </html>
