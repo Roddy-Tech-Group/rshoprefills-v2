@@ -49,10 +49,38 @@ class Admin extends Authenticatable
         'email',
         'password',
         'role',
+        'permissions',
         'avatar_url',
         'theme',
         'is_active',
         'last_login_at',
+    ];
+
+    /**
+     * Assignable admin sections: the sidebar areas a Super Admin can grant per
+     * admin from the edit form. The key is matched against route names by
+     * {@see self::routeSection()}; the label is what the form checkbox shows.
+     * Dashboard / account / activity are deliberately omitted - every admin
+     * keeps those as self-service essentials.
+     *
+     * @var array<string, string>
+     */
+    public const SECTIONS = [
+        'products' => 'Products',
+        'orders' => 'Orders',
+        'customers' => 'Customers',
+        'transactions' => 'Transactions',
+        'wallets' => 'Wallets',
+        'reports' => 'Reports',
+        'newsletter' => 'Newsletter',
+        'pricing-rules' => 'Pricing Rules',
+        'content' => 'Content (CMS)',
+        'support-tickets' => 'Support Tickets',
+        'notifications' => 'Notifications',
+        'admins' => 'Admins',
+        'rates' => 'Rate Management',
+        'settings' => 'System Settings',
+        'api-settings' => 'API & Integrations',
     ];
 
     /**
@@ -75,6 +103,7 @@ class Admin extends Authenticatable
         return [
             'password' => 'hashed',
             'role' => AdminRole::class,
+            'permissions' => 'array',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
         ];
@@ -90,6 +119,89 @@ class Admin extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->role === AdminRole::SuperAdmin;
+    }
+
+    /**
+     * The sections this admin may access. A Super Admin always gets every
+     * section. Otherwise it is the explicitly-saved permission set, falling
+     * back to the role's default preset when the column is null (so existing
+     * admins keep working until a Super Admin customises them).
+     *
+     * @return array<int, string>
+     */
+    public function accessibleSections(): array
+    {
+        if ($this->isSuperAdmin()) {
+            return array_keys(self::SECTIONS);
+        }
+
+        $saved = $this->permissions;
+        if (is_array($saved)) {
+            return array_values(array_intersect($saved, array_keys(self::SECTIONS)));
+        }
+
+        return $this->role->defaultPermissions();
+    }
+
+    /**
+     * Whether this admin may access a named section (one of self::SECTIONS).
+     */
+    public function canAccessSection(string $section): bool
+    {
+        return $this->isSuperAdmin() || in_array($section, $this->accessibleSections(), true);
+    }
+
+    /**
+     * Whether this admin may open the given admin route name. Self-service
+     * routes (dashboard, own account, activity, logout, theme) are always
+     * allowed; everything else maps to a section and is checked against the
+     * admin's accessible sections. Used by both the AdminAuth middleware and
+     * the sidebar so the menu shows exactly what is reachable.
+     */
+    public function canAccessAdminRoute(string $routeName): bool
+    {
+        $name = str_starts_with($routeName, 'admin.') ? substr($routeName, 6) : $routeName;
+
+        $alwaysAllowed = ['dashboard', 'logout', 'theme', 'account', 'account-activity'];
+        if (in_array($name, $alwaysAllowed, true)) {
+            return true;
+        }
+
+        $section = self::routeSection($name);
+
+        // Unknown routes default to Super-Admin-only, so a new admin page can't
+        // be silently exposed before it is mapped to a section here.
+        if ($section === null) {
+            return $this->isSuperAdmin();
+        }
+
+        return $this->canAccessSection($section);
+    }
+
+    /**
+     * Map an admin route name (without the "admin." prefix) to its section key,
+     * or null when it has no section (handled as Super-Admin-only).
+     */
+    public static function routeSection(string $name): ?string
+    {
+        return match (true) {
+            str_starts_with($name, 'products') || str_starts_with($name, 'api.catalog.') => 'products',
+            str_starts_with($name, 'orders') || $name === 'order' || str_starts_with($name, 'api.commerce.') => 'orders',
+            str_starts_with($name, 'customers') || $name === 'customer' || str_starts_with($name, 'customer.') || str_starts_with($name, 'kyc.') => 'customers',
+            str_starts_with($name, 'transactions') => 'transactions',
+            str_starts_with($name, 'wallets') || str_starts_with($name, 'api.monitoring.') => 'wallets',
+            str_starts_with($name, 'reports') || str_starts_with($name, 'api.dashboard.') || str_starts_with($name, 'api.sre.') => 'reports',
+            str_starts_with($name, 'newsletter') => 'newsletter',
+            str_starts_with($name, 'pricing-rules') => 'pricing-rules',
+            str_starts_with($name, 'content.') || str_starts_with($name, 'api.rewards.') => 'content',
+            str_starts_with($name, 'support-tickets') => 'support-tickets',
+            str_starts_with($name, 'notifications') || str_starts_with($name, 'api.notifications.') => 'notifications',
+            str_starts_with($name, 'admins') => 'admins',
+            str_starts_with($name, 'rates') => 'rates',
+            str_starts_with($name, 'settings') => 'settings',
+            str_starts_with($name, 'api-settings') => 'api-settings',
+            default => null,
+        };
     }
 
     /**

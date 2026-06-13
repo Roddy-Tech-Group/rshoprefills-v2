@@ -296,6 +296,10 @@
             --}}
             @php
                 $isCurrent = fn (...$patterns) => request()->routeIs(...$patterns);
+                // Role-aware nav gate: only show links the current admin's role
+                // can actually open (same logic the AdminAuth middleware enforces).
+                $adminUser = auth('admin')->user();
+                $can = fn (string $routeName) => $adminUser?->canAccessAdminRoute($routeName) ?? false;
                 $navItemClass = fn (bool $active) => $active
                     ? 'group flex items-center gap-3 rounded-[10px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
                     : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
@@ -319,6 +323,7 @@
                 </a>
 
                 {{-- Products (expandable group — SoC for product/service categories) --}}
+                @if ($can('admin.products'))
                 @php
                     $productPatterns = ['admin.products*', 'admin.gift-cards*', 'admin.esims*', 'admin.mobile-topups*', 'admin.bill-payments*', 'admin.flights*', 'admin.stays*'];
                     $productActive = $isCurrent(...$productPatterns);
@@ -367,50 +372,64 @@
                         <a href="{{ route('admin.products', ['category' => 'stays']) }}" wire:navigate class="{{ $subItemClass($isCategory('stays')) }}">Stays</a>
                     </div>
                 </div>
+                @endif
 
                 {{-- Orders --}}
+                @if ($can('admin.orders'))
                 @php $active = $isCurrent('admin.orders*'); @endphp
                 <a href="{{ route('admin.orders') }}" wire:navigate data-tip="Orders" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('order.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Orders
                 </a>
+                @endif
 
                 {{-- Customers --}}
+                @if ($can('admin.customers'))
                 @php $active = $isCurrent('admin.customers*'); @endphp
                 <a href="{{ route('admin.customers') }}" wire:navigate data-tip="Customers" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('customer.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Customers
                 </a>
+                @endif
 
                 {{-- Transactions --}}
+                @if ($can('admin.transactions'))
                 @php $active = $isCurrent('admin.transactions*'); @endphp
                 <a href="{{ route('admin.transactions') }}" wire:navigate data-tip="Transactions" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Transactions
                 </a>
+                @endif
 
                 {{-- Wallets --}}
+                @if ($can('admin.wallets'))
                 @php $active = $isCurrent('admin.wallets*'); @endphp
                 <a href="{{ route('admin.wallets') }}" wire:navigate data-tip="Wallets" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Wallets
                 </a>
+                @endif
 
                 {{-- Reports --}}
+                @if ($can('admin.reports'))
                 @php $active = $isCurrent('admin.reports*'); @endphp
                 <a href="{{ route('admin.reports') }}" wire:navigate data-tip="Reports" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/report.svg') }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Reports
                 </a>
+                @endif
 
                 {{-- Newsletter --}}
+                @if ($can('admin.newsletter'))
                 @php $active = $isCurrent('admin.newsletter*'); @endphp
                 <a href="{{ route('admin.newsletter') }}" wire:navigate data-tip="Newsletter" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('marketing.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Newsletter
                 </a>
+                @endif
 
                 {{-- Pricing Rules --}}
+                @if ($can('admin.pricing-rules'))
                 @php $active = $isCurrent('admin.pricing-rules*'); @endphp
                 <a href="{{ route('admin.pricing-rules') }}" wire:navigate data-tip="Pricing Rules" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -418,10 +437,12 @@
                     </svg>
                     Pricing Rules
                 </a>
+                @endif
 
                 {{-- Content — CMS-managed marketing copy (blog / press / reviews / FAQs).
                      Sub-items expand inline so the rail stays scannable when collapsed
                      they hide behind the parent label. --}}
+                @if ($can('admin.content.blog'))
                 @php $contentActive = $isCurrent('admin.content.*'); @endphp
                 <div
                     x-data="{ open: {{ $contentActive ? 'true' : 'false' }} }"
@@ -464,6 +485,7 @@
                         <a href="{{ route('admin.content.rewards.withdrawals') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.rewards.withdrawals')) }}">Rcoin Withdrawals</a>
                     </div>
                 </div>
+                @endif
 
                 {{-- Account Activity --}}
                 @php $active = $isCurrent('admin.account-activity*'); @endphp
@@ -475,20 +497,25 @@
                 </a>
 
                 {{-- Support Tickets --}}
+                @if ($can('admin.support-tickets'))
                 @php $active = $isCurrent('admin.support-tickets*'); @endphp
                 <a href="{{ route('admin.support-tickets') }}" wire:navigate data-tip="Support Tickets" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/support.svg') }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Support Tickets
                 </a>
+                @endif
 
                 {{-- Admins --}}
+                @if ($can('admin.admins'))
                 @php $active = $isCurrent('admin.admins*'); @endphp
                 <a href="{{ route('admin.admins') }}" wire:navigate data-tip="Admins" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Admins
                 </a>
+                @endif
 
                 {{-- Rate Management --}}
+                @if ($can('admin.rates'))
                 @php $active = $isCurrent('admin.rates*'); @endphp
                 <a href="{{ route('admin.rates') }}" wire:navigate data-tip="Rate Management" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -497,20 +524,25 @@
                     </svg>
                     Rate Management
                 </a>
+                @endif
 
                 {{-- System Settings --}}
+                @if ($can('admin.settings'))
                 @php $active = $isCurrent('admin.settings*'); @endphp
                 <a href="{{ route('admin.settings') }}" wire:navigate data-tip="System Settings" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     System Settings
                 </a>
+                @endif
 
                 {{-- API & Integrations - partner API keys + provider credentials --}}
+                @if ($can('admin.api-settings'))
                 @php $active = $isCurrent('admin.api-settings*'); @endphp
                 <a href="{{ route('admin.api-settings') }}" wire:navigate data-tip="API & Integrations" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     API & Integrations
                 </a>
+                @endif
             </nav>
 
         </flux:sidebar>

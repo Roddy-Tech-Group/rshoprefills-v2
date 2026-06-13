@@ -22,6 +22,33 @@ class extends Component {
     public string $role = AdminRole::Admin->value;
     public bool $isActive = true;
 
+    /** @var array<int, string> Section keys this admin may access. */
+    public array $permissions = [];
+
+    public function mount(): void
+    {
+        // Managing admins is the highest-risk surface - Super Admin only.
+        abort_unless(auth('admin')->user()?->isSuperAdmin(), 403, 'Only a Super Admin can manage admins.');
+
+        $this->permissions = AdminRole::from($this->role)->defaultPermissions();
+    }
+
+    /** All assignable sections, for the permission checkboxes. */
+    #[Computed]
+    public function sections(): array
+    {
+        return Admin::SECTIONS;
+    }
+
+    /**
+     * When the role changes on the form, reset the ticked permissions to that
+     * role's preset (the Super Admin can then fine-tune).
+     */
+    public function updatedRole(string $value): void
+    {
+        $this->permissions = AdminRole::from($value)->defaultPermissions();
+    }
+
     #[Computed]
     public function admins()
     {
@@ -59,6 +86,9 @@ class extends Component {
         $this->password  = '';
         $this->role      = $admin->role->value;
         $this->isActive  = $admin->is_active;
+        // Show the admin's effective sections (saved set, or the role preset
+        // when nothing has been customised yet).
+        $this->permissions = $admin->accessibleSections();
         $this->resetValidation();
         $this->showForm = true;
     }
@@ -67,11 +97,20 @@ class extends Component {
     {
         $this->validate();
 
+        // Super Admins always have full access, so their permission set is left
+        // null (the model returns every section for them). Other roles save the
+        // ticked sections, filtered to the known registry.
+        $role = AdminRole::from($this->role);
+        $permissions = $role === AdminRole::SuperAdmin
+            ? null
+            : array_values(array_intersect($this->permissions, array_keys(Admin::SECTIONS)));
+
         $payload = [
-            'name'      => $this->name,
-            'email'     => $this->email,
-            'role'      => $this->role,
-            'is_active' => $this->isActive,
+            'name'        => $this->name,
+            'email'       => $this->email,
+            'role'        => $this->role,
+            'permissions' => $permissions,
+            'is_active'   => $this->isActive,
         ];
 
         if (filled($this->password)) {
@@ -111,13 +150,14 @@ class extends Component {
 
     private function resetForm(): void
     {
-        $this->editingId = null;
-        $this->name      = '';
-        $this->email     = '';
-        $this->password  = '';
-        $this->role      = AdminRole::Admin->value;
-        $this->isActive  = true;
-        $this->showForm  = false;
+        $this->editingId   = null;
+        $this->name        = '';
+        $this->email       = '';
+        $this->password    = '';
+        $this->role        = AdminRole::Admin->value;
+        $this->permissions = AdminRole::Admin->defaultPermissions();
+        $this->isActive    = true;
+        $this->showForm    = false;
         $this->resetValidation();
     }
 }; ?>
@@ -270,9 +310,32 @@ class extends Component {
                         @php
                             $roleOptions = collect(AdminRole::cases())->mapWithKeys(fn ($c) => [$c->value => $c->label()])->all();
                         @endphp
-                        <x-admin.select wire:model="role" :options="$roleOptions" />
+                        <x-admin.select wire:model.live="role" :options="$roleOptions" />
+                        <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Picking a role pre-fills the access below; tick or untick any section to customise.</p>
                         @error('role') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror
                     </div>
+
+                    {{-- Section access. Super Admins always have everything, so the
+                         checklist only shows for Admin / Moderator. --}}
+                    @if ($role === \App\Domain\Admin\Enums\AdminRole::SuperAdmin->value)
+                        <div class="rounded-[10px] bg-blue-50 px-4 py-3 text-xs font-medium text-blue-700 ring-1 ring-blue-200 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-500/30">
+                            Super Admins have full, unrestricted access to every section.
+                        </div>
+                    @else
+                        <div>
+                            <label class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Section access</label>
+                            <div class="mt-2 grid grid-cols-1 gap-1.5 rounded-[10px] border border-zinc-200 p-3 sm:grid-cols-2 dark:border-zinc-700/60">
+                                @foreach ($this->sections as $key => $label)
+                                    <label class="flex items-center gap-2 rounded-[8px] px-2 py-1.5 transition-colors hover:bg-zinc-50 dark:hover:bg-[#26416b]">
+                                        <input type="checkbox" value="{{ $key }}" wire:model="permissions" class="h-4 w-4 cursor-pointer accent-blue-600">
+                                        <span class="text-sm text-zinc-700 dark:text-zinc-200">{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">The admin only sees and can open the sections you tick. Dashboard and their own account are always available.</p>
+                        </div>
+                    @endif
+
                     <label class="flex items-center gap-2">
                         <input wire:model="isActive" type="checkbox" class="h-4 w-4 cursor-pointer accent-blue-600">
                         <span class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Active</span>
