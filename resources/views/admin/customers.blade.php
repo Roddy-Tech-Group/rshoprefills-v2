@@ -1,8 +1,42 @@
 @php
     use App\Models\User;
 
-    $customers = User::with('wallet')->latest()->limit(50)->get();
+    $customers = User::with('wallets')->latest()->limit(50)->get();
     $totalCustomers = User::count();
+
+    // Wallet column shows the customer's TOTAL holdings as one USD figure.
+    // `$user->wallet` is the USD wallet only - reading it here showed 0.00
+    // for everyone keeping their balance in XAF/NGN/RCOIN wallets.
+    $ratesPerUsd = \App\Models\CurrencyRate::query()
+        ->where('is_active', true)
+        ->pluck('rate_per_usd', 'code')
+        ->map(fn ($r) => (float) $r);
+    $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005);
+
+    $walletUsdTotal = function (User $user) use ($ratesPerUsd, $rcoinUsdRate): ?float {
+        if ($user->wallets->isEmpty()) {
+            return null;
+        }
+
+        $total = 0.0;
+        foreach ($user->wallets as $wallet) {
+            $code = strtoupper($wallet->currency instanceof \App\Domain\Shared\Enums\Currency ? $wallet->currency->value : (string) $wallet->currency);
+            $balance = (float) $wallet->balance;
+            if ($balance <= 0) {
+                continue;
+            }
+            if ($code === 'USD') {
+                $total += $balance;
+            } elseif ($code === 'RCOIN') {
+                $total += $balance * $rcoinUsdRate;
+            } elseif (($ratesPerUsd[$code] ?? 0) > 0) {
+                $total += $balance / $ratesPerUsd[$code];
+            }
+            // Unknown-rate currencies are skipped rather than guessed.
+        }
+
+        return $total;
+    };
 
     // Status pill tone — drives the right-side chip per row. Active means the
     // email is verified AND the account isn't banned/suspended. Tone names
@@ -94,10 +128,11 @@
                     <x-admin.badge :tone="$status['tone']">{{ $status['label'] }}</x-admin.badge>
                 </span>
 
-                {{-- Wallet balance --}}
+                {{-- Wallet balance - every wallet converted to USD and summed --}}
+                @php $usdTotal = $walletUsdTotal($user); @endphp
                 <span class="truncate text-[13px] font-bold tabular-nums text-zinc-900 dark:text-white">
-                    @if ($user->wallet)
-                        {{ \App\Models\Product::currencySymbol($user->wallet->currency->value) }}{{ number_format((float) $user->wallet->balance, 2) }} {{ $user->wallet->currency->value }}
+                    @if ($usdTotal !== null)
+                        ${{ number_format($usdTotal, 2) }} USD
                     @else
                         <span class="font-medium text-zinc-500 dark:text-zinc-500">No wallet</span>
                     @endif

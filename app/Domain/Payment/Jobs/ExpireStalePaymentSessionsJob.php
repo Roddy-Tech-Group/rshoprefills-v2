@@ -78,6 +78,14 @@ class ExpireStalePaymentSessionsJob implements ShouldQueue
                     continue;
                 }
 
+                // The admin Transactions page lists PaymentAttempt rows, so the
+                // attempt must reach a terminal state too - otherwise an
+                // abandoned checkout shows "pending" in admin forever even
+                // though the order was cancelled and the session expired.
+                if (in_array($attempt->payment_status, [PaymentStatus::Unpaid, PaymentStatus::Pending, PaymentStatus::Processing], true)) {
+                    $attempt->update(['payment_status' => PaymentStatus::Expired]);
+                }
+
                 if ($order = $attempt->order) {
                     // Skip if a late webhook already moved the order past Unpaid.
                     if ($order->payment_status === PaymentStatus::Unpaid) {
