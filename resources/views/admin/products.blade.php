@@ -859,7 +859,11 @@
                     // base on the supplier's USD cost. What this column shows
                     // is what checkout actually charges.
                     $retailBase = ($valueCurrency === 'USD' || $valueCurrency === '') && $valueNative > 0 ? $valueNative : $costUsd;
-                    $retailUsd = $product ? $pricing->resolveRetailPrice($product, $retailBase) : $retailBase;
+                    // resolveVariantRetailPrice honours the per-variant
+                    // manual_retail_price_usd override set in the drawer; the
+                    // product-level resolveRetailPrice would ignore it, so the
+                    // column kept showing the rule price after an admin override.
+                    $retailUsd = $pricing->resolveVariantRetailPrice($variant, $retailBase);
 
                     // Discount % — the supplier's wholesale discount: the gap
                     // between the face Value (what the customer receives) and
@@ -1613,6 +1617,9 @@
                                 `/admin/api/catalog/variants/${this.data.variantId}/price`,
                                 { manual_retail_price_usd: value });
                             this.data.manualPriceUsd = json.manual_retail_price_usd;
+                            // The Sales Price column is server-rendered, so reload
+                            // to show the new override (the data is already saved).
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1628,6 +1635,7 @@
                                 `/admin/api/catalog/variants/${this.data.variantId}/price`);
                             this.data.manualPriceUsd = null;
                             this.priceInput = '';
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1645,6 +1653,7 @@
                                 `/admin/api/catalog/products/${this.data.productId}/markup`,
                                 { markup_type: this.markupType, markup_value: value });
                             this.data.productMarkup = { type: json.markup_type, value: json.markup_value };
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1662,6 +1671,7 @@
                             this.data.productMarkup = null;
                             this.markupType = 'percentage';
                             this.markupValue = '';
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {

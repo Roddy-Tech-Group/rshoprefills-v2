@@ -18,6 +18,7 @@ use App\Http\Controllers\RcoinWithdrawalController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
 use App\Models\BlogPost;
+use App\Models\Coupon;
 use App\Models\CurrencyRate;
 use App\Models\PressArticle;
 use App\Models\Product;
@@ -506,6 +507,67 @@ $renderCheckout = function (CartManager $cartManager, CartPricingService $pricin
     return view('shop.checkout', ['cart' => $cart, 'totals' => $totals, 'rate' => $rate]);
 };
 Route::get('checkout', $renderCheckout)->name('shop.checkout');
+
+// Coupon live preview. Validates a code against the active cart and returns the
+// USD + display-currency discount, computed EXACTLY like CheckoutService applies
+// it at order time (per-variant, per-unit x qty), so the checkout total the
+// customer sees matches what they're charged. No state is changed here.
+Route::post('coupon/preview', function (Request $request, CartManager $cartManager) {
+    $code = Str::upper(trim((string) $request->input('code', '')));
+    $currency = strtoupper(trim((string) $request->input('currency', 'USD'))) ?: 'USD';
+
+    if ($code === '') {
+        return response()->json(['valid' => false, 'message' => 'Enter a coupon code.']);
+    }
+
+    $userId = auth()->id();
+    $guestToken = $request->cookie('guest_token') ?? $request->header('X-Guest-Token');
+
+    try {
+        $cart = $cartManager->resolveCart($userId, $guestToken);
+        $cart->load('items');
+    } catch (Throwable $e) {
+        $cart = null;
+    }
+
+    if (! $cart || $cart->items->isEmpty()) {
+        return response()->json(['valid' => false, 'message' => 'Your cart is empty.']);
+    }
+
+    $coupon = Coupon::where('code', $code)->first();
+    if ($coupon === null) {
+        return response()->json(['valid' => false, 'message' => 'This coupon code is not valid.']);
+    }
+    if (! $coupon->isRedeemable()) {
+        return response()->json(['valid' => false, 'message' => 'This coupon has expired or is no longer available.']);
+    }
+
+    $item = $cart->items->firstWhere('product_variant_id', $coupon->product_variant_id);
+    if ($item === null) {
+        return response()->json(['valid' => false, 'message' => 'This coupon does not apply to anything in your cart.']);
+    }
+
+    $unitPriceUsd = (float) $item->subtotal_snapshot / max(1, (int) $item->quantity);
+    $discountedUnit = $coupon->applyTo($unitPriceUsd);
+    $discountUsd = round(($unitPriceUsd - $discountedUnit) * max(1, (int) $item->quantity), 2);
+
+    if ($discountUsd <= 0) {
+        return response()->json(['valid' => false, 'message' => 'This coupon gives no discount on your cart.']);
+    }
+
+    // Convert the USD discount into the customer's display currency for the
+    // on-screen line (CurrencyRate::resolve returns the rate row + a convert()).
+    $discountDisplay = round(CurrencyRate::resolve($currency)->convert($discountUsd), 2);
+
+    return response()->json([
+        'valid' => true,
+        'code' => $coupon->code,
+        'discount_usd' => $discountUsd,
+        'discount_display' => $discountDisplay,
+        'currency' => $currency,
+        'message' => 'Coupon applied.',
+    ]);
+})->middleware(['not-suspended', 'maintenance-guard', 'throttle:20,1'])->name('coupon.preview');
 
 // Checkout submission - creates the Order + OrderItems + a pending Payment from the
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside

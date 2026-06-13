@@ -568,13 +568,40 @@
                         </div>
                     </div>
 
-                    {{-- Coupon --}}
+                    {{-- Coupon — live preview. Apply validates against the cart and
+                         shows the discount on the total before payment; the same
+                         code submits with the form so the server re-applies it. --}}
                     <div class="mt-5" x-data="{ open: false }">
                         <button type="button" @click="open = !open" class="text-sm font-semibold text-zinc-900 underline underline-offset-2 transition-colors hover:text-blue-700">
                             I have a coupon
                         </button>
                         <div x-show="open" x-collapse x-cloak class="mt-2">
-                            <input name="coupon_code" type="text" placeholder="Coupon code" class="{{ $fieldClass }} !mt-0">
+                            <div class="flex items-stretch gap-2">
+                                <input
+                                    name="coupon_code"
+                                    type="text"
+                                    x-model="couponCode"
+                                    @input="couponApplied && removeCoupon()"
+                                    @keydown.enter.prevent="applyCoupon()"
+                                    placeholder="Coupon code"
+                                    class="{{ $fieldClass }} !mt-0 flex-1 uppercase"
+                                >
+                                <button
+                                    type="button"
+                                    @click="couponApplied ? removeCoupon() : applyCoupon()"
+                                    :disabled="couponLoading || (! couponApplied && ! couponCode)"
+                                    class="shrink-0 rounded-[10px] px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                    :class="couponApplied ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-blue-600 hover:bg-blue-700'"
+                                >
+                                    <span x-show="! couponLoading" x-text="couponApplied ? 'Remove' : 'Apply'"></span>
+                                    <span x-show="couponLoading">…</span>
+                                </button>
+                            </div>
+                            <p x-show="couponError" x-cloak class="mt-1.5 text-xs font-medium text-red-600" x-text="couponError"></p>
+                            <p x-show="couponApplied" x-cloak class="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                <span x-text="'Coupon ' + couponApplied + ' applied'"></span>
+                            </p>
                         </div>
                     </div>
 
@@ -613,6 +640,17 @@
                             <span class="font-medium text-zinc-600">Processing fee</span>
                             <span class="font-semibold tabular-nums text-zinc-900" x-text="$store.cart.pay(processingFee())"></span>
                         </div>
+                        <div x-show="couponApplied" x-cloak class="mt-2 flex items-center justify-between text-sm">
+                            <span class="font-medium text-emerald-600" x-text="'Discount (' + couponApplied + ')'"></span>
+                            <span class="font-semibold tabular-nums text-emerald-600" x-text="'-' + $store.cart.pay(couponDiscountDisplay)"></span>
+                        </div>
+                    </div>
+
+                    {{-- Discount line when there is no processing fee (wallet/crypto)
+                         so the customer still sees the coupon reduction. --}}
+                    <div x-show="couponApplied && processingFee() <= 0" x-cloak class="mt-4 flex items-center justify-between border-t border-zinc-100 pt-4 text-sm">
+                        <span class="font-medium text-emerald-600" x-text="'Discount (' + couponApplied + ')'"></span>
+                        <span class="font-semibold tabular-nums text-emerald-600" x-text="'-' + $store.cart.pay(couponDiscountDisplay)"></span>
                     </div>
 
                     {{-- Total --}}
@@ -951,6 +989,56 @@
                 hasTransactionPin: hasTransactionPin || false,
                 paymentFees: paymentFees || { fee_free: [], methods: {}, default: { transaction: 0, international: 0 } },
 
+                // Coupon live-preview state. couponApplied holds the validated
+                // code once Apply succeeds; the discount is shown on the total
+                // and the same code submits with the form for server re-apply.
+                couponCode: '',
+                couponApplied: '',
+                couponDiscountUsd: 0,
+                couponDiscountDisplay: 0,
+                couponError: '',
+                couponLoading: false,
+
+                async applyCoupon() {
+                    const code = (this.couponCode || '').trim();
+                    if (! code || this.couponLoading) { return; }
+                    this.couponLoading = true;
+                    this.couponError = '';
+                    try {
+                        const res = await fetch('/coupon/preview', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ code, currency: this.$store.cart.currency || 'USD' }),
+                        });
+                        const json = await res.json();
+                        if (json.valid) {
+                            this.couponApplied = json.code;
+                            this.couponDiscountUsd = Number(json.discount_usd) || 0;
+                            this.couponDiscountDisplay = Number(json.discount_display) || 0;
+                            this.couponError = '';
+                        } else {
+                            this.removeCoupon();
+                            this.couponError = json.message || 'This coupon could not be applied.';
+                        }
+                    } catch (e) {
+                        this.removeCoupon();
+                        this.couponError = 'Could not check that coupon. Please try again.';
+                    } finally {
+                        this.couponLoading = false;
+                    }
+                },
+
+                removeCoupon() {
+                    this.couponApplied = '';
+                    this.couponDiscountUsd = 0;
+                    this.couponDiscountDisplay = 0;
+                },
+
                 // Rcoin redemption state — three values:
                 //   ''     = off (default)
                 //   '1'    = partial, capped at redemption_max_percentage
@@ -1195,7 +1283,7 @@
                 },
 
                 totalLabel() {
-                    const usd = Number(this.$store.cart.subtotalUsd || 0);
+                    const usd = Math.max(0, Number(this.$store.cart.subtotalUsd || 0) - Number(this.couponDiscountUsd || 0));
                     if (this.method === 'crypto') {
                         const coin = this.coinMeta();
                         if (! coin) {
@@ -1203,7 +1291,8 @@
                         }
                         return (usd * coin.perUsd).toFixed(coin.decimals) + ' ' + coin.code;
                     }
-                    return this.$store.cart.pay(Number(this.$store.cart.subtotal || 0) + this.processingFee());
+                    const display = Math.max(0, Number(this.$store.cart.subtotal || 0) + this.processingFee() - Number(this.couponDiscountDisplay || 0));
+                    return this.$store.cart.pay(display);
                 },
 
                 points() {

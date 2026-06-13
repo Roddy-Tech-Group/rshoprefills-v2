@@ -1909,9 +1909,15 @@ window.salesCostChart = function (series) {
                 { name: 'Sales', data: this.series.map((p) => [new Date(p.date).getTime(), p.sales]) },
                 { name: 'Cost',  data: this.series.map((p) => [new Date(p.date).getTime(), p.cost])  },
             ]);
+
+            // updateSeries resets per-series visibility, so a "Sales only" or
+            // "Cost only" selection would silently revert to both after a period
+            // change. Re-apply the active mode so the filter sticks.
+            this._update();
         },
 
         _update() {
+            if (! this.chart) return;
             const wanted = this.mode === 'both' ? ['Sales', 'Cost'] : (this.mode === 'sales' ? ['Sales'] : ['Cost']);
             ['Sales', 'Cost'].forEach((name) => {
                 if (wanted.includes(name)) { this.chart.showSeries(name); }
