@@ -42,10 +42,45 @@ new #[Lazy] class extends Component
             ->sortByDesc(fn ($w) => $primaryWallet && $w->id === $primaryWallet->id)
             ->values();
 
-        // Recent wallet ledger movements - covers both top-ups (credits) and
-        // purchases (debits) since they both write WalletTransaction rows. Latest 8
-        // so the mobile and desktop overview cards have enough content to feel full.
-        $recentTransactions = $user->walletTransactions()->latest()->limit(8)->get();
+        // Recent money activity - the wallet ledger (top-ups, wallet purchases,
+        // Rcoin credits) MERGED with paid gateway order payments (card / mobile
+        // money / crypto), which never touch a wallet and were otherwise
+        // invisible here. Wallet-gateway attempts are excluded: their ledger
+        // debit already covers them. Uniform row shape for the blade.
+        $walletRecent = $user->walletTransactions()->latest()->limit(8)->get()->map(fn ($txn) => (object) [
+            'key' => 'txn-'.$txn->id,
+            'is_credit' => $txn->type === \App\Domain\Shared\Enums\WalletTransactionType::Credit,
+            'title' => $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction'),
+            'sub' => $txn->transaction_category?->label() ?? $txn->type->label(),
+            'amount' => (float) $txn->amount,
+            'symbol' => $txn->currency?->symbol() ?? '',
+            'date' => $txn->created_at,
+        ]);
+
+        $paymentRecent = \App\Models\PaymentAttempt::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('order_id')
+            ->where('gateway', '!=', 'wallet')
+            ->whereIn('payment_status', [
+                \App\Domain\Payment\Enums\PaymentStatus::Paid,
+                \App\Domain\Payment\Enums\PaymentStatus::Refunded,
+                \App\Domain\Payment\Enums\PaymentStatus::PartiallyRefunded,
+            ])
+            ->with('order:id,order_number')
+            ->latest()
+            ->limit(8)
+            ->get()
+            ->map(fn ($attempt) => (object) [
+                'key' => 'pay-'.$attempt->id,
+                'is_credit' => false,
+                'title' => $attempt->customerMethodLabel(),
+                'sub' => $attempt->order?->order_number ? 'Order '.$attempt->order->order_number : 'Order payment',
+                'amount' => (float) $attempt->amount,
+                'symbol' => \App\Models\Product::currencySymbol($attempt->currency),
+                'date' => $attempt->confirmed_at ?? $attempt->created_at,
+            ]);
+
+        $recentTransactions = $walletRecent->concat($paymentRecent)->sortByDesc('date')->take(8)->values();
 
         // Latest 5 orders for the Recent Orders card. Mobile renders all 5; the
         // desktop card slices ->take(3) to keep its right-rail compact.
@@ -387,23 +422,19 @@ new #[Lazy] class extends Component
 
             <ul class="mt-4 space-y-3">
                 @forelse ($recentTransactions as $txn)
-                    @php
-                        $isCredit = $txn->type === \App\Domain\Shared\Enums\WalletTransactionType::Credit;
-                        $sym = $txn->currency?->symbol() ?? '';
-                    @endphp
                     <li class="flex items-center gap-3">
-                        @if ($isCredit)
+                        @if ($txn->is_credit)
                             <x-icons.txn-credit class="h-11 w-11" />
                         @else
                             <x-icons.txn-debit class="h-11 w-11" />
                         @endif
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
-                            <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>
+                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->title }}</p>
+                            <p class="truncate text-[11px] text-zinc-600">{{ $txn->sub }}</p>
                         </div>
                         <div class="shrink-0 text-right">
-                            <p class="text-sm font-bold {{ $isCredit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $isCredit ? '+' : '-' }}{{ $sym }}{{ number_format((float) $txn->amount, 2) }}</p>
-                            <p class="text-[10px] text-zinc-600">{{ $txn->created_at->format('d M, H:i') }}</p>
+                            <p class="text-sm font-bold {{ $txn->is_credit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $txn->is_credit ? '+' : '-' }}{{ $txn->symbol }}{{ number_format($txn->amount, 2) }}</p>
+                            <p class="text-[10px] text-zinc-600">{{ $txn->date->format('d M, H:i') }}</p>
                         </div>
                     </li>
                 @empty
@@ -966,23 +997,19 @@ new #[Lazy] class extends Component
 
                     <ul class="mt-4 flex-1 space-y-3">
                         @forelse ($recentTransactions as $txn)
-                            @php
-                                $isCredit = $txn->type === \App\Domain\Shared\Enums\WalletTransactionType::Credit;
-                                $sym = $txn->currency?->symbol() ?? '';
-                            @endphp
                             <li class="flex items-center gap-3">
-                                @if ($isCredit)
+                                @if ($txn->is_credit)
                                     <x-icons.txn-credit class="h-11 w-11" />
                                 @else
                                     <x-icons.txn-debit class="h-11 w-11" />
                                 @endif
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
-                                    <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>
+                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->title }}</p>
+                                    <p class="truncate text-[11px] text-zinc-600">{{ $txn->sub }}</p>
                                 </div>
                                 <div class="shrink-0 text-right">
-                                    <p class="text-sm font-bold {{ $isCredit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $isCredit ? '+' : '-' }}{{ $sym }}{{ number_format((float) $txn->amount, 2) }}</p>
-                                    <p class="text-[10px] text-zinc-600">{{ $txn->created_at->format('d M, H:i') }}</p>
+                                    <p class="text-sm font-bold {{ $txn->is_credit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $txn->is_credit ? '+' : '-' }}{{ $txn->symbol }}{{ number_format($txn->amount, 2) }}</p>
+                                    <p class="text-[10px] text-zinc-600">{{ $txn->date->format('d M, H:i') }}</p>
                                 </div>
                             </li>
                         @empty

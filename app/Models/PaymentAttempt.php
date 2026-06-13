@@ -88,4 +88,29 @@ class PaymentAttempt extends Model
     {
         return $this->hasOne(PaymentSession::class);
     }
+
+    /**
+     * Customer-facing label for how this attempt was paid. Generic wording
+     * only - gateway/provider names never reach customer surfaces. Derived
+     * from the gateway's payment_type when the verification/webhook payload
+     * carries one, otherwise from the gateway family.
+     */
+    public function customerMethodLabel(): string
+    {
+        $type = strtolower((string) (
+            data_get($this->verification_payload, 'data.payment_type')
+            ?? data_get($this->webhook_payload, 'data.payment_type')
+            ?? ''
+        ));
+
+        return match (true) {
+            str_contains($type, 'mobilemoney') || str_contains($type, 'momo') => 'Mobile Money payment',
+            str_contains($type, 'ussd') => 'USSD payment',
+            str_contains($type, 'bank') => 'Bank transfer payment',
+            $type === 'card' => 'Card payment',
+            in_array($this->gateway, ['nowpayments', 'crypto'], true) => 'Crypto payment',
+            $this->gateway === 'wallet' => 'Wallet payment',
+            default => 'Card payment',
+        };
+    }
 }

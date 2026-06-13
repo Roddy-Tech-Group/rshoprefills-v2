@@ -911,6 +911,9 @@
             </div>
         </div>
 
+        {{-- Floating action toasts (session flashes) - auto-dismiss top-right. --}}
+        <x-flash-toast />
+
         @fluxScripts
     </body>
 </html>

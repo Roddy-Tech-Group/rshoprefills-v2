@@ -30,14 +30,8 @@
 
     <div class="flex flex-1 flex-col gap-6">
 
-        @if (session('status'))
-            <div class="flex items-center gap-2 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                </svg>
-                {{ session('status') }}
-            </div>
-        @endif
+        {{-- Action flashes (e.g. "Returned to your admin account") surface as a
+             floating auto-dismissing toast from the layout - no inline banner. --}}
 
         {{-- Back link --}}
         <a href="{{ route('admin.customers') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700">

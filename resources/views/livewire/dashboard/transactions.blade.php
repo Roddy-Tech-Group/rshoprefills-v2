@@ -1,8 +1,13 @@
 <?php
 
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Shared\Enums\FundingStatus;
 use App\Domain\Shared\Enums\WalletTransactionType;
+use App\Models\PaymentAttempt;
+use App\Models\Product;
 use App\Models\WalletFunding;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -82,6 +87,25 @@ class extends Component {
                 }
             });
 
+            // Gateway order payments (card / mobile money / crypto) - part of
+            // the on-screen unified feed, so the export carries them too.
+            if ($filter !== 'credit') {
+                $this->orderPaymentsQuery($search)->chunkById(500, function ($attempts) use ($out) {
+                    foreach ($attempts as $attempt) {
+                        fputcsv($out, [
+                            ($attempt->confirmed_at ?? $attempt->created_at)->format('Y-m-d H:i:s'),
+                            $attempt->order?->order_number ?? $attempt->gateway_reference,
+                            'Debit',
+                            'Order payment',
+                            $attempt->customerMethodLabel(),
+                            number_format((float) $attempt->amount, 2, '.', ''),
+                            $attempt->currency,
+                            '',
+                        ]);
+                    }
+                });
+            }
+
             fclose($out);
         }, $filename, [
             'Content-Type'  => 'text/csv',
@@ -89,11 +113,68 @@ class extends Component {
         ]);
     }
 
+    /**
+     * Paid gateway attempts on ORDERS (card / mobile money / crypto). These never
+     * touch a wallet, so without this source a card-paying customer's Transactions
+     * page only ever showed their Rcoin credits. Wallet-gateway attempts are
+     * excluded - their wallet debit is already in the ledger.
+     */
+    private function orderPaymentsQuery(string $term)
+    {
+        $query = PaymentAttempt::query()
+            ->where('user_id', Auth::id())
+            ->whereNotNull('order_id')
+            ->where('gateway', '!=', 'wallet')
+            ->whereIn('payment_status', [PaymentStatus::Paid, PaymentStatus::Refunded, PaymentStatus::PartiallyRefunded])
+            ->with('order:id,order_number')
+            ->latest();
+
+        if ($term !== '') {
+            $query->where(function ($q) use ($term) {
+                $q->where('gateway_reference', 'like', "%{$term}%")
+                    ->orWhereHas('order', fn ($o) => $o->where('order_number', 'like', "%{$term}%"));
+            });
+        }
+
+        return $query;
+    }
+
+    /** @return object Uniform row the blade renders regardless of source. */
+    private function paymentRow(PaymentAttempt $attempt): object
+    {
+        return (object) [
+            'key' => 'pay-'.$attempt->id,
+            'is_credit' => false,
+            'title' => $attempt->customerMethodLabel(),
+            'sub' => $attempt->order?->order_number ? 'Order '.$attempt->order->order_number : 'Order payment',
+            'amount' => (float) $attempt->amount,
+            'symbol' => Product::currencySymbol($attempt->currency),
+            'date' => $attempt->confirmed_at ?? $attempt->created_at,
+            'balance_after' => null,
+        ];
+    }
+
+    private function walletRow(\App\Models\WalletTransaction $txn): object
+    {
+        return (object) [
+            'key' => 'txn-'.$txn->id,
+            'is_credit' => $txn->type === WalletTransactionType::Credit,
+            'title' => $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction'),
+            'sub' => $txn->transaction_category?->label() ?? $txn->type->label(),
+            'amount' => (float) $txn->amount,
+            'symbol' => $txn->currency?->symbol() ?? '',
+            'date' => $txn->created_at,
+            'balance_after' => $txn->balance_after !== null ? (float) $txn->balance_after : null,
+        ];
+    }
+
     public function with(): array
     {
+        $term = trim($this->search);
+
         $query = Auth::user()->walletTransactions()->latest();
 
-        if (($term = trim($this->search)) !== '') {
+        if ($term !== '') {
             $query->where(function ($q) use ($term) {
                 $q->where('reference', 'like', "%{$term}%")
                     ->orWhere('description', 'like', "%{$term}%");
@@ -106,6 +187,28 @@ class extends Component {
             $query->where('type', WalletTransactionType::Debit);
         }
 
+        // Unified feed: wallet ledger + paid order payments, newest first. Both
+        // sources are capped so a pathological account can't blow memory; 500
+        // each is years of activity for a normal customer.
+        $rows = $query->limit(500)->get()->map(fn ($txn) => $this->walletRow($txn));
+
+        if ($this->filter !== 'credit') {
+            $rows = $rows->concat(
+                $this->orderPaymentsQuery($term)->limit(500)->get()->map(fn ($a) => $this->paymentRow($a))
+            );
+        }
+
+        $rows = $rows->sortByDesc('date')->values();
+
+        $page = Paginator::resolveCurrentPage();
+        $transactions = new LengthAwarePaginator(
+            $rows->forPage($page, 12)->values(),
+            $rows->count(),
+            12,
+            $page,
+            ['path' => Paginator::resolveCurrentPath()],
+        );
+
         // Non-completed funding attempts. A completed deposit already appears in
         // the ledger below as a credit, so here we surface only the in-flight and
         // failed ones so the customer can see a deposit is still pending or failed.
@@ -116,7 +219,7 @@ class extends Component {
             ->get();
 
         return [
-            'transactions' => $query->paginate(12),
+            'transactions' => $transactions,
             'recentDeposits' => $recentDeposits,
         ];
     }
@@ -237,30 +340,28 @@ class extends Component {
     @if ($transactions->isNotEmpty())
         <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
             @foreach ($transactions as $txn)
-                @php
-                    $isCredit = $txn->type === WalletTransactionType::Credit;
-                    $sym = $txn->currency?->symbol() ?? '';
-                @endphp
-                <div class="flex items-center gap-3 px-4 py-3.5" wire:key="txn-{{ $txn->id }}">
+                <div class="flex items-center gap-3 px-4 py-3.5" wire:key="{{ $txn->key }}">
                     {{-- Animated direction icon - green incoming arrow for
                          money in, red outgoing for money out. --}}
-                    @if ($isCredit)
+                    @if ($txn->is_credit)
                         <x-icons.txn-credit class="h-10 w-10" />
                     @else
                         <x-icons.txn-debit class="h-10 w-10" />
                     @endif
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-bold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
+                        <p class="truncate text-sm font-bold text-zinc-900">{{ $txn->title }}</p>
                         <p class="truncate text-xs text-zinc-500">
-                            {{ $txn->transaction_category?->label() ?? $txn->type->label() }}
-                            &middot; {{ $txn->created_at->format('d M Y, H:i') }}
+                            {{ $txn->sub }}
+                            &middot; {{ $txn->date->format('d M Y, H:i') }}
                         </p>
                     </div>
                     <div class="flex shrink-0 flex-col items-end gap-0.5">
-                        <p class="text-sm font-bold {{ $isCredit ? 'text-emerald-600' : 'text-zinc-900' }}">
-                            {{ $isCredit ? '+' : '-' }}{{ $sym }}{{ number_format((float) $txn->amount, 2) }}
+                        <p class="text-sm font-bold {{ $txn->is_credit ? 'text-emerald-600' : 'text-zinc-900' }}">
+                            {{ $txn->is_credit ? '+' : '-' }}{{ $txn->symbol }}{{ number_format($txn->amount, 2) }}
                         </p>
-                        <p class="text-[11px] text-zinc-400">Balance {{ $sym }}{{ number_format((float) $txn->balance_after, 2) }}</p>
+                        @if ($txn->balance_after !== null)
+                            <p class="text-[11px] text-zinc-400">Balance {{ $txn->symbol }}{{ number_format($txn->balance_after, 2) }}</p>
+                        @endif
                     </div>
                 </div>
             @endforeach
