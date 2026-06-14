@@ -547,21 +547,25 @@
                         <p x-show="groups().length === 0" class="rounded-[10px] bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-400 dark:ring-zinc-700">No packages in this category right now.</p>
                     </div>
 
-                    {{-- Voice-plan inclusions — only on the Calls / Texts tab. --}}
-                    <div x-show="activeTab === 'voice'" x-cloak class="mt-6 rounded-[10px] bg-blue-50 p-5 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
+                    {{-- Voice-plan inclusions — only on the Calls / Texts tab.
+                         Each inclusion is its own card. --}}
+                    <div x-show="activeTab === 'voice'" x-cloak class="mt-6">
                         <p class="text-sm font-bold text-zinc-900 dark:text-white">Every voice plan includes</p>
-                        <ul class="mt-3 space-y-2.5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                        <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             @foreach ([
-                                'App verification for WhatsApp, Facebook, TikTok and many other apps that need a number.',
-                                'Unlimited iMessage for the full validity period your plan carries.',
-                                'Renewable and top-up friendly - top up for local calls, with iMessage unlimited.',
-                            ] as $voiceIncl)
-                                <li class="flex items-start gap-2.5">
-                                    <svg class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                    <span>{{ $voiceIncl }}</span>
-                                </li>
+                                ['title' => 'App verification', 'desc' => 'WhatsApp, Facebook, TikTok and many other apps that need a number.', 'icon' => 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+                                ['title' => 'Unlimited iMessage', 'desc' => 'Unlimited iMessage for the full validity period your plan carries.', 'icon' => 'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z'],
+                                ['title' => 'Renewable & top-up', 'desc' => 'Top up for local calls any time, with iMessage unlimited.', 'icon' => 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99'],
+                            ] as $voiceCard)
+                                <div class="rounded-[10px] bg-blue-50 p-4 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
+                                    <span class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $voiceCard['icon'] }}"/></svg>
+                                    </span>
+                                    <p class="mt-3 text-sm font-bold text-zinc-900 dark:text-white">{{ $voiceCard['title'] }}</p>
+                                    <p class="mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{{ $voiceCard['desc'] }}</p>
+                                </div>
                             @endforeach
-                        </ul>
+                        </div>
                     </div>
 
                     {{-- Need broader coverage — sits inside the same card, beneath the plans. --}}
