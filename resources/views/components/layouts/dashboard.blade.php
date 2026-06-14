@@ -1248,15 +1248,15 @@
             x-data="{ active: {{ $activeIndex }} }"
             class="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden"
         >
-            <nav class="mx-auto max-w-md rounded-[28px] border border-zinc-200/80 bg-white/95 px-2 py-2 shadow-[0_8px_30px_-6px_rgba(0,0,0,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0c1a36]/90" aria-label="Primary">
+            <nav class="mx-auto max-w-md rounded-full border border-white/50 bg-white/55 p-1.5 shadow-[0_10px_34px_-6px_rgba(0,0,0,0.22)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#0c1a36]/55" aria-label="Primary">
                 <div class="relative flex items-stretch">
-                    {{-- Apple-glass sliding pill: one translucent bubble that glides
-                         to the active tab. Width = one of five equal columns;
-                         translateX(active * 100%) lands it on the active slot
-                         (Menu sits in slot 2, which is never an active route). --}}
+                    {{-- Apple-glass sliding pill: one frosted bubble that fills the
+                         bar height and glides to the active tab. Width = one of
+                         five equal columns; translateX(active * 100%) lands it on
+                         the active slot (Menu is slot 2, never an active route). --}}
                     <span
                         aria-hidden="true"
-                        class="pointer-events-none absolute inset-y-0 left-0 w-1/5 rounded-full bg-zinc-500/10 ring-1 ring-zinc-900/[0.04] shadow-sm backdrop-blur-md transition-transform duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-white/10 dark:ring-white/10"
+                        class="pointer-events-none absolute inset-y-0 left-0 w-1/5 rounded-full bg-zinc-500/15 ring-1 ring-white/50 shadow-sm backdrop-blur-md backdrop-saturate-150 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-white/15 dark:ring-white/15"
                         :style="'transform: translateX(' + (active * 100) + '%)'"
                     ></span>
 
