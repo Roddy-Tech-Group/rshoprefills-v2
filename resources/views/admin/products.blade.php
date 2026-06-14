@@ -1560,17 +1560,16 @@
                             this.markupValue = '';
                         }
                         this.isOpen = true;
-                        // Lock page scroll while the drawer is open. The admin page scrolls
-                        // on the root <html> (body is min-h-screen), so body-only overflow
-                        // isn't enough — lock both the documentElement and body.
-                        document.documentElement.style.overflow = 'hidden';
-                        document.body.style.overflow = 'hidden';
+                        // Use the shared scroll lock (position:fixed + reserved
+                        // scrollbar gutter) like every other modal. The previous
+                        // raw `overflow:hidden` removed the scrollbar and shifted
+                        // the whole layout (incl. the sidebar) by its width.
+                        window.rshopScrollLock?.lock();
                         this.loadCoupons();
                     },
                     close() {
                         this.isOpen = false;
-                        document.documentElement.style.overflow = '';
-                        document.body.style.overflow = '';
+                        window.rshopScrollLock?.unlock();
                     },
 
                     _csrf() {
