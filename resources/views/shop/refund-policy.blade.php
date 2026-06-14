@@ -143,6 +143,15 @@
                 </div>
             </div>
 
+            {{-- Wrong-region purchase --}}
+            <div class="my-5 flex items-start gap-3 rounded-[10px] bg-blue-50 p-4 ring-1 ring-zinc-100">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a9.004 9.004 0 018.716 6.747M12 3a9.004 9.004 0 00-8.716 6.747M21.75 12H2.25"/></svg>
+                <div>
+                    <p class="text-sm font-bold text-blue-700">Bought the wrong region?</p>
+                    <p class="mt-1 text-sm leading-relaxed text-zinc-600">If you bought an eSIM for the wrong country or region, refunds are processed within 24 to 48 hours after our team confirms the case. Whether a refund is granted still depends on whether the eSIM was installed: an eSIM that has not been installed or activated is refunded to your wallet, while one that has already been installed or used is not refundable.</p>
+                </div>
+            </div>
+
             {{-- Flights & stays --}}
             <h3 class="mt-8 text-base font-bold text-zinc-900">Flights and hotel stays</h3>
             <p class="mt-2 text-sm leading-relaxed text-zinc-600 sm:text-base">

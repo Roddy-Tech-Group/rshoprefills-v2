@@ -393,6 +393,23 @@
                             The package starts when you connect to a supported network
                         </li>
                     </ul>
+
+                    {{-- Wrong-destination guard: this eSIM only works in its own
+                         coverage area, so steer anyone not travelling here to the
+                         worldwide Discover Global eSIM. Hidden on that page itself. --}}
+                    @php
+                        $discoverGlobalSlug = 'esim-ww-discover-global';
+                        $isDiscoverGlobal = $product->slug === $discoverGlobalSlug || strtoupper((string) $product->country_code) === 'WW';
+                    @endphp
+                    @unless ($isDiscoverGlobal)
+                        <div class="mt-5 flex items-start gap-2.5 rounded-[10px] bg-amber-50 p-3.5 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:ring-amber-500/30">
+                            <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                            <p class="text-sm leading-relaxed text-amber-800 dark:text-amber-200">
+                                Only buy this if you're in <span class="font-semibold">{{ $regionLabel }}</span> or travelling there - it only works on {{ $regionLabel }} networks. Not headed there?
+                                <a href="{{ $shopRoute('esim', $discoverGlobalSlug) }}" wire:navigate class="font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-950 dark:text-white dark:hover:text-blue-200">Buy Discover Global instead</a> for worldwide coverage.
+                            </p>
+                        </div>
+                    @endunless
                 </div>
 
                 {{-- Region switcher --}}
@@ -528,6 +545,23 @@
                         </template>
 
                         <p x-show="groups().length === 0" class="rounded-[10px] bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-400 dark:ring-zinc-700">No packages in this category right now.</p>
+                    </div>
+
+                    {{-- Voice-plan inclusions — only on the Calls / Texts tab. --}}
+                    <div x-show="activeTab === 'voice'" x-cloak class="mt-6 rounded-[10px] bg-blue-50 p-5 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
+                        <p class="text-sm font-bold text-zinc-900 dark:text-white">Every voice plan includes</p>
+                        <ul class="mt-3 space-y-2.5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                            @foreach ([
+                                'App verification for WhatsApp, Facebook, TikTok and many other apps that need a number.',
+                                'Unlimited iMessage for the full validity period your plan carries.',
+                                'Renewable and top-up friendly - top up for local calls, with iMessage unlimited.',
+                            ] as $voiceIncl)
+                                <li class="flex items-start gap-2.5">
+                                    <svg class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                    <span>{{ $voiceIncl }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
 
                     {{-- Need broader coverage — sits inside the same card, beneath the plans. --}}
