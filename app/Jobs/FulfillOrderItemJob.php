@@ -8,6 +8,7 @@ use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Order\Events\FulfillmentFailed;
 use App\Domain\Order\Events\FulfillmentQueued;
 use App\Domain\Order\Events\FulfillmentSucceeded;
+use App\Domain\Order\Services\GatewayRefundService;
 use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Providers\WalletPaymentProvider;
@@ -208,7 +209,14 @@ class FulfillOrderItemJob implements ShouldQueue
                 }
                 // If Reserved, the full reservation will be settled when remaining items resolve.
             }
+
+            return;
         }
+
+        // Non-wallet (card / mobile money / crypto) paid order: the money
+        // settled to us, so honour the wallet-first refund policy by crediting
+        // the customer's wallet for this failed item. Idempotent per item.
+        app(GatewayRefundService::class)->refundFailedItemToWallet($item);
     }
 
     private function checkOrderCompletion(string $orderId, OrderService $orderService): void

@@ -7,6 +7,7 @@ use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Services\PaymentSessionService;
 use App\Domain\Shared\Enums\FundingStatus;
+use App\Jobs\VerifyPaymentJob;
 use App\Models\PaymentSession;
 use App\Models\WalletFunding;
 use Illuminate\Bus\Queueable;
@@ -64,6 +65,35 @@ class ExpireStalePaymentSessionsJob implements ShouldQueue
 
         foreach ($stale as $session) {
             try {
+                $attempt = $session->paymentAttempt;
+
+                // 0. LAST-CHANCE GATEWAY VERIFICATION. A customer can confirm a
+                //    payment (card / mobile money) whose webhook + return both
+                //    fail to land - the order stays Unpaid and would be wrongly
+                //    cancelled here while the gateway holds their money. Before
+                //    treating the session as abandoned, ask the gateway one more
+                //    time; if it's actually paid, VerifyPaymentJob confirms the
+                //    order and dispatches fulfillment, and we skip the expiry.
+                if ($attempt
+                    && $attempt->order
+                    && $attempt->gateway !== 'wallet'
+                    && ! in_array($attempt->payment_status, [PaymentStatus::Paid, PaymentStatus::Failed], true)) {
+                    try {
+                        dispatch_sync(new VerifyPaymentJob($attempt));
+                    } catch (\Throwable $e) {
+                        Log::warning('ExpireStalePaymentSessionsJob: gateway verify failed for attempt '.$attempt->id, [
+                            'message' => $e->getMessage(),
+                        ]);
+                    }
+
+                    $attempt->refresh();
+                    if ($attempt->payment_status === PaymentStatus::Paid) {
+                        Log::info('ExpireStalePaymentSessionsJob: recovered a real payment on session '.$session->id.' - confirmed instead of cancelled.');
+
+                        continue; // payment was genuine: confirmed + fulfilling
+                    }
+                }
+
                 // 1. Expire the session itself — the existing state-machine method,
                 //    idempotent if status changed between query and lock.
                 $paymentSessionService->expireSession($session);
@@ -71,7 +101,6 @@ class ExpireStalePaymentSessionsJob implements ShouldQueue
                 // 2. Cascade to the linked Order or WalletFunding so the customer's
                 //    dashboard reflects the dead checkout instead of showing Pending
                 //    in perpetuity.
-                $attempt = $session->paymentAttempt;
                 if (! $attempt) {
                     $expired++;
 

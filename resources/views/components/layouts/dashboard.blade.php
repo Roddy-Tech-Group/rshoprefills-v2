@@ -1322,8 +1322,9 @@
                     @endforeach
                 </nav>
 
-                {{-- Safe-area spacer for iOS home indicator. Matches the glass nav above. --}}
-                <div class="bg-white/70 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70" style="height: env(safe-area-inset-bottom);"></div>
+                {{-- Bottom breathing room: always keep a small gap under the tabs
+                     (more on phones with a home indicator). Matches the glass nav. --}}
+                <div class="bg-white/70 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70" style="height: max(14px, env(safe-area-inset-bottom));"></div>
             </div>
         </div>
 

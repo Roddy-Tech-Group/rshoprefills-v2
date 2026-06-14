@@ -5,7 +5,9 @@ namespace Tests\Feature\Payment;
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Payment\Interfaces\PaymentProviderInterface;
 use App\Domain\Payment\Jobs\ExpireStalePaymentSessionsJob;
+use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Domain\Payment\Services\PaymentSessionService;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
@@ -63,8 +65,19 @@ class ExpireStalePaymentSessionsTest extends TestCase
         return [$order, $attempt, $session];
     }
 
+    /** Force the gateway to report "unpaid" so the checkout is genuinely abandoned. */
+    private function fakeGatewayUnpaid(): void
+    {
+        $provider = $this->createMock(PaymentProviderInterface::class);
+        $provider->method('verifyPayment')->willReturn(false);
+        $factory = $this->createMock(PaymentGatewayFactory::class);
+        $factory->method('getProvider')->willReturn($provider);
+        $this->app->instance(PaymentGatewayFactory::class, $factory);
+    }
+
     public function test_abandoned_checkout_reaches_terminal_state_everywhere(): void
     {
+        $this->fakeGatewayUnpaid();
         [$order, $attempt, $session] = $this->staleCheckout();
 
         (new ExpireStalePaymentSessionsJob)->handle(
