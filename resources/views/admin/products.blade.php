@@ -246,7 +246,6 @@
                     name="q"
                     x-model.debounce.250ms="query"
                     @input="suggest()"
-                    @focus="suggest()"
                     value="{{ $search }}"
                     placeholder="Search products by name, SKU or country (e.g. Cameroon, US, ESIM-AD)"
                     class="w-full rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-white"

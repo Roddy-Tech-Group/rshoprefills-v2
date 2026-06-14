@@ -1232,23 +1232,33 @@
                 default                                       => 0, // dashboard / overview
             };
         @endphp
+        @php
+            $tabs = [
+                ['idx' => 0, 'href' => route('dashboard'),              'icon' => 'Home.svg',           'label' => 'Home',         'nav' => true],
+                ['idx' => 1, 'href' => route('dashboard.orders'),       'icon' => 'order.svg',          'label' => 'Orders',       'nav' => true],
+                // index 2 is the Menu button, rendered between the two loops
+                ['idx' => 3, 'href' => route('dashboard.transactions'), 'icon' => 'transactions 1.svg', 'label' => 'History',      'nav' => true],
+                ['idx' => 4, 'href' => route('dashboard.profile'),      'icon' => 'Profile 1.svg',      'label' => 'Profile',      'nav' => true],
+            ];
+        @endphp
+        {{-- Floating rounded nav bar (neobank style): detached from the edges with
+             a pill highlight behind the active tab. The wrapper's bottom padding
+             keeps it clear of the iOS home indicator. --}}
         <div
             x-data="{ active: {{ $activeIndex }} }"
-            class="fixed inset-x-0 bottom-0 z-50 lg:hidden"
+            class="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden"
         >
-            <div class="relative">
-                {{-- Tab bar shell — glassmorphism so page content blurs through. --}}
-                <nav class="relative grid grid-cols-5 items-center rounded-t-3xl border-t border-white/40 bg-white/70 px-1.5 py-2 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.10)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#0c1a36]/70" aria-label="Primary">
-
-                    @php
-                        $tabs = [
-                            ['idx' => 0, 'href' => route('dashboard'),         'icon' => 'Home.svg',           'label' => 'Home',         'nav' => true],
-                            ['idx' => 1, 'href' => route('dashboard.orders'), 'icon' => 'order.svg',          'label' => 'Orders',       'nav' => true],
-                            // index 2 is the FAB spacer — handled separately below
-                            ['idx' => 3, 'href' => route('dashboard.transactions'), 'icon' => 'transactions 1.svg', 'label' => 'Transactions', 'nav' => true],
-                            ['idx' => 4, 'href' => route('dashboard.profile'), 'icon' => 'Profile 1.svg',      'label' => 'Profile',      'nav' => true],
-                        ];
-                    @endphp
+            <nav class="mx-auto max-w-md rounded-[28px] border border-zinc-200/80 bg-white/95 px-2 py-2 shadow-[0_8px_30px_-6px_rgba(0,0,0,0.20)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0c1a36]/90" aria-label="Primary">
+                <div class="relative flex items-stretch">
+                    {{-- Apple-glass sliding pill: one translucent bubble that glides
+                         to the active tab. Width = one of five equal columns;
+                         translateX(active * 100%) lands it on the active slot
+                         (Menu sits in slot 2, which is never an active route). --}}
+                    <span
+                        aria-hidden="true"
+                        class="pointer-events-none absolute inset-y-0 left-0 w-1/5 rounded-full bg-zinc-500/10 ring-1 ring-zinc-900/[0.04] shadow-sm backdrop-blur-md transition-transform duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-white/10 dark:ring-white/10"
+                        :style="'transform: translateX(' + (active * 100) + '%)'"
+                    ></span>
 
                     {{-- Tabs 0 + 1 --}}
                     @foreach (array_slice($tabs, 0, 2) as $t)
@@ -1257,69 +1267,53 @@
                             @if ($t['nav'] && $t['href'] !== '#') wire:navigate @endif
                             @click="active = {{ $t['idx'] }}"
                             aria-label="{{ $t['label'] }}"
-                            class="relative z-10 flex items-center justify-center py-1.5 transition-transform duration-200 active:scale-90"
+                            class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
                         >
-                            {{-- iOS-style: clean tinted icon + label, no pill. Active
-                                 tints system-blue; idle is muted grey. --}}
-                            <span class="flex flex-col items-center gap-1">
-                                <span
-                                    aria-hidden="true"
-                                    class="h-6 w-6 transition-colors duration-200"
-                                    :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-500 dark:bg-zinc-400'"
-                                    style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
-                                ></span>
-                                <span class="text-[10px] leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'font-medium text-zinc-500 dark:text-zinc-400'">{{ $t['label'] }}</span>
-                            </span>
+                            <span
+                                aria-hidden="true"
+                                class="h-6 w-6 transition-colors duration-200"
+                                :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-900 dark:bg-zinc-300'"
+                                style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
+                            ></span>
+                            <span class="text-[10px] leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'font-medium text-zinc-700 dark:text-zinc-300'">{{ $t['label'] }}</span>
                         </a>
                     @endforeach
 
-                    {{-- Menu — a normal inline tab (no longer a floating FAB).
-                         Opens the bottom-sheet menu; styled identically to the
-                         route tabs around it. --}}
+                    {{-- Menu — opens the bottom-sheet menu (slot 2). --}}
                     <button
                         type="button"
                         x-on:click="$dispatch('open-mobile-menu')"
                         aria-label="Open menu"
-                        class="relative z-10 flex items-center justify-center py-1.5 transition-transform duration-200 active:scale-90"
+                        class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
                     >
-                        <span class="flex flex-col items-center gap-1">
-                            <span
-                                aria-hidden="true"
-                                class="h-6 w-6 bg-zinc-500 transition-colors duration-200 dark:bg-zinc-400"
-                                style="-webkit-mask: url('{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}') center / contain no-repeat;"
-                            ></span>
-                            <span class="text-[10px] font-medium leading-none text-zinc-500 dark:text-zinc-400">Menu</span>
-                        </span>
+                        <span
+                            aria-hidden="true"
+                            class="h-6 w-6 bg-zinc-900 transition-colors duration-200 dark:bg-zinc-300"
+                            style="-webkit-mask: url('{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}') center / contain no-repeat;"
+                        ></span>
+                        <span class="text-[10px] font-medium leading-none text-zinc-700 dark:text-zinc-300">Menu</span>
                     </button>
 
-                    {{-- Tabs 2 + 3 (transactions + profile) --}}
+                    {{-- Tabs 2 + 3 --}}
                     @foreach (array_slice($tabs, 2, 2) as $t)
                         <a
                             href="{{ $t['href'] }}"
                             @if ($t['nav'] && $t['href'] !== '#') wire:navigate @endif
                             @click="active = {{ $t['idx'] }}"
                             aria-label="{{ $t['label'] }}"
-                            class="relative z-10 flex items-center justify-center py-1.5 transition-transform duration-200 active:scale-90"
+                            class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
                         >
-                            {{-- iOS-style: clean tinted icon + label, no pill. Active
-                                 tints system-blue; idle is muted grey. --}}
-                            <span class="flex flex-col items-center gap-1">
-                                <span
-                                    aria-hidden="true"
-                                    class="h-6 w-6 transition-colors duration-200"
-                                    :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-500 dark:bg-zinc-400'"
-                                    style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
-                                ></span>
-                                <span class="text-[10px] leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'font-medium text-zinc-500 dark:text-zinc-400'">{{ $t['label'] }}</span>
-                            </span>
+                            <span
+                                aria-hidden="true"
+                                class="h-6 w-6 transition-colors duration-200"
+                                :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-900 dark:bg-zinc-300'"
+                                style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
+                            ></span>
+                            <span class="text-[10px] leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'font-medium text-zinc-700 dark:text-zinc-300'">{{ $t['label'] }}</span>
                         </a>
                     @endforeach
-                </nav>
-
-                {{-- Bottom breathing room: always keep a small gap under the tabs
-                     (more on phones with a home indicator). Matches the glass nav. --}}
-                <div class="bg-white/70 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70" style="height: max(14px, env(safe-area-inset-bottom));"></div>
-            </div>
+                </div>
+            </nav>
         </div>
 
         {{-- Locale modal at body root.
