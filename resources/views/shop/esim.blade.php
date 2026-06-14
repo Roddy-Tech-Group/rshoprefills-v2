@@ -318,7 +318,7 @@
         })"
         x-init="init()"
         translate="no"
-        class="notranslate mx-auto w-full max-w-[1320px] px-4 pb-32 pt-6 sm:px-6 lg:pt-10"
+        class="notranslate mx-auto w-full max-w-[1140px] px-4 pb-32 pt-6 sm:px-6 lg:pt-10"
     >
 
         {{-- ── Breadcrumb (aligned with the 800px cards) ────────────────────── --}}

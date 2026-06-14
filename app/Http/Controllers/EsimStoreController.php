@@ -47,8 +47,9 @@ class EsimStoreController extends Controller
         $popularIso = ['CM', 'FR', 'GB', 'CG', 'US', 'MA', 'CF', 'EG', 'IN', 'CI', 'CD', 'SN', 'GH', 'GA', 'KE', 'AZ', 'AU', 'ZA', 'TR', 'TH'];
 
         // Cache key carries the Zendit-eSIM flag so toggling it doesn't serve a
-        // stale catalog (the summary is cached for an hour).
-        $cacheKey = 'esim-catalog-summary-v5-z'.(FeatureFlag::on('zendit_esims') ? '1' : '0');
+        // stale catalog (the summary is cached for an hour). v6 adds the per-card
+        // data-size label.
+        $cacheKey = 'esim-catalog-summary-v6-z'.(FeatureFlag::on('zendit_esims') ? '1' : '0');
 
         return Cache::remember($cacheKey, now()->addHour(), function () use ($popularIso) {
             $pricing = app(CartPricingService::class);
@@ -85,6 +86,7 @@ class EsimStoreController extends Controller
                         'name' => $meta['name'],
                         'flag' => $hasFlag ? Product::flagUrl($meta['cc']) : self::globalFlag(),
                         'from' => $from,
+                        'data' => self::planDataLabel($cheapest),
                         'scope' => $meta['scope'],
                         'popular' => $hasFlag && in_array($meta['cc'], $popularIso, true),
                     ];
@@ -210,6 +212,33 @@ class EsimStoreController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * Short data-size label for an eSIM variant ("1 GB", "Unlimited"), used on
+     * the location cards so customers see what the cheapest plan offers, not
+     * just the "from" price. Mirrors the country page's data logic: prefer the
+     * clean data_limit, fall back to the raw payload (Zendit dataGB / unlimited).
+     */
+    private static function planDataLabel($variant): ?string
+    {
+        $meta = $variant->metadata ?? [];
+
+        $dl = trim((string) ($meta['data_limit'] ?? ''));
+        if ($dl !== '' && strtolower($dl) !== 'unknown') {
+            return $dl;
+        }
+
+        $raw = (array) ($meta['raw_payload'] ?? []);
+        if (! empty($raw['dataUnlimited'])) {
+            return 'Unlimited';
+        }
+        $gb = (float) ($raw['dataGB'] ?? 0);
+        if ($gb > 0) {
+            return rtrim(rtrim(number_format($gb, 2), '0'), '.').' GB';
+        }
+
+        return null;
     }
 
     /** Every available variant for a country, across all suppliers, each carrying its own product. */

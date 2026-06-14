@@ -40,6 +40,9 @@
                  Sits above the sticky header so it announces itself first. --}}
             @include('partials.maintenance-banner')
 
+            {{-- Announcement / coupon bar - blue strip rotating admin-set promos. --}}
+            @include('partials.announcement-bar')
+
             {{-- The whole header is sticky as one block (sticky needs a tall
                  containing block, the body provides that here). main-nav's
                  own Alpine then collapses the primary row on scroll, leaving

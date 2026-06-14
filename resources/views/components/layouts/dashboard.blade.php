@@ -1259,19 +1259,16 @@
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex items-center justify-center py-1.5 transition-transform duration-200 active:scale-90"
                         >
-                            {{-- Active tab gets a rounded pill highlight; the masked span
-                                 tints the monochrome SVG to the active / idle colour. --}}
-                            <span
-                                class="flex flex-col items-center gap-1 rounded-[12px] px-3 py-1 transition-colors duration-200"
-                                :class="active === {{ $t['idx'] }} ? 'bg-blue-50 dark:bg-blue-600/20' : ''"
-                            >
+                            {{-- iOS-style: clean tinted icon + label, no pill. Active
+                                 tints system-blue; idle is muted grey. --}}
+                            <span class="flex flex-col items-center gap-1">
                                 <span
                                     aria-hidden="true"
-                                    class="h-7 w-7 transition-colors duration-200"
+                                    class="h-6 w-6 transition-colors duration-200"
                                     :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-500 dark:bg-zinc-400'"
                                     style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
                                 ></span>
-                                <span class="text-[11px] font-medium leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'text-zinc-500 dark:text-zinc-400'">{{ $t['label'] }}</span>
+                                <span class="text-[10px] leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'font-medium text-zinc-500 dark:text-zinc-400'">{{ $t['label'] }}</span>
                             </span>
                         </a>
                     @endforeach
@@ -1285,13 +1282,13 @@
                         aria-label="Open menu"
                         class="relative z-10 flex items-center justify-center py-1.5 transition-transform duration-200 active:scale-90"
                     >
-                        <span class="flex flex-col items-center gap-1 rounded-[12px] px-3 py-1">
+                        <span class="flex flex-col items-center gap-1">
                             <span
                                 aria-hidden="true"
-                                class="h-7 w-7 bg-zinc-500 transition-colors duration-200 dark:bg-zinc-400"
+                                class="h-6 w-6 bg-zinc-500 transition-colors duration-200 dark:bg-zinc-400"
                                 style="-webkit-mask: url('{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}') center / contain no-repeat;"
                             ></span>
-                            <span class="text-[11px] font-medium leading-none text-zinc-500 dark:text-zinc-400">Menu</span>
+                            <span class="text-[10px] font-medium leading-none text-zinc-500 dark:text-zinc-400">Menu</span>
                         </span>
                     </button>
 
@@ -1304,19 +1301,16 @@
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex items-center justify-center py-1.5 transition-transform duration-200 active:scale-90"
                         >
-                            {{-- Active tab gets a rounded pill highlight; the masked span
-                                 tints the monochrome SVG to the active / idle colour. --}}
-                            <span
-                                class="flex flex-col items-center gap-1 rounded-[12px] px-3 py-1 transition-colors duration-200"
-                                :class="active === {{ $t['idx'] }} ? 'bg-blue-50 dark:bg-blue-600/20' : ''"
-                            >
+                            {{-- iOS-style: clean tinted icon + label, no pill. Active
+                                 tints system-blue; idle is muted grey. --}}
+                            <span class="flex flex-col items-center gap-1">
                                 <span
                                     aria-hidden="true"
-                                    class="h-7 w-7 transition-colors duration-200"
+                                    class="h-6 w-6 transition-colors duration-200"
                                     :class="active === {{ $t['idx'] }} ? 'bg-blue-600' : 'bg-zinc-500 dark:bg-zinc-400'"
                                     style="-webkit-mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat; mask: url('{{ asset('assets/' . rawurlencode($t['icon'])) }}') center / contain no-repeat;"
                                 ></span>
-                                <span class="text-[11px] font-medium leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'text-zinc-500 dark:text-zinc-400'">{{ $t['label'] }}</span>
+                                <span class="text-[10px] leading-none transition-colors duration-200" :class="active === {{ $t['idx'] }} ? 'text-blue-600 font-semibold' : 'font-medium text-zinc-500 dark:text-zinc-400'">{{ $t['label'] }}</span>
                             </span>
                         </a>
                     @endforeach

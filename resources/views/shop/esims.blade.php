@@ -35,7 +35,7 @@
                 });
             },
         }"
-        class="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:py-12"
+        class="mx-auto w-full max-w-[1140px] px-4 py-8 sm:px-6 lg:py-12"
     >
 
         {{-- Mobile category picker (dark pill + slide-up sheet). --}}
