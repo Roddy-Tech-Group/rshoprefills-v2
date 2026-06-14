@@ -6,6 +6,7 @@ use Database\Factories\ReviewFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
@@ -29,6 +30,7 @@ class Review extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'initials',
         'author_name',
         'body',
@@ -36,6 +38,7 @@ class Review extends Model
         'source',
         'reviewed_at',
         'is_published',
+        'is_customer_submitted',
         'sort_order',
     ];
 
@@ -44,6 +47,7 @@ class Review extends Model
         return [
             'reviewed_at' => 'date',
             'is_published' => 'boolean',
+            'is_customer_submitted' => 'boolean',
             'rating' => 'float',
         ];
     }
@@ -56,5 +60,16 @@ class Review extends Model
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderByDesc('sort_order')->orderByDesc('reviewed_at');
+    }
+
+    /** Customer submissions still awaiting admin approval. */
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('is_customer_submitted', true)->where('is_published', false);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

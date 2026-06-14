@@ -44,7 +44,11 @@ class extends Component {
     #[Computed]
     public function reviews()
     {
-        return Review::orderByDesc('reviewed_at')->get();
+        // Pending customer submissions float to the top so the admin sees what
+        // needs approval first.
+        return Review::orderByRaw('(is_customer_submitted = 1 AND is_published = 0) DESC')
+            ->orderByDesc('reviewed_at')
+            ->get();
     }
 
     #[Computed]
@@ -208,9 +212,13 @@ class extends Component {
                             <td>{{ $review->reviewed_at->format('M j, Y') }}</td>
                             <td class="max-w-md truncate">{{ $review->body }}</td>
                             <td>
-                                <x-admin.badge :tone="$review->is_published ? 'emerald' : 'zinc'">
-                                    {{ $review->is_published ? 'Published' : 'Draft' }}
-                                </x-admin.badge>
+                                @if (! $review->is_published && $review->is_customer_submitted)
+                                    <x-admin.badge tone="amber">Pending</x-admin.badge>
+                                @else
+                                    <x-admin.badge :tone="$review->is_published ? 'emerald' : 'zinc'">
+                                        {{ $review->is_published ? 'Published' : 'Draft' }}
+                                    </x-admin.badge>
+                                @endif
                             </td>
                             <td class="whitespace-nowrap text-right">
                                 <div class="inline-flex items-center gap-1.5">

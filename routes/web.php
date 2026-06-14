@@ -15,6 +15,7 @@ use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
 use App\Http\Controllers\RcoinConvertController;
 use App\Http\Controllers\RcoinWithdrawalController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
 use App\Models\BlogPost;
@@ -507,6 +508,12 @@ $renderCheckout = function (CartManager $cartManager, CartPricingService $pricin
     return view('shop.checkout', ['cart' => $cart, 'totals' => $totals, 'rate' => $rate]);
 };
 Route::get('checkout', $renderCheckout)->name('shop.checkout');
+
+// Customer review submission - after a completed order. Stored unpublished for
+// admin approval, then it appears on the storefront reviews wall.
+Route::post('reviews', [ReviewController::class, 'store'])
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('reviews.store');
 
 // Coupon live preview. Validates a code against the active cart and returns the
 // USD + display-currency discount, computed EXACTLY like CheckoutService applies
