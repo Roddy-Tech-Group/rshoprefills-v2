@@ -35,8 +35,8 @@
             'USDT' => 'USDT.svg',
             'BUSD' => 'USDT.svg',
             'SOL'  => 'SOLANA.svg',
-            'BNB'  => 'BNB.webp',
-            'LTC'  => 'LTC.webp',
+            'BNB'  => 'BNB.svg',
+            'LTC'  => 'LTC.svg',
             default => null,
         };
     };

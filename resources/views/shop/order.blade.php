@@ -245,35 +245,13 @@
                 @endforeach
             </div>
 
-            {{-- ── Order-level actions: wallet + side-by-side help links ──
-                 Mirrors the mobile mockup: "Add to wallet" on its own row,
-                 then two small text links that toggle an inline collapsible
-                 panel beneath them. Single Alpine root tracks which panel
-                 is open at a time. --}}
+            {{-- ── Order-level actions: side-by-side help links that toggle an
+                 inline collapsible panel beneath them. Single Alpine root tracks
+                 which panel is open at a time. --}}
             <div class="mt-6" x-data="{
                     open: null,
                     toggle(name) { this.open = this.open === name ? null : name; },
-                    isApple: /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent),
                 }">
-
-                {{-- Add to Apple Wallet - shown only on Apple devices that
-                     actually have Wallet (iPhone / iPad / Mac). x-if (not
-                     x-show) so the button never enters the DOM at all on
-                     Windows / Android. Gift-card orders only - eSIMs and
-                     top-ups don't go in Wallet. --}}
-                @if ($orderHasGiftCards)
-                    <template x-if="isApple">
-                        <div class="flex justify-center">
-                            <a href="{{ route('shop.order.codes.pdf', $order->order_number) }}" class="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900 transition-colors hover:text-blue-700 dark:text-white dark:hover:text-blue-300">
-                                <svg class="h-5 w-5 text-zinc-700 dark:text-zinc-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M16 16.5c0.8284 0 1.5 -0.6716 1.5 -1.5s-0.6716 -1.5 -1.5 -1.5 -1.5 0.6716 -1.5 1.5 0.6716 1.5 1.5 1.5"/>
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M15.7041 0.0447311c0.2313 -0.0716753 0.482 -0.0571144 0.7051 0.0429688 0.255 0.1145191 0.4506 0.3305361 0.539 0.5957031l1.7725 5.316407H20c0.5523 0 1 0.44771 1 1v3h2c0.5523 0 1 0.44769 1 0.99999v8c0 0.5523 -0.4477 1 -1 1h-2v3c0 0.5523 -0.4477 1 -1 1H1c-0.552285 0 -1 -0.4477 -1 -1V6.99981c0 -0.55229 0.447715 -1 1 -1h0.7959L15.6064 0.0808639zM11.4141 14.9998l3 3H22v-6h-7.5859zM6.87109 5.99981h9.74121l-1.2178 -3.65332z"/>
-                                </svg>
-                                Add to wallet
-                            </a>
-                        </div>
-                    </template>
-                @endif
 
                 {{-- Side-by-side text links --}}
                 <div class="mt-3 flex items-center justify-center gap-8 text-xs">

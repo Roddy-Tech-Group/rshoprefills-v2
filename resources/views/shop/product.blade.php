@@ -242,6 +242,28 @@
         ->filter(fn ($p) => $p > 0)
         ->values();
 
+    // Real published-review aggregate + a few sample reviews so Product rich
+    // results can show stars (fixes Search Console "missing aggregateRating /
+    // review"). Cached for an hour since it's identical across every product.
+    $reviewSchema = \Illuminate\Support\Facades\Cache::remember('product-schema-reviews-v1', now()->addHour(), function () {
+        $published = \App\Models\Review::published()->ordered()->get();
+
+        if ($published->isEmpty()) {
+            return ['count' => 0];
+        }
+
+        return [
+            'rating' => round((float) $published->avg('rating'), 1),
+            'count' => $published->count(),
+            'samples' => $published->take(5)->map(fn ($r) => [
+                'author' => $r->author_name,
+                'body' => $r->body,
+                'rating' => max(1, min(5, (int) round((float) $r->rating))),
+                'date' => optional($r->reviewed_at)->toDateString(),
+            ])->all(),
+        ];
+    });
+
     $productJsonLd = [
         '@context' => 'https://schema.org',
         '@type' => 'Product',
@@ -266,6 +288,29 @@
             'availability' => 'https://schema.org/InStock',
             'url' => url()->current(),
         ];
+    }
+
+    if (($reviewSchema['count'] ?? 0) > 0) {
+        $productJsonLd['aggregateRating'] = [
+            '@type' => 'AggregateRating',
+            'ratingValue' => (string) $reviewSchema['rating'],
+            'reviewCount' => (string) $reviewSchema['count'],
+            'bestRating' => '5',
+            'worstRating' => '1',
+        ];
+
+        $productJsonLd['review'] = array_map(fn ($s) => array_filter([
+            '@type' => 'Review',
+            'reviewRating' => [
+                '@type' => 'Rating',
+                'ratingValue' => (string) $s['rating'],
+                'bestRating' => '5',
+                'worstRating' => '1',
+            ],
+            'author' => ['@type' => 'Person', 'name' => $s['author']],
+            'reviewBody' => $s['body'],
+            'datePublished' => $s['date'] ?? null,
+        ]), $reviewSchema['samples']);
     }
 
     $crumbLabel = match ($categorySlug) {

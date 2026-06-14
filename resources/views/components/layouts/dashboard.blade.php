@@ -1284,7 +1284,7 @@
                          the active slot (Menu is slot 2, never an active route). --}}
                     <span
                         aria-hidden="true"
-                        class="pointer-events-none absolute inset-y-0 left-0 w-1/5 rounded-full bg-zinc-500/15 ring-1 ring-white/50 shadow-sm backdrop-blur-md backdrop-saturate-150 transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] dark:bg-white/15 dark:ring-white/15"
+                        class="pointer-events-none absolute inset-y-0 left-0 w-1/5 rounded-full bg-zinc-500/15 ring-1 ring-white/50 shadow-sm backdrop-blur-md backdrop-saturate-150 transition-transform duration-[600ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] dark:bg-white/15 dark:ring-white/15"
                         :style="'transform: translateX(' + (active * 100) + '%)'"
                     ></span>
 
@@ -1423,7 +1423,7 @@
                 x-transition:leave-start="translate-y-0"
                 x-transition:leave-end="translate-y-full"
                 style="display: none;"
-                class="modal-norise fixed inset-x-0 bottom-0 z-[70] rounded-t-3xl bg-white/70 ring-1 ring-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl shadow-zinc-900/25 dark:bg-[#0c1a36]/70 dark:ring-white/10"
+                class="modal-norise fixed inset-x-3 bottom-3 z-[70] rounded-3xl bg-white/70 ring-1 ring-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl shadow-zinc-900/25 dark:bg-[#0c1a36]/70 dark:ring-white/10"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="mobile-menu-title"

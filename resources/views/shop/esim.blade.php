@@ -334,7 +334,7 @@
         {{-- z-20: backdrop-blur creates a stacking context — without lifting it
              above the plan selector (also a blur context, later in DOM), the
              region picker dropdown gets clipped behind the plans card. --}}
-        <div class="relative z-20 mx-auto mt-4 w-full max-w-[800px] rounded-[10px] bg-white/60 p-6 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl sm:p-8 dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
+        <div class="relative z-20 mx-auto mt-4 w-full max-w-[800px] rounded-[10px] bg-transparent p-6 ring-1 ring-zinc-200 sm:p-8 dark:ring-zinc-700/60">
             <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div class="min-w-0">
                     <div class="flex items-center gap-3">
@@ -420,7 +420,7 @@
                             type="button"
                             @click="open = ! open; if (open) $nextTick(() => $refs.regionSearch?.focus())"
                             :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-600'"
-                            class="flex h-[46px] w-full items-center gap-2 rounded-[10px] border bg-white px-3 text-sm font-medium text-zinc-900 outline-none transition-colors dark:bg-[#26416b] dark:text-white"
+                            class="flex h-[46px] w-full items-center gap-2 rounded-[10px] border bg-transparent px-3 text-sm font-medium text-zinc-900 outline-none transition-colors dark:text-white"
                         >
                             @if ($flag)
                                 <img src="{{ $flag }}" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200 dark:ring-zinc-700">
@@ -462,6 +462,20 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Quick reassurance badges under the region picker. --}}
+                    <div class="mt-5 space-y-3">
+                        @foreach ([
+                            ['t' => 'Instant activation', 'icon' => 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z'],
+                            ['t' => 'No ID required', 'icon' => 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z'],
+                            ['t' => '180+ countries and territories', 'icon' => 'M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8'],
+                        ] as $feat)
+                            <div class="flex items-center gap-2.5 text-sm font-semibold text-zinc-900 dark:text-white">
+                                <svg class="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $feat['icon'] }}"/></svg>
+                                {{ $feat['t'] }}
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
@@ -469,14 +483,14 @@
         @if ($hasPlans)
             {{-- ── Selector card (glass): holds the Data/Voice + Standard/Unlimited
                  segmented controls only. The plan cards live outside it, below. ── --}}
-            <div id="esim-packages" class="mx-auto mt-6 w-full max-w-[800px] scroll-mt-24 overflow-hidden rounded-[10px] bg-white/60 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
+            <div id="esim-packages" class="mx-auto mt-6 w-full max-w-[800px] scroll-mt-24 overflow-hidden rounded-[14px] bg-white/60 ring-1 ring-white/50 shadow-xl shadow-zinc-900/5 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#1d3252]/60 dark:ring-white/10 dark:shadow-black/40">
                 <div class="p-5 sm:p-6">
                     {{-- Category selector (Data Only / Voice) - segmented control with
                          a smooth sliding bubble. The bubble width adapts to however
                          many categories this region actually carries. --}}
                     <div class="relative flex rounded-[10px] bg-zinc-100 p-1 dark:bg-[#26416b]" role="tablist">
                         <div
-                            class="pointer-events-none absolute inset-y-1 left-1 rounded-[8px] bg-white shadow-sm transition-transform duration-300 ease-out dark:bg-blue-600"
+                            class="pointer-events-none absolute inset-y-1 left-1 rounded-[8px] bg-white shadow-sm transition-transform duration-300 ease-out dark:border dark:border-white dark:bg-[#1d3252]"
                             :style="`width: calc((100% - 0.5rem) / ${tabList().length}); transform: translateX(${tabIndex() * 100}%)`"
                         ></div>
                         <template x-for="t in tabList()" :key="t">
@@ -512,13 +526,20 @@
                     {{-- Plan cards. Flat (no duration grouping) - each card carries its
                          own validity. Same responsive grid as the gift-card catalog:
                          2 per row on mobile, scaling up to 5 per row on large screens. --}}
-                    <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    {{-- Re-keyed per tab/mode so the whole grid fades + slides in on switch. --}}
+                    <template x-for="frame in [activeTab + '-' + dataMode]" :key="frame">
+                    <div
+                        x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0 translate-y-2"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                    >
                         <template x-for="(p, idx) in sortedPlans()" :key="p.id">
                             <button
                                 type="button"
                                 @click="selectedId = p.id"
                                 :class="selectedId === p.id ? 'border-blue-600 dark:border-white' : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'"
-                                class="flex flex-col rounded-[14px] border-2 bg-white px-4 py-4 text-left transition-colors focus:outline-none dark:bg-[#1d3252]"
+                                class="flex flex-col rounded-[14px] border-2 bg-transparent px-4 py-4 text-left transition-colors focus:outline-none"
                             >
                                 {{-- Badges: tier (TRIP/EXPLORER/ADVENTURER/NOMAD, cycles by
                                      position) + a Data only / Voice type badge. --}}
@@ -531,54 +552,55 @@
                                     <span x-text="p.data"></span> <span x-text="p.days + ' Days'"></span>
                                 </p>
 
-                                <div class="my-3 h-px bg-zinc-100 dark:bg-zinc-700/60"></div>
+                                <div class="my-3 h-px bg-zinc-200 dark:bg-zinc-700"></div>
 
-                                <ul class="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
+                                <ul class="space-y-2 text-sm text-zinc-600 dark:text-white">
                                     <li class="flex items-center gap-2">
-                                        <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
+                                        <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
                                         <span x-text="p.data + ' of data'"></span>
                                     </li>
                                     <li class="flex items-center gap-2">
-                                        <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         <span x-text="p.days + ' day validity'"></span>
                                     </li>
                                     <template x-if="p.is_voice && p.voice">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
                                             <span x-text="p.voice"></span>
                                         </li>
                                     </template>
                                     <template x-if="p.is_voice && p.sms">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
                                             <span x-text="p.sms"></span>
                                         </li>
                                     </template>
                                     <template x-if="p.is_voice">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
                                             <span>Unlimited iMessage</span>
                                         </li>
                                     </template>
                                     <template x-if="p.is_voice">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
                                             <span>FaceTime</span>
                                         </li>
                                     </template>
                                 </ul>
 
                                 <template x-if="p.note">
-                                    <p class="mt-3 text-xs text-zinc-400 dark:text-zinc-500" x-text="p.note"></p>
+                                    <p class="mt-3 text-xs text-zinc-400 dark:text-zinc-300" x-text="p.note"></p>
                                 </template>
 
                                 {{-- See more: selects this plan and opens its full package details. --}}
-                                <span @click.stop="selectedId = p.id; showDetails = true" @keydown.enter.stop="selectedId = p.id; showDetails = true" role="button" tabindex="0" class="mt-3 self-start cursor-pointer text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">See more</span>
+                                <span @click.stop="detailsId = p.id; showDetails = true" @keydown.enter.stop="detailsId = p.id; showDetails = true" role="button" tabindex="0" class="mt-3 self-start cursor-pointer text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">See more</span>
 
                                 <p class="mt-2 text-right text-lg font-bold tabular-nums text-zinc-900 dark:text-white" x-text="rowPrice(p)"></p>
                             </button>
                         </template>
                     </div>
+                    </template>
                     <p x-show="sortedPlans().length === 0" class="mt-4 rounded-[10px] bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-400 dark:ring-zinc-700">No packages in this category right now.</p>
 
                     {{-- Voice-plan inclusions - only on the Voice tab.
@@ -610,7 +632,7 @@
                             {{-- Same card style + responsive grid as the plan cards. --}}
                             <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                                 @foreach ($broaderCoverage as $b)
-                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex flex-col rounded-[14px] border-2 border-zinc-200 bg-white px-4 py-4 transition-colors hover:border-blue-600 dark:border-zinc-700 dark:bg-[#1d3252] dark:hover:border-white">
+                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex flex-col rounded-[14px] border-2 border-zinc-200 bg-transparent px-4 py-4 transition-colors hover:border-blue-600 dark:border-zinc-700 dark:hover:border-white">
                                         <span class="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-blue-50 ring-1 ring-zinc-200 dark:bg-blue-950/40 dark:ring-zinc-700">
                                             @if ($b['flag'])
                                                 <img src="{{ $b['flag'] }}" alt="" class="h-full w-full object-cover" loading="lazy">
@@ -671,7 +693,7 @@
                                 {{ $faq['q'] }}
                                 <svg class="h-5 w-5 shrink-0 text-zinc-500 transition-transform group-open:rotate-180 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                             </summary>
-                            <p class="pb-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $faq['a'] }}</p>
+                            <p class="pb-4 text-sm leading-relaxed text-zinc-600 dark:text-white">{{ $faq['a'] }}</p>
                         </details>
                     @endforeach
                 </div>
@@ -786,8 +808,8 @@
                     ['name' => 'Ethereum',     'icon' => 'ETH.svg',                 'kind' => 'crypto'],
                     ['name' => 'Tether',       'icon' => 'USDT.svg',                'kind' => 'crypto'],
                     ['name' => 'Solana',       'icon' => 'SOLANA.svg',              'kind' => 'crypto'],
-                    ['name' => 'BNB',          'icon' => 'BNB.webp',                 'kind' => 'crypto'],
-                    ['name' => 'Litecoin',     'icon' => 'LTC.webp',                 'kind' => 'crypto'],
+                    ['name' => 'BNB',          'icon' => 'BNB.svg',                  'kind' => 'crypto'],
+                    ['name' => 'Litecoin',     'icon' => 'LTC.svg',                  'kind' => 'crypto'],
                 ];
             @endphp
             <section class="mx-auto mt-12 w-full max-w-[1450px]">
@@ -812,31 +834,34 @@
                 </div>
             </section>
 
-            {{-- ── Sticky buy bar ───────────────────────────────────────────── --}}
-            {{-- position:fixed + the parent's permanent pb-32 means the bar overlays
-                 content without ever reflowing the page. The floating X chip in the
-                 middle clears selectedId, which hides the bar via x-show.
-                 In the dashboard the mobile tab bar (lg:hidden, ~5rem tall plus the
-                 iOS safe area) also pins to bottom-0, so on those screens we lift the
-                 buy bar clear of it (6.5rem leaves a comfortable gap above the nav);
-                 lg has no tab bar, so it drops back to bottom-0. --}}
-            {{-- Glassmorphism buy bar: translucent frosted surface with a soft
-                 inner highlight, matching the referral pill / locale modal glass. --}}
-            <div x-show="selectedId" x-transition.opacity style="display:none;" class="fixed inset-x-0 {{ $inDash ? 'bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0' : 'bottom-0' }} z-40 border-t border-white/40 bg-white/60 shadow-[0_-8px_32px_-12px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#1d3252]/60">
-                {{-- Centered close chip: deselects the current plan, which collapses
-                     the bar. Sits half-out-of-bar so the X is visible without crowding
-                     the buy controls. --}}
-                <button
-                    type="button"
-                    @click="selectedId = null"
-                    aria-label="Deselect plan"
-                    class="absolute left-1/2 top-0 z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[10px] bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-md transition-colors hover:bg-zinc-50 hover:text-zinc-900 dark:bg-[#26416b] dark:text-white dark:ring-zinc-700/60 dark:hover:bg-[#34507a]"
-                >
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
+            {{-- ── Buy toast: drops down from the top of the page on selection ──── --}}
+            {{-- A rounded glass toast that slides in from above when a plan is
+                 selected (selectedId). Non-blocking, so plans stay browsable; the
+                 X chip clears selectedId, which hides the toast via x-show. --}}
+            <div
+                x-show="selectedId"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 -translate-y-6"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-6"
+                style="display:none;"
+                class="fixed inset-x-0 top-3 z-[60] px-3 sm:px-5"
+            >
+                <div class="relative mx-auto w-full max-w-[860px] rounded-[20px] border border-white/40 bg-white/70 shadow-[0_14px_44px_-12px_rgba(15,23,42,0.4),inset_0_1px_0_rgba(255,255,255,0.4)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#1d3252]/80">
+                    {{-- Close chip: half-out the bottom edge, deselects the plan. --}}
+                    <button
+                        type="button"
+                        @click="selectedId = null"
+                        aria-label="Deselect plan"
+                        class="absolute bottom-0 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-[10px] bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-md transition-colors hover:bg-zinc-50 hover:text-zinc-900 dark:bg-[#26416b] dark:text-white dark:ring-zinc-700/60 dark:hover:bg-[#34507a]"
+                    >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
 
-                <div class="mx-auto flex w-full max-w-[840px] flex-wrap items-center gap-3 px-4 py-4 sm:px-6">
-                    <button type="button" @click="showDetails = true" class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-400/60 backdrop-blur-md transition-colors hover:bg-white/60 dark:text-white dark:ring-white/60 dark:hover:bg-white/10">
+                    <div class="flex w-full flex-wrap items-center gap-3 px-4 py-4 sm:px-6">
+                    <button type="button" @click="detailsId = selectedId; showDetails = true" class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold text-zinc-900 ring-1 ring-zinc-400/60 backdrop-blur-md transition-colors hover:bg-white/60 dark:text-white dark:ring-white/60 dark:hover:bg-white/10">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                         Package details
                     </button>
@@ -849,7 +874,7 @@
                             <span x-text="selectedCrypto"></span>
                             <svg class="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div x-show="open" x-transition style="display:none;" class="absolute bottom-full left-0 z-20 mb-2 max-h-72 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40" role="listbox">
+                        <div x-show="open" x-transition style="display:none;" class="absolute top-full left-0 z-20 mt-2 max-h-72 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40" role="listbox">
                             <template x-for="(meta, code) in cryptos" :key="code">
                                 <button type="button" @click="selectedCrypto = code; open = false" :class="selectedCrypto === code ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'text-zinc-800 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]'" class="flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors">
                                     <template x-if="meta.icon"><img :src="meta.icon" :alt="code" class="h-5 w-5 shrink-0 rounded-[10px]"></template>
@@ -891,6 +916,7 @@
                         </button>
                     </div>
                 </div>
+                </div>
             </div>
         @else
             <div class="mt-8 rounded-[10px] bg-zinc-50 px-4 py-10 text-center ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
@@ -903,15 +929,15 @@
         {{-- ════ Modals ═══════════════════════════════════════════════════════ --}}
 
         {{-- Networks modal --}}
-        <div x-show="showNetworks" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="networks-title">
+        <div x-show="showNetworks" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center px-3 pb-3 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="networks-title">
             <div x-show="showNetworks" @click="showNetworks = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showNetworks" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showNetworks" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white/65 p-6 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:rounded-[14px] dark:bg-[#0c1a36]/70 dark:ring-1 dark:ring-white/10">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="networks-title" class="text-lg font-bold text-zinc-900 dark:text-white">{{ $coverageCount > 1 ? 'Countries & Networks' : 'Networks' }}</h2>
                     <button type="button" @click="showNetworks = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                 </div>
                 @if ($coverageCount > 1)
-                    <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">This eSIM works across {{ $coverageCount }} countries and connects to a local network automatically in each.</p>
+                    <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-white">This eSIM works across {{ $coverageCount }} countries and connects to a local network automatically in each.</p>
                     @if ($countryNetworks->isNotEmpty())
                         {{-- Per-country networks straight from the supplier's plan
                              details: flag + country left, its carriers and speeds
@@ -959,7 +985,7 @@
                         </div>
                     @endif
                 @else
-                    <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">This eSIM may switch between the following networks based on availability and speed. You can adjust this in your device settings.</p>
+                    <p class="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-white">This eSIM may switch between the following networks based on availability and speed. You can adjust this in your device settings.</p>
                     {{-- Global eSIMs can list 100+ carriers - cap the list like
                          the countries branch so the modal never outgrows the
                          screen; the list itself scrolls. --}}
@@ -974,7 +1000,7 @@
                                     @endif
                                 </li>
                             @empty
-                                <li class="text-sm text-zinc-600 dark:text-zinc-300">Your device connects automatically to the best available local network in {{ $regionLabel }}.</li>
+                                <li class="text-sm text-zinc-600 dark:text-white">Your device connects automatically to the best available local network in {{ $regionLabel }}.</li>
                             @endforelse
                         </ul>
                     </div>
@@ -985,12 +1011,12 @@
         {{-- Check compatibility modal --}}
         <div x-show="showCompat" style="display:none;" class="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="compat-title">
             <div x-show="showCompat" @click="showCompat = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showCompat" x-transition class="relative flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-[10px] bg-white shadow-2xl dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showCompat" x-transition class="relative flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-[14px] bg-white/65 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70 dark:ring-1 dark:ring-white/10">
                 <div class="flex items-start justify-between gap-4 p-5 pb-3">
                     <h2 id="compat-title" class="text-lg font-bold text-zinc-900 dark:text-white">Check compatibility</h2>
                     <button type="button" @click="showCompat = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                 </div>
-                <div class="px-6 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                <div class="px-6 text-sm leading-relaxed text-zinc-600 dark:text-white">
                     <p>To use an eSIM, a device must meet the following conditions:</p>
                     <ul class="mt-2 list-disc space-y-1 pl-5">
                         <li>The device supports eSIMs.</li>
@@ -1041,9 +1067,9 @@
         </div>
 
         {{-- Package details modal --}}
-        <div x-show="showDetails" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="details-title">
+        <div x-show="showDetails" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center px-3 pb-3 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="details-title">
             <div x-show="showDetails" @click="showDetails = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showDetails" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-[10px] dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60">
+            <div x-show="showDetails" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white/65 p-6 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:rounded-[14px] dark:bg-[#0c1a36]/70 dark:ring-1 dark:ring-white/10">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="details-title" class="flex items-center gap-2.5 text-lg font-bold text-zinc-900 dark:text-white">
                         @if ($flag)
@@ -1062,26 +1088,25 @@
                         </span>
                         <span class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-zinc-700/60">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Data</span>
-                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="plan()?.data || '-'"></span>
+                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="detailsPlan()?.data || '-'"></span>
                         </span>
-                        <span class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-zinc-700/60">
+                        <span x-show="detailsPlan()?.is_voice" x-cloak class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-zinc-700/60">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Calls</span>
-                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="plan()?.voice || '-'"></span>
+                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="detailsPlan()?.voice || '-'"></span>
                         </span>
-                        <span class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-zinc-700/60">
+                        <span x-show="detailsPlan()?.is_voice" x-cloak class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-zinc-700/60">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Texts</span>
-                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="plan()?.sms || '-'"></span>
+                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="detailsPlan()?.sms || '-'"></span>
                         </span>
                         <span class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-zinc-700/60">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Validity</span>
-                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="(plan()?.days > 0 ? plan().days + ' days' : 'Flexible')"></span>
+                            <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="(detailsPlan()?.days > 0 ? detailsPlan().days + ' days' : 'Flexible')"></span>
                         </span>
                     </div>
 
-                    {{-- Apple data services - iMessage & FaceTime ride on the data
-                         allowance, so they work on this eSIM regardless of plan type. --}}
-                    <div class="mt-5">
-                        <p class="text-sm font-bold text-zinc-900 dark:text-white">Works over data</p>
+                    {{-- iMessage / Apple + verification features - voice plans only. --}}
+                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-5">
+                        <p class="text-sm font-bold text-zinc-900 dark:text-white">iMessage &amp; Apple services</p>
                         <div class="mt-3 grid grid-cols-2 gap-2.5">
                             @foreach ([
                                 ['t' => 'Unlimited iMessage', 'd' => 'No limit messaging other Apple devices.', 'icon' => 'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z'],
@@ -1103,12 +1128,21 @@
                     </div>
 
                     {{-- Top-up + free iMessage note (voice plans). --}}
-                    <div x-show="plan()?.is_voice" x-cloak class="mt-4 rounded-[10px] bg-blue-50 p-4 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
+                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[10px] bg-blue-50 p-4 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
                         <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
                             <svg class="h-4 w-4 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
                             Top-ups &amp; iMessage
                         </p>
-                        <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">You can top up this plan any time for local calls, texts and regular data browsing. Using iMessage is always free and unlimited - it never counts against your allowance.</p>
+                        <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-white">You can top up this plan any time for local calls, texts and regular data browsing. Using iMessage is always free and unlimited - it never counts against your allowance.</p>
+                    </div>
+
+                    {{-- Data-only note: pure connectivity, no calls/texts/number. --}}
+                    <div x-show="detailsPlan() && ! detailsPlan().is_voice" x-cloak class="mt-4 rounded-[10px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-zinc-700/60">
+                        <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
+                            <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
+                            Data only
+                        </p>
+                        <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-white">This is a data-only plan - it keeps you connected online with mobile data for the full validity period. It has no calls, texts or phone number, just internet access.</p>
                     </div>
 
                     {{-- Supplier plan policies - every section below renders only
@@ -1120,7 +1154,7 @@
                                     <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     Activation policy
                                 </p>
-                                <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $activationText }}</p>
+                                <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-white">{{ $activationText }}</p>
                             </div>
                         @endif
 
@@ -1130,7 +1164,7 @@
                                     <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                                     Top-up option
                                 </p>
-                                <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                                <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-white">
                                     @if ($planPolicy['rechargeable'])
                                         You can top up this eSIM when your data or validity runs out - top-ups are available once the eSIM is installed.
                                     @else
@@ -1147,14 +1181,14 @@
                                     Other info
                                 </p>
                                 @if ($planPolicy['bullets']->isNotEmpty())
-                                    <ul class="mt-1 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                                    <ul class="mt-1 list-disc space-y-1 pl-5 text-sm leading-relaxed text-zinc-600 dark:text-white">
                                         @foreach ($planPolicy['bullets'] as $bullet)
                                             <li>{{ $bullet }}</li>
                                         @endforeach
                                     </ul>
                                 @endif
                                 @if ($planPolicy['other'])
-                                    <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{{ $planPolicy['other'] }}</p>
+                                    <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-white">{{ $planPolicy['other'] }}</p>
                                 @endif
                             </div>
                         @endif
@@ -1181,6 +1215,7 @@
                 activeTab: 'data',     // 'data' | 'voice'
                 dataMode: 'standard',  // 'standard' | 'unlimited'
                 selectedId: null,
+                detailsId: null,       // plan previewed in the details modal (independent of selection)
 
                 // Display-only tier badges, cycled by card position.
                 tiers: ['TRIP', 'EXPLORER', 'ADVENTURER', 'NOMAD'],
@@ -1248,6 +1283,8 @@
 
                 // ---- selected plan + pricing ----
                 plan() { return this.plans.find((p) => p.id === this.selectedId) || null; },
+                // Plan shown in the details modal: the previewed one (See more), else the selected one.
+                detailsPlan() { return this.plans.find((p) => p.id === this.detailsId) || this.plan(); },
                 unitPriceUsd() { return this.plan()?.price || 0; },
                 totalUsd() { return this.unitPriceUsd(); },
                 // Calculated from backend settings.

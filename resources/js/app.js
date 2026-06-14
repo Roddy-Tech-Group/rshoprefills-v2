@@ -205,52 +205,9 @@ async function initAnimations() {
             .from('[data-anim="hero-banner"]',   { y: 24 }, '-=0.5');
     }
 
-    // ----- Scroll-triggered staggered groups (rows of cards / tiles) -----
-    gsap.utils.toArray('[data-reveal-group]').forEach((group) => {
-        const items = group.querySelectorAll('[data-reveal-item]');
-        if (!items.length) return;
-
-        gsap.fromTo(
-            items,
-            { y: 24, autoAlpha: 0 },
-            {
-                y: 0,
-                autoAlpha: 1,
-                duration: 0.7,
-                stagger: 0.07,
-                ease: 'power2.out',
-                immediateRender: false,
-                scrollTrigger: {
-                    trigger: group,
-                    start: 'top 85%',
-                    toggleActions: 'play none none none',
-                },
-            }
-        );
-    });
-
-    // ----- Plain single-element fade-up reveals -----
-    gsap.utils.toArray('[data-reveal]').forEach((el) => {
-        gsap.fromTo(
-            el,
-            { y: 20, autoAlpha: 0 },
-            {
-                y: 0,
-                autoAlpha: 1,
-                duration: 0.7,
-                ease: 'power2.out',
-                immediateRender: false,
-                scrollTrigger: {
-                    trigger: el,
-                    start: 'top 85%',
-                    toggleActions: 'play none none none',
-                },
-            }
-        );
-    });
-
-    // Recalculate positions after the page settles.
-    requestAnimationFrame(() => ScrollTrigger.refresh());
+    // Scroll-triggered reveals intentionally removed: sections render in place
+    // with no fade-up on scroll (the reveal read like the page was "refreshing"
+    // each section as you scrolled). The hero load animation above is kept.
 
     // Animated inline-SVG illustrations (hero chips, 404, empty cart).
     initIllos(gsap);

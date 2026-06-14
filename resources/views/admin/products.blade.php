@@ -1559,16 +1559,25 @@
                             this.markupValue = '';
                         }
                         this.isOpen = true;
-                        // Use the shared scroll lock (position:fixed + reserved
-                        // scrollbar gutter) like every other modal. The previous
-                        // raw `overflow:hidden` removed the scrollbar and shifted
-                        // the whole layout (incl. the sidebar) by its width.
-                        window.rshopScrollLock?.lock();
+                        // Lock background scroll the sidebar-safe way: DON'T use the
+                        // shared rshopScrollLock here. It sets body{position:fixed},
+                        // which jumps the Flux *sticky* sidebar, and its ref-counter
+                        // desyncs when you click another row while the drawer is open
+                        // (re-lock without a matching unlock) - leaving the page stuck
+                        // and unable to scroll. Instead just hide the document's
+                        // overflow and reserve the scrollbar width on <body> so the
+                        // layout never shifts. This is idempotent (safe to re-run).
+                        if (document.documentElement.style.overflow !== 'hidden') {
+                            const sbw = window.innerWidth - document.documentElement.clientWidth;
+                            document.documentElement.style.overflow = 'hidden';
+                            document.body.style.paddingRight = sbw > 0 ? sbw + 'px' : '';
+                        }
                         this.loadCoupons();
                     },
                     close() {
                         this.isOpen = false;
-                        window.rshopScrollLock?.unlock();
+                        document.documentElement.style.overflow = '';
+                        document.body.style.paddingRight = '';
                     },
 
                     _csrf() {

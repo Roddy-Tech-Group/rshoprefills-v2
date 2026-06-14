@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Review;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class ProductSchemaMarkupTest extends TestCase
@@ -61,6 +63,45 @@ class ProductSchemaMarkupTest extends TestCase
         $response->assertSee('"highPrice":"50"', false);
         $response->assertSee('"priceCurrency":"USD"', false);
         $response->assertSee('https://schema.org/InStock', false);
+    }
+
+    public function test_gift_card_page_emits_aggregate_rating_and_reviews_from_published_reviews(): void
+    {
+        $this->withoutVite();
+        $this->giftCardBrand();
+
+        Review::create([
+            'initials' => 'JD',
+            'author_name' => 'Jane Doe',
+            'body' => 'Fast delivery and great prices, very happy.',
+            'rating' => 5,
+            'source' => 'RshopRefills',
+            'reviewed_at' => now(),
+            'is_published' => true,
+        ]);
+
+        // The schema review aggregate is cached; clear it so the new review counts.
+        Cache::flush();
+
+        $response = $this->get(route('shop.brand', ['brandSlug' => 'acme']))->assertOk();
+
+        $response->assertSee('"@type":"AggregateRating"', false);
+        $response->assertSee('"ratingValue":"5"', false);
+        $response->assertSee('"reviewCount":"1"', false);
+        $response->assertSee('"@type":"Review"', false);
+        $response->assertSee('Jane Doe', false);
+    }
+
+    public function test_gift_card_page_omits_review_schema_when_no_published_reviews(): void
+    {
+        $this->withoutVite();
+        $this->giftCardBrand();
+
+        Cache::flush();
+
+        $response = $this->get(route('shop.brand', ['brandSlug' => 'acme']))->assertOk();
+
+        $response->assertDontSee('"@type":"AggregateRating"', false);
     }
 
     public function test_gift_card_page_emits_breadcrumb_schema(): void

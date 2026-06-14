@@ -23,7 +23,7 @@
         pointer-events: none;
         will-change: transform, opacity;
     }
-    #rshop-ptr.rshop-ptr-animate { transition: transform .32s cubic-bezier(.22,1,.36,1), opacity .2s ease; }
+    #rshop-ptr.rshop-ptr-animate { transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .3s ease; }
     .rshop-ptr-circle {
         display: flex;
         height: 40px;
@@ -66,23 +66,35 @@
         const DAMP = 0.5;       // resistance so the pull feels elastic
         const MAX = 96;
 
-        let startY = 0, pulling = false, pull = 0, refreshing = false;
+        let startY = 0, pulling = false, pull = 0, refreshing = false, raf = null, nextPx = 0;
 
         const scroller = () => document.scrollingElement || document.documentElement;
         const isLocked = () => document.body.style.position === 'fixed';
         const el = () => document.getElementById('rshop-ptr');
 
+        // Batch DOM writes to one per animation frame so the spinner tracks the
+        // finger buttery-smooth even on rapid touchmove bursts (no layout thrash).
         function render(px) {
-            const e = el();
-            if (! e) { return; }
-            e.classList.remove('rshop-ptr-animate');
-            e.style.transform = 'translateX(-50%) translateY(' + (HIDDEN_Y + px) + 'px)';
-            e.style.opacity = Math.min(px / THRESHOLD, 1).toFixed(3);
-            const s = e.querySelector('.rshop-ptr-spin');
-            if (s) { s.style.transform = 'rotate(' + (px * 3.2) + 'deg)'; }
+            nextPx = px;
+            if (raf) { return; }
+            raf = requestAnimationFrame(() => {
+                raf = null;
+                const e = el();
+                if (! e) { return; }
+                e.classList.remove('rshop-ptr-animate');
+                e.style.transform = 'translateX(-50%) translateY(' + (HIDDEN_Y + nextPx) + 'px)';
+                e.style.opacity = Math.min(nextPx / THRESHOLD, 1).toFixed(3);
+                const s = e.querySelector('.rshop-ptr-spin');
+                if (s) { s.style.transform = 'rotate(' + (nextPx * 3.2) + 'deg)'; }
+            });
+        }
+
+        function cancelRaf() {
+            if (raf) { cancelAnimationFrame(raf); raf = null; }
         }
 
         function snapBack() {
+            cancelRaf();
             const e = el();
             if (! e) { return; }
             e.classList.add('rshop-ptr-animate');
@@ -118,6 +130,7 @@
             pulling = false;
             if (pull >= THRESHOLD) {
                 refreshing = true;
+                cancelRaf();
                 const e = el();
                 if (e) {
                     e.classList.add('rshop-ptr-animate', 'rshop-ptr-refreshing');

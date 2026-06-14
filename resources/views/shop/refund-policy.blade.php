@@ -29,6 +29,24 @@
             to the terms below. This policy is part of our Terms of Service.
         </p>
 
+        {{-- Delivery: digital products ship free and arrive instantly. --}}
+        <div class="mt-5 grid gap-3 sm:grid-cols-2">
+            <div class="flex items-start gap-3 rounded-[10px] bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75l2.25 2.25 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div>
+                    <p class="text-sm font-bold text-emerald-700">Free delivery, always</p>
+                    <p class="mt-1 text-sm leading-relaxed text-zinc-600">Every product is digital, so there are no shipping or delivery fees. The price you see is the price you pay.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3 rounded-[10px] bg-blue-50 p-4 ring-1 ring-zinc-100">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                <div>
+                    <p class="text-sm font-bold text-blue-700">Instant delivery</p>
+                    <p class="mt-1 text-sm leading-relaxed text-zinc-600">Your code, eSIM or top-up is delivered to your email and dashboard within seconds of your payment being confirmed.</p>
+                </div>
+            </div>
+        </div>
+
         {{-- On this page --}}
         <nav class="mt-7 rounded-[10px] bg-zinc-50 p-5 ring-1 ring-zinc-100" aria-label="On this page">
             <p class="text-xs font-semibold uppercase tracking-wider text-zinc-500">On this page</p>
