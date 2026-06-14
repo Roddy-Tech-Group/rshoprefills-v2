@@ -304,9 +304,9 @@
                         </div>
                     </div>
 
-                    {{-- Options - capped at ~8 rows so the dropdown never
-                         spills past the modal; the list itself scrolls. --}}
-                    <div class="max-h-80 overflow-y-auto overscroll-contain p-1">
+                    {{-- Options - capped at ~6 rows for a compact mobile-friendly
+                         list; the list itself scrolls for the rest. --}}
+                    <div class="max-h-60 overflow-y-auto overscroll-contain p-1">
                         <template x-for="lang in options.filter(l => l.toLowerCase().includes(search.toLowerCase()))" :key="lang">
                             <button
                                 type="button"

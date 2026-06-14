@@ -1038,6 +1038,18 @@
                     </a>
                 </div>
                 <div class="flex items-center gap-2" x-data>
+                    {{-- Language + currency — opens the locale modal so mobile
+                         users can switch country/currency/language without the
+                         desktop top bar. Matches the cart / notification pills. --}}
+                    <button
+                        type="button"
+                        x-on:click="$dispatch('open-locale-modal')"
+                        aria-label="Language and currency"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 transition-colors hover:bg-white/25"
+                    >
+                        <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8"/></svg>
+                    </button>
+
                     {{-- Cart — links to the cart page with a live count from the
                          global $store.cart (kept in sync with the shop pages). --}}
                     <a
@@ -1103,6 +1115,16 @@
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
                 <div class="flex items-center gap-1" x-data>
+                    {{-- Language + currency toggle (opens the locale modal). --}}
+                    <button
+                        type="button"
+                        x-on:click="$dispatch('open-locale-modal')"
+                        aria-label="Language and currency"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-white/40 active:scale-95 dark:hover:bg-white/10"
+                    >
+                        <svg class="h-5 w-5 text-zinc-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8"/></svg>
+                    </button>
+
                     {{-- Cart — live count from the global $store.cart, taps through to the cart page. --}}
                     <a
                         href="{{ route('dashboard.shop.cart') }}"
@@ -1163,12 +1185,18 @@
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
 
-                {{-- (Regional locale chip removed - dashboard floating bar is
-                     hamburger + cart + notification only; region switching is a
-                     shop-page concern, not an account-page one.) --}}
-
-                {{-- Cart + notification chips (right) - same glass treatment, pinned. --}}
+                {{-- Locale + cart + notification chips (right) - same glass treatment, pinned. --}}
                 <div class="pointer-events-auto flex items-center gap-2" x-data>
+                    {{-- Language + currency toggle (opens the locale modal). --}}
+                    <button
+                        type="button"
+                        x-on:click="$dispatch('open-locale-modal')"
+                        aria-label="Language and currency"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                    >
+                        <svg class="h-5 w-5 text-zinc-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8"/></svg>
+                    </button>
+
                     <a
                         href="{{ route('dashboard.shop.cart') }}"
                         wire:navigate
