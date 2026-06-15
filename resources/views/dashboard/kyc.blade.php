@@ -66,7 +66,7 @@
 
         {{-- ─── Current status ─── --}}
         <section>
-            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
+            <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none sm:p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
                         <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-blue-50">
@@ -112,7 +112,7 @@
 
         {{-- Email verification --}}
         <section>
-            <div class="flex items-center justify-between gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+            <div class="flex items-center justify-between gap-4 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                 <div class="flex items-center gap-4">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] {{ $emailVerified ? 'bg-emerald-50' : 'bg-amber-50' }}">
                         <svg class="h-5 w-5 {{ $emailVerified ? 'text-emerald-600' : 'text-amber-600' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -138,7 +138,7 @@
         {{-- ID verification (KYC) --}}
         <section>
             @if ($kycStatus === 'verified')
-                <div class="flex items-center gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                <div class="flex items-center gap-4 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50">
                         <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
@@ -151,7 +151,7 @@
                 </div>
 
             @elseif ($kycStatus === 'pending')
-                <div class="mt-3 flex items-center gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                <div class="mt-3 flex items-center gap-4 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-amber-50">
                         <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -178,7 +178,7 @@
                     method="POST"
                     action="{{ route('kyc.submit') }}"
                     enctype="multipart/form-data"
-                    class="mt-3 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6"
+                    class="mt-3 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none sm:p-6"
                 >
                     @csrf
 

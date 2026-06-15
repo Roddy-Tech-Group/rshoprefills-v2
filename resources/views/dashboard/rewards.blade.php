@@ -123,7 +123,7 @@
                 @endif
             </div>
 
-            <div class="mt-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
+            <div class="mt-4 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none sm:p-6">
                 <div class="flex items-start gap-4">
                     <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 shadow-sm shadow-zinc-900/10">
                         <img src="{{ $coin }}" alt="Rcoin" class="h-7 w-7 object-contain">
@@ -160,7 +160,7 @@
         <section>
             <h2 class="text-sm font-bold text-black">Earn more Rcoin</h2>
 
-            <div class="mt-3 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
+            <div class="mt-3 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none sm:p-6">
                 <div class="flex items-start gap-4">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 dark:bg-blue-500/15">
                         <img src="{{ asset('assets/referals.webp') }}" alt="" class="no-dark-invert h-5 w-5 object-contain" loading="lazy">
@@ -197,7 +197,7 @@
                 {{-- Convert to wallet - instant Rcoin → USD wallet swap.
                      Posts to RcoinConvertController. Min USD floor lives in
                      `wallet_conversion_min_usd` setting (default $2). --}}
-                <div class="flex flex-col rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                <div class="flex flex-col rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                     <span class="flex h-10 w-10 items-center justify-center rounded-[10px] bg-blue-50 dark:bg-blue-500/15">
                         <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="no-dark-invert h-5 w-5 dark:invert dark:brightness-200" loading="lazy">
                     </span>
@@ -257,7 +257,7 @@
                 {{-- Withdraw to cash --}}
                 <div
                     x-data="{ amount: '', method: 'wallet' }"
-                    class="flex flex-col rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100"
+                    class="flex flex-col rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none"
                 >
                     <span class="flex h-10 w-10 items-center justify-center rounded-[10px] bg-emerald-50 dark:bg-emerald-500/15">
                         <img src="{{ asset('assets/' . rawurlencode('wallet 2.svg')) }}" alt="" class="no-dark-invert h-5 w-5 dark:invert dark:brightness-200" loading="lazy">
@@ -433,7 +433,7 @@
         {{-- ─── Rcoin history ─── --}}
         <section>
             <h2 class="mb-3 text-sm font-bold text-black">Rcoin history</h2>
-            <div class="divide-y divide-zinc-100 rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="divide-y divide-zinc-100 rounded-[10px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                 @forelse ($rcoinHistory as $entry)
                     <div class="flex items-center justify-between gap-4 px-5 py-3">
                         <div class="min-w-0">

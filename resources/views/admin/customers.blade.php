@@ -118,7 +118,12 @@
                 <div class="col-user flex min-w-0 items-center gap-3">
                     <img src="{{ $rowAvatar }}" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100 dark:ring-blue-500/30" loading="lazy">
                     <div class="min-w-0 leading-tight">
-                        <p class="truncate text-[13px] font-semibold text-zinc-900 dark:text-white">{{ $user->name }}</p>
+                        <p class="flex items-center gap-1 text-[13px] font-semibold text-zinc-900 dark:text-white">
+                            <span class="truncate">{{ $user->name }}</span>
+                            @if ($user->isKycVerified())
+                                <x-verified-badge size="xs" />
+                            @endif
+                        </p>
                         <p class="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{{ $user->email }}</p>
                     </div>
                 </div>

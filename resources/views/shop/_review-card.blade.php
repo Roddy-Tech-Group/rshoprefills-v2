@@ -23,13 +23,18 @@
     $empty    = 5 - $full - ($hasHalf ? 1 : 0);
 @endphp
 
-<article class="flex w-72 shrink-0 flex-col rounded-[14px] border-2 border-zinc-200 bg-transparent p-5 sm:w-80 dark:border-zinc-700">
+<article class="flex w-72 shrink-0 flex-col rounded-[14px] dash-shimmer border border-zinc-200 bg-transparent p-5 transition-colors hover:border-green-200 sm:w-80 dark:border-zinc-700 dark:hover:border-white">
 
     <div class="flex items-start justify-between gap-3">
         <div class="flex min-w-0 items-start gap-3">
             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-100 text-sm font-bold text-zinc-600 dark:bg-[#26416b] dark:text-zinc-200">{{ $review->initials }}</span>
             <div class="min-w-0 leading-tight">
-                <p class="truncate text-sm font-semibold text-zinc-900 dark:text-white">{{ $review->author_name }}</p>
+                <p class="flex items-center gap-1 text-sm font-semibold text-zinc-900 dark:text-white">
+                    <span class="truncate">{{ $review->author_name }}</span>
+                    @if ($review->user?->isKycVerified())
+                        <x-verified-badge size="xs" />
+                    @endif
+                </p>
                 <p class="text-xs text-zinc-600 dark:text-zinc-400">{{ $review->reviewed_at->format('M j, Y') }}</p>
             </div>
         </div>

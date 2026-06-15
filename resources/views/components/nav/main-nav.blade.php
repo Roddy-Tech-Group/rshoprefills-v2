@@ -86,7 +86,7 @@
                     action="{{ route('shop.gift-cards') }}"
                     @click="$refs.search.focus()"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-400 hover:border-zinc-500'"
-                    class="group flex items-center gap-3 cursor-text rounded-[10px] border-2 bg-white px-4 py-2 transition-all duration-200"
+                    class="group flex items-center gap-3 cursor-text rounded-[10px] border-2 bg-[#eff6ff] px-4 py-2 transition-all duration-200"
                 >
                     <button type="submit" class="shrink-0 text-zinc-900 transition-colors hover:text-blue-600 focus:outline-none" aria-label="Search">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -230,7 +230,7 @@
                             role="search"
                             method="GET"
                             action="{{ route('shop.gift-cards') }}"
-                            class="flex items-center gap-3 rounded-[10px] border-2 border-blue-500 bg-white px-4 py-2.5 ring-2 ring-blue-500/15 dark:bg-[#162a4a] dark:border-blue-400"
+                            class="flex items-center gap-3 rounded-[10px] border-2 border-blue-500 bg-[#eff6ff] px-4 py-2.5 ring-2 ring-blue-500/15 dark:bg-[#0c1a36] dark:border-blue-400"
                         >
                             <svg class="h-5 w-5 shrink-0 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

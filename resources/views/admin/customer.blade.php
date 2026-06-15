@@ -47,7 +47,12 @@
                 <img src="{{ $avatar }}" alt="" class="h-16 w-16 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100">
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                        <h2 class="text-lg font-bold text-zinc-900">{{ $user->name }}</h2>
+                        <h2 class="inline-flex items-center gap-1.5 text-lg font-bold text-zinc-900">
+                            {{ $user->name }}
+                            @if ($user->isKycVerified())
+                                <x-verified-badge size="sm" />
+                            @endif
+                        </h2>
                         @if ($user->email_verified_at)
                             <span class="inline-flex items-center rounded-[5px] bg-emerald-400 px-2.5 py-0.5 text-xs font-semibold text-white">Active</span>
                         @else

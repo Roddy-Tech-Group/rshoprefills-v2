@@ -46,7 +46,8 @@ class extends Component {
     {
         // Pending customer submissions float to the top so the admin sees what
         // needs approval first.
-        return Review::orderByRaw('(is_customer_submitted = 1 AND is_published = 0) DESC')
+        return Review::with('user:id,kyc_status')
+            ->orderByRaw('(is_customer_submitted = 1 AND is_published = 0) DESC')
             ->orderByDesc('reviewed_at')
             ->get();
     }
@@ -204,7 +205,12 @@ class extends Component {
                     @forelse ($this->reviews as $review)
                         <tr>
                             <td>
-                                <p class="font-semibold text-zinc-900 dark:text-white">{{ $review->author_name }}</p>
+                                <p class="flex items-center gap-1 font-semibold text-zinc-900 dark:text-white">
+                                    <span class="truncate">{{ $review->author_name }}</span>
+                                    @if ($review->user?->isKycVerified())
+                                        <x-verified-badge size="xs" />
+                                    @endif
+                                </p>
                                 <p class="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">{{ $review->initials }}</p>
                             </td>
                             <td>{{ $review->source }}</td>

@@ -509,10 +509,11 @@ $renderCheckout = function (CartManager $cartManager, CartPricingService $pricin
 };
 Route::get('checkout', $renderCheckout)->name('shop.checkout');
 
-// Customer review submission - after a completed order. Stored unpublished for
-// admin approval, then it appears on the storefront reviews wall.
+// Customer review submission. Open to guests too (they supply a name); signed-in
+// customers review under their account name. Stored unpublished for admin
+// approval, then it appears on the storefront reviews wall.
 Route::post('reviews', [ReviewController::class, 'store'])
-    ->middleware(['auth', 'throttle:6,1'])
+    ->middleware(['throttle:6,1'])
     ->name('reviews.store');
 
 // Coupon live preview. Validates a code against the active cart and returns the

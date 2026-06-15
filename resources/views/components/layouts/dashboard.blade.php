@@ -275,7 +275,7 @@
             $defaultAvatar = $user?->initialsAvatar() ?? '';
         @endphp
 
-        <flux:sidebar sticky stashable class="relative hidden w-[256px] bg-white dark:bg-[#0c1a36] lg:flex">
+        <flux:sidebar sticky stashable class="relative hidden w-[256px] m-3 rounded-[14px] border border-zinc-200 bg-[#eff6ff] dark:border-zinc-700 dark:bg-[#0c1a36] lg:flex" style="height: calc(100dvh - 1.5rem); top: 0.75rem;">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
             {{-- Glass round toggle on the seam — mirrors the admin sidebar.
@@ -301,7 +301,7 @@
             </button>
 
             {{-- Brand — full wordmark when expanded, square favicon when collapsed. --}}
-            <a href="{{ route('dashboard') }}" wire:navigate class="mr-5 -ml-1 flex flex-col rounded-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 shrink-0">
+            <a href="{{ route('dashboard') }}" wire:navigate.hover class="mr-5 -ml-1 flex flex-col rounded-[10px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 shrink-0">
                 <span class="brand-full flex h-10 items-center">
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.webp') }}"
@@ -323,12 +323,12 @@
             {{-- Scrollable middle: only the nav links scroll. Logo above + Newsletter/Need-Help
                  below stay fixed. min-h-0 lets flex-1 actually shrink and trigger overflow.
                  -mr-2 pr-2 hides the scrollbar gutter; the project hides scrollbars site-wide. --}}
-            <div class="-mr-2 flex min-h-0 flex-1 flex-col overflow-y-auto pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div class="-mx-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
             {{-- Primary nav --}}
             <nav class="mt-6 flex flex-col gap-1" aria-label="Account">
                 @php $active = $isCurrent('dashboard'); @endphp
-                <a href="{{ route('dashboard') }}" wire:navigate data-tip="Overview" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard') }}" wire:navigate.hover data-tip="Overview" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <svg class="{{ $iconCls($active) }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>
@@ -370,7 +370,7 @@
                     {{-- Submenu rows are text-only: the parent Shop item carries
                          the icon, repeating one per child just adds noise. --}}
                     <div x-show="expanded" x-collapse class="nav-submenu ml-5 flex flex-col gap-1 border-l border-zinc-200 pl-3">
-                        <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="{{ $subItem(false) }}">
+                        <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate.hover class="{{ $subItem(false) }}">
                             All Categories
                         </a>
                         @foreach ([
@@ -380,7 +380,7 @@
                             ['Stays',          route('dashboard.shop.stays'),      true],
                             ['Topups & Bills', route('dashboard.shop.topups'),     true],
                         ] as [$label, $href, $live])
-                            <a href="{{ $href }}" @if ($live) wire:navigate @endif class="{{ $subItem(false) }}">
+                            <a href="{{ $href }}" @if ($live) wire:navigate.hover @endif class="{{ $subItem(false) }}">
                                 {{ $label }}
                             </a>
                         @endforeach
@@ -393,7 +393,7 @@
             <p class="dash-section-label mt-6 px-3 text-base font-bold text-zinc-900 dark:text-white">Account</p>
             <nav class="mt-2 flex flex-col gap-1" aria-label="Account management">
                 @php $active = $isCurrent('dashboard.orders*'); @endphp
-                <a href="{{ route('dashboard.orders') }}" wire:navigate data-tip="Orders" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.orders') }}" wire:navigate.hover data-tip="Orders" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/' . rawurlencode('order.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Orders
@@ -404,7 +404,7 @@
                 </a>
 
                 @php $active = request()->routeIs('dashboard.wallet'); @endphp
-                <a href="{{ route('dashboard.wallet') }}" wire:navigate data-tip="Wallet" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.wallet') }}" wire:navigate.hover data-tip="Wallet" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Wallet
@@ -412,7 +412,7 @@
                 </a>
 
                 @php $active = $isCurrent('dashboard.transactions*'); @endphp
-                <a href="{{ route('dashboard.transactions') }}" wire:navigate data-tip="Transactions" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.transactions') }}" wire:navigate.hover data-tip="Transactions" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Transactions
@@ -423,7 +423,7 @@
                      reachable via the avatar dropdown (and the mobile menu). --}}
 
                 @php $active = $isCurrent('dashboard.kyc'); @endphp
-                <a href="{{ route('dashboard.kyc') }}" wire:navigate data-tip="Verify Identity" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.kyc') }}" wire:navigate.hover data-tip="Verify Identity" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/customer.svg') }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Verify Identity
@@ -432,7 +432,7 @@
                 </a>
 
                 @php $active = $isCurrent('dashboard.password'); @endphp
-                <a href="{{ route('dashboard.password') }}" wire:navigate data-tip="Security" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.password') }}" wire:navigate.hover data-tip="Security" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Security
@@ -440,7 +440,7 @@
                 </a>
 
                 @php $active = request()->routeIs('dashboard.notifications'); @endphp
-                <a href="{{ route('dashboard.notifications') }}" wire:navigate data-tip="Notifications" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.notifications') }}" wire:navigate.hover data-tip="Notifications" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Notifications
@@ -454,7 +454,7 @@
                      backend ships (the page is only an empty-state shell today).
                      Restore this block + the route in routes/web.php to re-enable.
                 @php $active = request()->routeIs('dashboard.saved-cards'); @endphp
-                <a href="{{ route('dashboard.saved-cards') }}" wire:navigate data-tip="Saved Cards" class="{{ $navItem($active) }}">
+                <a href="{{ route('dashboard.saved-cards') }}" wire:navigate.hover data-tip="Saved Cards" class="{{ $navItem($active) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/' . 'savedcard.svg') }}" alt="" class="h-5 w-5 shrink-0" style="{{ $imgIconStyle($active) }}" loading="lazy">
                         Saved Cards
@@ -462,7 +462,7 @@
                 </a>
                 --}}
 
-                <a href="{{ route('dashboard.rewards') }}" wire:navigate data-tip="Referrals" class="{{ $navItem(request()->routeIs('dashboard.rewards')) }}">
+                <a href="{{ route('dashboard.rewards') }}" wire:navigate.hover data-tip="Referrals" class="{{ $navItem(request()->routeIs('dashboard.rewards')) }}">
                     <span class="flex items-center gap-3">
                         <img src="{{ asset('assets/referals.webp') }}" alt="" class="h-5 w-5 shrink-0 object-contain" loading="lazy">
                         Referrals
@@ -579,7 +579,7 @@
                                  emails the support team. --}}
                             <a
                                 href="{{ route('shop.contact') }}"
-                                wire:navigate
+                                wire:navigate.hover
                                 @click="helpOpen = false"
                                 class="group flex items-center gap-3 rounded-[10px] bg-blue-50 px-4 py-3 ring-1 ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:ring-blue-500/30 dark:hover:bg-blue-500/25"
                             >
@@ -617,7 +617,7 @@
                     role="search"
                     @click="$refs.searchInput.focus(); open = true"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-400 hover:border-zinc-500'"
-                    class="group flex w-full items-center gap-3 cursor-text rounded-[10px] border-2 bg-white px-4 py-2 transition-all duration-200"
+                    class="group flex w-full items-center gap-3 cursor-text rounded-[10px] border-2 bg-[#eff6ff] px-4 py-2 transition-all duration-200"
                 >
                     <svg class="h-5 w-5 shrink-0 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -737,13 +737,13 @@
                                 ['Wallet',          'Top up & balance',       'Wallet.svg',         route('dashboard.wallet')],
                                 ['Orders',          'Recent purchases',       'order.svg',          route('dashboard.orders')],
                                 ['Transactions',    'Activity history',       'transactions.svg',   route('dashboard.transactions')],
-                                ['Profile',         'Account information',    'user.svg',           route('dashboard.profile')],
+                                ['Settings',        'Account information',    'system setting.svg', route('dashboard.profile')],
                                 ['Security',        'Password & sessions',    'admin access.svg',   route('dashboard.password')],
                             ];
                         @endphp
 
                         @foreach ($searchItems as [$title, $subtitle, $icon, $href])
-                            <a href="{{ $href }}" wire:navigate class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-blue-100">
+                            <a href="{{ $href }}" wire:navigate.hover class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-blue-100">
                                 <span class="flex items-center gap-3">
                                     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200">
                                         <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-4 w-4" loading="lazy">
@@ -853,10 +853,10 @@
                         </ul>
 
                         <div class="mt-3 flex gap-2 rounded-[10px] bg-zinc-50 px-3 py-3">
-                            <a href="{{ route('dashboard.shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
+                            <a href="{{ route('dashboard.shop.cart') }}" wire:navigate.hover @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
                                 View cart
                             </a>
-                            <a :href="'{{ route('dashboard.shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                            <a :href="'{{ route('dashboard.shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate.hover @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
                                 Checkout
                             </a>
                         </div>
@@ -934,15 +934,15 @@
                         $iconBlack = 'filter: brightness(0) saturate(100%);';
                     @endphp
                     <div class="p-1.5">
-                        <a href="{{ route('dashboard.profile') }}" wire:navigate class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('dashboard.profile') }}" wire:navigate.hover class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/user.svg') }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Profile
                         </a>
-                        <a href="{{ route('dashboard.password') }}" wire:navigate class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('dashboard.password') }}" wire:navigate.hover class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Security
                         </a>
-                        <a href="{{ route('dashboard.appearance') }}" wire:navigate class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('dashboard.appearance') }}" wire:navigate.hover class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('Appearance.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Appearance
                         </a>
@@ -950,7 +950,7 @@
                         {{-- (Regional country/language switcher removed from the
                              dashboard - it belongs on shop/category pages only.) --}}
 
-                        <a href="{{ route('dashboard.notifications') }}" wire:navigate class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('dashboard.notifications') }}" wire:navigate.hover class="flex items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <span class="flex items-center gap-3">
                                 <img src="{{ asset('assets/' . rawurlencode('notification 2.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                                 Notifications
@@ -959,7 +959,7 @@
                                 <span class="inline-flex h-5 min-w-[20px] items-center justify-center rounded-[5px] bg-red-500 px-1 text-[10px] font-bold text-white">{{ $notificationCount }}</span>
                             @endif
                         </a>
-                        <a href="{{ route('home') }}" wire:navigate class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
+                        <a href="{{ route('home') }}" wire:navigate.hover class="flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-blue-100" role="menuitem">
                             <img src="{{ asset('assets/' . rawurlencode('Back to shop.svg')) }}" alt="" class="h-5 w-5 shrink-0" style="{{ $iconBlack }}" loading="lazy">
                             Back to store
                         </a>
@@ -998,18 +998,19 @@
         {{-- Blue hero — overview only. Scrolls away with the page; the floating
              wallet chip + Top Up button inside <x-slot:mobileHero> take over once
              the hero leaves the viewport. --}}
-        <header class="relative z-10 rounded-b-[20px] bg-blue-600 px-5 pb-6 lg:hidden" style="padding-top: max(1rem, env(safe-area-inset-top));">
+        <header class="relative z-10 px-5 pb-6 lg:hidden" style="padding-top: max(1rem, env(safe-area-inset-top));">
             {{-- Compact identity strip - avatar + small online dot on the left,
                  notification bell on the right. Replaces the old "Hello /
                  Welcome back" greeting so the wallet card sits closer to the
                  top and the product categories get more vertical room. --}}
-            <div class="flex items-center justify-between gap-3 text-white">
+            <div class="flex items-center justify-between gap-3 text-zinc-900 dark:text-white">
                 @php $mobileFirstName = strtok(trim((string) ($user?->name ?? '')), ' ') ?: ''; @endphp
                 <div class="flex min-w-0 items-center gap-2.5">
-                    {{-- The avatar doubles as a refresh control on mobile: tapping it
-                         reloads the dashboard to pull fresh wallet / order data. --}}
-                    <button type="button" onclick="window.location.reload()" aria-label="Refresh dashboard" class="relative inline-flex shrink-0 items-center transition-transform active:scale-95">
-                        <span class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/15 text-sm font-bold uppercase ring-2 ring-white/30">
+                    {{-- The avatar taps through to Settings. Pull-to-refresh already
+                         handles reloading fresh wallet / order data, so the tap is
+                         free for the more useful destination. --}}
+                    <a href="{{ route('dashboard.profile') }}" wire:navigate.hover aria-label="Open settings" class="relative inline-flex shrink-0 items-center transition-transform active:scale-95">
+                        <span class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-sm font-bold uppercase text-blue-700 ring-2 ring-blue-200 dark:bg-white/15 dark:text-white dark:ring-white/30">
                             @if ($user?->avatar_url)
                                 <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" class="h-full w-full object-cover" loading="lazy">
                             @else
@@ -1021,20 +1022,20 @@
                                  has its own white edge so it pops on the blue hero. --}}
                             <x-ui.verified-badge class="absolute -bottom-1 -right-1 h-4 w-4 drop-shadow-sm" />
                         @else
-                            <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-blue-600" aria-label="Online"></span>
+                            <span class="absolute -bottom-1 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[#eff6ff] dark:ring-[#0c1a36]" aria-label="Online"></span>
                         @endif
-                    </button>
+                    </a>
                     {{-- The greeting doubles as a storefront shortcut. The tiny
                          chip stays visible permanently so PWA users always have
                          an obvious door back to the storefront. --}}
                     <a
                         href="{{ route('home') }}"
-                        wire:navigate
+                        wire:navigate.hover
                         class="flex min-w-0 items-center gap-2 transition-transform active:scale-95"
                         aria-label="Go to the storefront"
                     >
                         <span class="truncate text-base font-semibold">Hi {{ $mobileFirstName }}</span>
-                        <span class="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-white/30">Visit store</span>
+                        <span class="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-200 dark:bg-white/20 dark:text-white dark:ring-white/30">Visit site</span>
                     </a>
                 </div>
                 <div class="flex items-center gap-2" x-data>
@@ -1043,22 +1044,24 @@
                          desktop top bar. Matches the cart / notification pills. --}}
                     <button
                         type="button"
+                        x-data="{ code: (localStorage.getItem('locale.countryCode') || 'US').toLowerCase() }"
+                        @locale-updated.window="code = ($event.detail.countryCode || code).toLowerCase()"
                         x-on:click="$dispatch('open-locale-modal')"
-                        aria-label="Language and currency"
-                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 transition-colors hover:bg-white/25"
+                        aria-label="Region, language and currency"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200 transition-colors hover:bg-blue-200 dark:bg-white/15 dark:ring-white/30 dark:hover:bg-white/25"
                     >
-                        <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8"/></svg>
+                        <img :src="'https://flagcdn.com/w80/' + code + '.png'" alt="" class="h-6 w-6 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/25" loading="lazy">
                     </button>
 
                     {{-- Cart — links to the cart page with a live count from the
                          global $store.cart (kept in sync with the shop pages). --}}
                     <a
                         href="{{ route('dashboard.shop.cart') }}"
-                        wire:navigate
+                        wire:navigate.hover
                         aria-label="Cart"
-                        class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 transition-colors hover:bg-white/25"
+                        class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200 transition-colors hover:bg-blue-200 dark:bg-white/15 dark:ring-white/30 dark:hover:bg-white/25"
                     >
-                        <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 brightness-0 invert" loading="lazy">
+                        <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 brightness-0 dark:invert" loading="lazy">
                         <span
                             x-show="$store.cart && $store.cart.count > 0"
                             x-text="$store.cart ? $store.cart.count : ''"
@@ -1102,7 +1105,7 @@
             {{-- Inner-page top bar. NOT sticky - scrolls away with the page; the
                  floating hamburger + locale chip + bell below pin to the viewport
                  once the user scrolls past, keeping the essentials always reachable. --}}
-            <div class="relative z-10 flex items-center justify-between gap-2 border-b border-white/30 bg-white/40 backdrop-blur-xl backdrop-saturate-150 px-3 py-2.5 lg:hidden dark:border-white/10 dark:bg-white/5">
+            <div class="relative z-10 flex items-center justify-between gap-2 px-3 py-2.5 lg:hidden">
                 {{-- Hamburger opens the Connect panel (social + contact channels).
                      The app menu itself is the bottom-bar centre FAB. --}}
                 <button
@@ -1110,7 +1113,7 @@
                     x-data
                     x-on:click="$dispatch('open-connect-panel')"
                     aria-label="Connect with us"
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-white/40 active:scale-95 dark:hover:bg-white/10"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
@@ -1118,19 +1121,21 @@
                     {{-- Language + currency toggle (opens the locale modal). --}}
                     <button
                         type="button"
+                        x-data="{ code: (localStorage.getItem('locale.countryCode') || 'US').toLowerCase() }"
+                        @locale-updated.window="code = ($event.detail.countryCode || code).toLowerCase()"
                         x-on:click="$dispatch('open-locale-modal')"
-                        aria-label="Language and currency"
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-white/40 active:scale-95 dark:hover:bg-white/10"
+                        aria-label="Region, language and currency"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
                     >
-                        <svg class="h-5 w-5 text-zinc-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8"/></svg>
+                        <img :src="'https://flagcdn.com/w80/' + code + '.png'" alt="" class="h-6 w-6 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/25" loading="lazy">
                     </button>
 
                     {{-- Cart — live count from the global $store.cart, taps through to the cart page. --}}
                     <a
                         href="{{ route('dashboard.shop.cart') }}"
-                        wire:navigate
+                        wire:navigate.hover
                         aria-label="Cart"
-                        class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition-colors hover:bg-white/40 active:scale-95 dark:hover:bg-white/10"
+                        class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
                     >
                         <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                         <span
@@ -1140,7 +1145,9 @@
                             class="absolute -top-0.5 -right-0.5 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold leading-none text-white"
                         ></span>
                     </a>
-                    <livewire:notifications-menu tone="dark" />
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-white/10 dark:ring-white/20">
+                        <livewire:notifications-menu tone="dark" wire:key="inner-bar-notif" />
+                    </div>
                 </div>
             </div>
         @endif
@@ -1190,16 +1197,18 @@
                     {{-- Language + currency toggle (opens the locale modal). --}}
                     <button
                         type="button"
+                        x-data="{ code: (localStorage.getItem('locale.countryCode') || 'US').toLowerCase() }"
+                        @locale-updated.window="code = ($event.detail.countryCode || code).toLowerCase()"
                         x-on:click="$dispatch('open-locale-modal')"
-                        aria-label="Language and currency"
+                        aria-label="Region, language and currency"
                         class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
                     >
-                        <svg class="h-5 w-5 text-zinc-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8"/></svg>
+                        <img :src="'https://flagcdn.com/w80/' + code + '.png'" alt="" class="h-6 w-6 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/25" loading="lazy">
                     </button>
 
                     <a
                         href="{{ route('dashboard.shop.cart') }}"
-                        wire:navigate
+                        wire:navigate.hover
                         aria-label="Cart"
                         class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
                     >
@@ -1217,7 +1226,7 @@
                 </div>
             </div>
 
-            <div class="flex flex-col bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:min-h-full lg:px-10 lg:py-8 dark:bg-[#0c1a36]">
+            <div data-page-content class="flex flex-col bg-[#eff6ff] px-4 pt-5 pb-28 sm:px-6 sm:pt-6 lg:min-h-full lg:px-10 lg:py-8 dark:bg-[#0c1a36]">
                 <div class="w-full lg:flex-1">
                     {{-- Suspension banner: visible on every dashboard page when the
                          account is suspended. Carries the admin-authored reason +
@@ -1235,7 +1244,7 @@
                      admin layout. Full-width so the legal line sits flush with
                      the page edges. `mt-auto` pins it to the bottom. --}}
                 <footer class="mt-auto hidden w-full pt-12 flex-wrap items-center justify-end gap-x-4 gap-y-1 text-[11px] font-semibold text-zinc-600 lg:flex dark:text-zinc-300">
-                    <a href="{{ route('shop.privacy') }}" wire:navigate class="hover:text-zinc-900 dark:hover:text-white">Privacy Policy</a>
+                    <a href="{{ route('shop.privacy') }}" wire:navigate.hover class="hover:text-zinc-900 dark:hover:text-white">Privacy Policy</a>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
                     <span>version 2.0.0</span>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
@@ -1266,7 +1275,7 @@
                 ['idx' => 1, 'href' => route('dashboard.orders'),       'icon' => 'order.svg',          'label' => 'Orders',       'nav' => true],
                 // index 2 is the Menu button, rendered between the two loops
                 ['idx' => 3, 'href' => route('dashboard.transactions'), 'icon' => 'transactions 1.svg', 'label' => 'History',      'nav' => true],
-                ['idx' => 4, 'href' => route('dashboard.profile'),      'icon' => 'Profile 1.svg',      'label' => 'Profile',      'nav' => true],
+                ['idx' => 4, 'href' => route('dashboard.profile'),      'icon' => 'system setting.svg', 'label' => 'Settings',     'nav' => true],
             ];
         @endphp
         {{-- Floating rounded nav bar (neobank style): detached from the edges with
@@ -1276,7 +1285,7 @@
             x-data="{ active: {{ $activeIndex }} }"
             class="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden"
         >
-            <nav class="mx-auto max-w-md rounded-full border border-white/50 bg-white/55 p-1.5 shadow-[0_10px_34px_-6px_rgba(0,0,0,0.22)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#0c1a36]/55" aria-label="Primary">
+            <nav class="nav-glass mx-auto max-w-md rounded-full p-1.5" aria-label="Primary">
                 <div class="relative flex items-stretch">
                     {{-- Apple-glass sliding pill: one frosted bubble that fills the
                          bar height and glides to the active tab. Width = one of
@@ -1284,7 +1293,7 @@
                          the active slot (Menu is slot 2, never an active route). --}}
                     <span
                         aria-hidden="true"
-                        class="pointer-events-none absolute inset-y-0 left-0 w-1/5 rounded-full bg-zinc-500/15 ring-1 ring-white/50 shadow-sm backdrop-blur-md backdrop-saturate-150 transition-transform duration-[600ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] dark:bg-white/15 dark:ring-white/15"
+                        class="liquid-pill pointer-events-none absolute -inset-y-1 left-0 w-1/5 rounded-full transition-transform duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
                         :style="'transform: translateX(' + (active * 100) + '%)'"
                     ></span>
 
@@ -1292,7 +1301,7 @@
                     @foreach (array_slice($tabs, 0, 2) as $t)
                         <a
                             href="{{ $t['href'] }}"
-                            @if ($t['nav'] && $t['href'] !== '#') wire:navigate @endif
+                            @if ($t['nav'] && $t['href'] !== '#') wire:navigate.hover @endif
                             @click="active = {{ $t['idx'] }}"
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
@@ -1326,7 +1335,7 @@
                     @foreach (array_slice($tabs, 2, 2) as $t)
                         <a
                             href="{{ $t['href'] }}"
-                            @if ($t['nav'] && $t['href'] !== '#') wire:navigate @endif
+                            @if ($t['nav'] && $t['href'] !== '#') wire:navigate.hover @endif
                             @click="active = {{ $t['idx'] }}"
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
@@ -1378,7 +1387,7 @@
                 ['label' => 'Orders',        'href' => route('dashboard.orders'),    'icon' => 'order.svg',          'tone' => 'bg-sky-500',      'nav' => true],
                 ['label' => 'Wallet',        'href' => route('dashboard.wallet'),    'icon' => 'Wallet.svg',         'tone' => 'bg-emerald-500',  'nav' => true],
                 ['label' => 'Transactions',  'href' => route('dashboard.transactions'), 'icon' => 'transactions 1.svg', 'tone' => 'bg-teal-500',  'nav' => true],
-                ['label' => 'Profile',       'href' => route('dashboard.profile'),   'icon' => 'Profile 1.svg',      'tone' => 'bg-indigo-500',   'nav' => true],
+                ['label' => 'Settings',      'href' => route('dashboard.profile'),   'icon' => 'system setting.svg', 'tone' => 'bg-indigo-500',   'nav' => true],
                 ['label' => 'Verify (KYC)',  'href' => route('dashboard.kyc'),       'icon' => 'customer.svg',       'tone' => 'bg-amber-500',    'nav' => true],
                 ['label' => 'Security',      'href' => route('dashboard.password'),  'icon' => 'admin access.svg',   'tone' => 'bg-violet-500',   'nav' => true],
                 ['label' => 'Appearance',    'href' => route('dashboard.appearance'),'icon' => 'Appearance.svg',     'tone' => 'bg-fuchsia-500',  'nav' => true],
@@ -1443,7 +1452,7 @@
                         @foreach ($mobileMenuItems as $i => $item)
                             <a
                                 href="{{ $item['href'] }}"
-                                @if ($item['nav'] && $item['href'] !== '#') wire:navigate @endif
+                                @if ($item['nav'] && $item['href'] !== '#') wire:navigate.hover @endif
                                 @click="menuOpen = false"
                                 style="--i: {{ $i }}"
                                 class="group flex flex-col items-center justify-center gap-2 rounded-[6px] px-2 py-3 text-center transition-transform duration-200 active:scale-95"

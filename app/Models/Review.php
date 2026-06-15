@@ -31,6 +31,7 @@ class Review extends Model
 
     protected $fillable = [
         'user_id',
+        'order_id',
         'initials',
         'author_name',
         'body',
@@ -68,8 +69,26 @@ class Review extends Model
         return $query->where('is_customer_submitted', true)->where('is_published', false);
     }
 
+    /**
+     * Reviews whose order contains a product for the given gift-card brand.
+     * One order-page review can roll up under several brands when the customer
+     * bought more than one gift card in that order. General reviews (no order)
+     * are naturally excluded.
+     */
+    public function scopeForBrand(Builder $query, string $brandKey): Builder
+    {
+        return $query->whereHas('order.items.product', function (Builder $itemQuery) use ($brandKey) {
+            $itemQuery->where('brand_key', $brandKey);
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }

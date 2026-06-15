@@ -249,7 +249,7 @@ class extends Component {
                 type="text"
                 wire:model.live.debounce.300ms="search"
                 placeholder="Search by reference or description"
-                class="w-full rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                class="w-full rounded-[10px] border-2 border-zinc-100 bg-[#eff6ff] px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:text-white"
             >
             <div wire:loading wire:target="search" class="absolute right-3 top-1/2 -translate-y-1/2">
                 <svg class="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -299,7 +299,7 @@ class extends Component {
     @if ($recentDeposits->isNotEmpty())
         <div class="flex flex-col gap-2">
             <p class="text-sm font-bold text-zinc-900">Recent deposits</p>
-            <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+            <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
                 @foreach ($recentDeposits as $deposit)
                     @php [$depLabel, $depClass] = $depositStatusUi[$deposit->status->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30']; @endphp
                     <div class="flex items-center gap-3 px-4 py-3" wire:key="dep-{{ $deposit->id }}">
@@ -328,7 +328,7 @@ class extends Component {
     <div
         wire:loading.flex
         wire:target="search, setFilter, gotoPage, nextPage, previousPage"
-        class="skeleton-stagger-fast flex-col divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white"
+        class="skeleton-stagger-fast flex-col divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none"
     >
         @for ($i = 0; $i < 6; $i++)
             <x-skeletons.table-row style="--i: {{ $i }}" />
@@ -338,7 +338,7 @@ class extends Component {
     {{-- Ledger --}}
     <div wire:loading.remove wire:target="search, setFilter, gotoPage, nextPage, previousPage" class="flex flex-col gap-5">
     @if ($transactions->isNotEmpty())
-        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             @foreach ($transactions as $txn)
                 <div class="flex items-center gap-3 px-4 py-3.5" wire:key="{{ $txn->key }}">
                     {{-- Animated direction icon - green incoming arrow for
@@ -368,7 +368,7 @@ class extends Component {
         </div>
     @else
         {{-- Empty state --}}
-        <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+        <div class="dash-shimmer rounded-[10px] bg-[#eff6ff] px-6 py-16 text-center border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/>

@@ -78,11 +78,11 @@ class extends Component {
     </div>
 
     @if ($notifications->isNotEmpty())
-        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             @foreach ($notifications as $note)
                 <div
                     wire:key="note-{{ $note->id }}"
-                    class="group relative flex items-stretch transition-colors hover:bg-zinc-50 {{ $note->read_at ? '' : 'bg-blue-50/50' }}"
+                    class="group relative flex items-stretch transition-colors hover:bg-zinc-50 dark:hover:bg-white/5 {{ $note->read_at ? '' : 'bg-blue-50/50 dark:bg-blue-500/10' }}"
                 >
                     {{-- Clickable area — opens the detail sheet. --}}
                     <button

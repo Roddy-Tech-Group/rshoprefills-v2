@@ -432,7 +432,7 @@
                             x-show="open"
                             x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                             style="display:none;"
-                            class="absolute right-0 left-0 top-full z-50 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10 dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40"
+                            class="glass-panel absolute right-0 left-0 top-full z-50 mt-2 overflow-hidden rounded-[10px] shadow-xl shadow-zinc-900/10 dark:shadow-black/40"
                             role="listbox"
                         >
                             <div class="border-b border-zinc-100 p-2 dark:border-zinc-700">
@@ -483,7 +483,7 @@
         @if ($hasPlans)
             {{-- ── Selector card (glass): holds the Data/Voice + Standard/Unlimited
                  segmented controls only. The plan cards live outside it, below. ── --}}
-            <div id="esim-packages" class="mx-auto mt-6 w-full max-w-[800px] scroll-mt-24 overflow-hidden rounded-[14px] bg-white/60 ring-1 ring-white/50 shadow-xl shadow-zinc-900/5 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#1d3252]/60 dark:ring-white/10 dark:shadow-black/40">
+            <div id="esim-packages" class="mx-auto mt-6 w-full max-w-[800px] scroll-mt-24 overflow-hidden rounded-[14px] bg-[#eff6ff] border border-zinc-200 dark:bg-[#0c1a36] dark:border-zinc-700">
                 <div class="p-5 sm:p-6">
                     {{-- Category selector (Data Only / Voice) - segmented control with
                          a smooth sliding bubble. The bubble width adapts to however
@@ -538,8 +538,8 @@
                             <button
                                 type="button"
                                 @click="selectedId = p.id"
-                                :class="selectedId === p.id ? 'border-blue-600 dark:border-white' : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'"
-                                class="flex flex-col rounded-[14px] border-2 bg-transparent px-4 py-4 text-left transition-colors focus:outline-none"
+                                :class="selectedId === p.id ? 'border-2 border-blue-600 dark:border-blue-500' : 'border border-white hover:border-green-200 dark:border-zinc-700 dark:hover:border-white'"
+                                class="flex flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none"
                             >
                                 {{-- Badges: tier (TRIP/EXPLORER/ADVENTURER/NOMAD, cycles by
                                      position) + a Data only / Voice type badge. --}}
@@ -554,43 +554,43 @@
 
                                 <div class="my-3 h-px bg-zinc-200 dark:bg-zinc-700"></div>
 
-                                <ul class="space-y-2 text-sm text-zinc-600 dark:text-white">
+                                <ul class="space-y-2 text-sm text-zinc-900 dark:text-white">
                                     <li class="flex items-center gap-2">
-                                        <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
+                                        <svg class="h-4 w-4 shrink-0 text-zinc-700 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
                                         <span x-text="p.data + ' of data'"></span>
                                     </li>
                                     <li class="flex items-center gap-2">
-                                        <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <svg class="h-4 w-4 shrink-0 text-zinc-700 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         <span x-text="p.days + ' day validity'"></span>
                                     </li>
                                     <template x-if="p.is_voice && p.voice">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-700 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
                                             <span x-text="p.voice"></span>
                                         </li>
                                     </template>
                                     <template x-if="p.is_voice && p.sms">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-700 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
                                             <span x-text="p.sms"></span>
                                         </li>
                                     </template>
                                     <template x-if="p.is_voice">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-700 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
                                             <span>Unlimited iMessage</span>
                                         </li>
                                     </template>
                                     <template x-if="p.is_voice">
                                         <li class="flex items-center gap-2">
-                                            <svg class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
+                                            <svg class="h-4 w-4 shrink-0 text-zinc-700 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
                                             <span>FaceTime</span>
                                         </li>
                                     </template>
                                 </ul>
 
                                 <template x-if="p.note">
-                                    <p class="mt-3 text-xs text-zinc-400 dark:text-zinc-300" x-text="p.note"></p>
+                                    <p class="mt-3 text-xs text-zinc-700 dark:text-white" x-text="p.note"></p>
                                 </template>
 
                                 {{-- See more: selects this plan and opens its full package details. --}}
@@ -632,7 +632,7 @@
                             {{-- Same card style + responsive grid as the plan cards. --}}
                             <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                                 @foreach ($broaderCoverage as $b)
-                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex flex-col rounded-[14px] border-2 border-zinc-200 bg-transparent px-4 py-4 transition-colors hover:border-blue-600 dark:border-zinc-700 dark:hover:border-white">
+                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex flex-col rounded-[14px] border border-white bg-transparent px-4 py-4 transition-colors hover:border-blue-600 dark:border-zinc-700 dark:hover:border-white">
                                         <span class="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-blue-50 ring-1 ring-zinc-200 dark:bg-blue-950/40 dark:ring-zinc-700">
                                             @if ($b['flag'])
                                                 <img src="{{ $b['flag'] }}" alt="" class="h-full w-full object-cover" loading="lazy">

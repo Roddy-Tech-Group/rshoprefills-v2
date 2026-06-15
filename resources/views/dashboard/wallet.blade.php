@@ -86,7 +86,7 @@
         {{-- Summary strip - count chip + add-wallet CTA. Glass surface with
              a subtle ring + tinted shadow to lift it off the page bg without
              feeling heavy. --}}
-        <div class="flex flex-wrap items-center justify-between gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-blue-900/[0.04] ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-white/10">
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-[10px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             <div class="flex min-w-0 items-center gap-4">
                 <span class="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-br from-blue-500 to-blue-700 shadow-sm shadow-blue-600/30">
                     <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
@@ -143,7 +143,7 @@
             </div>
         @else
             {{-- Empty state - modern centered card with a soft tinted icon halo. --}}
-            <div class="relative overflow-hidden rounded-[10px] bg-white px-6 py-16 text-center shadow-sm shadow-blue-900/[0.04] ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-white/10">
+            <div class="relative overflow-hidden rounded-[10px] bg-[#eff6ff] px-6 py-16 text-center border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
                 {{-- Soft background glow behind the icon. --}}
                 <div class="pointer-events-none absolute left-1/2 top-8 h-32 w-32 -translate-x-1/2 rounded-full bg-blue-100/60 blur-2xl dark:bg-blue-500/10" aria-hidden="true"></div>
                 <span class="relative mx-auto flex h-16 w-16 items-center justify-center rounded-[10px] bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-600/30 ring-4 ring-white dark:ring-[#0c1a36]">

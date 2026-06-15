@@ -57,7 +57,7 @@
                  <main> made <main> clip its fixed-position descendants (the eSIM buy
                  bar + modals rendered trapped inside the content box instead of the
                  viewport). <html> is the viewport root, so it never traps fixed. --}}
-            <main class="flex-1 bg-zinc-100">
+            <main data-page-content class="flex-1 bg-[#eff6ff]">
                 {{ $slot }}
             </main>
 

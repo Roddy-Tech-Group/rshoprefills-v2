@@ -6,7 +6,7 @@
     // During SPA navigation the card row is held behind a matching skeleton.
     //
     // Content source: the `reviews` table + `site_settings` (CMS-managed).
-    $reviews = \App\Models\Review::published()->ordered()->get();
+    $reviews = \App\Models\Review::published()->with('user:id,kyc_status')->ordered()->get();
     $aggregateRating = (float) \App\Models\SiteSetting::get('reviews.aggregate.rating', 4.4);
     $aggregateCount = (int) \App\Models\SiteSetting::get('reviews.aggregate.count', 0);
     $aggregateSince = (int) \App\Models\SiteSetting::get('reviews.aggregate.since_year', date('Y'));
@@ -68,12 +68,7 @@
              clipped by the overflow-hidden viewport. --}}
         <div
             x-ref="track"
-            @pointerdown="onDragStart($event)"
-            @pointermove="onDragMove($event)"
-            @pointerup="onDragEnd($event)"
-            @pointercancel="onDragEnd($event)"
-            class="overflow-x-hidden overflow-y-visible py-6 touch-pan-y select-none"
-            style="cursor: grab;"
+            class="overflow-x-auto overflow-y-hidden py-6 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
         >
             <div x-ref="list" class="carousel-list flex w-max gap-4 sm:gap-5">
 

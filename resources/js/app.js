@@ -929,22 +929,13 @@ window.dashboardSearch = function () {
 window.customerReviewsCarousel = function () {
     return {
         navigating: false,
-        tx: 0,
-        maxTx: 0,
         cardW: 288,
         gap: 20,
         padLeft: 0,
-        savedDuration: '0.6s',
-        dragArmed: false,
-        dragging: false,
-        dragTarget: null,
-        dragPointerId: null,
-        dragStartX: 0,
-        dragStartTx: 0,
 
-        // Wire up the transform-based carousel: measure the content column
-        // padding, compute scroll bounds, snap to start. Matches the brand-row
-        // factory so both rows feel identical.
+        // Measure the card width + content-column padding so the arrow steps by
+        // whole cards and the first card lines up with the header title. The
+        // actual swipe is native overflow scrolling (smooth momentum on touch).
         setup() {
             const viewport = this.$refs.track;
             const list     = this.$refs.list;
@@ -961,92 +952,23 @@ window.customerReviewsCarousel = function () {
                 ? Math.round(header.getBoundingClientRect().left)
                 : Math.round(this.$el.getBoundingClientRect().left);
             list.style.paddingLeft = this.padLeft + 'px';
-            this.tx = 0;
-            this.maxTx = Math.min(0, viewport.clientWidth - list.scrollWidth);
-            list.style.transform = 'translate3d(0, 0, 0)';
-
-            // Slow the slide down on long rows so a 20-card carousel doesn't
-            // feel hurried. Base 0.6s, +0.04s per item beyond 5, capped at 1.2s.
-            const itemCount = list.children.length;
-            const duration  = Math.min(1.2, 0.6 + 0.04 * Math.max(0, itemCount - 5));
-            this.savedDuration = duration.toFixed(2) + 's';
-            list.style.transitionDuration = this.savedDuration;
+            list.style.transform = '';
         },
 
-        // Advance 2 cards per click on desktop / tablet, 1 on mobile. Loops back
-        // to the start once the end is reached (the original reviews-carousel
-        // contract; lets the row run forever from a single Next button).
+        // Arrow: advance a couple of cards (one on mobile) with smooth scrolling,
+        // looping back to the start once the end is reached. Touch swiping is
+        // handled natively by the scroll container.
         next() {
-            const list = this.$refs.list;
-            if (! list) return;
+            const viewport = this.$refs.track;
+            if (! viewport) return;
 
-            if (this.tx <= this.maxTx + 1) {
-                this.tx = 0;
-                list.style.transform = 'translate3d(0, 0, 0)';
+            if (viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 4) {
+                viewport.scrollTo({ left: 0, behavior: 'smooth' });
                 return;
             }
 
             const cardsPerStep = window.innerWidth >= 640 ? 2 : 1;
-            const step = cardsPerStep * (this.cardW + this.gap);
-            this.tx = Math.max(this.maxTx, this.tx - step);
-            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
-        },
-
-        // Touch / pointer drag for mobile + trackpad. Matches the brand-row
-        // implementation so both carousels feel identical when swiped.
-        //
-        // 8px movement threshold gates the drag commitment. Below it, the
-        // gesture is treated as a click - we do not capture the pointer,
-        // do not move the list, and do not snap on release - so reviews
-        // (and any clickable card inside the row) receive a clean click.
-        onDragStart(e) {
-            const list = this.$refs.list;
-            if (! list) return;
-            if (e.button !== undefined && e.button !== 0) return;
-            this.dragArmed = true;
-            this.dragging = false;
-            this.dragTarget = e.currentTarget;
-            this.dragPointerId = e.pointerId;
-            this.dragStartX = e.clientX;
-            this.dragStartTx = this.tx;
-        },
-        onDragMove(e) {
-            if (! this.dragArmed) return;
-            const list = this.$refs.list;
-            if (! list) return;
-            const delta = e.clientX - this.dragStartX;
-
-            if (! this.dragging && Math.abs(delta) < 8) return;
-
-            if (! this.dragging) {
-                this.dragging = true;
-                list.style.transitionDuration = '0s';
-                try { this.dragTarget?.setPointerCapture(this.dragPointerId); } catch (_) {}
-            }
-
-            const raw = this.dragStartTx + delta;
-            const next = raw > 0
-                ? raw * 0.35
-                : (raw < this.maxTx ? this.maxTx + (raw - this.maxTx) * 0.35 : raw);
-            list.style.transform = `translate3d(${next}px, 0, 0)`;
-        },
-        onDragEnd(e) {
-            if (! this.dragArmed) return;
-            const wasDragging = this.dragging;
-            this.dragArmed = false;
-            this.dragging = false;
-
-            if (! wasDragging) return;
-
-            const list = this.$refs.list;
-            if (! list) return;
-            list.style.transitionDuration = this.savedDuration;
-            const delta = e.clientX - this.dragStartX;
-            const step  = this.cardW + this.gap;
-            const projected = this.dragStartTx + delta;
-            const snapped   = Math.round(projected / step) * step;
-            this.tx = Math.max(this.maxTx, Math.min(0, snapped));
-            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
+            viewport.scrollBy({ left: cardsPerStep * (this.cardW + this.gap), behavior: 'smooth' });
         },
     };
 };
@@ -1120,14 +1042,19 @@ window.valueFlip = function () {
 
 window.storefrontLocale = function () {
     // Pages that read country/currency from the URL. The listing and every brand-level
-    // detail page (e.g. /gift-cards/apple) both honour ?country=XX so flipping the locale
-    // modal reloads either one with the new filters applied.
-    const SHOP_PATH_PREFIXES = ['/gift-cards'];
+    // detail page (e.g. /gift-cards/apple) honour ?country=XX so flipping the locale
+    // modal reloads with the new filters applied. The dashboard mirrors the storefront:
+    // the overview (region-locked popular products) and the whole /dashboard/shop section
+    // must re-source on a region switch too, otherwise the catalog stays on the old region.
+    const SHOP_PATH_PREFIXES = ['/gift-cards', '/dashboard/shop'];
 
-    // Storefront paths where switching country must reload, so the region lock
-    // re-applies: the homepage and the whole gift-cards section (listing + brand).
+    // Paths where switching country must reload so the region lock re-applies and the
+    // catalog re-sources: the homepage, the gift-cards section, the dashboard overview,
+    // and the dashboard shop section.
     const isShopPath = (path) => {
-        return path === '/' || SHOP_PATH_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
+        return path === '/'
+            || path === '/dashboard'
+            || SHOP_PATH_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
     };
 
     // Checkout renders its rate, crypto prices and fee math server-side, so a
@@ -1172,35 +1099,49 @@ window.storefrontLocale = function () {
             this.$watch('currency',       save('currency'));
             this.$watch('currencySymbol', save('currencySymbol'));
 
-            // When country or currency change AND the user is on a filterable shop page,
-            // navigate to the same path with the updated URL params so the catalog reloads.
-            const reloadIfShop = () => {
-                const path = window.location.pathname;
-                const checkout = isCheckoutPath(path);
-                if (!isShopPath(path) && !checkout) return;
+            // Region (country) is the catalog lock, so switching it must apply on EVERY
+            // page of the site — not just shop pages — so the destination always
+            // re-sources for the new region (ResolveRegion reads ?country= on any route
+            // and sets the region cookie). Currency only needs a reload where prices are
+            // server-rendered (shop + checkout); elsewhere the cart re-prices client-side
+            // via the currency-changed event.
+            //
+            // A country pick mutates countryCode AND currency at once, firing two
+            // watchers; we debounce into a SINGLE navigation, otherwise the two racing
+            // Livewire.navigate calls sometimes leave the switch unapplied until a manual
+            // refresh. Debounced => one click reliably switches.
+            let reloadTimer = null;
+            const navigateLocale = () => {
+                clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(() => {
+                    const checkout = isCheckoutPath(window.location.pathname);
+                    const url = new URL(window.location.href);
+                    if (this.countryCode) url.searchParams.set('country', this.countryCode);
+                    else url.searchParams.delete('country');
 
-                const url = new URL(window.location.href);
-                if (this.countryCode) url.searchParams.set('country', this.countryCode);
-                else url.searchParams.delete('country');
+                    if (this.currency) url.searchParams.set('currency', this.currency);
+                    else url.searchParams.delete('currency');
 
-                if (this.currency) url.searchParams.set('currency', this.currency);
-                else url.searchParams.delete('currency');
-
-                // Checkout always hard-reloads (payment scripts + server-side
-                // rate math). Shop pages use Livewire's SPA navigation if available.
-                if (!checkout && window.Livewire && typeof window.Livewire.navigate === 'function') {
-                    window.Livewire.navigate(url.toString());
-                } else {
-                    window.location.href = url.toString();
-                }
+                    // Checkout hard-reloads (payment scripts + server-side rate math);
+                    // everywhere else uses Livewire's fast SPA navigation when available.
+                    if (!checkout && window.Livewire && typeof window.Livewire.navigate === 'function') {
+                        window.Livewire.navigate(url.toString());
+                    } else {
+                        window.location.href = url.toString();
+                    }
+                }, 60);
             };
 
-            this.$watch('countryCode', reloadIfShop);
-            this.$watch('currency',    reloadIfShop);
+            // Region: apply on every page.
+            this.$watch('countryCode', navigateLocale);
 
-            // Tell the cart store to re-price when the display currency changes
-            // (covers non-shop pages, where reloadIfShop does not navigate).
-            this.$watch('currency', () => window.dispatchEvent(new CustomEvent('currency-changed')));
+            // Currency: reload only where prices render server-side; always re-price the
+            // cart store client-side.
+            this.$watch('currency', () => {
+                const path = window.location.pathname;
+                if (isShopPath(path) || isCheckoutPath(path)) navigateLocale();
+                window.dispatchEvent(new CustomEvent('currency-changed'));
+            });
 
             // NOTE: the locale modal dispatches `language-changed` itself when a
             // language is picked (works regardless of which Alpine scope the modal
@@ -1209,6 +1150,36 @@ window.storefrontLocale = function () {
         },
     };
 };
+
+/**
+ * Smooth SPA page transitions. On every Livewire navigation the new page's main
+ * content slides in from the right (see `.page-enter` in app.css), giving the
+ * app-like feel of the menu modal opening rather than a hard reload. We restart
+ * the CSS animation by removing the class, forcing a reflow, then re-adding it.
+ */
+document.addEventListener('livewire:navigated', () => {
+    document.querySelectorAll('[data-page-content]').forEach((el) => {
+        el.classList.remove('page-enter');
+        void el.offsetWidth; // reflow so the animation replays on every navigation
+        el.classList.add('page-enter');
+        // Drop the class once it finishes so no transform lingers on the content.
+        el.addEventListener('animationend', () => el.classList.remove('page-enter'), { once: true });
+    });
+});
+
+/**
+ * Mobile-instant navigation. Livewire prefetches `wire:navigate.hover` links on
+ * mouseenter, but touch devices never fire that — so a tap pays the full server
+ * round-trip. We synthesize a mouseenter on touchstart so the destination page is
+ * fetched while the finger is still down; by the time the tap completes, the page
+ * is cached and the navigation is instant.
+ */
+document.addEventListener('touchstart', (e) => {
+    const link = e.target.closest && e.target.closest('a[wire\\:navigate\\.hover]');
+    if (link) {
+        link.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    }
+}, { passive: true, capture: true });
 
 /**
  * Modern dropdown select used by the KYC form (and reusable elsewhere). Replaces a

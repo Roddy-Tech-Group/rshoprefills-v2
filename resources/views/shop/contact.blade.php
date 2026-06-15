@@ -238,12 +238,6 @@
                 'form_label' => 'Supplier inquiry form',
             ],
             [
-                'label' => 'Careers',
-                'email' => trim((string) \App\Models\SiteSetting::get('contact.email_careers', '')),
-                'form'  => '',
-                'form_label' => null,
-            ],
-            [
                 'label' => 'Press & media',
                 'email' => trim((string) \App\Models\SiteSetting::get('contact.email_press', '')),
                 'form'  => '',

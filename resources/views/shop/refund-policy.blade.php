@@ -31,7 +31,7 @@
 
         {{-- Delivery: digital products ship free and arrive instantly. --}}
         <div class="mt-5 grid gap-3 sm:grid-cols-2">
-            <div class="flex items-start gap-3 rounded-[10px] bg-emerald-50 p-4 ring-1 ring-emerald-100">
+            <div class="flex items-start gap-3 rounded-[10px] bg-emerald-50 p-4 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
                 <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75l2.25 2.25 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <div>
                     <p class="text-sm font-bold text-emerald-700">Free delivery, always</p>

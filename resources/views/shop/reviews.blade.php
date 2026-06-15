@@ -8,7 +8,7 @@
     // Trustpilot collect the actual reviews behind the scenes.
     $tp = config('services.trustpilot');
     $google = config('services.google_reviews');
-    $reviews = \App\Models\Review::published()->ordered()->get();
+    $reviews = \App\Models\Review::published()->with('user:id,kyc_status')->ordered()->get();
     $aggregate = [
         'rating' => (float) \App\Models\SiteSetting::get('reviews.aggregate.rating', 0),
         'count' => (int) \App\Models\SiteSetting::get('reviews.aggregate.count', 0),
@@ -179,7 +179,7 @@
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Recent reviews</h2>
-                    <p class="mt-1 text-sm text-zinc-600">Collected from {{ $aggregate['source'] }}, Google, and our own customers. Hover any card to pause.</p>
+                    <p class="mt-1 text-sm text-zinc-600">Reviews collected from our system, Trustpilot and Google Business. Hover any card to pause.</p>
                 </div>
                 <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800">
                     View all on {{ $aggregate['source'] }}
@@ -238,6 +238,16 @@
         @endif
     </section>
 
+
+    {{-- Leave a review - our own collector, posting straight into the wall
+         above (after approval). These are general, non-product reviews. --}}
+    <section class="border-t border-zinc-100 bg-white">
+        <div class="mx-auto w-full max-w-[640px] px-4 py-14 sm:px-6 sm:py-16">
+            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8">
+                @include('shop._review-form')
+            </div>
+        </div>
+    </section>
 
     {{-- Final CTA --}}
     <section class="bg-blue-600">

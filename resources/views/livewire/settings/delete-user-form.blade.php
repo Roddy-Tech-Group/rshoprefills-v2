@@ -69,7 +69,7 @@ new class extends Component {
             x-transition:leave="transition duration-200 ease-in"
             x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 translate-y-4"
-            class="relative w-full max-w-md rounded-t-3xl bg-white/85 ring-1 ring-white/40 p-5 shadow-2xl shadow-zinc-900/30 backdrop-blur-2xl backdrop-saturate-150 sm:rounded-[10px] dark:bg-[#0c1a36]/80 dark:ring-white/10"
+            class="glass-panel relative w-full max-w-md rounded-t-3xl p-5 shadow-2xl shadow-zinc-900/30 sm:rounded-[10px]"
             style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));"
         >
             {{-- Drag handle (mobile only) --}}
