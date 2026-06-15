@@ -110,7 +110,7 @@ class EsimDetailPageTest extends TestCase
             ->assertSee('eSIM Store')                  // breadcrumb
             ->assertSee('United States eSIMs')          // country header
             ->assertSee('Choose your package')
-            ->assertSee('Data / Calls / Texts')         // voice tab
+            ->assertSee('Data Only')                    // category selector (Data Only / Voice)
             ->assertSee('Standard')                     // standard/unlimited toggle
             ->assertSee('Check compatibility')
             ->assertSee('Why travelers choose RshopRefills eSIMs')
@@ -269,23 +269,22 @@ class EsimDetailPageTest extends TestCase
         $this->get('/esims/this-region-does-not-exist')->assertNotFound();
     }
 
-    public function test_dashboard_buy_bar_lifts_above_the_mobile_tab_bar(): void
+    public function test_buy_bar_renders_as_a_top_toast(): void
     {
         $this->withoutVite();
 
         $this->esimRegion();
 
-        // In the dashboard the mobile tab bar (lg:hidden) pins to bottom-0, so the
-        // buy bar must lift above it on small screens; lg has no tab bar and drops
-        // back to bottom-0.
+        // The plan-selection buy bar now slides in from the top of the viewport
+        // (fixed inset-x-0 top-3), so it sits clear of the dashboard's bottom
+        // mobile tab bar entirely. The storefront uses the same top toast.
         $this->actingAs(User::factory()->create())
             ->get(route('dashboard.shop.esim', 'united-states-data-esim'))
             ->assertOk()
-            ->assertSee('bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))] lg:bottom-0', false);
+            ->assertSee('fixed inset-x-0 top-3', false);
 
-        // The storefront has no tab bar, so its buy bar stays pinned to bottom-0.
         $this->get(route('shop.esim', 'united-states-data-esim'))
             ->assertOk()
-            ->assertDontSee('bottom-[calc(6.5rem_+_env(safe-area-inset-bottom))]', false);
+            ->assertSee('fixed inset-x-0 top-3', false);
     }
 }
