@@ -37,7 +37,7 @@ class AdminLoginController extends Controller
             $request->boolean('remember')
         );
 
-        return redirect()->intended(route('admin.dashboard', absolute: false));
+        return redirect()->route('admin.2fa.challenge');
     }
 
     /**

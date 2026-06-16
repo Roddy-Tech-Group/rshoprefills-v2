@@ -2,9 +2,11 @@
 
 namespace App\Domain\Admin\Services;
 
+use App\Mail\AdminTwoFactorOtpMail;
 use App\Models\Admin;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -28,21 +30,22 @@ class AdminAuthService
      */
     private const DECAY_SECONDS = 120;
 
+    public function __construct(
+        private readonly AdminTwoFactorService $twoFactorService
+    ) {}
+
     /**
-     * Attempt to authenticate an admin.
+     * Attempt to authenticate an admin up to the 2FA step.
      *
      * @throws ValidationException
      */
-    public function authenticate(string $email, string $password, bool $remember = false): Admin
+    public function authenticate(string $email, string $password, bool $remember = false): void
     {
         $throttleKey = $this->throttleKey($email);
 
         $this->ensureIsNotRateLimited($throttleKey);
 
-        if (! Auth::guard('admin')->attempt(
-            ['email' => $email, 'password' => $password],
-            $remember,
-        )) {
+        if (! Auth::guard('admin')->validate(['email' => $email, 'password' => $password])) {
             RateLimiter::hit($throttleKey, self::DECAY_SECONDS);
 
             Log::warning('Admin login failed', ['email' => $email]);
@@ -52,13 +55,11 @@ class AdminAuthService
             ]);
         }
 
-        // Verify the admin account is active
         /** @var Admin $admin */
-        $admin = Auth::guard('admin')->user();
+        $admin = Admin::where('email', $email)->first();
 
+        // Verify the admin account is active
         if (! $admin->isActive()) {
-            Auth::guard('admin')->logout();
-
             Log::warning('Deactivated admin attempted login', [
                 'admin_id' => $admin->id,
                 'email' => $admin->email,
@@ -71,18 +72,17 @@ class AdminAuthService
 
         RateLimiter::clear($throttleKey);
 
-        // Regenerate session to prevent fixation attacks
-        session()->regenerate();
-
-        // Track login timestamp
-        $admin->recordLogin();
-
-        Log::info('Admin logged in', [
-            'admin_id' => $admin->id,
-            'email' => $admin->email,
+        // Put the admin ID in the session for the 2FA challenge
+        session([
+            'admin_2fa_id' => $admin->id,
+            'admin_2fa_remember' => $remember,
         ]);
 
-        return $admin;
+        // If the admin doesn't have TOTP enabled, send an Email OTP
+        if (!$admin->hasTotpEnabled()) {
+            $otp = $this->twoFactorService->generateAndSaveEmailOtp($admin);
+            Mail::to($admin->email)->send(new AdminTwoFactorOtpMail($admin, $otp));
+        }
     }
 
     /**

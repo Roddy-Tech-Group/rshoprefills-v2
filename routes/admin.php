@@ -27,6 +27,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest:admin')->group(function () {
         Route::get('login', [AdminLoginController::class, 'create'])->name('login');
         Route::post('login', [AdminLoginController::class, 'store']);
+
+        Route::get('2fa', [\App\Http\Controllers\Admin\Auth\AdminTwoFactorController::class, 'create'])->name('2fa.challenge');
+        Route::post('2fa', [\App\Http\Controllers\Admin\Auth\AdminTwoFactorController::class, 'store'])->name('2fa.verify');
+        Route::post('2fa/resend', [\App\Http\Controllers\Admin\Auth\AdminTwoFactorController::class, 'resend'])->name('2fa.resend');
     });
 
     // Authenticated admin routes

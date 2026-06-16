@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use App\Domain\Admin\Services\AdminTwoFactorService;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -26,6 +27,11 @@ class extends Component {
     public string $current_password = '';
     public string $password = '';
     public string $password_confirmation = '';
+
+    public bool $showTotpSetup = false;
+    public string $totpSecret = '';
+    public string $totpQrCode = '';
+    public string $totpCode = '';
 
     public function mount(): void
     {
@@ -115,6 +121,58 @@ class extends Component {
         $this->reset('current_password', 'password', 'password_confirmation');
 
         $this->dispatch('password-updated');
+    }
+
+    /**
+     * Start the TOTP setup process.
+     */
+    public function initiateTotpSetup(): void
+    {
+        $service = app(AdminTwoFactorService::class);
+        $this->totpSecret = $service->generateSecretKey();
+        $this->totpQrCode = $service->getQrCodeUrl(config('app.name'), $this->admin->email, $this->totpSecret);
+        $this->showTotpSetup = true;
+    }
+
+    /**
+     * Confirm and save the TOTP setup.
+     */
+    public function confirmTotpSetup(): void
+    {
+        $this->validate([
+            'totpCode' => ['required', 'string'],
+        ]);
+
+        $service = app(AdminTwoFactorService::class);
+        
+        if (!$service->verifyTotp($this->totpSecret, $this->totpCode)) {
+            throw ValidationException::withMessages([
+                'totpCode' => __('The provided code was invalid.'),
+            ]);
+        }
+
+        $this->admin->update([
+            'two_factor_secret' => $this->totpSecret,
+            'two_factor_confirmed_at' => now(),
+        ]);
+
+        $this->showTotpSetup = false;
+        $this->reset(['totpSecret', 'totpQrCode', 'totpCode']);
+        $this->dispatch('totp-enabled');
+    }
+
+    /**
+     * Disable TOTP.
+     */
+    public function disableTotp(): void
+    {
+        $this->admin->update([
+            'two_factor_secret' => null,
+            'two_factor_confirmed_at' => null,
+            'two_factor_recovery_codes' => null,
+        ]);
+
+        $this->dispatch('totp-disabled');
     }
 }; ?>
 
@@ -314,6 +372,78 @@ class extends Component {
                     <x-action-message on="password-updated" class="text-sm font-medium text-emerald-600">Saved.</x-action-message>
                 </div>
             </form>
+        </div>
+
+        {{-- Two-Factor Authentication --}}
+        <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <h2 class="text-base font-semibold text-zinc-900">Two-Factor Authentication</h2>
+            <p class="mt-0.5 text-xs text-zinc-600">Add an extra layer of security using an Authenticator app (like Google Authenticator or Authy).</p>
+
+            <div class="mt-5">
+                @if ($this->admin->hasTotpEnabled())
+                    <div class="flex items-center justify-between rounded-[10px] border border-emerald-200 bg-emerald-50 px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-emerald-900">Authenticator App is enabled</p>
+                                <p class="text-xs text-emerald-700">You'll be asked for a code from your app when you sign in.</p>
+                            </div>
+                        </div>
+                        <button type="button" wire:click="disableTotp" class="rounded-[10px] bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-zinc-300 hover:bg-zinc-50">
+                            Disable
+                        </button>
+                    </div>
+                @else
+                    @if (!$showTotpSetup)
+                        <div class="flex items-center justify-between rounded-[10px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <svg class="h-6 w-6 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-medium text-zinc-900">Authenticator App is not configured</p>
+                                    <p class="text-xs text-zinc-600">Currently using Email OTP as the default verification method.</p>
+                                </div>
+                            </div>
+                            <button type="button" wire:click="initiateTotpSetup" class="rounded-[10px] bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-zinc-700">
+                                Set up
+                            </button>
+                        </div>
+                    @else
+                        <div class="rounded-[10px] border border-zinc-200 p-5">
+                            <h3 class="text-sm font-medium text-zinc-900">Configure Authenticator App</h3>
+                            <p class="mt-1 text-xs text-zinc-600">Scan this QR code using Google Authenticator, Authy, or your preferred TOTP app.</p>
+
+                            <div class="mt-4 flex flex-col sm:flex-row sm:items-start gap-6">
+                                <div class="rounded-[10px] bg-white p-2 shadow-sm ring-1 ring-zinc-200">
+                                    {!! \BaconQrCode\Renderer\Image\SvgImageBackEnd::class ? (new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(new \BaconQrCode\Renderer\RendererStyle\RendererStyle(160), new \BaconQrCode\Renderer\Image\SvgImageBackEnd())))->writeString($totpQrCode) : '' !!}
+                                </div>
+                                <div class="flex-1 space-y-4">
+                                    <div>
+                                        <p class="text-xs font-medium text-zinc-700">Can't scan the code?</p>
+                                        <p class="mt-1 font-mono text-xs text-zinc-900 bg-zinc-100 p-2 rounded-[6px] break-all">{{ $totpSecret }}</p>
+                                    </div>
+                                    <form wire:submit="confirmTotpSetup">
+                                        <label for="totpCode" class="block text-xs font-medium text-zinc-700">Enter the 6-digit code from your app</label>
+                                        <div class="mt-1.5 flex gap-2">
+                                            <input wire:model="totpCode" id="totpCode" type="text" inputmode="numeric" maxlength="6" required class="{{ $field }} max-w-[150px] text-center tracking-widest">
+                                            <button type="submit" class="inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                                                Verify & Save
+                                            </button>
+                                        </div>
+                                        @error('totpCode') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                    </form>
+                                    <div class="pt-2 text-xs">
+                                        <button type="button" wire:click="$set('showTotpSetup', false)" class="text-zinc-500 hover:text-zinc-900">Cancel setup</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endif
+            </div>
         </div>
 
     </div>

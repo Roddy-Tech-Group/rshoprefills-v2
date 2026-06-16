@@ -53,6 +53,11 @@ class Admin extends Authenticatable
         'theme',
         'is_active',
         'last_login_at',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+        'email_otp',
+        'email_otp_expires_at',
     ];
 
     /**
@@ -77,6 +82,8 @@ class Admin extends Authenticatable
             'role' => AdminRole::class,
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
+            'email_otp_expires_at' => 'datetime',
         ];
     }
 
@@ -138,5 +145,13 @@ class Admin extends Authenticatable
     public function recordLogin(): void
     {
         $this->update(['last_login_at' => now()]);
+    }
+
+    /**
+     * Determine if the admin has TOTP 2FA enabled and confirmed.
+     */
+    public function hasTotpEnabled(): bool
+    {
+        return !is_null($this->two_factor_secret) && !is_null($this->two_factor_confirmed_at);
     }
 }
