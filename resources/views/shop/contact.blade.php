@@ -1,10 +1,11 @@
 @php
     $supportEmail = 'support@rshoprefill.com';
-    // Admin-editable on the System Settings page (group "contact"). Derive the
-    // dialable (tel:/sms:) and WhatsApp (digits only) forms from the display value.
-    $supportPhone = \App\Models\SiteSetting::get('contact.support_phone', '+237 676 700 173');
+    // Admin-editable on the System Settings page (group "contact"). Display +
+    // dialable (tel:/sms:) come from contact.phone_primary; the wa.me digits
+    // come from contact.whatsapp_number.
+    $supportPhone = \App\Models\SiteSetting::get('contact.phone_primary', '+1 (940) 238-6229');
     $supportPhoneDial = preg_replace('/[^0-9+]/', '', $supportPhone);
-    $supportPhoneWa = preg_replace('/[^0-9]/', '', $supportPhone);
+    $supportPhoneWa = preg_replace('/[^0-9]/', '', \App\Models\SiteSetting::get('contact.whatsapp_number', '19402386229'));
     $field = 'w-full rounded-[10px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-black placeholder:text-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
 
     $subjects = [

@@ -91,7 +91,7 @@
                                 <a href="{{ \App\Models\SiteSetting::get('social.instagram', 'https://instagram.com/rshoprefills') }}" style="color:#2563eb; text-decoration:none; margin:0 7px;">Instagram</a>
                             </p>
                             <p style="margin:0 0 6px; color:#a1a1aa;">RshopRefills, your digital marketplace for gift cards, eSIMs, top-ups and bills.</p>
-                            <p style="margin:0 0 6px;">Need a hand? <a href="https://wa.me/237676700173" style="color:#2563eb; text-decoration:none;">Chat with support</a></p>
+                            <p style="margin:0 0 6px;">Need a hand? <a href="https://wa.me/19402386229" style="color:#2563eb; text-decoration:none;">Chat with support</a></p>
                             <p style="margin:0; color:#a1a1aa;">&copy; 2026 RshopRefills. All rights reserved.</p>
                         </td>
                     </tr>

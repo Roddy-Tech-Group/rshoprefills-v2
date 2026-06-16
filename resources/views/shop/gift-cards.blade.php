@@ -218,8 +218,9 @@
                             </div>
                         </div>
 
-                        {{-- Shop by country picker — sits in the centered middle column.
-                             Replaces a page-level brand search (the storefront nav carries search). --}}
+                        {{-- Global product search (all categories) - centered middle column. --}}
+                        <x-shop.product-search class="sm:max-w-sm sm:justify-self-center" />
+
                         {{-- Modern segmented sort selector. URL-driven so the choice survives reloads;
                              each pill is a real <a> that updates ?sort= while preserving other filters. --}}
                         <div class="inline-flex shrink-0 items-center rounded-[10px] bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort gift cards">

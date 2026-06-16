@@ -144,6 +144,9 @@
         <section id="esim-locations" class="mt-10 scroll-mt-24">
             <x-esim.location-tabs />
 
+            {{-- Global product search (all categories). --}}
+            <x-shop.product-search class="mt-5" />
+
             <div class="mt-6">
                 <h2 class="text-[30px] font-bold tracking-tight text-zinc-900" x-text="titles[locTab]">Popular locations</h2>
                 <p class="mt-1 text-[18px] text-zinc-600" x-text="subtitles[locTab]"></p>

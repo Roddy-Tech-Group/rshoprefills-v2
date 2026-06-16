@@ -11,6 +11,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EmailPreviewController;
 use App\Http\Controllers\EsimStoreController;
 use App\Http\Controllers\EsimTopupController;
+use App\Http\Controllers\GoogleMerchantFeedController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
 use App\Http\Controllers\RcoinConvertController;
@@ -352,6 +353,12 @@ Route::get('robots.txt', function () {
 
     return response(implode("\n", $lines), 200, ['Content-Type' => 'text/plain']);
 })->name('robots');
+
+// Google Merchant Center product feed (XML). Scoped to eSIMs - the digital-goods
+// category Shopping approves. Register as a scheduled-fetch feed in Merchant
+// Center (XML = no column-delimiter issues). Self-caches for 6h.
+Route::get('feeds/google-merchant.xml', [GoogleMerchantFeedController::class, 'esims'])
+    ->name('feeds.google-merchant');
 
 // XML sitemap for search engines. Lists every public, rankable page: marketing
 // pages + one URL per product brand (gift cards / top-ups / bill payments).

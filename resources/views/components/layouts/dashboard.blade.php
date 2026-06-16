@@ -557,7 +557,7 @@
                                  the previous direct link used so existing routing
                                  inside the support team stays unchanged. --}}
                             <a
-                                href="https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F"
+                                href="https://wa.me/19402386229?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F"
                                 target="_blank"
                                 rel="noopener"
                                 @click="helpOpen = false"
@@ -1395,7 +1395,7 @@
                 // Saved Cards hidden until the card-vault backend ships (see routes/web.php).
                 // ['label' => 'Saved Cards',   'href' => route('dashboard.saved-cards'),   'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => true],
                 ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.webp',       'tone' => 'bg-orange-500',   'nav' => true],
-                ['label' => 'Support',       'href' => 'https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'icon' => 'support.svg', 'tone' => 'bg-cyan-500', 'nav' => false],
+                ['label' => 'Support',       'href' => 'https://wa.me/19402386229?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'icon' => 'support.svg', 'tone' => 'bg-cyan-500', 'nav' => false],
             ];
         @endphp
         {{-- Mobile menu wrapper: `contents` removes the div from Flux's grid layout so it
@@ -1509,9 +1509,9 @@
                     'cta' => 'Join Discord',
                 ],
                 [
-                    'type' => 'whatsapp', 'url' => 'https://wa.me/237676700173?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'bg' => 'bg-emerald-500', 'external' => true,
+                    'type' => 'whatsapp', 'url' => 'https://wa.me/19402386229?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'bg' => 'bg-emerald-500', 'external' => true,
                     'heading' => 'Chat on WhatsApp',
-                    'tagline' => 'Direct help on +237 676 700 173. Most replies in under 5 minutes.',
+                    'tagline' => 'Direct help on +1 (940) 238-6229. Most replies in under 5 minutes.',
                     'cta' => 'Open WhatsApp',
                 ],
                 [
@@ -1527,9 +1527,9 @@
                     'cta' => 'Send email',
                 ],
                 [
-                    'type' => 'phone', 'url' => 'tel:+237676700173', 'bg' => 'bg-sky-500', 'external' => false,
+                    'type' => 'phone', 'url' => 'tel:+19402386229', 'bg' => 'bg-sky-500', 'external' => false,
                     'heading' => 'Give us a call',
-                    'tagline' => 'Talk to a human on +237 676 700 173, Monday to Saturday.',
+                    'tagline' => 'Talk to a human on +1 (940) 238-6229, Monday to Saturday.',
                     'cta' => 'Call now',
                 ],
             ];

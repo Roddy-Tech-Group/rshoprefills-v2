@@ -37,11 +37,29 @@
         ];
     }
 
-    // Gift-card code + PIN extraction. Only runs for non-eSIM items so the
-    // fallback scalar-picker can never surface an SM-DP+ address as a "code".
+    // Mobile top-up: airtime / data / bundle is credited directly to the
+    // recipient phone - there is no code or PIN, so it must NOT render as a gift
+    // card (same detection rule as the dashboard order list).
+    $topupPhone = $scalar($payload['topup_recipient_phone'] ?? null)
+        ?? $scalar((($payload['topup'] ?? [])['recipient_phone'] ?? null))
+        ?? $scalar(((array) ($item->metadata ?? []))['recipient_phone'] ?? null);
+    $categorySlug = (string) ($snap['category']['slug'] ?? $item->category?->slug ?? '');
+    $isTopup = ! $esim && ($categorySlug === 'mobile-airtime' || $topupPhone !== null);
+
+    // Top-up type from the subcategory (Zendit: Mobile Top Up / Data / Bundle).
+    $topupType = null;
+    if ($isTopup) {
+        $subcatName = strtolower((string) ($item->subcategory?->name ?? $snap['subcategory']['name'] ?? ''));
+        $topupType = str_contains($subcatName, 'bundle') ? 'Bundle'
+            : (str_contains($subcatName, 'data') ? 'Data' : 'Airtime');
+    }
+
+    // Gift-card code + PIN extraction. Only runs for non-eSIM, non-top-up items
+    // so the fallback scalar-picker can never surface an SM-DP+ address or a
+    // provider reference as a "code".
     $cardCode = null;
     $cardPin = null;
-    if (! $esim) {
+    if (! $esim && ! $isTopup) {
         $cardPin = $scalar($payload['pin'] ?? null);
         foreach (['code', 'voucher_code', 'redeem_code', 'card_number', 'serial'] as $key) {
             if ($cardCode = $scalar($payload[$key] ?? null)) {
@@ -69,10 +87,17 @@
         ? (int) $rewardTx->amount
         : app(\App\Domain\Rewards\Services\RewardEngine::class)->cashbackPreviewFor($order);
 
-    $emailTitle = $esim ? 'Your eSIM is ready' : 'Your gift card is ready';
-    $emailPreheader = $esim
-        ? 'Your eSIM and installation details are ready to use.'
-        : 'Your gift card and redemption code are ready to use.';
+    if ($esim) {
+        $emailTitle = 'Your eSIM is ready';
+        $emailPreheader = 'Your eSIM and installation details are ready to use.';
+    } elseif ($isTopup) {
+        $emailTitle = $topupType === 'Data' ? 'Your data is on its way'
+            : ($topupType === 'Bundle' ? 'Your bundle is on its way' : 'Your top-up is on its way');
+        $emailPreheader = 'Your '.strtolower($topupType).' has been credited to the phone.';
+    } else {
+        $emailTitle = 'Your gift card is ready';
+        $emailPreheader = 'Your gift card and redemption code are ready to use.';
+    }
 @endphp
 <x-emails.layout :mail-message="$message ?? null" :title="$emailTitle" :preheader="$emailPreheader">
 
@@ -80,6 +105,8 @@
 
     @if ($esim)
         <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">Your eSIM for order <strong>#{{ $orderNumber }}</strong> has been delivered. Scan the QR code or use the manual details below to install it, and keep this email somewhere safe.</p>
+    @elseif ($isTopup)
+        <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">Your {{ strtolower($topupType) }} for order <strong>#{{ $orderNumber }}</strong> has been sent{{ $topupPhone ? ' to '.$topupPhone : ' to the recipient line' }}. It is credited directly to the phone - there is no code to redeem.</p>
     @else
         <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">Your purchase for order <strong>#{{ $orderNumber }}</strong> has been delivered. Your card and redemption details are below, keep this email somewhere safe.</p>
     @endif
@@ -159,6 +186,17 @@
                         </table>
                     @endforeach
 
+                @elseif ($isTopup)
+                    {{-- Top-up: credited straight to the recipient phone, no code/PIN. --}}
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff; border:1px solid #e4e4e7; border-radius:8px;">
+                        <tr>
+                            <td style="padding:12px 14px; font-family:'Inter',-apple-system,Helvetica,Arial,sans-serif;">
+                                <span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#71717a;">Credited to</span>
+                                <span style="display:block; margin-top:2px; font-size:15px; font-weight:700; color:#18181b; word-break:break-all;">{{ $topupPhone ?? 'Your phone number on file' }}</span>
+                                <span style="display:block; margin-top:6px; font-size:12px; font-weight:600; color:#16a34a;">&#10003; {{ $topupType }} sent to the line</span>
+                            </td>
+                        </tr>
+                    </table>
                 @else
                     {{-- Code + PIN. No copy button (email clients strip JS); values are
                          select-all so a tap highlights them, and the dashboard button
@@ -235,6 +273,10 @@
         <p style="margin:14px 0 0; font-size:13px; line-height:1.65; color:#71717a; text-align:center;">Your eSIM page has everything else you need: installation steps for your exact device, the compatible-device list, manual setup values and a downloadable PDF guide.</p>
 
         <p style="margin:18px 0 0; font-size:13px; line-height:1.6; color:#a1a1aa;">Treat these installation details like cash. Do not share them with anyone you do not trust.</p>
+    @elseif ($isTopup)
+        <x-emails.button :url="url('/dashboard/orders')" align="center">View order in your dashboard</x-emails.button>
+
+        <p style="margin:18px 0 0; font-size:13px; line-height:1.6; color:#a1a1aa;">Airtime lands on the phone directly, so there is nothing to redeem. If it has not arrived within a few minutes, reply to this email and we will sort it out.</p>
     @else
         @if ($redeemHtml)
             <x-emails.panel title="How to redeem">
