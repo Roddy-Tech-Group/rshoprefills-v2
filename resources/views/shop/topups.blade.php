@@ -162,7 +162,7 @@
                 <div>
                     {{-- Mobile category picker (dark pill + slide-up sheet). --}}
                     <div class="mb-4 sm:hidden">
-                        <x-shop.category-picker active="mobile-airtime" />
+                        <x-shop.category-picker active="mobile-airtime" :sub-items="$sidebarSubItems" />
                     </div>
 
                     {{-- Heading + search row --}}

@@ -86,7 +86,7 @@
                     action="{{ route('shop.gift-cards') }}"
                     @click="$refs.search.focus()"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-400 hover:border-zinc-500'"
-                    class="group flex items-center gap-3 cursor-text rounded-[10px] border-2 bg-white px-4 py-2 transition-all duration-200"
+                    class="group flex items-center gap-3 cursor-text rounded-[10px] border-2 bg-[#eff6ff] px-4 py-2 transition-all duration-200"
                 >
                     <button type="submit" class="shrink-0 text-zinc-900 transition-colors hover:text-blue-600 focus:outline-none" aria-label="Search">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -230,7 +230,7 @@
                             role="search"
                             method="GET"
                             action="{{ route('shop.gift-cards') }}"
-                            class="flex items-center gap-3 rounded-[10px] border-2 border-blue-500 bg-white px-4 py-2.5 ring-2 ring-blue-500/15 dark:bg-[#162a4a] dark:border-blue-400"
+                            class="flex items-center gap-3 rounded-[10px] border-2 border-blue-500 bg-[#eff6ff] px-4 py-2.5 ring-2 ring-blue-500/15 dark:bg-[#0c1a36] dark:border-blue-400"
                         >
                             <svg class="h-5 w-5 shrink-0 text-zinc-600 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -360,7 +360,7 @@
 
                         {{-- KYC verified tick over the storefront account avatar. --}}
                         @if (($authUser?->kyc_status ?? null) === 'verified')
-                            <x-ui.verified-badge class="pointer-events-none absolute -bottom-1 -right-1 h-4 w-4 drop-shadow-sm" />
+                            <x-ui.verified-badge class="pointer-events-none absolute -bottom-1.5 -right-1.5 h-4 w-4 drop-shadow-sm" />
                         @endif
 
                         <div
@@ -525,27 +525,27 @@
                                 x-transition:leave-start="opacity-100 translate-y-0"
                                 x-transition:leave-end="opacity-0 -translate-y-1"
                                 style="display:none;"
-                                class="fixed right-3 top-[84px] z-[56] w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[10px] bg-white/80 px-3 py-2 backdrop-blur-xl shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 sm:right-4 lg:right-[max(2rem,calc((100vw-1350px)/2+2rem))]"
+                                class="fixed right-3 top-[84px] z-[56] w-[340px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[14px] bg-white/80 px-3 py-2 backdrop-blur-2xl backdrop-saturate-150 shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 sm:right-4 lg:right-[max(2rem,calc((100vw-1350px)/2+2rem))] dark:bg-[#0c1a36]/80 dark:ring-white/10"
                                 role="menu"
                             >
                         {{-- Empty state --}}
                         <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
-                            <h3 class="text-xl font-bold text-zinc-900">Your cart is empty</h3>
+                            <h3 class="text-xl font-bold text-zinc-900 dark:text-white">Your cart is empty</h3>
                             <x-illo name="emptyCart" class="mx-auto mt-4 w-full max-w-[230px]" />
-                            <p class="mt-3 text-sm text-zinc-600">Your cart needs items</p>
+                            <p class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Your cart needs items</p>
                         </div>
 
                         {{-- Populated state --}}
                         <div x-show="$store.cart.count > 0" x-cloak>
                             <div class="flex items-center justify-between px-3 pt-3">
-                                <h3 class="text-lg font-bold text-zinc-900">Your cart</h3>
-                                <span class="text-sm text-zinc-600" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
+                                <h3 class="text-lg font-bold text-zinc-900 dark:text-white">Your cart</h3>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
                             </div>
 
                             <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                                 <template x-for="item in $store.cart.items" :key="item.id">
                                     <li class="flex items-center gap-3 rounded-[10px] px-3 py-2.5">
-                                        <span class="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-zinc-200">
+                                        <span class="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-zinc-200 dark:ring-white/15">
                                             <template x-if="item.logo">
                                                 <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                             </template>
@@ -554,16 +554,16 @@
                                             </template>
                                         </span>
                                         <span class="min-w-0 flex-1">
-                                            <span class="block truncate text-sm font-bold text-zinc-900" x-text="item.name"></span>
-                                            <span class="mt-0.5 block text-xs font-semibold text-zinc-700" x-text="$store.cart.pay(item.unit_price)"></span>
+                                            <span class="block truncate text-sm font-bold text-zinc-900 dark:text-white" x-text="item.name"></span>
+                                            <span class="mt-0.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300" x-text="$store.cart.pay(item.unit_price)"></span>
                                         </span>
                                         {{-- Quantity counter --}}
                                         <span class="flex shrink-0 items-center gap-1.5">
-                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-[10px] text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Decrease">
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-[10px] text-zinc-600 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-white/15 transition-colors hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white" aria-label="Decrease">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M5 12h14"/></svg>
                                             </button>
-                                            <span class="w-5 text-center text-sm font-bold tabular-nums text-zinc-900" x-text="item.quantity"></span>
-                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity + 1)" class="flex h-7 w-7 items-center justify-center rounded-[10px] text-zinc-600 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 hover:text-zinc-900" aria-label="Increase">
+                                            <span class="w-5 text-center text-sm font-bold tabular-nums text-zinc-900 dark:text-white" x-text="item.quantity"></span>
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity + 1)" class="flex h-7 w-7 items-center justify-center rounded-[10px] text-zinc-600 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-white/15 transition-colors hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white" aria-label="Increase">
                                                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
                                             </button>
                                         </span>
@@ -571,8 +571,8 @@
                                 </template>
                             </ul>
 
-                            <div class="mt-3 flex gap-2 rounded-[10px] bg-zinc-50 px-3 py-3">
-                                <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100">
+                            <div class="mt-3 flex gap-2 rounded-[10px] bg-zinc-50 px-3 py-3 dark:bg-white/5">
+                                <a href="{{ route('shop.cart') }}" wire:navigate @click="$store.cart.open = false; locked = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-100 dark:bg-white/10 dark:text-zinc-200 dark:ring-white/15 dark:hover:bg-white/15">
                                     View cart
                                 </a>
                                 <a :href="'{{ route('shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">

@@ -40,6 +40,9 @@
                  Sits above the sticky header so it announces itself first. --}}
             @include('partials.maintenance-banner')
 
+            {{-- Announcement / coupon bar - blue strip rotating admin-set promos. --}}
+            @include('partials.announcement-bar')
+
             {{-- The whole header is sticky as one block (sticky needs a tall
                  containing block, the body provides that here). main-nav's
                  own Alpine then collapses the primary row on scroll, leaving
@@ -54,7 +57,7 @@
                  <main> made <main> clip its fixed-position descendants (the eSIM buy
                  bar + modals rendered trapped inside the content box instead of the
                  viewport). <html> is the viewport root, so it never traps fixed. --}}
-            <main class="flex-1 bg-zinc-100">
+            <main data-page-content class="flex-1 bg-[#eff6ff]">
                 {{ $slot }}
             </main>
 
@@ -82,6 +85,11 @@
                 <livewire:feedback-widget />
             @endfeature
         </div>
+
+        <x-chatway-widget />
+
+        {{-- PWA pull-to-refresh (standalone mode only). --}}
+        <x-pull-to-refresh />
 
         @fluxScripts
     </body>

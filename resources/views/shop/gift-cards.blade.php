@@ -79,14 +79,17 @@
     } elseif ($sort === 'name-desc') {
         $productsQuery->orderByDesc('name');
     } else {
-        // Default (Popularity): curated popular brands lead the page, then the
-        // is_popular / is_featured flags, then alphabetical.
+        // Default (Popularity): the admin's is_popular / is_featured flags
+        // lead the page - those are set per product on the admin dashboard
+        // and outrank the hand-curated config list, which only breaks ties
+        // among unflagged brands. Alphabetical last.
+        $productsQuery->orderByDesc('is_popular')->orderByDesc('is_featured');
         $popularKeys = config('popular_brands.keys', []);
         if (! empty($popularKeys)) {
             $placeholders = implode(',', array_fill(0, count($popularKeys), '?'));
             $productsQuery->orderByRaw("CASE WHEN brand_key IN ({$placeholders}) THEN 0 ELSE 1 END", $popularKeys);
         }
-        $productsQuery->orderByDesc('is_popular')->orderByDesc('is_featured')->orderBy('name');
+        $productsQuery->orderBy('name');
     }
 
     // The listing shows every matching brand on one page — no pagination.
@@ -140,7 +143,7 @@
         'PEN' => 'S/', 'NGN' => '₦',  'GHS' => '₵',  'KES' => 'KSh','UGX' => 'USh',
         'TZS' => 'TSh','ZAR' => 'R',  'EGP' => 'E£', 'MAD' => 'MAD','AED' => 'AED',
         'SAR' => 'SAR','TRY' => '₺',  'ILS' => '₪',  'PKR' => '₨',  'BDT' => '৳',
-        'RUB' => '₽',  'UAH' => '₴',  'XAF' => 'FCFA','XOF' => 'CFA',
+        'RUB' => '₽',  'UAH' => '₴',  'XAF' => 'XAF ','XOF' => 'CFA',
     ];
     $sym = fn (?string $code) => $code ? ($currencySymbols[strtoupper($code)] ?? $code) : '';
 
@@ -196,7 +199,7 @@
                          the hidden desktop sidebar at < sm so customers can hop between
                          categories without leaving the page. --}}
                     <div class="mb-4 sm:hidden">
-                        <x-shop.category-picker active="gift-cards" />
+                        <x-shop.category-picker active="gift-cards" :sub-items="$sidebarSubItems" />
                     </div>
 
                     {{-- Heading + search row --}}
@@ -215,8 +218,9 @@
                             </div>
                         </div>
 
-                        {{-- Shop by country picker — sits in the centered middle column.
-                             Replaces a page-level brand search (the storefront nav carries search). --}}
+                        {{-- Global product search (all categories) - centered middle column. --}}
+                        <x-shop.product-search class="sm:max-w-sm sm:justify-self-center" />
+
                         {{-- Modern segmented sort selector. URL-driven so the choice survives reloads;
                              each pill is a real <a> that updates ?sort= while preserving other filters. --}}
                         <div class="inline-flex shrink-0 items-center rounded-[10px] bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort gift cards">
@@ -288,7 +292,7 @@
                                                  remap keeps it white — brand logos are drawn for a
                                                  light tile and vanish on a dark one. --}}
                                             <div
-                                                class="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-[#ffffff] shadow-sm ring-1 ring-zinc-200"
+                                                class="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[14px] bg-[#ffffff] shadow-sm ring-1 ring-zinc-200"
                                             >
                                                 @if ($logoSrc)
                                                     <img src="{{ $logoSrc }}" alt="{{ Product::brandDisplayName($product->brand_key) }}" class="h-full w-full object-cover" loading="lazy">
@@ -303,9 +307,11 @@
                                                         Out of stock
                                                     </span>
                                                 @elseif ($product->is_popular)
-                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-fuchsia-500 bg-fuchsia-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-600 backdrop-blur-sm">Popular</span>
+                                                    {{-- Round pill with a soft fuchsia glow halo. --}}
+                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-fuchsia-500 bg-fuchsia-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-600 shadow-[0_0_12px_rgba(217,70,239,0.55)] backdrop-blur-sm">Popular</span>
                                                 @elseif ($product->is_featured)
-                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-amber-500 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-600 backdrop-blur-sm">Featured</span>
+                                                    {{-- Round pill with a soft amber glow halo. --}}
+                                                    <span class="absolute left-2 top-2 inline-flex items-center rounded-full border border-amber-500 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-600 shadow-[0_0_12px_rgba(245,158,11,0.6)] backdrop-blur-sm">Featured</span>
                                                 @endif
 
                                             </div>

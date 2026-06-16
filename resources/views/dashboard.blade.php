@@ -16,13 +16,19 @@
 
     // Wallet data for the mobile hero carousel. The desktop wallet card lives inside
     // the lazy overview component, which computes its own copy of this payload.
-    $allWallets = $user->wallets()->where('is_active', true)->get();
+    // Rcoin is rewards points, not a spendable wallet - it lives on its own
+    // rewards section and never renders as a wallet card. The default wallet
+    // (funded; largest USD-equivalent when several are funded) leads the carousel.
+    $defaultWallet = $user->defaultWallet();
+    $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get()
+        ->sortByDesc(fn ($w) => $defaultWallet && $w->id === $defaultWallet->id)
+        ->values();
 
     // Symbol/label map covering fiat + crypto.
     $symbolFor = function (string $code): string {
         return match (strtoupper($code)) {
             'USD' => '$',  'NGN'  => '₦', 'GHS'  => '₵', 'GBP' => '£',
-            'XAF' => 'FCFA','XOF' => 'CFA','EUR' => '€',
+            'XAF' => 'XAF ','XOF' => 'CFA','EUR' => '€',
             'KES' => 'KSh','ZAR'  => 'R', 'UGX'  => 'USh','TZS' => 'TSh',
             'RWF' => 'FRw','ZMW'  => 'K', 'MWK'  => 'MK', 'ETB' => 'Br',
             'EGP' => 'E£', 'MAD'  => 'DH',
@@ -44,8 +50,8 @@
             'USDT' => 'USDT.svg',
             'BUSD' => 'USDT.svg',
             'SOL'  => 'SOLANA.svg',
-            'BNB'  => 'BNB.webp',
-            'LTC'  => 'LTC.webp',
+            'BNB'  => 'BNB.svg',
+            'LTC'  => 'LTC.svg',
             default => null,
         };
     };
@@ -99,7 +105,7 @@
                 @foreach ($walletsPayload as $w)
                     <div class="w-full shrink-0 snap-center px-5">
                         {{-- Card bg adopts this wallet's brand colour, so swiping reveals each wallet's own colour (matches the desktop card). --}}
-                        <div class="rounded-2xl {{ $w['color'] }} p-5 text-white ring-1 ring-white/10">
+                        <div class="rounded-2xl bg-blue-800 p-5 text-white ring-1 ring-white/10">
                             <div class="flex items-start justify-between gap-3">
                                 <p class="text-sm font-medium text-blue-100">Wallet Balance</p>
                                 <button type="button" @click="visible = ! visible" class="-mr-1 -mt-1 shrink-0 rounded-md p-1 text-blue-200 transition-colors hover:bg-white/10 hover:text-white" :aria-label="visible ? 'Hide balance' : 'Show balance'">

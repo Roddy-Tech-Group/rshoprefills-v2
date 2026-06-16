@@ -2,6 +2,9 @@
     // Slug of the currently-active category:
     // gift-cards | mobile-airtime | esims | bill-payments | flights | stays
     'active' => '',
+    // Subcategory links for the active category, built by the page (same shape
+    // as the desktop sidebar): ['label' => string, 'url' => string, 'active' => bool].
+    'subItems' => [],
 ])
 
 @php
@@ -75,7 +78,7 @@
         x-transition:leave="transition-transform duration-200 ease-in"
         x-transition:leave-start="translate-y-0"
         x-transition:leave-end="translate-y-full"
-        class="fixed inset-x-0 bottom-0 z-[71] rounded-t-3xl bg-white/70 ring-1 ring-white/40 pb-6 shadow-2xl shadow-zinc-900/30 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70 dark:ring-white/10"
+        class="fixed inset-x-0 bottom-0 z-[71] max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-[#eff6ff]/85 ring-1 ring-zinc-200/70 pb-6 shadow-2xl shadow-zinc-900/30 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/80 dark:ring-white/10"
         role="dialog"
         aria-modal="true"
         aria-label="Pick a category"
@@ -115,5 +118,35 @@
                 </li>
             @endforeach
         </ul>
+
+        {{-- Subcategories of the active category (when the page supplies them).
+             Lets the sheet switch both the category and its subcategory. --}}
+        @if (! empty($subItems))
+            <div class="mt-4 px-5">
+                <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">Subcategories</p>
+            </div>
+            <ul class="mt-2 px-3">
+                @foreach ($subItems as $item)
+                    <li>
+                        <a
+                            href="{{ $item['url'] }}"
+                            wire:navigate
+                            @class([
+                                'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors',
+                                'bg-blue-50 font-bold text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30' => $item['active'] ?? false,
+                                'font-medium text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/10' => ! ($item['active'] ?? false),
+                            ])
+                        >
+                            <span class="flex-1">{{ $item['label'] }}</span>
+                            @if ($item['active'] ?? false)
+                                <svg class="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                </svg>
+                            @endif
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
     </div>
 </div>

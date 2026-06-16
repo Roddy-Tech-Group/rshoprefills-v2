@@ -1,7 +1,7 @@
 @php
     $user = $withdrawal->user;
 @endphp
-<x-emails.layout title="Your Rcoin withdrawal was not approved" preheader="Your Rcoin has been credited back to your wallet.">
+<x-emails.layout :mail-message="$message ?? null" title="Your Rcoin withdrawal was not approved" preheader="Your Rcoin has been credited back to your wallet.">
     <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">Your Rcoin withdrawal was not approved.</h1>
 
     <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">

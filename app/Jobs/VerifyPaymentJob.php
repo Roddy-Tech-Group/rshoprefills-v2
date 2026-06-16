@@ -7,8 +7,11 @@ use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Services\PaymentGatewayFactory;
 use App\Domain\Payment\Services\PaymentSessionService;
+use App\Domain\Shared\Enums\FundingStatus;
+use App\Domain\Wallet\Services\WalletFundingService;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Models\WalletFunding;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -46,17 +49,18 @@ class VerifyPaymentJob implements ShouldQueue
 
             if ($isPaid) {
                 // If this is a WalletFunding attempt, process it via WalletFundingService
-                if ($attempt->payable_type === \App\Models\WalletFunding::class) {
+                if ($attempt->payable_type === WalletFunding::class) {
                     Log::info("VerifyPaymentJob: payment confirmed for WalletFunding attempt {$attempt->id}");
                     $funding = $attempt->payable;
-                    if ($funding && $funding->status !== \App\Domain\Shared\Enums\FundingStatus::Completed) {
-                        $fundingService = app(\App\Domain\Wallet\Services\WalletFundingService::class);
+                    if ($funding && $funding->status !== FundingStatus::Completed) {
+                        $fundingService = app(WalletFundingService::class);
                         $fundingService->processSuccessfulFunding(
                             $funding->reference,
                             $attempt->gateway_reference ?: 'VERIFY-'.uniqid(),
                             $attempt->verification_payload ?: []
                         );
                     }
+
                     return;
                 }
 

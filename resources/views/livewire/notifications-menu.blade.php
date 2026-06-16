@@ -73,9 +73,9 @@ new class extends Component {
         :aria-expanded="open.toString()"
         aria-label="Notifications"
         @class([
-            'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] transition-colors active:scale-95',
-            'text-white hover:bg-white/10' => $tone === 'light',
-            'text-zinc-700 hover:bg-zinc-100' => $tone === 'dark',
+            'relative flex h-10 w-10 shrink-0 items-center justify-center transition-colors active:scale-95',
+            'rounded-full bg-blue-100 ring-2 ring-blue-200 text-blue-700 hover:bg-blue-200 dark:bg-white/15 dark:ring-white/30 dark:text-white dark:hover:bg-white/25' => $tone === 'light',
+            'rounded-[10px] text-zinc-700 hover:bg-zinc-100' => $tone === 'dark',
         ])
     >
         <img
@@ -83,12 +83,12 @@ new class extends Component {
             alt=""
             @class([
                 'h-5 w-5 shrink-0',
-                'brightness-0 invert' => $tone === 'light',
+                'brightness-0 dark:invert' => $tone === 'light',
                 'brightness-0' => $tone === 'dark',
             ])
         >
         @if ($this->unreadCount > 0)
-            <span class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-[10px] bg-red-500 px-1 text-[10px] font-bold text-white ring-2 {{ $tone === 'light' ? 'ring-blue-600' : 'ring-white' }}">
+            <span class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-[10px] bg-red-500 px-1 text-[10px] font-bold text-white ring-2 {{ $tone === 'light' ? 'ring-[#eff6ff] dark:ring-[#0c1a36]' : 'ring-white' }}">
                 {{ $this->unreadCount > 99 ? '99+' : $this->unreadCount }}
             </span>
         @endif

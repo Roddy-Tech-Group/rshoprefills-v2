@@ -17,6 +17,6 @@ class AccessibilityPageTest extends TestCase
             ->assertOk()
             ->assertSee('Accessibility Statement')
             ->assertSee('WCAG')
-            ->assertSee('info@rshoprefill.com');
+            ->assertSee('support@rshoprefill.com');
     }
 }

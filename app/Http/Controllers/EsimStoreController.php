@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Domain\Cart\Services\CartPricingService;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\FeatureFlag;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -44,13 +46,19 @@ class EsimStoreController extends Controller
         // Popular destinations, mirroring Airalo's "Popular" set for this market.
         $popularIso = ['CM', 'FR', 'GB', 'CG', 'US', 'MA', 'CF', 'EG', 'IN', 'CI', 'CD', 'SN', 'GH', 'GA', 'KE', 'AZ', 'AU', 'ZA', 'TR', 'TH'];
 
-        return Cache::remember('esim-catalog-summary-v5', now()->addHour(), function () use ($popularIso) {
+        // Cache key carries the Zendit-eSIM flag so toggling it doesn't serve a
+        // stale catalog (the summary is cached for an hour). v6 adds the per-card
+        // data-size label.
+        $cacheKey = 'esim-catalog-summary-v6-z'.(FeatureFlag::on('zendit_esims') ? '1' : '0');
+
+        return Cache::remember($cacheKey, now()->addHour(), function () use ($popularIso) {
             $pricing = app(CartPricingService::class);
             $cat = Category::where('slug', 'esims')->first();
 
             return Product::query()
                 ->where('is_active', true)
                 ->when($cat, fn ($q) => $q->where('category_id', $cat->id))
+                ->tap(fn ($q) => self::applyEsimSupplierFlags($q))
                 ->with(['variants' => fn ($q) => $q->where('is_available', true)])
                 ->orderBy('name')
                 ->get()
@@ -78,6 +86,7 @@ class EsimStoreController extends Controller
                         'name' => $meta['name'],
                         'flag' => $hasFlag ? Product::flagUrl($meta['cc']) : self::globalFlag(),
                         'from' => $from,
+                        'data' => self::planDataLabel($cheapest),
                         'scope' => $meta['scope'],
                         'popular' => $hasFlag && in_array($meta['cc'], $popularIso, true),
                     ];
@@ -147,6 +156,7 @@ class EsimStoreController extends Controller
             ->where('slug', $slug)
             ->where('is_active', true)
             ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
+            ->tap(fn ($q) => self::applyEsimSupplierFlags($q))
             ->firstOrFail();
 
         return $this->renderCountry($product);
@@ -162,6 +172,7 @@ class EsimStoreController extends Controller
             ->where('is_active', true)
             ->where('country_code', $cc)
             ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
+            ->tap(fn ($q) => self::applyEsimSupplierFlags($q))
             ->withCount(['variants' => fn ($q) => $q->where('is_available', true)])
             ->orderByDesc('variants_count')
             ->firstOrFail();
@@ -184,6 +195,52 @@ class EsimStoreController extends Controller
         return view('shop.esim', ['product' => $product, 'variants' => $variants]);
     }
 
+    /**
+     * Hide suppliers switched off by a feature flag. Zendit eSIMs ride behind
+     * features.zendit_esims_enabled so they can be turned on/off without a
+     * deploy; Airalo (and any other provider) stays visible. NULL provider rows
+     * are kept defensively.
+     *
+     * @param  Builder  $query
+     */
+    private static function applyEsimSupplierFlags($query)
+    {
+        if (FeatureFlag::off('zendit_esims')) {
+            $query->where(function ($w) {
+                $w->where('provider_name', '!=', 'zendit')->orWhereNull('provider_name');
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Short data-size label for an eSIM variant ("1 GB", "Unlimited"), used on
+     * the location cards so customers see what the cheapest plan offers, not
+     * just the "from" price. Mirrors the country page's data logic: prefer the
+     * clean data_limit, fall back to the raw payload (Zendit dataGB / unlimited).
+     */
+    private static function planDataLabel($variant): ?string
+    {
+        $meta = $variant->metadata ?? [];
+
+        $dl = trim((string) ($meta['data_limit'] ?? ''));
+        if ($dl !== '' && strtolower($dl) !== 'unknown') {
+            return $dl;
+        }
+
+        $raw = (array) ($meta['raw_payload'] ?? []);
+        if (! empty($raw['dataUnlimited'])) {
+            return 'Unlimited';
+        }
+        $gb = (float) ($raw['dataGB'] ?? 0);
+        if ($gb > 0) {
+            return rtrim(rtrim(number_format($gb, 2), '0'), '.').' GB';
+        }
+
+        return null;
+    }
+
     /** Every available variant for a country, across all suppliers, each carrying its own product. */
     private function mergedCountryVariants(string $country): EloquentCollection
     {
@@ -191,6 +248,7 @@ class EsimStoreController extends Controller
             ->where('is_active', true)
             ->where('country_code', $country)
             ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
+            ->tap(fn ($q) => self::applyEsimSupplierFlags($q))
             ->with(['variants' => fn ($q) => $q->where('is_available', true)->orderBy('cost_price')])
             ->get();
 

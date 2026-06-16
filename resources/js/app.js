@@ -205,52 +205,9 @@ async function initAnimations() {
             .from('[data-anim="hero-banner"]',   { y: 24 }, '-=0.5');
     }
 
-    // ----- Scroll-triggered staggered groups (rows of cards / tiles) -----
-    gsap.utils.toArray('[data-reveal-group]').forEach((group) => {
-        const items = group.querySelectorAll('[data-reveal-item]');
-        if (!items.length) return;
-
-        gsap.fromTo(
-            items,
-            { y: 24, autoAlpha: 0 },
-            {
-                y: 0,
-                autoAlpha: 1,
-                duration: 0.7,
-                stagger: 0.07,
-                ease: 'power2.out',
-                immediateRender: false,
-                scrollTrigger: {
-                    trigger: group,
-                    start: 'top 85%',
-                    toggleActions: 'play none none none',
-                },
-            }
-        );
-    });
-
-    // ----- Plain single-element fade-up reveals -----
-    gsap.utils.toArray('[data-reveal]').forEach((el) => {
-        gsap.fromTo(
-            el,
-            { y: 20, autoAlpha: 0 },
-            {
-                y: 0,
-                autoAlpha: 1,
-                duration: 0.7,
-                ease: 'power2.out',
-                immediateRender: false,
-                scrollTrigger: {
-                    trigger: el,
-                    start: 'top 85%',
-                    toggleActions: 'play none none none',
-                },
-            }
-        );
-    });
-
-    // Recalculate positions after the page settles.
-    requestAnimationFrame(() => ScrollTrigger.refresh());
+    // Scroll-triggered reveals intentionally removed: sections render in place
+    // with no fade-up on scroll (the reveal read like the page was "refreshing"
+    // each section as you scrolled). The hero load animation above is kept.
 
     // Animated inline-SVG illustrations (hero chips, 404, empty cart).
     initIllos(gsap);
@@ -683,6 +640,21 @@ document.addEventListener('alpine:init', () => {
             return this.currency !== 'USD';
         },
 
+        // Human unit label for a cart line: face value plus what the item IS.
+        // "$2.50 eSIM", "$25.00 card", "$10.00 top-up" - an eSIM must never
+        // read as "card".
+        unitLabel(item) {
+            if (!item || !item.face_label) {
+                return '';
+            }
+            const suffix = {
+                'esims': ' eSIM',
+                'mobile-airtime': ' top-up',
+                'bill-payments': ' bill payment',
+            }[item.category_slug] ?? ' card';
+            return item.face_label + suffix;
+        },
+
         // Format an amount already in the customer's display currency.
         pay(value) {
             const n = Number(value || 0);
@@ -957,22 +929,14 @@ window.dashboardSearch = function () {
 window.customerReviewsCarousel = function () {
     return {
         navigating: false,
-        tx: 0,
-        maxTx: 0,
         cardW: 288,
         gap: 20,
         padLeft: 0,
-        savedDuration: '0.6s',
-        dragArmed: false,
-        dragging: false,
-        dragTarget: null,
-        dragPointerId: null,
-        dragStartX: 0,
-        dragStartTx: 0,
+        timer: null,
 
-        // Wire up the transform-based carousel: measure the content column
-        // padding, compute scroll bounds, snap to start. Matches the brand-row
-        // factory so both rows feel identical.
+        // Measure the card width + content-column padding so the arrow steps by
+        // whole cards and the first card lines up with the header title. Native
+        // overflow scrolling drives manual swipes; play() auto-advances on a timer.
         setup() {
             const viewport = this.$refs.track;
             const list     = this.$refs.list;
@@ -989,92 +953,39 @@ window.customerReviewsCarousel = function () {
                 ? Math.round(header.getBoundingClientRect().left)
                 : Math.round(this.$el.getBoundingClientRect().left);
             list.style.paddingLeft = this.padLeft + 'px';
-            this.tx = 0;
-            this.maxTx = Math.min(0, viewport.clientWidth - list.scrollWidth);
-            list.style.transform = 'translate3d(0, 0, 0)';
-
-            // Slow the slide down on long rows so a 20-card carousel doesn't
-            // feel hurried. Base 0.6s, +0.04s per item beyond 5, capped at 1.2s.
-            const itemCount = list.children.length;
-            const duration  = Math.min(1.2, 0.6 + 0.04 * Math.max(0, itemCount - 5));
-            this.savedDuration = duration.toFixed(2) + 's';
-            list.style.transitionDuration = this.savedDuration;
+            list.style.transform = '';
         },
 
-        // Advance 2 cards per click on desktop / tablet, 1 on mobile. Loops back
-        // to the start once the end is reached (the original reviews-carousel
-        // contract; lets the row run forever from a single Next button).
+        // Arrow: advance a couple of cards (one on mobile) with smooth scrolling,
+        // looping back to the start once the end is reached. Touch swiping is
+        // handled natively by the scroll container.
         next() {
-            const list = this.$refs.list;
-            if (! list) return;
+            const viewport = this.$refs.track;
+            if (! viewport) return;
 
-            if (this.tx <= this.maxTx + 1) {
-                this.tx = 0;
-                list.style.transform = 'translate3d(0, 0, 0)';
+            if (viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 4) {
+                viewport.scrollTo({ left: 0, behavior: 'smooth' });
                 return;
             }
 
             const cardsPerStep = window.innerWidth >= 640 ? 2 : 1;
-            const step = cardsPerStep * (this.cardW + this.gap);
-            this.tx = Math.max(this.maxTx, this.tx - step);
-            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
+            viewport.scrollBy({ left: cardsPerStep * (this.cardW + this.gap), behavior: 'smooth' });
         },
 
-        // Touch / pointer drag for mobile + trackpad. Matches the brand-row
-        // implementation so both carousels feel identical when swiped.
-        //
-        // 8px movement threshold gates the drag commitment. Below it, the
-        // gesture is treated as a click - we do not capture the pointer,
-        // do not move the list, and do not snap on release - so reviews
-        // (and any clickable card inside the row) receive a clean click.
-        onDragStart(e) {
-            const list = this.$refs.list;
-            if (! list) return;
-            if (e.button !== undefined && e.button !== 0) return;
-            this.dragArmed = true;
-            this.dragging = false;
-            this.dragTarget = e.currentTarget;
-            this.dragPointerId = e.pointerId;
-            this.dragStartX = e.clientX;
-            this.dragStartTx = this.tx;
+        // Auto-advance on a timer (slideshow). Paused while the user hovers or
+        // touches the row so they can read; resumed afterwards. Skips ticks while
+        // the tab is hidden.
+        play() {
+            this.stop();
+            this.timer = setInterval(() => {
+                if (! document.hidden) { this.next(); }
+            }, 4500);
         },
-        onDragMove(e) {
-            if (! this.dragArmed) return;
-            const list = this.$refs.list;
-            if (! list) return;
-            const delta = e.clientX - this.dragStartX;
-
-            if (! this.dragging && Math.abs(delta) < 8) return;
-
-            if (! this.dragging) {
-                this.dragging = true;
-                list.style.transitionDuration = '0s';
-                try { this.dragTarget?.setPointerCapture(this.dragPointerId); } catch (_) {}
-            }
-
-            const raw = this.dragStartTx + delta;
-            const next = raw > 0
-                ? raw * 0.35
-                : (raw < this.maxTx ? this.maxTx + (raw - this.maxTx) * 0.35 : raw);
-            list.style.transform = `translate3d(${next}px, 0, 0)`;
+        stop() {
+            if (this.timer) { clearInterval(this.timer); this.timer = null; }
         },
-        onDragEnd(e) {
-            if (! this.dragArmed) return;
-            const wasDragging = this.dragging;
-            this.dragArmed = false;
-            this.dragging = false;
-
-            if (! wasDragging) return;
-
-            const list = this.$refs.list;
-            if (! list) return;
-            list.style.transitionDuration = this.savedDuration;
-            const delta = e.clientX - this.dragStartX;
-            const step  = this.cardW + this.gap;
-            const projected = this.dragStartTx + delta;
-            const snapped   = Math.round(projected / step) * step;
-            this.tx = Math.max(this.maxTx, Math.min(0, snapped));
-            list.style.transform = `translate3d(${this.tx}px, 0, 0)`;
+        destroy() {
+            this.stop();
         },
     };
 };
@@ -1148,14 +1059,27 @@ window.valueFlip = function () {
 
 window.storefrontLocale = function () {
     // Pages that read country/currency from the URL. The listing and every brand-level
-    // detail page (e.g. /gift-cards/apple) both honour ?country=XX so flipping the locale
-    // modal reloads either one with the new filters applied.
-    const SHOP_PATH_PREFIXES = ['/gift-cards'];
+    // detail page (e.g. /gift-cards/apple) honour ?country=XX so flipping the locale
+    // modal reloads with the new filters applied. The dashboard mirrors the storefront:
+    // the overview (region-locked popular products) and the whole /dashboard/shop section
+    // must re-source on a region switch too, otherwise the catalog stays on the old region.
+    const SHOP_PATH_PREFIXES = ['/gift-cards', '/dashboard/shop'];
 
-    // Storefront paths where switching country must reload, so the region lock
-    // re-applies: the homepage and the whole gift-cards section (listing + brand).
+    // Paths where switching country must reload so the region lock re-applies and the
+    // catalog re-sources: the homepage, the gift-cards section, the dashboard overview,
+    // and the dashboard shop section.
     const isShopPath = (path) => {
-        return path === '/' || SHOP_PATH_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
+        return path === '/'
+            || path === '/dashboard'
+            || SHOP_PATH_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
+    };
+
+    // Checkout renders its rate, crypto prices and fee math server-side, so a
+    // currency flip must re-render the whole page - a store-only refresh leaves
+    // the totals half in the old currency. Always a HARD reload: the gateway
+    // script and payment state don't survive an SPA body swap.
+    const isCheckoutPath = (path) => {
+        return path === '/checkout' || path === '/dashboard/shop/checkout';
     };
 
     const read = (key, fallback) => {
@@ -1192,33 +1116,49 @@ window.storefrontLocale = function () {
             this.$watch('currency',       save('currency'));
             this.$watch('currencySymbol', save('currencySymbol'));
 
-            // When country or currency change AND the user is on a filterable shop page,
-            // navigate to the same path with the updated URL params so the catalog reloads.
-            const reloadIfShop = () => {
-                const path = window.location.pathname;
-                if (!isShopPath(path)) return;
+            // Region (country) is the catalog lock, so switching it must apply on EVERY
+            // page of the site — not just shop pages — so the destination always
+            // re-sources for the new region (ResolveRegion reads ?country= on any route
+            // and sets the region cookie). Currency only needs a reload where prices are
+            // server-rendered (shop + checkout); elsewhere the cart re-prices client-side
+            // via the currency-changed event.
+            //
+            // A country pick mutates countryCode AND currency at once, firing two
+            // watchers; we debounce into a SINGLE navigation, otherwise the two racing
+            // Livewire.navigate calls sometimes leave the switch unapplied until a manual
+            // refresh. Debounced => one click reliably switches.
+            let reloadTimer = null;
+            const navigateLocale = () => {
+                clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(() => {
+                    const checkout = isCheckoutPath(window.location.pathname);
+                    const url = new URL(window.location.href);
+                    if (this.countryCode) url.searchParams.set('country', this.countryCode);
+                    else url.searchParams.delete('country');
 
-                const url = new URL(window.location.href);
-                if (this.countryCode) url.searchParams.set('country', this.countryCode);
-                else url.searchParams.delete('country');
+                    if (this.currency) url.searchParams.set('currency', this.currency);
+                    else url.searchParams.delete('currency');
 
-                if (this.currency) url.searchParams.set('currency', this.currency);
-                else url.searchParams.delete('currency');
-
-                // Livewire's SPA navigation if available, otherwise hard reload.
-                if (window.Livewire && typeof window.Livewire.navigate === 'function') {
-                    window.Livewire.navigate(url.toString());
-                } else {
-                    window.location.href = url.toString();
-                }
+                    // Checkout hard-reloads (payment scripts + server-side rate math);
+                    // everywhere else uses Livewire's fast SPA navigation when available.
+                    if (!checkout && window.Livewire && typeof window.Livewire.navigate === 'function') {
+                        window.Livewire.navigate(url.toString());
+                    } else {
+                        window.location.href = url.toString();
+                    }
+                }, 60);
             };
 
-            this.$watch('countryCode', reloadIfShop);
-            this.$watch('currency',    reloadIfShop);
+            // Region: apply on every page.
+            this.$watch('countryCode', navigateLocale);
 
-            // Tell the cart store to re-price when the display currency changes
-            // (covers non-shop pages, where reloadIfShop does not navigate).
-            this.$watch('currency', () => window.dispatchEvent(new CustomEvent('currency-changed')));
+            // Currency: reload only where prices render server-side; always re-price the
+            // cart store client-side.
+            this.$watch('currency', () => {
+                const path = window.location.pathname;
+                if (isShopPath(path) || isCheckoutPath(path)) navigateLocale();
+                window.dispatchEvent(new CustomEvent('currency-changed'));
+            });
 
             // NOTE: the locale modal dispatches `language-changed` itself when a
             // language is picked (works regardless of which Alpine scope the modal
@@ -1227,6 +1167,36 @@ window.storefrontLocale = function () {
         },
     };
 };
+
+/**
+ * Smooth SPA page transitions. On every Livewire navigation the new page's main
+ * content slides in from the right (see `.page-enter` in app.css), giving the
+ * app-like feel of the menu modal opening rather than a hard reload. We restart
+ * the CSS animation by removing the class, forcing a reflow, then re-adding it.
+ */
+document.addEventListener('livewire:navigated', () => {
+    document.querySelectorAll('[data-page-content]').forEach((el) => {
+        el.classList.remove('page-enter');
+        void el.offsetWidth; // reflow so the animation replays on every navigation
+        el.classList.add('page-enter');
+        // Drop the class once it finishes so no transform lingers on the content.
+        el.addEventListener('animationend', () => el.classList.remove('page-enter'), { once: true });
+    });
+});
+
+/**
+ * Mobile-instant navigation. Livewire prefetches `wire:navigate.hover` links on
+ * mouseenter, but touch devices never fire that — so a tap pays the full server
+ * round-trip. We synthesize a mouseenter on touchstart so the destination page is
+ * fetched while the finger is still down; by the time the tap completes, the page
+ * is cached and the navigation is instant.
+ */
+document.addEventListener('touchstart', (e) => {
+    const link = e.target.closest && e.target.closest('a[wire\\:navigate\\.hover]');
+    if (link) {
+        link.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    }
+}, { passive: true, capture: true });
 
 /**
  * Modern dropdown select used by the KYC form (and reusable elsewhere). Replaces a
@@ -1480,6 +1450,10 @@ window.bestSellingCountriesMap = function (payload) {
             const bg = dark ? '#26416b' : '#e5e7eb';
             const stroke = dark ? '#34507a' : '#cbd5e1';
 
+            // Initial fill, kept so _refresh() can un-shade countries that
+            // drop out when a filter narrows the window.
+            this._baseFill = bg;
+
             // Cursor affordance: grab on idle, grabbing during a drag pan.
             el.style.cursor = 'grab';
             el.addEventListener('mousedown', () => { el.style.cursor = 'grabbing'; });
@@ -1522,6 +1496,10 @@ window.bestSellingCountriesMap = function (payload) {
                 },
             });
 
+            // Seed the shaded-codes memory with the initial paint so the first
+            // filter change can reset countries that drop out.
+            this._lastShaded = Object.keys(this._values());
+
             this.$watch('view', () => this._refresh());
             this.$watch('continent', () => this._refresh());
         },
@@ -1533,6 +1511,13 @@ window.bestSellingCountriesMap = function (payload) {
 
         setView(v) { this.view = v; },
         setContinent(c) { this.continent = c; },
+
+        // No sales in the selected window — drives the client-side empty
+        // overlay; the map SVG stays mounted (wire:ignore) so a later filter
+        // with data re-shades it in place instead of facing a dead canvas.
+        isEmpty() {
+            return Object.keys(this.countries || {}).length === 0;
+        },
 
         // Called from the dashboard's Livewire layer (via the
         // map-data-updated browser event) when the Period or Product filter
@@ -1560,15 +1545,18 @@ window.bestSellingCountriesMap = function (payload) {
         },
 
         _scale() {
-            // Two near-identical brand blues — jsvectormap collapses to black
-            // when both ends of the scale are exactly equal, so we use a
-            // hairline gradient (#1d4ed8 → #0044FF) that reads as uniform blue
-            // but keeps the interpolator happy.
-            return ['#1d4ed8', '#0044FF'];
+            // jsvectormap's Series only understands an ORDINAL scale: an
+            // object of named keys -> colors, with values mapping each region
+            // to one of those keys. (An array scale + numeric values makes
+            // every lookup return undefined, which SVG paints BLACK - the
+            // "black country" bug.) Four brand-blue intensity tiers; _values()
+            // buckets each country's USD total into one of them.
+            return { t1: '#93c5fd', t2: '#60a5fa', t3: '#3b82f6', t4: '#1d4ed8' };
         },
 
-        _values() {
-            // Country mode: shade per-country, filtered by continent scope.
+        // Numeric USD totals per country for the current view + continent
+        // scope. The tooltip reads these directly.
+        _numericValues() {
             if (this.view === 'country') {
                 const out = {};
                 Object.keys(this.countries).forEach((cc) => {
@@ -1588,6 +1576,19 @@ window.bestSellingCountriesMap = function (payload) {
             return out;
         },
 
+        // Bucket the numeric totals into the ordinal tier keys the scale
+        // understands: top seller gets the deepest blue, others scale down.
+        _values() {
+            const nums = this._numericValues();
+            const max = Math.max(0, ...Object.values(nums));
+            const out = {};
+            Object.keys(nums).forEach((cc) => {
+                const ratio = max > 0 ? nums[cc] / max : 0;
+                out[cc] = ratio > 0.75 ? 't4' : (ratio > 0.5 ? 't3' : (ratio > 0.25 ? 't2' : 't1'));
+            });
+            return out;
+        },
+
         _tooltipValue(code) {
             if (!this._inScope(code)) { return null; }
             if (this.view === 'country') { return this.countries[code] ?? null; }
@@ -1597,7 +1598,20 @@ window.bestSellingCountriesMap = function (payload) {
 
         _refresh() {
             if (!this.map) { return; }
-            this.map.series.regions[0].setValues(this._values());
+            const series = this.map.series.regions[0];
+            const tiers = this._values();
+
+            // setValues() only paints the codes it is given - countries shaded
+            // by the previous filter would keep their old blue, so reset any
+            // that dropped out of the new window back to the base fill first.
+            const reset = {};
+            (this._lastShaded || []).forEach((cc) => {
+                if (!(cc in tiers)) { reset[cc] = this._baseFill; }
+            });
+            series.setAttributes(reset);
+
+            series.setValues(tiers);
+            this._lastShaded = Object.keys(tiers);
         },
     };
 };
@@ -1815,7 +1829,40 @@ window.salesCostChart = function (series) {
             return this.mode === 'sales' ? 'Sales' : (this.mode === 'cost' ? 'Cost' : 'Sales / Cost');
         },
 
+        // No data in the selected window — drives the client-side empty
+        // overlay so the canvas can stay in the DOM (wire:ignore) across
+        // filter changes instead of being swapped out by a server re-render.
+        isEmpty() {
+            return !this.series
+                || this.series.length === 0
+                || this.series.every((p) => !Number(p.sales) && !Number(p.cost));
+        },
+
+        // Called via the trends-data-updated browser event when the period
+        // filter changes server-side. Swaps the series into the live chart -
+        // no page reload, no re-init. Livewire 3 wraps named params in
+        // different detail shapes depending on the consumer; accept both.
+        updateData(detail) {
+            if (! detail) return;
+            const payload = Array.isArray(detail?.params)
+                ? (detail.params[0] || {})
+                : detail;
+            this.series = payload.series || [];
+            if (! this.chart) return; // init() will pick the series up when it lands
+
+            this.chart.updateSeries([
+                { name: 'Sales', data: this.series.map((p) => [new Date(p.date).getTime(), p.sales]) },
+                { name: 'Cost',  data: this.series.map((p) => [new Date(p.date).getTime(), p.cost])  },
+            ]);
+
+            // updateSeries resets per-series visibility, so a "Sales only" or
+            // "Cost only" selection would silently revert to both after a period
+            // change. Re-apply the active mode so the filter sticks.
+            this._update();
+        },
+
         _update() {
+            if (! this.chart) return;
             const wanted = this.mode === 'both' ? ['Sales', 'Cost'] : (this.mode === 'sales' ? ['Sales'] : ['Cost']);
             ['Sales', 'Cost'].forEach((name) => {
                 if (wanted.includes(name)) { this.chart.showSeries(name); }
@@ -1854,7 +1901,11 @@ window.salesCostChart = function (series) {
                     type: 'datetime',
                     labels: {
                         style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
-                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                        // The series is daily buckets, but with a short data
+                        // window Apex zooms to hour-level ticks whose default
+                        // format is HH:mm — every label reads "00:00". Override
+                        // hour/minute so sub-day ticks still print the day.
+                        datetimeFormatter: { day: 'MMM dd, ddd', hour: 'MMM dd', minute: 'MMM dd' },
                     },
                     axisBorder: { show: false },
                     axisTicks: { show: false },
@@ -2037,7 +2088,10 @@ window.reportChart = function (series, chartType) {
                     type: 'datetime',
                     labels: {
                         style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
-                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                        // Same fix as the dashboard Trends chart: short data
+                        // windows make Apex pick hour-level ticks, whose
+                        // default HH:mm format prints "00:00" everywhere.
+                        datetimeFormatter: { day: 'MMM dd, ddd', hour: 'MMM dd', minute: 'MMM dd' },
                     },
                     axisBorder: { show: false },
                     axisTicks: { show: false },

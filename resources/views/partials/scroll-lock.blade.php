@@ -57,5 +57,11 @@
                 html.style.overscrollBehavior = '';
             },
         };
+
+        // Safety net: if a modal/drawer was open when the user followed a
+        // wire:navigate link (an SPA swap, not a full reload), its close()
+        // never fired and the body would stay position:fixed - the new page
+        // then can't scroll. Clear any leftover lock on every SPA navigation.
+        document.addEventListener('livewire:navigated', () => window.rshopScrollLock?.reset());
     })();
 </script>

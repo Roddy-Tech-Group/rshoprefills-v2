@@ -19,7 +19,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
          light mode, pure black in dark mode (same palette the sidebar active
          link uses). The radio group is bound to window.setTheme via Alpine so
          it persists through reloads, exactly like the old flux variant did. --}}
-    <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+    <div class="rounded-[10px] bg-[#eff6ff] p-6 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
         <div class="mb-5">
             <h2 class="text-base font-semibold text-black">Theme</h2>
             <p class="mt-0.5 text-xs text-zinc-600">Switch between light and dark mode, or follow your system.</p>
@@ -33,9 +33,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             class="grid grid-cols-3 gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#0c1a36]"
         >
             @foreach ([
-                ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.webp'],
-                ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.webp'],
-                ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.webp'],
+                ['value' => 'light',  'label' => 'Light', 'icon' => 'icons.theme-light'],
+                ['value' => 'dark',   'label' => 'Dark',  'icon' => 'icons.theme-dark'],
+                ['value' => 'system', 'label' => 'Auto',  'icon' => 'icons.theme-auto'],
             ] as $opt)
                 <button
                     type="button"
@@ -43,11 +43,13 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     @click="theme = '{{ $opt['value'] }}'"
                     :aria-checked="(theme === '{{ $opt['value'] }}').toString()"
                     :class="theme === '{{ $opt['value'] }}'
-                        ? 'bg-zinc-200 text-black shadow-sm dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10'
+                        ? 'text-black ring-1 ring-blue-400 dark:text-white dark:ring-blue-500/60'
                         : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'"
                     class="inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold transition-colors"
                 >
-                    <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-4 w-4 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
+                    {{-- Inline animated SVG inherits currentColor, so it follows
+                         the button's own text colour in every state. --}}
+                    <x-dynamic-component :component="$opt['icon']" class="h-4 w-4" />
                     {{ $opt['label'] }}
                 </button>
             @endforeach

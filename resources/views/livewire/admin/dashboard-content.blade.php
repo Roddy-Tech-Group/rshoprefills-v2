@@ -294,17 +294,23 @@
 
                 {{-- Map canvas. jsvectormap injects raw SVG inside x-ref="map"
                      once init() resolves. Livewire would otherwise wipe that
-                     SVG on every component re-render (filter clicks), so we
-                     wire:ignore the canvas - the map keeps its rendered state
-                     and the Alpine factory re-shades it from the new data
-                     pushed via the map-data-updated browser event above. --}}
-                @if (empty($countriesByCode))
-                    <div wire:ignore wire:key="map-empty-{{ $countryDays }}-{{ $countryCategory }}" class="mt-6 flex flex-1 items-center justify-center rounded-[10px] bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400" style="min-height: 320px;">
-                        No completed orders in the last {{ $countryDays }} {{ $countryDays === 1 ? 'day' : 'days' }}{{ $countryCategory !== 'all' ? ' for '.$currentCountryCategory : '' }} yet.
+                     SVG on every component re-render (filter clicks), so the
+                     whole block is wire:ignore and stays mounted permanently -
+                     the Alpine factory re-shades it from the data pushed via
+                     the map-data-updated browser event, and the empty state is
+                     a client-side overlay (a server-rendered swap here used to
+                     destroy the SVG the moment a filter hit an empty window,
+                     leaving a dead canvas until a full reload). --}}
+                <div wire:ignore class="relative mt-2 w-full max-w-full flex-1 overflow-hidden" style="min-height: 320px;">
+                    <div x-ref="map" class="h-full w-full" style="min-height: 320px;"></div>
+                    <div
+                        x-show="isEmpty()"
+                        x-cloak
+                        class="absolute inset-0 z-10 flex items-center justify-center rounded-[10px] bg-zinc-50/95 text-sm text-zinc-600 dark:bg-[#26416b]/95 dark:text-zinc-400"
+                    >
+                        No completed orders in this period yet.
                     </div>
-                @else
-                    <div wire:ignore wire:key="map-canvas" x-ref="map" class="mt-2 w-full max-w-full flex-1 overflow-hidden" style="min-height: 320px;"></div>
-                @endif
+                </div>
 
                 {{-- Footer: Period dropdown + Product dropdown (server-side),
                      Country / Region toggle (client-side repaint). --}}
@@ -411,6 +417,7 @@
                  the chart. --}}
             <div
                 x-data="salesCostChart(@js($salesCostSeries))"
+                x-on:trends-data-updated.window="updateData($event.detail)"
                 class="min-w-0 overflow-hidden rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60"
             >
                 {{-- Header: title + squiggle legend (left), Sales/Cost dropdown (right) --}}
@@ -473,15 +480,22 @@
                     </div>
                 </div>
 
-                {{-- Empty / chart canvas. ApexCharts renders into x-ref="canvas"
-                     once init() resolves; it lazy-imports the lib on demand. --}}
-                @if ($pointCount === 0)
-                    <div class="mt-6 flex h-72 items-center justify-center rounded-[10px] bg-zinc-50 text-sm text-zinc-600 dark:bg-[#26416b] dark:text-zinc-400">
-                        No completed orders in the last {{ $revenueDays }} {{ $revenueDays === 1 ? 'day' : 'days' }} yet.
-                    </div>
-                @else
+                {{-- Chart canvas. ApexCharts renders into x-ref="canvas" once
+                     init() resolves (lazy-imports the lib on demand). The block
+                     is wire:ignore so Livewire's morph never wipes the Apex SVG
+                     when the period filter re-renders the component - fresh
+                     series arrive via the trends-data-updated browser event and
+                     the empty state is a client-side overlay. --}}
+                <div wire:ignore class="relative">
                     <div x-ref="canvas" class="mt-2 min-h-[320px]"></div>
-                @endif
+                    <div
+                        x-show="isEmpty()"
+                        x-cloak
+                        class="absolute inset-0 z-10 mt-2 flex items-center justify-center rounded-[10px] bg-zinc-50/95 text-sm text-zinc-600 dark:bg-[#26416b]/95 dark:text-zinc-400"
+                    >
+                        No completed orders in this period yet.
+                    </div>
+                </div>
 
                 {{-- Footer: period dropdown — SPA-navigates with ?revenue_days=N so
                      the server re-aggregates the window. Currently selected period

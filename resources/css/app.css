@@ -1,4 +1,4 @@
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
+/*  */@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';
 
@@ -8,6 +8,16 @@
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Stable page width ────────────────────────────────────────────────────
+   Reserve the scrollbar gutter permanently. Without this, the vertical
+   scrollbar appears/disappears as content height changes (category filters,
+   Livewire updates), nudging the entire layout left/right a few pixels -
+   the storefront grid looked like it was "shaking" against the category
+   labels. */
+html {
+    scrollbar-gutter: stable;
+}
 
 /* ── Flatpickr dark theme ─────────────────────────────────────────────────
    The base flatpickr.css (imported in app.js) themes light mode; these rules
@@ -528,6 +538,125 @@ html.dark .trust-glow {
         0 12px 40px -8px rgba(0, 0, 0, 0.6);
 }
 
+/* Wallet card — blue frosted glass. Same convex "glass dome" recipe as
+   .trust-glow (top highlight + bottom inset + drop shadow) but tinted a deep
+   translucent blue so the white balance text stays legible while the page bleeds
+   through the backdrop blur. */
+.wallet-glass {
+    background: linear-gradient(180deg, rgba(191, 219, 254, 0.55) 0%, rgba(147, 197, 253, 0.62) 100%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        inset 0 -1px 0 rgba(15, 23, 42, 0.06),
+        0 10px 30px -10px rgba(15, 23, 42, 0.20);
+}
+html.dark .wallet-glass {
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.32) 0%, rgba(30, 58, 138, 0.48) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+        0 12px 40px -8px rgba(0, 0, 0, 0.55);
+}
+
+/* Section hover sheen — a very light blue highlight that sweeps left→right
+   across a card on hover, layered ON TOP of the border-colour hover. The sheen
+   lives on ::after and is clipped to the card's own radius (border-radius:
+   inherit), so no overflow:hidden is needed and dropdowns inside cards stay
+   visible. pointer-events:none keeps it click-through. */
+.dash-shimmer {
+    position: relative;
+}
+.dash-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 40%, rgba(147, 197, 253, 0.22) 50%, transparent 60%);
+    background-repeat: no-repeat;
+    background-size: 220% 100%;
+    background-position: -60% 0;
+    opacity: 0;
+    transition: background-position 1.15s ease, opacity 0.3s ease;
+}
+.dash-shimmer:hover::after {
+    opacity: 1;
+    background-position: 160% 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .dash-shimmer::after {
+        transition: opacity 0.25s ease;
+    }
+}
+
+/* Smooth SPA page entrance — every wire:navigate slides the new page in from the
+   right with a soft fade, giving the app-like feel of the menu modal opening
+   instead of a hard reload. Re-triggered on each livewire:navigated (see app.js).
+   Honours reduced-motion. */
+.page-enter {
+    animation: page-enter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes page-enter {
+    from { opacity: 0; transform: translateX(28px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .page-enter { animation: none; }
+}
+
+/* Liquid-glass active pill (mobile bottom nav): a near-transparent water bead
+   that refracts the frosted bar behind it rather than sitting on a solid tint.
+   The inset top highlight + soft inner/drop shadow give the convex "water" gloss. */
+.liquid-pill {
+    background: #d4d4d8; /* zinc-300 - lighter grey for the light theme */
+    box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.18);
+}
+html.dark .liquid-pill {
+    background: #52525b; /* zinc-600 */
+    box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.40);
+}
+
+/* Floating bottom-nav bar — iOS "liquid glass". A soft top→bottom white gradient
+   over a heavy, saturated backdrop blur (so the page bleeds through with colour),
+   a glossy 1px top highlight + lower inner sheen for the convex glass curve, and a
+   deep soft drop shadow so the whole pill reads as a physical pane floating above
+   the page. */
+.nav-glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.78) 100%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow:
+        inset 0 1px 0.5px rgba(255, 255, 255, 0.85),
+        inset 0 -10px 14px -10px rgba(255, 255, 255, 0.40),
+        0 12px 34px -8px rgba(15, 23, 42, 0.25);
+}
+html.dark .nav-glass {
+    background: linear-gradient(180deg, rgba(15, 27, 48, 0.88) 0%, rgba(8, 16, 34, 0.82) 100%);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+        inset 0 1px 0.5px rgba(255, 255, 255, 0.14),
+        inset 0 -10px 14px -10px rgba(255, 255, 255, 0.06),
+        0 14px 40px -8px rgba(0, 0, 0, 0.60);
+}
+
+/* Shared frosted surface for every user-facing modal + dropdown panel. The
+   background is the PAGE colour at high opacity over a heavy blur, so panels
+   read as "the page, frosted" rather than a foreign white/navy card. One
+   definition keeps all overlays consistent; add `.glass-panel` to the panel
+   element (it already supplies bg + blur + a 1px page-matching border). */
+.glass-panel {
+    background: rgba(239, 246, 255, 0.85); /* #eff6ff page bg */
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgb(228, 228, 231); /* zinc-200 */
+}
+html.dark .glass-panel {
+    background: rgba(12, 26, 54, 0.82); /* #0c1a36 page bg */
+    border-color: rgba(255, 255, 255, 0.10);
+}
+
 /* Honour reduced-motion: drop the tilt, glare, pop, flip and signal pulse. */
 @media (prefers-reduced-motion: reduce) {
     .card-3d {
@@ -715,7 +844,11 @@ select:focus[data-flux-control] {
 
 /* Borders, rings and dividers. */
 .dark .border-zinc-100,
-.dark .border-zinc-200 { border-color: #24364f; }
+.dark .border-zinc-200,
+/* The thin-black (light-mode) cards/sidebars/pills use border-zinc-900; in dark
+   mode they must read the SAME navy border as every other card, not a stray
+   zinc-900/700. */
+.dark .border-zinc-900 { border-color: #24364f; }
 .dark .ring-zinc-100,
 .dark .ring-zinc-200   { --tw-ring-color: #24364f; }
 .dark .divide-zinc-100 > *,

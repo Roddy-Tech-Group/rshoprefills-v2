@@ -28,8 +28,9 @@ class DashboardContent extends Component
 
     public ?string $rangeEnd = null;
 
-    // Trends chart (Sales / Cost over N days)
-    public int $revenueDays = 30;
+    // Trends chart (Sales / Cost over N days). Defaults to the week so the
+    // dashboard opens on recent activity rather than a flat month.
+    public int $revenueDays = 7;
 
     // Best-Selling-Countries map
     public int $countryDays = 7;
@@ -49,7 +50,7 @@ class DashboardContent extends Component
         $this->rangePreset = request('range');
         $this->rangeStart = request('start');
         $this->rangeEnd = request('end');
-        $this->revenueDays = max(1, min(365, (int) request('revenue_days', 30)));
+        $this->revenueDays = max(1, min(365, (int) request('revenue_days', 7)));
         $this->countryDays = max(1, min(365, (int) request('country_days', 7)));
         $this->countryCategory = (string) request('country_cat', 'all');
     }
@@ -58,6 +59,13 @@ class DashboardContent extends Component
     public function setRevenueDays(int $days): void
     {
         $this->revenueDays = max(1, min(365, $days));
+
+        // The chart canvas is wire:ignore (Livewire would wipe the Apex SVG on
+        // re-render), so the fresh series travels via a browser event and the
+        // salesCostChart factory swaps it into the live chart in place.
+        $this->dispatch('trends-data-updated',
+            series: app(DashboardMetricsQuery::class)->getSalesCostTimeseries($this->revenueDays),
+        );
     }
 
     /** Best Selling Countries period dropdown. */

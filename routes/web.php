@@ -11,13 +11,16 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EmailPreviewController;
 use App\Http\Controllers\EsimStoreController;
 use App\Http\Controllers\EsimTopupController;
+use App\Http\Controllers\GoogleMerchantFeedController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
 use App\Http\Controllers\RcoinConvertController;
 use App\Http\Controllers\RcoinWithdrawalController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
 use App\Models\BlogPost;
+use App\Models\Coupon;
 use App\Models\CurrencyRate;
 use App\Models\PressArticle;
 use App\Models\Product;
@@ -351,6 +354,12 @@ Route::get('robots.txt', function () {
     return response(implode("\n", $lines), 200, ['Content-Type' => 'text/plain']);
 })->name('robots');
 
+// Google Merchant Center product feed (XML). Scoped to eSIMs - the digital-goods
+// category Shopping approves. Register as a scheduled-fetch feed in Merchant
+// Center (XML = no column-delimiter issues). Self-caches for 6h.
+Route::get('feeds/google-merchant.xml', [GoogleMerchantFeedController::class, 'esims'])
+    ->name('feeds.google-merchant');
+
 // XML sitemap for search engines. Lists every public, rankable page: marketing
 // pages + one URL per product brand (gift cards / top-ups / bill payments).
 // Cached for 6 hours so the brand query never runs on a hot crawl.
@@ -507,6 +516,74 @@ $renderCheckout = function (CartManager $cartManager, CartPricingService $pricin
 };
 Route::get('checkout', $renderCheckout)->name('shop.checkout');
 
+// Customer review submission. Open to guests too (they supply a name); signed-in
+// customers review under their account name. Stored unpublished for admin
+// approval, then it appears on the storefront reviews wall.
+Route::post('reviews', [ReviewController::class, 'store'])
+    ->middleware(['throttle:6,1'])
+    ->name('reviews.store');
+
+// Coupon live preview. Validates a code against the active cart and returns the
+// USD + display-currency discount, computed EXACTLY like CheckoutService applies
+// it at order time (per-variant, per-unit x qty), so the checkout total the
+// customer sees matches what they're charged. No state is changed here.
+Route::post('coupon/preview', function (Request $request, CartManager $cartManager) {
+    $code = Str::upper(trim((string) $request->input('code', '')));
+    $currency = strtoupper(trim((string) $request->input('currency', 'USD'))) ?: 'USD';
+
+    if ($code === '') {
+        return response()->json(['valid' => false, 'message' => 'Enter a coupon code.']);
+    }
+
+    $userId = auth()->id();
+    $guestToken = $request->cookie('guest_token') ?? $request->header('X-Guest-Token');
+
+    try {
+        $cart = $cartManager->resolveCart($userId, $guestToken);
+        $cart->load('items');
+    } catch (Throwable $e) {
+        $cart = null;
+    }
+
+    if (! $cart || $cart->items->isEmpty()) {
+        return response()->json(['valid' => false, 'message' => 'Your cart is empty.']);
+    }
+
+    $coupon = Coupon::where('code', $code)->first();
+    if ($coupon === null) {
+        return response()->json(['valid' => false, 'message' => 'This coupon code is not valid.']);
+    }
+    if (! $coupon->isRedeemable()) {
+        return response()->json(['valid' => false, 'message' => 'This coupon has expired or is no longer available.']);
+    }
+
+    $item = $cart->items->firstWhere('product_variant_id', $coupon->product_variant_id);
+    if ($item === null) {
+        return response()->json(['valid' => false, 'message' => 'This coupon does not apply to anything in your cart.']);
+    }
+
+    $unitPriceUsd = (float) $item->subtotal_snapshot / max(1, (int) $item->quantity);
+    $discountedUnit = $coupon->applyTo($unitPriceUsd);
+    $discountUsd = round(($unitPriceUsd - $discountedUnit) * max(1, (int) $item->quantity), 2);
+
+    if ($discountUsd <= 0) {
+        return response()->json(['valid' => false, 'message' => 'This coupon gives no discount on your cart.']);
+    }
+
+    // Convert the USD discount into the customer's display currency for the
+    // on-screen line (CurrencyRate::resolve returns the rate row + a convert()).
+    $discountDisplay = round(CurrencyRate::resolve($currency)->convert($discountUsd), 2);
+
+    return response()->json([
+        'valid' => true,
+        'code' => $coupon->code,
+        'discount_usd' => $discountUsd,
+        'discount_display' => $discountDisplay,
+        'currency' => $currency,
+        'message' => 'Coupon applied.',
+    ]);
+})->middleware(['not-suspended', 'maintenance-guard', 'throttle:20,1'])->name('coupon.preview');
+
 // Checkout submission - creates the Order + OrderItems + a pending Payment from the
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside
 // the controller. Requires auth: an Order needs a user_id.
@@ -526,6 +603,11 @@ Route::get('checkout/return/{session}', [CheckoutController::class, 'hostedRetur
 Route::get('order/{orderNumber}', [CheckoutController::class, 'order'])
     ->middleware('auth')
     ->name('shop.order');
+
+// Status probe polled by the order page while fulfillment is in flight.
+Route::get('order/{orderNumber}/status.json', [CheckoutController::class, 'orderStatus'])
+    ->middleware('auth')
+    ->name('shop.order.status');
 
 // Downloadable receipts for the order success view.
 Route::get('order/{orderNumber}/codes.csv', [CheckoutController::class, 'codesCsv'])

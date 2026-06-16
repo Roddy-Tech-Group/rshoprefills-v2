@@ -11,6 +11,14 @@
     // admin sees in this grid matches what the customer would pay.
     $pricing = app(CartPricingService::class);
 
+    // Face values are stored in each card's own currency (a £1000 Amazon GB
+    // card stores 1000/GBP) while cost_price is USD — these rates convert the
+    // value before any USD comparison in the grid.
+    $ratesPerUsd = \App\Models\CurrencyRate::query()
+        ->where('is_active', true)
+        ->pluck('rate_per_usd', 'code')
+        ->map(fn ($r) => (float) $r);
+
     $search = request()->query('q', '');
     $categorySlug = request()->query('category', 'all');                   // Product Type filter
     $subtypeFilter = (string) request()->query('subtype', '');             // eSIM sub-type: 'data' | 'voice'
@@ -238,7 +246,6 @@
                     name="q"
                     x-model.debounce.250ms="query"
                     @input="suggest()"
-                    @focus="suggest()"
                     value="{{ $search }}"
                     placeholder="Search products by name, SKU or country (e.g. Cameroon, US, ESIM-AD)"
                     class="w-full rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-white"
@@ -831,21 +838,38 @@
 
                     // Value (supplier-suggested retail). Stored on the variant
                     // at sync time as `retail_price` — falls back to face_value
-                    // when retail is missing. This is what the customer receives
-                    // and is the BASE we mark up against (not cost).
-                    $valueUsd = (float) ($variant->retail_price ?: $variant->face_value ?: $costUsd);
+                    // when retail is missing. It lives in the CARD's currency,
+                    // so convert to USD before comparing against the USD cost;
+                    // mixing units made strong-currency cards read as negative
+                    // discounts and weak-currency ones as ~100%. Currencies
+                    // without an active rate fall back to the USD cost — the
+                    // same authority the cart pricing uses.
+                    $valueNative = (float) ($variant->retail_price ?: $variant->face_value ?: $costUsd);
+                    $valueCurrency = strtoupper((string) ($variant->currency ?: 'USD'));
+                    if ($valueCurrency === '' || $valueCurrency === 'USD') {
+                        $valueUsd = $valueNative;
+                    } else {
+                        $valueRate = (float) ($ratesPerUsd[$valueCurrency] ?? 0);
+                        $valueUsd = $valueRate > 0 ? round($valueNative / $valueRate, 4) : $costUsd;
+                    }
 
-                    // SALES PRICE — markup applied to VALUE, not cost. The
-                    // pricing engine takes a base + walks the product →
-                    // subcategory → category → global rule hierarchy; here we
-                    // pass the value so "my rates plus the value" is what the
-                    // customer pays. Falls back to value when no rule matches.
-                    $retailUsd = $product ? $pricing->resolveRetailPrice($product, $valueUsd) : $valueUsd;
+                    // SALES PRICE — mirrors CartPricingService exactly: USD
+                    // face values are the markup base; non-USD denominations
+                    // base on the supplier's USD cost. What this column shows
+                    // is what checkout actually charges.
+                    $retailBase = ($valueCurrency === 'USD' || $valueCurrency === '') && $valueNative > 0 ? $valueNative : $costUsd;
+                    // resolveVariantRetailPrice honours the per-variant
+                    // manual_retail_price_usd override set in the drawer; the
+                    // product-level resolveRetailPrice would ignore it, so the
+                    // column kept showing the rule price after an admin override.
+                    $retailUsd = $pricing->resolveVariantRetailPrice($variant, $retailBase);
 
                     // Discount % — the supplier's wholesale discount: the gap
                     // between the face Value (what the customer receives) and
                     // the Cost (what the supplier charges us), as a % of Value.
-                    // e.g. Value $12.50, Cost $3.30 → 73.6% off face.
+                    // e.g. Value $12.50, Cost $3.30 → 73.6% off face. A negative
+                    // figure is now honest data: the supplier charges a premium
+                    // above face for that card (common cross-currency).
                     $discountPct = $valueUsd > 0
                         ? round((($valueUsd - $costUsd) / $valueUsd) * 100, 2)
                         : null;
@@ -1535,17 +1559,25 @@
                             this.markupValue = '';
                         }
                         this.isOpen = true;
-                        // Lock page scroll while the drawer is open. The admin page scrolls
-                        // on the root <html> (body is min-h-screen), so body-only overflow
-                        // isn't enough — lock both the documentElement and body.
-                        document.documentElement.style.overflow = 'hidden';
-                        document.body.style.overflow = 'hidden';
+                        // Lock background scroll the sidebar-safe way: DON'T use the
+                        // shared rshopScrollLock here. It sets body{position:fixed},
+                        // which jumps the Flux *sticky* sidebar, and its ref-counter
+                        // desyncs when you click another row while the drawer is open
+                        // (re-lock without a matching unlock) - leaving the page stuck
+                        // and unable to scroll. Instead just hide the document's
+                        // overflow and reserve the scrollbar width on <body> so the
+                        // layout never shifts. This is idempotent (safe to re-run).
+                        if (document.documentElement.style.overflow !== 'hidden') {
+                            const sbw = window.innerWidth - document.documentElement.clientWidth;
+                            document.documentElement.style.overflow = 'hidden';
+                            document.body.style.paddingRight = sbw > 0 ? sbw + 'px' : '';
+                        }
                         this.loadCoupons();
                     },
                     close() {
                         this.isOpen = false;
                         document.documentElement.style.overflow = '';
-                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
                     },
 
                     _csrf() {
@@ -1592,6 +1624,9 @@
                                 `/admin/api/catalog/variants/${this.data.variantId}/price`,
                                 { manual_retail_price_usd: value });
                             this.data.manualPriceUsd = json.manual_retail_price_usd;
+                            // The Sales Price column is server-rendered, so reload
+                            // to show the new override (the data is already saved).
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1607,6 +1642,7 @@
                                 `/admin/api/catalog/variants/${this.data.variantId}/price`);
                             this.data.manualPriceUsd = null;
                             this.priceInput = '';
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1624,6 +1660,7 @@
                                 `/admin/api/catalog/products/${this.data.productId}/markup`,
                                 { markup_type: this.markupType, markup_value: value });
                             this.data.productMarkup = { type: json.markup_type, value: json.markup_value };
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1641,6 +1678,7 @@
                             this.data.productMarkup = null;
                             this.markupType = 'percentage';
                             this.markupValue = '';
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {

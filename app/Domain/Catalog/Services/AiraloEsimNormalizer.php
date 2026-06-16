@@ -63,11 +63,17 @@ class AiraloEsimNormalizer implements CatalogNormalizerInterface
             $network = $operator['title'] ?? 'Multiple';
             $packages = $operator['packages'] ?? [];
 
-            // Real carrier networks for this operator (Airalo exposes them per coverage
-            // as { name, types: [...] }, e.g. T-Mobile 5G / Verizon 5G). Deduped by name.
+            // Real carrier networks for this operator (Airalo exposes them per
+            // coverage as { name, networks: [{ name, types }] }). Two shapes
+            // are kept:
+            //   networks_detail   - flat, deduped by carrier name (single-country pages)
+            //   coverage_networks - grouped per country, powering the
+            //                       Countries & Networks modal on regional/global eSIMs
             $networksByName = [];
+            $coverageNetworks = [];
             foreach (($operator['coverages'] ?? []) as $coverage) {
-                foreach (($coverage['networks'] ?? []) as $net) {
+                $countryNets = [];
+                foreach ((array) ($coverage['networks'] ?? []) as $net) {
                     if (! is_array($net) || empty($net['name'])) {
                         continue;
                     }
@@ -79,6 +85,11 @@ class AiraloEsimNormalizer implements CatalogNormalizerInterface
                         }
                     }
                     $networksByName[$net['name']] = $speed;
+                    $countryNets[] = ['name' => $net['name'], 'speed' => $speed];
+                }
+                $coverageCountry = is_array($coverage) ? ($coverage['name'] ?? null) : null;
+                if ($coverageCountry && $countryNets !== []) {
+                    $coverageNetworks[] = ['country' => (string) $coverageCountry, 'networks' => $countryNets];
                 }
             }
             $networksDetail = [];
@@ -120,6 +131,14 @@ class AiraloEsimNormalizer implements CatalogNormalizerInterface
                     'countries' => [$countryCode], // Could be an array for regional
                     'network' => $network,
                     'networks_detail' => $networksDetail,
+                    'coverage_networks' => $coverageNetworks,
+                    // Provider policy notes, verbatim from the supplier - the
+                    // storefront's Package details modal renders these as-is.
+                    'operator_info' => array_values(array_filter(array_map(
+                        fn ($i) => is_scalar($i) ? trim((string) $i) : null,
+                        (array) ($operator['info'] ?? []),
+                    ))),
+                    'other_info' => is_scalar($operator['other_info'] ?? null) ? trim((string) $operator['other_info']) : null,
                     'activation_policy' => $operator['activation_policy'] ?? 'automatic',
                     'is_rechargeable' => (bool) ($operator['rechargeability'] ?? false),
                     'raw_payload' => $pkg,

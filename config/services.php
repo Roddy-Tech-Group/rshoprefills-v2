@@ -54,10 +54,19 @@ return [
         ],
     ],
 
+    // Chatway live-chat widget (customer-facing pages only). The widget stays
+    // off until the ID is set, so non-production environments render clean.
+    'chatway' => [
+        'widget_id' => env('CHATWAY_WIDGET_ID'),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+        // Google Analytics 4 measurement ID (gtag.js). Empty = analytics off,
+        // so local/dev and any deploy without the key render no tag.
+        'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
     ],
 
     // Master switch allowing the payment providers to fall back to mock

@@ -17,6 +17,7 @@
     $categorySlug = $product->category?->slug ?? 'gift-cards';
     $isTopup      = $categorySlug === 'mobile-airtime';
     $isBill       = $categorySlug === 'bill-payments';
+    $isGiftCard   = $categorySlug === 'gift-cards';
 
     [$kindNoun, $kindTitle, $listingRoute, $detailRoute] = match ($categorySlug) {
         'mobile-airtime' => ['top-up', 'Mobile Top-up', 'shop.topups', 'shop.topup'],
@@ -38,7 +39,7 @@
     $currency = $product->currency_code ?: 'USD';
 
     $symbols = [
-        'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦', 'XAF' => 'FCFA', 'ZAR' => 'R',
+        'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦', 'XAF' => 'XAF ', 'ZAR' => 'R',
         'KES' => 'KSh', 'GHS' => '₵', 'EGP' => 'E£', 'MAD' => 'DH', 'CAD' => 'CA$', 'AUD' => 'A$',
         'JPY' => '¥', 'CNY' => '¥', 'INR' => '₹', 'BRL' => 'R$', 'AED' => 'AED', 'SAR' => 'SAR',
         'TRY' => '₺', 'CHF' => 'Fr', 'MXN' => 'MX$', 'KRW' => '₩', 'SGD' => 'S$', 'HKD' => 'HK$',
@@ -242,6 +243,60 @@
         ->filter(fn ($p) => $p > 0)
         ->values();
 
+    // Real published-review aggregate + a few sample reviews so Product rich
+    // results can show stars (fixes Search Console "missing aggregateRating /
+    // review"). Cached for an hour since it's identical across every product.
+    $reviewSchema = \Illuminate\Support\Facades\Cache::remember('product-schema-reviews-v1', now()->addHour(), function () {
+        $published = \App\Models\Review::published()->ordered()->get();
+
+        if ($published->isEmpty()) {
+            return ['count' => 0];
+        }
+
+        return [
+            'rating' => round((float) $published->avg('rating'), 1),
+            'count' => $published->count(),
+            'samples' => $published->take(5)->map(fn ($r) => [
+                'author' => $r->author_name,
+                'body' => $r->body,
+                'rating' => max(1, min(5, (int) round((float) $r->rating))),
+                'date' => optional($r->reviewed_at)->toDateString(),
+            ])->all(),
+        ];
+    });
+
+    // Gift-card brand pages prefer THIS brand's own customer reviews for the
+    // rating shown under the product name. When the brand has its own reviews we
+    // use them for the visible block AND the rich-result markup so the two
+    // always agree; brands with none fall back to the site-wide aggregate above
+    // so the page still carries star markup. Cached per brand. Gift cards only -
+    // top-ups and bills never carry a per-product rating.
+    $brandReviewAgg = ['count' => 0];
+    if ($isGiftCard) {
+        $brandReviewAgg = \Illuminate\Support\Facades\Cache::remember("product-brand-reviews-v1-{$brandKey}", now()->addHour(), function () use ($brandKey) {
+            $reviews = \App\Models\Review::published()->forBrand($brandKey)->ordered()->get();
+
+            if ($reviews->isEmpty()) {
+                return ['count' => 0];
+            }
+
+            return [
+                'rating' => round((float) $reviews->avg('rating'), 1),
+                'count' => $reviews->count(),
+                'samples' => $reviews->take(5)->map(fn ($r) => [
+                    'author' => $r->author_name,
+                    'body' => $r->body,
+                    'rating' => max(1, min(5, (int) round((float) $r->rating))),
+                    'date' => optional($r->reviewed_at)->toDateString(),
+                ])->all(),
+            ];
+        });
+
+        if (($brandReviewAgg['count'] ?? 0) > 0) {
+            $reviewSchema = $brandReviewAgg;
+        }
+    }
+
     $productJsonLd = [
         '@context' => 'https://schema.org',
         '@type' => 'Product',
@@ -266,6 +321,29 @@
             'availability' => 'https://schema.org/InStock',
             'url' => url()->current(),
         ];
+    }
+
+    if (($reviewSchema['count'] ?? 0) > 0) {
+        $productJsonLd['aggregateRating'] = [
+            '@type' => 'AggregateRating',
+            'ratingValue' => (string) $reviewSchema['rating'],
+            'reviewCount' => (string) $reviewSchema['count'],
+            'bestRating' => '5',
+            'worstRating' => '1',
+        ];
+
+        $productJsonLd['review'] = array_map(fn ($s) => array_filter([
+            '@type' => 'Review',
+            'reviewRating' => [
+                '@type' => 'Rating',
+                'ratingValue' => (string) $s['rating'],
+                'bestRating' => '5',
+                'worstRating' => '1',
+            ],
+            'author' => ['@type' => 'Person', 'name' => $s['author']],
+            'reviewBody' => $s['body'],
+            'datePublished' => $s['date'] ?? null,
+        ]), $reviewSchema['samples']);
     }
 
     $crumbLabel = match ($categorySlug) {
@@ -320,7 +398,7 @@
             rcoinConfig: @js([
                 'enabled' => (bool) \App\Models\Setting::get('rcoin_enabled', true),
                 'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
-                'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+                'usd_rate' => (float) \App\Models\Setting::rcoinUsdRate(),
             ]),
         })"
         x-init="init()"
@@ -359,6 +437,23 @@
                 {{-- Heading --}}
                 <div>
                     <h1 class="text-[24px] font-bold leading-tight text-zinc-900">{{ $brandName }} {{ $kindNoun }}</h1>
+
+                    {{-- Per-brand customer rating, from reviews left on delivered
+                         orders for this gift card. Only shown for gift cards that
+                         have at least one approved review. --}}
+                    @if ($isGiftCard && ($brandReviewAgg['count'] ?? 0) > 0)
+                        <a href="{{ route('shop.reviews') }}" wire:navigate class="mt-2 inline-flex items-center gap-2" aria-label="{{ number_format($brandReviewAgg['rating'], 1) }} out of 5 from {{ $brandReviewAgg['count'] }} {{ str('review')->plural($brandReviewAgg['count']) }}">
+                            <span class="flex items-center gap-0.5">
+                                @for ($i = 1; $i <= 5; $i++)
+                                    <svg class="h-4 w-4 {{ $i <= (int) round($brandReviewAgg['rating']) ? 'text-amber-400' : 'text-zinc-300' }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                        <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                                    </svg>
+                                @endfor
+                            </span>
+                            <span class="text-sm font-bold text-zinc-900">{{ number_format($brandReviewAgg['rating'], 1) }}</span>
+                            <span class="text-sm text-zinc-500 hover:text-blue-700">({{ $brandReviewAgg['count'] }} {{ str('review')->plural($brandReviewAgg['count']) }})</span>
+                        </a>
+                    @endif
 
                     @if ($product->description)
                         <div class="mt-3 text-base leading-relaxed text-zinc-600 [&>p]:mb-2 [&_a]:text-blue-600 [&_a]:underline">{!! $product->description !!}</div>
@@ -434,7 +529,7 @@
                                     type="button"
                                     @click="open = ! open; locked = open"
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
-                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-white px-3 text-base font-bold text-zinc-900 transition-colors"
+                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <span class="font-semibold text-zinc-600">{{ $variable ? $customSymbol : $displaySymbol }}</span>
                                     <span
@@ -517,7 +612,7 @@
                                             max="{{ (float) $variable->max_amount }}"
                                             step="any"
                                             placeholder="{{ rtrim(rtrim(number_format((float) $variable->min_amount, 2), '0'), '.') }} - {{ rtrim(rtrim(number_format((float) $variable->max_amount, 2), '0'), '.') }}"
-                                            class="w-full rounded-[10px] border bg-white py-2.5 pl-10 pr-3 text-base font-bold tabular-nums text-zinc-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500/15"
+                                            class="w-full rounded-[10px] border bg-[#eff6ff] py-2.5 pl-10 pr-3 text-base font-bold tabular-nums text-zinc-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500/15"
                                             :class="(amount !== '' && (Number(amount) < customMin || Number(amount) > customMax)) ? 'border-red-400 focus:border-red-500' : 'border-zinc-200 focus:border-[color:var(--brand)]'"
                                         />
                                     </div>
@@ -552,7 +647,7 @@
                                     type="button"
                                     @click="open = ! open; locked = open"
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
-                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-white px-3 text-base font-bold text-zinc-900 transition-colors"
+                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <span x-data="valueFlip()" x-effect="quantity; flash()" class="flex-1 text-left tabular-nums" x-text="quantity">1</span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -598,7 +693,7 @@
                                     type="button"
                                     @click="open = ! open; locked = open"
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
-                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-white px-3 text-base font-bold text-zinc-900 transition-colors"
+                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <template x-if="cryptos[selectedCrypto]?.icon">
                                         <img :src="cryptos[selectedCrypto].icon" :alt="selectedCrypto" class="h-5 w-5 shrink-0 rounded-[10px]">
@@ -665,7 +760,7 @@
                                 :class="accountIdValid()
                                     ? 'border-emerald-500 ring-2 ring-emerald-500/15'
                                     : (accountId.length > 0 ? 'border-red-300' : 'border-zinc-200')"
-                                class="flex h-[52px] w-full items-center gap-2 rounded-[10px] border bg-white px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
+                                class="flex h-[52px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
                             >
                                 <input
                                     type="text"
@@ -709,7 +804,7 @@
                                 :class="recipientPhoneValid()
                                     ? 'border-emerald-500 ring-2 ring-emerald-500/15'
                                     : (recipientPhone.length > 0 ? 'border-red-300' : 'border-zinc-200')"
-                                class="flex h-[52px] w-full items-center gap-2 rounded-[10px] border bg-white px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
+                                class="flex h-[52px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
                             >
                                 <span class="shrink-0 text-sm font-semibold text-zinc-600 dark:text-zinc-200" x-text="recipientDialCode">{{ $dialCode }}</span>
                                 <input
@@ -825,7 +920,7 @@
                         </p>
                     </div>
                 @else
-                    <div class="rounded-[10px] bg-zinc-50 px-4 py-8 text-center ring-1 ring-zinc-100">
+                    <div class="dash-shimmer rounded-[10px] bg-[#eff6ff] px-4 py-8 text-center border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
                         <p class="text-base font-semibold text-zinc-900">Out of stock</p>
                         <p class="mt-1 text-sm text-zinc-600">{{ $isTopup ? 'This network has no top-up amounts available right now.' : ($isBill ? 'This biller has no payment amounts available right now.' : 'This card has no denominations available right now.') }} Check back later.</p>
                     </div>

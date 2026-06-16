@@ -54,6 +54,8 @@ class OrderService
             if (in_array($newStatus, [FulfillmentStatus::Fulfilled, FulfillmentStatus::PartiallyFulfilled])) {
                 $order->order_status = OrderStatus::Completed;
                 $order->completed_at = now();
+                // An order recovered by a retry must not keep its failure stamp
+                $order->failed_at = null;
 
                 // Settle reserved wallet payments (PIN flow)
                 $walletPayment = $order->paymentAttempts()

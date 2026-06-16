@@ -11,16 +11,18 @@
     ];
 @endphp
 
-<div class="flex items-center gap-3 overflow-x-auto border-b-2 border-zinc-900 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-0 sm:justify-between" role="tablist">
+{{-- Equal-width cards (flex-1) so all five always fit on one line - no
+     horizontal scroll, no layout shift. Active card gets a blue border + tint. --}}
+<div class="flex items-stretch gap-2" role="tablist">
     @foreach ($tabs as $key => $tab)
         <button
             type="button"
             @click="locTab = '{{ $key }}'"
-            :class="locTab === '{{ $key }}' ? 'border-blue-600 text-zinc-900' : 'border-transparent text-zinc-500 hover:text-zinc-900'"
-            class="-mb-0.5 flex shrink-0 items-center gap-2 border-b-4 px-3 py-3 text-[22px] font-bold transition-colors focus:outline-none"
+            :class="locTab === '{{ $key }}' ? 'border-blue-600 bg-blue-600/10 text-blue-700 dark:border-blue-400/60 dark:bg-blue-500/20 dark:text-blue-200' : 'border-zinc-200 bg-[#eff6ff] text-zinc-600 hover:border-blue-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-blue-400/40'"
+            class="flex flex-1 min-w-0 flex-col items-center justify-center gap-1.5 rounded-[10px] border px-1 py-3 text-[12px] font-bold transition-colors focus:outline-none"
         >
-            <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">{!! $tab['icon'] !!}</svg>
-            {{ $tab['label'] }}
+            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">{!! $tab['icon'] !!}</svg>
+            <span class="truncate">{{ $tab['label'] }}</span>
         </button>
     @endforeach
 </div>

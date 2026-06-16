@@ -6,7 +6,7 @@
     // During SPA navigation the card row is held behind a matching skeleton.
     //
     // Content source: the `reviews` table + `site_settings` (CMS-managed).
-    $reviews = \App\Models\Review::published()->ordered()->get();
+    $reviews = \App\Models\Review::published()->with('user:id,kyc_status')->ordered()->get();
     $aggregateRating = (float) \App\Models\SiteSetting::get('reviews.aggregate.rating', 4.4);
     $aggregateCount = (int) \App\Models\SiteSetting::get('reviews.aggregate.count', 0);
     $aggregateSince = (int) \App\Models\SiteSetting::get('reviews.aggregate.since_year', date('Y'));
@@ -30,10 +30,14 @@
     aria-label="What our customers say"
     class="w-full"
     x-data="customerReviewsCarousel()"
-    x-init="$nextTick(() => setup())"
+    x-init="$nextTick(() => { setup(); play(); })"
     @resize.window.debounce.200ms="setup()"
-    x-on:livewire:navigate.window="navigating = true"
-    x-on:livewire:navigated.window="navigating = false; $nextTick(() => setup())"
+    @mouseenter="stop()"
+    @mouseleave="play()"
+    @touchstart.passive="stop()"
+    @touchend.passive="play()"
+    x-on:livewire:navigate.window="navigating = true; stop()"
+    x-on:livewire:navigated.window="navigating = false; $nextTick(() => { setup(); play(); })"
 >
 
     {{-- Header aligns with the page content width. --}}
@@ -68,12 +72,7 @@
              clipped by the overflow-hidden viewport. --}}
         <div
             x-ref="track"
-            @pointerdown="onDragStart($event)"
-            @pointermove="onDragMove($event)"
-            @pointerup="onDragEnd($event)"
-            @pointercancel="onDragEnd($event)"
-            class="overflow-x-hidden overflow-y-visible py-6 touch-pan-y select-none"
-            style="cursor: grab;"
+            class="overflow-x-auto overflow-y-hidden py-6 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
         >
             <div x-ref="list" class="carousel-list flex w-max gap-4 sm:gap-5">
 
@@ -150,16 +149,32 @@
                                 </p>
                             </div>
 
-                            {{-- Brand-appropriate stars --}}
+                            {{-- Brand-appropriate stars, driven by the actual
+                                 rating in half-star steps (4.6 renders as 4.5
+                                 stars - never a fake full five). --}}
+                            @php $starValue = round((float) $agg['rating'] * 2) / 2; @endphp
                             <div class="mt-3 flex gap-0.5">
                                 @for ($s = 0; $s < 5; $s++)
+                                    @php $fill = ($starValue - $s) >= 1 ? 'full' : (($starValue - $s) >= 0.5 ? 'half' : 'empty'); @endphp
                                     @if ($isGoogle)
-                                        <svg class="h-7 w-7 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                            <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
-                                        </svg>
+                                        <span class="relative h-7 w-7">
+                                            <svg class="h-7 w-7 text-zinc-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                                            </svg>
+                                            @if ($fill !== 'empty')
+                                                <span class="absolute inset-y-0 left-0 overflow-hidden" style="width: {{ $fill === 'half' ? '50%' : '100%' }};">
+                                                    <svg class="h-7 w-7 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                                        <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                                                    </svg>
+                                                </span>
+                                            @endif
+                                        </span>
                                     @else
-                                        <span class="flex h-7 w-7 items-center justify-center bg-emerald-500">
-                                            <svg class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                        <span class="relative flex h-7 w-7 items-center justify-center overflow-hidden {{ $fill === 'full' ? 'bg-emerald-500' : 'bg-zinc-300' }}">
+                                            @if ($fill === 'half')
+                                                <span class="absolute inset-y-0 left-0 w-1/2 bg-emerald-500" aria-hidden="true"></span>
+                                            @endif
+                                            <svg class="relative h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                                 <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                                             </svg>
                                         </span>

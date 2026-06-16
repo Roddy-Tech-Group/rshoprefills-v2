@@ -36,19 +36,28 @@
         }
     }
 
-    $fieldClass = 'mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
+    $fieldClass = 'mt-1.5 w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base text-zinc-900 dark:text-white outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-white/15 dark:bg-white/5 dark:placeholder:text-zinc-500';
 
     $rcoinConfig = [
         // Master kill-switch. When off the buyer sees no Rcoin earn lines and
         // no redemption toggle - the programme is invisible storefront-side.
         'enabled' => (bool) \App\Models\Setting::get('rcoin_enabled', true),
         'cashback_percentage' => (float) \App\Models\Setting::get('cashback_percentage', 1.0),
-        'usd_rate' => (float) \App\Models\Setting::get('rcoin_usd_rate', 0.005),
+        'usd_rate' => (float) \App\Models\Setting::rcoinUsdRate(),
         // Redemption rules - checkout toggle reads these to decide whether to
         // show the "Use Rcoin" switch and how many Rcoin can be applied.
         'redemption_enabled' => (bool) \App\Models\Setting::get('redemption_enabled', true),
         'redemption_min'     => (int) \App\Models\Setting::get('redemption_min_rcoin', 2000),
         'redemption_max_pct' => (float) \App\Models\Setting::get('redemption_max_percentage', 30.0),
+    ];
+
+    // Processing-fee disclosure rates (config/payment_fees.php). The gateway
+    // charges the customer these on top of the order amount; the totals block
+    // surfaces them up front so the statement never surprises anyone.
+    $paymentFees = [
+        'fee_free' => array_values((array) config('payment_fees.fee_free_methods', [])),
+        'methods'  => (array) config('payment_fees.methods', []),
+        'default'  => (array) config('payment_fees.default', ['transaction' => 0.0, 'international' => 0.0]),
     ];
 @endphp
 
@@ -56,7 +65,7 @@
 
     <script src="https://checkout.flutterwave.com/v3.js"></script>
 
-    <div class="min-h-full bg-zinc-100">
+    <div class="min-h-full bg-zinc-100 dark:bg-[#0c1a36]">
     <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
 
         @if (session('checkout_status'))
@@ -75,23 +84,24 @@
             class="mt-4"
         />
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false), @js($paymentFees))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
-            <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white py-24 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 py-24 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
                 <svg class="h-7 w-7 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                 </svg>
             </div>
 
-            {{-- Empty cart --}}
-            <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white px-6 py-20 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
-                <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
-                <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
+            {{-- Empty cart - same animated inline illustration as the cart
+                 page and the nav/dashboard cart popups. --}}
+            <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 px-6 py-20 text-center ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
+                <x-illo name="emptyCart" class="mx-auto w-full max-w-[280px]" />
+                <p class="mt-4 text-base font-semibold text-zinc-900 dark:text-white">Your cart is empty</p>
+                <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Add a Product before heading to checkout.</p>
                 <a href="{{ request()->routeIs('dashboard.*') ? route('dashboard.shop.gift-cards') : route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
-                    Browse gift cards
+                    Visit Shop
                 </a>
             </div>
 
@@ -99,8 +109,8 @@
             <div x-show="$store.cart.hydrated && $store.cart.count > 0" x-cloak class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-6">
 
                 {{-- ─── LEFT: Order details ─── --}}
-                <section class="self-start rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-6">
-                    <h2 class="text-lg font-bold text-zinc-900">Order details</h2>
+                <section class="self-start rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
+                    <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Order details</h2>
 
                     <ul class="mt-4 divide-y divide-zinc-100">
                         <template x-for="item in $store.cart.items" :key="item.id">
@@ -110,16 +120,25 @@
                                     <template x-if="item.logo">
                                         <img :src="item.logo" alt="" class="h-full w-full object-cover">
                                     </template>
-                                    <template x-if="!item.logo">
+                                    {{-- No logo (eSIMs): country flag, globe for Global plans. --}}
+                                    <template x-if="!item.logo && item.flag">
+                                        <img :src="item.flag" alt="" class="h-12 w-[72px] rounded-[6px] object-cover ring-1 ring-zinc-200" loading="lazy">
+                                    </template>
+                                    <template x-if="!item.logo && !item.flag && item.is_global">
+                                        <svg class="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a9.004 9.004 0 018.716 6.747M12 3a9.004 9.004 0 00-8.716 6.747M21.75 12H2.25"/>
+                                        </svg>
+                                    </template>
+                                    <template x-if="!item.logo && !item.flag && !item.is_global">
                                         <span class="text-lg font-black uppercase text-zinc-700" x-text="item.name.substring(0,2).toUpperCase()"></span>
                                     </template>
                                 </span>
 
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-bold text-zinc-900" x-text="item.name"></p>
-                                    <p class="mt-0.5 truncate text-xs text-zinc-500" x-text="item.country"></p>
-                                    <p class="mt-0.5 text-xs text-zinc-600">
-                                        <span x-show="item.face_label" x-text="item.face_label + ' card'"></span>
+                                    <p class="truncate text-sm font-bold text-zinc-900 dark:text-white" x-text="item.name"></p>
+                                    <p class="mt-0.5 truncate text-xs text-zinc-500" x-text="item.country_name || item.country"></p>
+                                    <p class="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                                        <span x-show="item.face_label" x-text="$store.cart.unitLabel(item)"></span>
                                     </p>
                                     {{-- Top-up: show the recipient phone the buyer entered. --}}
                                     <p
@@ -132,17 +151,17 @@
                                         </svg>
                                         <span x-text="item.recipient_phone"></span>
                                     </p>
-                                    <p x-show="rcoinConfig.enabled" class="mt-1 inline-flex items-center gap-1 text-xs text-zinc-600">
+                                    <p x-show="rcoinConfig.enabled" class="mt-1 inline-flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-400">
                                         <span x-text="item.quantity"></span> x
                                         <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-3.5 w-3.5 object-contain">
-                                        <span class="font-semibold text-zinc-900" x-text="Math.floor(((item.line_total_usd || 0) * (rcoinConfig.cashback_percentage / 100)) / rcoinConfig.usd_rate)"></span> Points
+                                        <span class="font-semibold text-zinc-900 dark:text-white" x-text="Math.floor(((item.line_total_usd || 0) * (rcoinConfig.cashback_percentage / 100)) / rcoinConfig.usd_rate)"></span> Points
                                     </p>
                                 </div>
 
                                 <div class="flex shrink-0 flex-col items-end gap-2">
                                     {{-- Quantity dropdown --}}
                                     <div x-data="{ qtyOpen: false }" @click.outside="qtyOpen = false" class="relative">
-                                        <button type="button" @click="qtyOpen = !qtyOpen" class="flex h-9 w-16 items-center justify-between rounded-[10px] border border-zinc-200 bg-white px-2.5 text-sm font-bold text-zinc-900 transition-colors hover:border-zinc-400">
+                                        <button type="button" @click="qtyOpen = !qtyOpen" class="flex h-9 w-16 items-center justify-between rounded-[10px] border border-zinc-200 bg-white px-2.5 text-sm font-bold text-zinc-900 dark:text-white transition-colors hover:border-zinc-400">
                                             <span x-text="item.quantity"></span>
                                             <svg class="h-4 w-4 text-zinc-500" :class="qtyOpen && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                                         </button>
@@ -170,22 +189,37 @@
                     <div
                         x-show="$store.cart.items.some((i) => ! ['mobile-airtime', 'esims', 'bill-payments'].includes(i.category_slug))"
                         x-cloak
-                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5"
+                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-amber-50 px-4 py-3.5 dark:bg-amber-500/10"
                     >
-                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
                         </svg>
-                        <p class="text-sm text-amber-800">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
+                        <p class="text-sm text-amber-800 dark:text-amber-200">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
+                    </div>
+
+                    {{-- eSIM coverage notice — eSIMs only have service inside
+                         their coverage area, and "US Data eSIM" bought from home
+                         is the classic blind-buy mistake. Shown whenever the
+                         cart contains an eSIM, mirroring the gift-card notice. --}}
+                    <div
+                        x-show="$store.cart.items.some((i) => i.category_slug === 'esims')"
+                        x-cloak
+                        class="mt-3 flex items-start gap-2.5 rounded-[10px] bg-blue-50 px-4 py-3.5 dark:bg-blue-500/10"
+                    >
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a9.004 9.004 0 018.716 6.747M12 3a9.004 9.004 0 00-8.716 6.747M21.75 12H2.25"/>
+                        </svg>
+                        <p class="text-sm text-blue-800 dark:text-blue-200">eSIMs are region-based and only work inside their coverage area. Pick the plan for the country or region you are traveling to, or choose a Global plan for worldwide connectivity. You can install it from anywhere; it connects once you arrive.</p>
                     </div>
 
                     {{-- Points + total --}}
-                    <div class="mt-4 space-y-2 border-t border-zinc-100 pt-4 text-sm">
+                    <div class="mt-4 space-y-2 border-t border-zinc-100 dark:border-white/10 pt-4 text-sm">
                         <div x-show="rcoinConfig.enabled" class="flex items-center justify-between">
-                            <span class="inline-flex items-center gap-1.5 text-zinc-600">
+                            <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
                                 Points you earn
                                 <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain">
                             </span>
-                            <span x-data="valueFlip()" x-effect="points(); flash()" class="inline-block font-bold text-zinc-900" x-text="points()">0</span>
+                            <span x-data="valueFlip()" x-effect="points(); flash()" class="inline-block font-bold text-zinc-900 dark:text-white" x-text="points()">0</span>
                         </div>
 
                         {{-- Rcoin redemption — three states (off / partial / full).
@@ -241,7 +275,7 @@
                             </div>
                         </div>
 
-                        <div class="flex items-start justify-between border-t border-zinc-100 pt-2 text-base font-bold text-zinc-900">
+                        <div class="flex items-start justify-between border-t border-zinc-100 dark:border-white/10 pt-2 text-base font-bold text-zinc-900 dark:text-white">
                             <span>Total estimate</span>
                             <span class="text-right">
                                 <span x-data="valueFlip()" x-effect="$store.cart.subtotal; flash()" class="block tabular-nums" x-text="$store.cart.pay($store.cart.subtotal)"></span>
@@ -255,27 +289,27 @@
                      `id="checkout-form"` so the Rcoin redemption checkbox in
                      the left column can post into this form via its
                      `form="checkout-form"` attribute. --}}
-                <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="rounded-[20px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100 sm:p-6">
+                <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
                     <input type="hidden" name="currency" :value="$store.cart.currency">
 
-                    <h2 class="text-lg font-bold text-zinc-900">Select payment method</h2>
+                    <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Select payment method</h2>
 
                     {{-- Checkout Currency Selector --}}
                     <div class="mt-4" x-data="{ ccyOpen: false }">
-                        <label class="text-sm font-semibold text-zinc-900">Checkout currency</label>
-                        <p class="mt-0.5 text-xs text-zinc-600">Select the currency you wish to pay with.</p>
+                        <label class="text-sm font-semibold text-zinc-900 dark:text-white">Checkout currency</label>
+                        <p class="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">Select the currency you wish to pay with.</p>
                         <div class="relative mt-1.5" @click.outside="ccyOpen = false">
                             <button
                                 type="button"
                                 @click="ccyOpen = !ccyOpen"
-                                class="flex w-full items-center justify-between gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors hover:border-zinc-300 focus:outline-none"
+                                class="flex w-full items-center justify-between gap-2 rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-base font-medium text-zinc-900 dark:text-white outline-none transition-colors hover:border-zinc-300 focus:outline-none"
                             >
                                 <span class="flex items-center gap-2">
                                     <span class="font-bold" x-text="$store.cart.currency"></span>
-                                    <span class="text-zinc-600">&middot;</span>
+                                    <span class="text-zinc-600 dark:text-zinc-400">&middot;</span>
                                     <span x-text="$store.cart.currency === 'USD' ? 'United States Dollar' : ($store.cart.currency === 'EUR' ? 'Euro' : ($store.cart.currency === 'GBP' ? 'British Pound' : ($store.cart.currency === 'NGN' ? 'Nigerian Naira' : ($store.cart.currency === 'XAF' ? 'Central African CFA Franc' : ''))))"></span>
                                 </span>
                                 <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-150" :class="ccyOpen && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -322,8 +356,8 @@
                          friend's email here to send the redemption codes
                          straight to them instead of yourself. --}}
                     <div class="mt-4">
-                        <label for="delivery_email" class="text-sm font-semibold text-zinc-900">Delivery email or send as a gift</label>
-                        <p class="mt-0.5 text-xs text-zinc-600">Codes are emailed to this address right after payment. Use a friend's email to send it as a gift.</p>
+                        <label for="delivery_email" class="text-sm font-semibold text-zinc-900 dark:text-white">Delivery email or send as a gift</label>
+                        <p class="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">Codes are emailed to this address right after payment. Use a friend's email to send it as a gift.</p>
                         <input id="delivery_email" name="delivery_email" type="email" required
                             value="{{ old('delivery_email', auth()->user()?->email) }}"
                             placeholder="you@example.com or friend@example.com" class="{{ $fieldClass }}">
@@ -347,7 +381,7 @@
                                     </template>
                                 </span>
                                 <span class="min-w-0 flex-1">
-                                    <span class="block text-sm font-bold text-zinc-900" x-text="m.label"></span>
+                                    <span class="block text-sm font-bold text-zinc-900 dark:text-white" x-text="m.label"></span>
                                     <span class="mt-0.5 block text-[11px] leading-tight text-zinc-500" x-text="m.desc"></span>
                                 </span>
                             </button>
@@ -358,11 +392,11 @@
                     <div x-show="method === 'card'" x-collapse class="mt-5 space-y-3">
                         @if(config('services.flutterwave.direct_charge_enabled', false))
                             <div>
-                                <label for="card_name" class="text-sm font-semibold text-zinc-900">Name on card</label>
+                                <label for="card_name" class="text-sm font-semibold text-zinc-900 dark:text-white">Name on card</label>
                                 <input id="card_name" name="card_name" type="text" autocomplete="cc-name" placeholder="Full name" x-model="cardDetails.card_holder" class="{{ $fieldClass }}">
                             </div>
                             <div>
-                                <label for="card_number" class="text-sm font-semibold text-zinc-900">Card number</label>
+                                <label for="card_number" class="text-sm font-semibold text-zinc-900 dark:text-white">Card number</label>
                                 <div class="relative">
                                     <input 
                                         id="card_number" 
@@ -392,7 +426,7 @@
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label for="card_expiry" class="text-sm font-semibold text-zinc-900">Expiry</label>
+                                    <label for="card_expiry" class="text-sm font-semibold text-zinc-900 dark:text-white">Expiry</label>
                                     <input 
                                         id="card_expiry" 
                                         name="card_expiry" 
@@ -406,7 +440,7 @@
                                     >
                                 </div>
                                 <div>
-                                    <label for="card_cvc" class="text-sm font-semibold text-zinc-900">CVC</label>
+                                    <label for="card_cvc" class="text-sm font-semibold text-zinc-900 dark:text-white">CVC</label>
                                     <input 
                                         id="card_cvc" 
                                         name="card_cvc" 
@@ -421,12 +455,20 @@
                                 </div>
                             </div>
                         @else
-                            <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4 text-center">
-                                <div class="flex justify-center gap-3 mb-3">
-                                    <img src="/assets/visa.svg" alt="Visa" class="h-8 object-contain">
-                                    <img src="/assets/mastercard.svg" alt="Mastercard" class="h-8 object-contain">
+                            <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-700/60 dark:bg-white/5">
+                                {{-- Brand marks keep their real colours in dark mode:
+                                     no-dark-invert opts them out of the global
+                                     .dark img[src$=".svg"] invert filter, and the
+                                     white chips keep them legible on the dark panel. --}}
+                                <div class="mb-3 flex justify-center gap-3">
+                                    <span class="flex h-9 items-center rounded-[6px] bg-white px-2 ring-1 ring-zinc-200 dark:ring-white/20">
+                                        <img src="/assets/visa.svg" alt="Visa" class="no-dark-invert h-6 object-contain">
+                                    </span>
+                                    <span class="flex h-9 items-center rounded-[6px] bg-white px-2 ring-1 ring-zinc-200 dark:ring-white/20">
+                                        <img src="/assets/mastercard.svg" alt="Mastercard" class="no-dark-invert h-6 object-contain">
+                                    </span>
                                 </div>
-                                <p class="text-sm font-medium text-zinc-700">
+                                <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                                     Secure and encrypted payment with bank-level security.
                                 </p>
                             </div>
@@ -437,7 +479,7 @@
                     <div x-show="method === 'mobile_money'" x-collapse x-cloak class="mt-5 space-y-3">
                         {{-- Network — custom glass dropdown (replaces the native <select>). --}}
                         <div>
-                            <label class="text-sm font-semibold text-zinc-900">Network</label>
+                            <label class="text-sm font-semibold text-zinc-900 dark:text-white">Network</label>
                             <div
                                 x-data="{ open: false, value: @js($momoNetworks[0]) }"
                                 @click.outside="open = false"
@@ -449,7 +491,7 @@
                                     type="button"
                                     @click="open = !open"
                                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
-                                    class="flex w-full items-center justify-between gap-2 rounded-[10px] border bg-white px-3 py-2.5 text-base text-zinc-900 transition-colors"
+                                    class="flex w-full items-center justify-between gap-2 rounded-[10px] border bg-white px-3 py-2.5 text-base text-zinc-900 dark:text-white transition-colors"
                                 >
                                     <span x-text="value"></span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -484,14 +526,14 @@
                             </div>
                         </div>
                         <div>
-                            <label for="momo_phone" class="text-sm font-semibold text-zinc-900">Mobile money number</label>
+                            <label for="momo_phone" class="text-sm font-semibold text-zinc-900 dark:text-white">Mobile money number</label>
                             <input id="momo_phone" name="momo_phone" type="tel" autocomplete="tel" placeholder="Phone number" class="{{ $fieldClass }}">
                         </div>
                     </div>
 
                     {{-- Crypto --}}
                     <div x-show="method === 'crypto'" x-collapse x-cloak class="mt-5">
-                        <p class="text-sm font-semibold text-zinc-900">Currency</p>
+                        <p class="text-sm font-semibold text-zinc-900 dark:text-white">Currency</p>
                         <div class="mt-1.5 grid grid-cols-4 gap-2 sm:grid-cols-5">
                             @forelse ($cryptoCoins as $coin)
                                 <button type="button" @click="crypto = '{{ $coin->code }}'"
@@ -502,13 +544,13 @@
                                     @else
                                         <span class="flex h-6 w-6 items-center justify-center rounded-[10px] bg-amber-500 text-[10px] font-black text-white">{{ substr($coin->code, 0, 1) }}</span>
                                     @endif
-                                    <span class="text-xs font-bold text-zinc-900">{{ $coin->code }}</span>
+                                    <span class="text-xs font-bold text-zinc-900 dark:text-white">{{ $coin->code }}</span>
                                 </button>
                             @empty
-                                <p class="col-span-full text-sm text-zinc-600">No crypto currencies are enabled.</p>
+                                <p class="col-span-full text-sm text-zinc-600 dark:text-zinc-400">No crypto currencies are enabled.</p>
                             @endforelse
                         </div>
-                        <p class="mt-3 text-xs text-zinc-600">
+                        <p class="mt-3 text-xs text-zinc-600 dark:text-zinc-400">
                             Pick a coin and continue — the next step shows the exact wallet address and amount to send.
                         </p>
                     </div>
@@ -517,8 +559,8 @@
                     <div x-show="method === 'wallet'" x-collapse x-cloak class="mt-5 space-y-3">
                         <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4">
                             <div class="flex justify-between items-center">
-                                <span class="text-sm font-medium text-zinc-600">Available Balance</span>
-                                <span class="text-base font-bold text-zinc-900" x-text="$store.cart.pay(walletBalances[$store.cart.currency] || 0)"></span>
+                                <span class="text-sm font-medium text-zinc-600 dark:text-zinc-400">Available Balance</span>
+                                <span class="text-base font-bold text-zinc-900 dark:text-white" x-text="$store.cart.pay(walletBalances[$store.cart.currency] || 0)"></span>
                             </div>
                             <div x-show="!hasSufficientWalletBalance()" class="mt-3 text-xs text-red-600 font-medium">
                                 Insufficient balance to pay for this order. Please fund your wallet or select a different payment method.
@@ -526,13 +568,40 @@
                         </div>
                     </div>
 
-                    {{-- Coupon --}}
+                    {{-- Coupon — live preview. Apply validates against the cart and
+                         shows the discount on the total before payment; the same
+                         code submits with the form so the server re-applies it. --}}
                     <div class="mt-5" x-data="{ open: false }">
-                        <button type="button" @click="open = !open" class="text-sm font-semibold text-zinc-900 underline underline-offset-2 transition-colors hover:text-blue-700">
+                        <button type="button" @click="open = !open" class="text-sm font-semibold text-zinc-900 dark:text-white underline underline-offset-2 transition-colors hover:text-blue-700">
                             I have a coupon
                         </button>
                         <div x-show="open" x-collapse x-cloak class="mt-2">
-                            <input name="coupon_code" type="text" placeholder="Coupon code" class="{{ $fieldClass }} !mt-0">
+                            <div class="flex items-stretch gap-2">
+                                <input
+                                    name="coupon_code"
+                                    type="text"
+                                    x-model="couponCode"
+                                    @input="couponApplied && removeCoupon()"
+                                    @keydown.enter.prevent="applyCoupon()"
+                                    placeholder="Coupon code"
+                                    class="{{ $fieldClass }} !mt-0 flex-1 uppercase"
+                                >
+                                <button
+                                    type="button"
+                                    @click="couponApplied ? removeCoupon() : applyCoupon()"
+                                    :disabled="couponLoading || (! couponApplied && ! couponCode)"
+                                    class="shrink-0 rounded-[10px] px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                    :class="couponApplied ? 'bg-zinc-600 hover:bg-zinc-700' : 'bg-blue-600 hover:bg-blue-700'"
+                                >
+                                    <span x-show="! couponLoading" x-text="couponApplied ? 'Remove' : 'Apply'"></span>
+                                    <span x-show="couponLoading">…</span>
+                                </button>
+                            </div>
+                            <p x-show="couponError" x-cloak class="mt-1.5 text-xs font-medium text-red-600" x-text="couponError"></p>
+                            <p x-show="couponApplied" x-cloak class="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                <span x-text="'Coupon ' + couponApplied + ' applied'"></span>
+                            </p>
                         </div>
                     </div>
 
@@ -559,10 +628,35 @@
 
                     @error('payment_method') <p class="mt-3 text-xs text-red-600">{{ $message }}</p> @enderror
 
+                    {{-- Fee breakdown - rendered only when the selected method
+                         carries a gateway processing fee, so fee-free methods
+                         (wallet, crypto) keep the simple single-line total. --}}
+                    <div x-show="processingFee() > 0" x-cloak class="mt-5 border-t border-zinc-100 dark:border-white/10 pt-5">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="font-medium text-zinc-600 dark:text-zinc-400">Subtotal</span>
+                            <span class="font-semibold tabular-nums text-zinc-900 dark:text-white" x-text="$store.cart.pay($store.cart.subtotal)"></span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between text-sm">
+                            <span class="font-medium text-zinc-600 dark:text-zinc-400">Processing fee</span>
+                            <span class="font-semibold tabular-nums text-zinc-900 dark:text-white" x-text="$store.cart.pay(processingFee())"></span>
+                        </div>
+                        <div x-show="couponApplied" x-cloak class="mt-2 flex items-center justify-between text-sm">
+                            <span class="font-medium text-emerald-600" x-text="'Discount (' + couponApplied + ')'"></span>
+                            <span class="font-semibold tabular-nums text-emerald-600" x-text="'-' + $store.cart.pay(couponDiscountDisplay)"></span>
+                        </div>
+                    </div>
+
+                    {{-- Discount line when there is no processing fee (wallet/crypto)
+                         so the customer still sees the coupon reduction. --}}
+                    <div x-show="couponApplied && processingFee() <= 0" x-cloak class="mt-4 flex items-center justify-between border-t border-zinc-100 dark:border-white/10 pt-4 text-sm">
+                        <span class="font-medium text-emerald-600" x-text="'Discount (' + couponApplied + ')'"></span>
+                        <span class="font-semibold tabular-nums text-emerald-600" x-text="'-' + $store.cart.pay(couponDiscountDisplay)"></span>
+                    </div>
+
                     {{-- Total --}}
-                    <div class="mt-5 flex items-center justify-between border-t border-zinc-100 pt-5">
-                        <span class="text-base font-bold text-zinc-900">Total amount to pay</span>
-                        <span x-data="valueFlip()" x-effect="totalLabel(); flash()" class="inline-block text-lg font-extrabold tabular-nums text-zinc-900" x-text="totalLabel()">0.00</span>
+                    <div class="mt-5 flex items-center justify-between border-t border-zinc-100 dark:border-white/10 pt-5" :class="processingFee() > 0 && 'mt-3 border-t-0 pt-0'">
+                        <span class="text-base font-bold text-zinc-900 dark:text-white">Total amount to pay</span>
+                        <span x-data="valueFlip()" x-effect="totalLabel(); flash()" class="inline-block text-lg font-extrabold tabular-nums text-zinc-900 dark:text-white" x-text="totalLabel()">0.00</span>
                     </div>
 
                     {{-- Crypto safety warning --}}
@@ -602,10 +696,10 @@
                         <button type="button" @click="$dispatch('open-auth-modal', { mode: 'login' })" class="mt-4 flex w-full items-center justify-center rounded-[10px] bg-blue-600 px-4 py-3.5 text-base font-bold text-white shadow-md transition-colors hover:bg-blue-700">
                             Sign in to pay
                         </button>
-                        <p class="mt-2 text-center text-xs text-zinc-600">You need an account to complete a purchase.</p>
+                        <p class="mt-2 text-center text-xs text-zinc-600 dark:text-zinc-400">You need an account to complete a purchase.</p>
                     @endauth
 
-                    <p class="mt-3 flex items-center justify-center gap-1.5 text-xs text-zinc-600">
+                    <p class="mt-3 flex items-center justify-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                         <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -657,7 +751,7 @@
                     <div x-show="session || paymentState === 'error'" class="mt-2">
                         <!-- Countdown timer banner -->
                         <div x-show="['awaiting_transfer', 'awaiting_confirmation', 'action_pin', 'action_otp', 'action_3ds'].includes(paymentState)" 
-                             class="mb-5 flex items-center justify-between rounded-[10px] bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+                             class="mb-5 flex items-center justify-between rounded-[10px] bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/30">
                             <span class="flex items-center gap-1.5">
                                 <svg class="h-4 w-4 animate-pulse text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -669,10 +763,10 @@
 
                         <!-- Card Auth: PIN Challenge -->
                         <div x-show="paymentState === 'action_pin'">
-                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Card PIN Required</h3>
-                            <p class="text-xs text-zinc-600 mb-4">Enter your card 4-digit security PIN to authorize payment.</p>
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white mb-2">Card PIN Required</h3>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-4">Enter your card 4-digit security PIN to authorize payment.</p>
                             <div class="space-y-4">
-                                <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <input type="password" x-model="pinValue" maxlength="4" placeholder="••••" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
                                 <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                                     Confirm PIN
                                 </button>
@@ -681,12 +775,12 @@
 
                         <!-- Wallet Auth: Transaction PIN Challenge -->
                         <div x-show="paymentState === 'wallet_pin'">
-                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Transaction PIN Required</h3>
-                            <p class="text-xs text-zinc-600 mb-4">Enter your 4-digit transaction PIN to authorize this payment from your wallet balance.</p>
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white mb-2">Transaction PIN Required</h3>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-4">Enter your 4-digit transaction PIN to authorize this payment from your wallet balance.</p>
                             <div class="space-y-4">
                                 <input type="password" inputmode="numeric" x-ref="walletPinInput" x-model="walletPin" maxlength="4" placeholder="••••"
                                     @keydown.enter.prevent="authorizeWalletPayment()"
-                                    class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                    class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
                                 <p x-show="errorMessage" x-cloak class="text-center text-xs text-red-600" x-text="errorMessage"></p>
                                 <button type="button" @click="authorizeWalletPayment()" :disabled="authorizingWallet"
                                     class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
@@ -702,10 +796,10 @@
 
                         <!-- Card Auth: OTP Challenge -->
                         <div x-show="paymentState === 'action_otp'">
-                            <h3 class="text-sm font-bold text-zinc-900 mb-2">OTP Verification</h3>
-                            <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white mb-2">OTP Verification</h3>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-4" x-text="actionMessage"></p>
                             <div class="space-y-4">
-                                <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
+                                <input type="text" x-model="otpValue" placeholder="123456" class="w-full rounded-[10px] border border-zinc-200 px-3 py-3 text-center text-lg font-bold tracking-widest text-zinc-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
                                 <button type="button" @click="paySession('card', cardDetails)" class="w-full rounded-[10px] bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                                     Verify OTP
                                 </button>
@@ -714,8 +808,8 @@
 
                         <!-- Card Auth: 3D Secure Redirect -->
                         <div x-show="paymentState === 'action_3ds'">
-                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Secure Verification</h3>
-                            <p class="text-xs text-zinc-600 mb-4">Please complete the secure authentication inside the window below.</p>
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white mb-2">Secure Verification</h3>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-4">Please complete the secure authentication inside the window below.</p>
 
                             <div class="w-full overflow-hidden rounded-[10px] border border-zinc-200 bg-zinc-50 h-[55vh] min-h-[400px] max-h-[520px]">
                                 <iframe :src="session?.payment_payload?.redirect_url" class="h-full w-full border-0" allow="payment"></iframe>
@@ -736,18 +830,18 @@
                             <!-- If Bank Transfer details -->
                             <template x-if="session?.payment_payload?.bank_details || session?.payment_payload?.account_number">
                                 <div>
-                                    <h3 class="text-sm font-bold text-zinc-900 mb-2">Virtual Bank Transfer</h3>
-                                    <p class="text-xs text-zinc-600 mb-4">Please make a transfer to the temporary virtual account below:</p>
+                                    <h3 class="text-sm font-bold text-zinc-900 dark:text-white mb-2">Virtual Bank Transfer</h3>
+                                    <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-4">Please make a transfer to the temporary virtual account below:</p>
 
                                     <div class="bg-zinc-50 border border-zinc-200 rounded-[10px] p-4 space-y-3 shadow-inner">
                                         <div class="flex justify-between items-center text-xs">
                                             <span class="text-zinc-500 font-medium">Bank Name</span>
-                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.bank_name"></span>
+                                            <span class="font-bold text-zinc-900 dark:text-white" x-text="bankDetails?.bank_name"></span>
                                         </div>
                                         <div class="flex justify-between items-center text-xs">
                                             <span class="text-zinc-500 font-medium">Account Number</span>
                                             <div class="flex items-center gap-2">
-                                                <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded-[10px] border border-zinc-150" x-text="bankDetails?.account_number"></span>
+                                                <span class="font-extrabold text-zinc-900 dark:text-white text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded-[10px] border border-zinc-150" x-text="bankDetails?.account_number"></span>
                                                 <button type="button" @click="copyToClipboard(bankDetails?.account_number, 'account')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded-[10px] transition-all">
                                                     <span x-show="!copiedStates['account']">Copy</span>
                                                     <span x-show="copiedStates['account']" class="text-emerald-600 font-bold">Copied!</span>
@@ -756,7 +850,7 @@
                                         </div>
                                         <div class="flex justify-between items-center text-xs">
                                             <span class="text-zinc-500 font-medium">Account Name</span>
-                                            <span class="font-bold text-zinc-900" x-text="bankDetails?.account_name || 'Roddy Technologies'"></span>
+                                            <span class="font-bold text-zinc-900 dark:text-white" x-text="bankDetails?.account_name || 'Roddy Technologies'"></span>
                                         </div>
                                         <div class="flex justify-between items-center text-xs border-t border-zinc-200 pt-3">
                                             <span class="text-zinc-500 font-medium">Amount</span>
@@ -769,8 +863,8 @@
                             <!-- If Crypto details -->
                             <template x-if="session?.payment_payload?.qr_payload || session?.payment_payload?.pay_address">
                                 <div>
-                                    <h3 class="text-sm font-bold text-zinc-900 text-center mb-2">Crypto Payment Details</h3>
-                                    <p class="text-xs text-zinc-600 text-center mb-4">Send the exact amount of cryptocurrency shown to the address below:</p>
+                                    <h3 class="text-sm font-bold text-zinc-900 dark:text-white text-center mb-2">Crypto Payment Details</h3>
+                                    <p class="text-xs text-zinc-600 dark:text-zinc-400 text-center mb-4">Send the exact amount of cryptocurrency shown to the address below:</p>
 
                                     <div class="flex flex-col items-center gap-4 bg-zinc-50 p-4 border border-zinc-200 rounded-[10px] shadow-inner">
                                         <!-- QR Code -->
@@ -795,8 +889,8 @@
                                             <div>
                                                 <span class="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider block mb-1">Amount to Send</span>
                                                 <div class="flex items-center gap-2">
-                                                    <span class="font-extrabold text-zinc-900 text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded-[10px] border border-zinc-150" x-text="session?.payment_payload?.pay_amount"></span>
-                                                    <span class="font-bold text-zinc-600 uppercase" x-text="session?.payment_payload?.pay_currency"></span>
+                                                    <span class="font-extrabold text-zinc-900 dark:text-white text-sm tracking-wider tabular-nums bg-white px-2 py-1 rounded-[10px] border border-zinc-150" x-text="session?.payment_payload?.pay_amount"></span>
+                                                    <span class="font-bold text-zinc-600 dark:text-zinc-400 uppercase" x-text="session?.payment_payload?.pay_currency"></span>
                                                     <button type="button" @click="copyToClipboard(session?.payment_payload?.pay_amount, 'amount_crypto')" class="text-blue-600 hover:text-blue-800 text-[10px] font-bold bg-blue-50 px-2 py-1 rounded-[10px] transition-all">
                                                         <span x-show="!copiedStates['amount_crypto']">Copy</span>
                                                         <span x-show="copiedStates['amount_crypto']" class="text-emerald-600 font-bold">Copied!</span>
@@ -830,8 +924,8 @@
 
                         <!-- Mobile money push prompt -->
                         <div x-show="paymentState === 'awaiting_confirmation'">
-                            <h3 class="text-sm font-bold text-zinc-900 mb-2">Authorize on Phone</h3>
-                            <p class="text-xs text-zinc-600 mb-4" x-text="actionMessage"></p>
+                            <h3 class="text-sm font-bold text-zinc-900 dark:text-white mb-2">Authorize on Phone</h3>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-4" x-text="actionMessage"></p>
 
                             <div class="flex flex-col items-center py-6 text-center">
                                 <span class="flex h-16 w-16 items-center justify-center rounded-[10px] bg-blue-50 ring-8 ring-blue-100/50 mb-5">
@@ -853,29 +947,22 @@
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                             </svg>
-                            <p class="mt-4 text-sm font-bold text-zinc-900" x-text="method === 'apple_pay' ? 'Authorizing with Apple Pay...' : 'Processing transaction...'"></p>
+                            <p class="mt-4 text-sm font-bold text-zinc-900 dark:text-white" x-text="method === 'apple_pay' ? 'Authorizing with Apple Pay...' : 'Processing transaction...'"></p>
                             <p class="mt-1 text-xs text-zinc-500">Please do not close this window.</p>
                         </div>
 
-                        <!-- Success state -->
+                        <!-- Success state: same animated tick as the order-complete
+                             page so every payment method celebrates identically. -->
                         <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
-                                <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                </svg>
-                            </span>
+                            <x-success-tick />
                             <h3 class="mt-4 text-base font-bold text-zinc-950">Payment Complete!</h3>
-                            <p class="mt-1.5 text-xs text-zinc-600 font-medium">Your order is confirmed. Redirecting now...</p>
+                            <p class="mt-1.5 text-xs text-zinc-600 dark:text-zinc-400 font-medium">Your order is confirmed. Redirecting now...</p>
                         </div>
 
-                        <!-- Error state -->
+                        <!-- Error state: animated red cross, the tick's counterpart. -->
                         <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
-                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </span>
-                            <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
+                            <x-error-cross />
+                            <h3 class="mt-4 text-sm font-bold text-zinc-900 dark:text-white">Payment Failed</h3>
                             <p class="mt-1.5 text-xs text-red-600 px-4" x-html="errorMessage"></p>
                             
                             <button type="button" @click="closeModal()" class="mt-6 rounded-[10px] bg-zinc-100 px-5 py-2.5 text-xs font-semibold text-zinc-800 hover:bg-zinc-200">
@@ -889,10 +976,9 @@
         </div>
     </div>
     </div>
-    </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin) {
+        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin, paymentFees) {
             return {
                 method: 'card',
                 crypto: '',
@@ -901,6 +987,57 @@
                 walletBalances: walletBalances || {},
                 isLoggedIn: isLoggedIn || false,
                 hasTransactionPin: hasTransactionPin || false,
+                paymentFees: paymentFees || { fee_free: [], methods: {}, default: { transaction: 0, international: 0 } },
+
+                // Coupon live-preview state. couponApplied holds the validated
+                // code once Apply succeeds; the discount is shown on the total
+                // and the same code submits with the form for server re-apply.
+                couponCode: '',
+                couponApplied: '',
+                couponDiscountUsd: 0,
+                couponDiscountDisplay: 0,
+                couponError: '',
+                couponLoading: false,
+
+                async applyCoupon() {
+                    const code = (this.couponCode || '').trim();
+                    if (! code || this.couponLoading) { return; }
+                    this.couponLoading = true;
+                    this.couponError = '';
+                    try {
+                        const res = await fetch('/coupon/preview', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ code, currency: this.$store.cart.currency || 'USD' }),
+                        });
+                        const json = await res.json();
+                        if (json.valid) {
+                            this.couponApplied = json.code;
+                            this.couponDiscountUsd = Number(json.discount_usd) || 0;
+                            this.couponDiscountDisplay = Number(json.discount_display) || 0;
+                            this.couponError = '';
+                        } else {
+                            this.removeCoupon();
+                            this.couponError = json.message || 'This coupon could not be applied.';
+                        }
+                    } catch (e) {
+                        this.removeCoupon();
+                        this.couponError = 'Could not check that coupon. Please try again.';
+                    } finally {
+                        this.couponLoading = false;
+                    }
+                },
+
+                removeCoupon() {
+                    this.couponApplied = '';
+                    this.couponDiscountUsd = 0;
+                    this.couponDiscountDisplay = 0;
+                },
 
                 // Rcoin redemption state — three values:
                 //   ''     = off (default)
@@ -1124,8 +1261,29 @@
                     return this.cryptoRates[this.crypto] || null;
                 },
 
+                // Estimated gateway processing fee for the selected method
+                // (config/payment_fees.php). The provider charges the customer
+                // this on top of the order amount, so we disclose it before
+                // payment. The international surcharge applies when the
+                // checkout currency is not NGN (the account's home market).
+                processingFee() {
+                    const method = this.method;
+                    if ((this.paymentFees.fee_free || []).includes(method)) {
+                        return 0;
+                    }
+                    const amount = Number(this.$store.cart.subtotal || 0);
+                    if (! (amount > 0)) {
+                        return 0;
+                    }
+                    const rates = (this.paymentFees.methods || {})[method] || this.paymentFees.default || { transaction: 0, international: 0 };
+                    const international = (this.$store.cart.currency || 'NGN') !== 'NGN';
+                    const pct = Number(rates.transaction || 0) + (international ? Number(rates.international || 0) : 0);
+
+                    return Math.round(amount * pct) / 100;
+                },
+
                 totalLabel() {
-                    const usd = Number(this.$store.cart.subtotalUsd || 0);
+                    const usd = Math.max(0, Number(this.$store.cart.subtotalUsd || 0) - Number(this.couponDiscountUsd || 0));
                     if (this.method === 'crypto') {
                         const coin = this.coinMeta();
                         if (! coin) {
@@ -1133,7 +1291,8 @@
                         }
                         return (usd * coin.perUsd).toFixed(coin.decimals) + ' ' + coin.code;
                     }
-                    return this.$store.cart.pay(this.$store.cart.subtotal);
+                    const display = Math.max(0, Number(this.$store.cart.subtotal || 0) + this.processingFee() - Number(this.couponDiscountDisplay || 0));
+                    return this.$store.cart.pay(display);
                 },
 
                 points() {

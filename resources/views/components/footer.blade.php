@@ -19,7 +19,7 @@
                 </a>
 
                 <p class="mt-6 max-w-sm text-base leading-relaxed text-zinc-600">
-                    Your digital world, all in one place. Gift cards, eSIMs, top-ups, flights and more. Instant, secure, worldwide.
+                    Making global digital services accessible to everyone, and direct brand shopping with zero payment failure while keeping your connected with family and friends world wide
                 </p>
 
                 {{-- Social links --}}
@@ -103,7 +103,6 @@
                     <li><a href="{{ route('shop.about') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">About us</a></li>
                     <li><a href="{{ route('shop.blog') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Blog</a></li>
                     <li><a href="{{ route('shop.reviews') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Reviews</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Careers</a></li>
                     <li><a href="{{ route('shop.press') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Press &amp; Media</a></li>
                     <li>
                         <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center gap-2 text-zinc-600 transition-colors hover:text-zinc-900">

@@ -10,6 +10,7 @@ use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Providers\WalletPaymentProvider;
 use App\Domain\Shared\Enums\Currency;
+use App\Domain\Wallet\Services\TransactionPinService;
 use App\Jobs\FulfillOrderItemJob;
 use App\Jobs\VerifyPaymentJob;
 use App\Models\Cart;
@@ -114,7 +115,7 @@ class CommerceOrchestrationTest extends TestCase
     {
         Queue::fake([FulfillOrderItemJob::class]);
 
-        app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($this->user, '5283');
+        app(TransactionPinService::class)->setupPin($this->user, '5283');
 
         // Setup Wallet with sufficient balance
         $wallet = Wallet::create([
@@ -144,7 +145,7 @@ class CommerceOrchestrationTest extends TestCase
         $session = $order->paymentAttempts->first()->paymentSession;
         $this->actingAs($this->user)->postJson(route('api.payment-sessions.pay', $session->id), [
             'method' => 'wallet',
-            'details' => ['auth_token' => $token]
+            'details' => ['auth_token' => $token],
         ])->assertOk();
 
         // Verify order persistence
@@ -154,8 +155,8 @@ class CommerceOrchestrationTest extends TestCase
 
         // Verify Wallet balance locks
         $wallet->refresh();
-        $this->assertEquals(100.00, (float)$wallet->balance);
-        $this->assertEquals(11.00, (float)$wallet->locked_balance);
+        $this->assertEquals(100.00, (float) $wallet->balance);
+        $this->assertEquals(11.00, (float) $wallet->locked_balance);
 
         // Verify Cart deactivation now that payment is confirmed
         $cart = Cart::find($this->cart->id);
@@ -176,7 +177,7 @@ class CommerceOrchestrationTest extends TestCase
             'is_active' => true,
         ]);
 
-        app(\App\Domain\Wallet\Services\TransactionPinService::class)->setupPin($this->user, '5283');
+        app(TransactionPinService::class)->setupPin($this->user, '5283');
 
         // Place order directly via service
         $order = app(CheckoutService::class)->placeOrder(
@@ -187,8 +188,8 @@ class CommerceOrchestrationTest extends TestCase
         );
 
         $attempt = $order->paymentAttempts->first();
-        $token = app(\App\Domain\Wallet\Services\TransactionPinService::class)->verifyPin($this->user, '5283');
-        app(\App\Domain\Payment\Providers\WalletPaymentProvider::class)->authorizeTransaction($attempt, $token);
+        $token = app(TransactionPinService::class)->verifyPin($this->user, '5283');
+        app(WalletPaymentProvider::class)->authorizeTransaction($attempt, $token);
 
         $orderItem = $order->items->first();
         $this->assertEquals(FulfillmentStatus::NotStarted, $orderItem->fulfillment_status);

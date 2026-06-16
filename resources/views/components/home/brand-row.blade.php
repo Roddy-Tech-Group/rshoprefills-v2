@@ -51,9 +51,22 @@
             const t    = this.$refs.track;
             const list = this.$refs.list;
             if (! t || ! list) { return; }
-            const padLeft = Math.round(this.$el.getBoundingClientRect().left);
-            list.style.paddingLeft   = padLeft + 'px';
-            t.style.scrollPaddingLeft = padLeft + 'px';
+            // rect.left can read ~0 mid entrance-animation or when the page
+            // carries a few px of horizontal overflow - applying that pinned
+            // the first card to the screen edge and made the row's left edge
+            // jump between re-measures. Clamp to the content column's static
+            // padding (matches the heading) so alignment can never collapse,
+            // and re-settle once after animations finish.
+            const minPad  = window.innerWidth >= 1024 ? 32 : (window.innerWidth >= 640 ? 24 : 16);
+            const apply = () => {
+                const padLeft = Math.max(minPad, Math.round(this.$el.getBoundingClientRect().left));
+                if (list.style.paddingLeft !== padLeft + 'px') {
+                    list.style.paddingLeft    = padLeft + 'px';
+                    t.style.scrollPaddingLeft = padLeft + 'px';
+                }
+            };
+            apply();
+            setTimeout(apply, 700);
             const cardW = window.innerWidth >= 1024 ? 280 : window.innerWidth >= 640 ? 200 : 160;
             list.style.setProperty('--card-w', cardW + 'px');
             this.$nextTick(() => this.refresh());
@@ -74,8 +87,7 @@
             t.scrollBy({ left: dir * step, behavior: 'smooth' });
         },
     }"
-    x-on:livewire:navigate.window="navigating = true"
-    x-on:livewire:navigated.window="navigating = false; $nextTick(() => setup())"
+    x-on:livewire:navigated.window="$nextTick(() => setup())"
     x-init="$nextTick(() => setup())"
     class="relative"
 >
@@ -89,7 +101,7 @@
 
         <div class="flex shrink-0 items-center gap-2">
             @if ($viewAllVariant === 'plus')
-                <a href="{{ $viewAllHref }}" wire:navigate aria-label="See more {{ $title }}" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                <a href="{{ $viewAllHref }}" wire:navigate aria-label="See more {{ $title }}" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] text-blue-700 border border-zinc-200 transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                     </svg>
@@ -173,15 +185,6 @@
                 </ul>
             @endif
 
-            {{-- Skeleton overlay during page navigation --}}
-            <ul x-show="navigating" x-cloak class="skeleton-stagger-fast pointer-events-none absolute inset-0 z-10 mt-12 flex w-max gap-4 bg-transparent sm:grid sm:w-full sm:grid-cols-3 sm:gap-5 {{ $gridCols }}" aria-hidden="true">
-                @for ($i = 0; $i < (int) $cols; $i++)
-                    <li class="rounded-[10px] bg-white p-3 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100" style="--i: {{ $i }}">
-                        <x-skeleton class="aspect-[16/10] w-full rounded-[15px]" />
-                        <x-skeleton class="mt-3 h-4 w-3/4" />
-                    </li>
-                @endfor
-            </ul>
         </div>
     @endif
 </section>

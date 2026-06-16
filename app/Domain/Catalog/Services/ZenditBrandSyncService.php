@@ -48,6 +48,11 @@ class ZenditBrandSyncService
 
         Log::info('ZenditBrandSync: fetching brand assets', ['unique_brands' => $uniqueBrands->count()]);
 
+        // Brand -> redemptionInstructions index: a per-country list of links that
+        // carry the deliveryType + language the redemption endpoint requires.
+        // Captured from the single brand fetch and reused by Pass 2.
+        $redemptionIndex = [];
+
         foreach ($uniqueBrands as $brandKey) {
             $brand = $this->provider->fetchBrand($brandKey);
 
@@ -66,6 +71,10 @@ class ZenditBrandSyncService
                     'description' => $brand['description'] ?? null,
                 ], fn ($v) => $v !== null && $v !== ''));
 
+            $redemptionIndex[$brandKey] = is_array($brand['redemptionInstructions'] ?? null)
+                ? $brand['redemptionInstructions']
+                : [];
+
             $brandsSynced++;
         }
 
@@ -82,7 +91,22 @@ class ZenditBrandSyncService
         Log::info('ZenditBrandSync: fetching redemption instructions', ['pairs' => $brandCountryPairs->count()]);
 
         foreach ($brandCountryPairs as $pair) {
-            $redemption = $this->provider->fetchRedemptionInstructions($pair->brand_key, $pair->country_code);
+            // The redemption endpoint needs the deliveryType + language from the
+            // brand's index entry for this country (an uppercase-country-only
+            // call returns []).
+            $entry = collect($redemptionIndex[$pair->brand_key] ?? [])
+                ->first(fn ($e) => is_array($e) && strcasecmp((string) ($e['country'] ?? ''), (string) $pair->country_code) === 0);
+
+            if (! $entry) {
+                continue;
+            }
+
+            $redemption = $this->provider->fetchRedemptionInstructions(
+                $pair->brand_key,
+                $pair->country_code,
+                $entry['deliveryType'] ?? null,
+                $entry['language'] ?? 'en',
+            );
 
             if (empty($redemption)) {
                 continue;

@@ -1,8 +1,13 @@
 <?php
 
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Shared\Enums\FundingStatus;
 use App\Domain\Shared\Enums\WalletTransactionType;
+use App\Models\PaymentAttempt;
+use App\Models\Product;
 use App\Models\WalletFunding;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -82,6 +87,25 @@ class extends Component {
                 }
             });
 
+            // Gateway order payments (card / mobile money / crypto) - part of
+            // the on-screen unified feed, so the export carries them too.
+            if ($filter !== 'credit') {
+                $this->orderPaymentsQuery($search)->chunkById(500, function ($attempts) use ($out) {
+                    foreach ($attempts as $attempt) {
+                        fputcsv($out, [
+                            ($attempt->confirmed_at ?? $attempt->created_at)->format('Y-m-d H:i:s'),
+                            $attempt->order?->order_number ?? $attempt->gateway_reference,
+                            'Debit',
+                            'Order payment',
+                            $attempt->customerMethodLabel(),
+                            number_format((float) $attempt->amount, 2, '.', ''),
+                            $attempt->currency,
+                            '',
+                        ]);
+                    }
+                });
+            }
+
             fclose($out);
         }, $filename, [
             'Content-Type'  => 'text/csv',
@@ -89,11 +113,68 @@ class extends Component {
         ]);
     }
 
+    /**
+     * Paid gateway attempts on ORDERS (card / mobile money / crypto). These never
+     * touch a wallet, so without this source a card-paying customer's Transactions
+     * page only ever showed their Rcoin credits. Wallet-gateway attempts are
+     * excluded - their wallet debit is already in the ledger.
+     */
+    private function orderPaymentsQuery(string $term)
+    {
+        $query = PaymentAttempt::query()
+            ->where('user_id', Auth::id())
+            ->whereNotNull('order_id')
+            ->where('gateway', '!=', 'wallet')
+            ->whereIn('payment_status', [PaymentStatus::Paid, PaymentStatus::Refunded, PaymentStatus::PartiallyRefunded])
+            ->with('order:id,order_number')
+            ->latest();
+
+        if ($term !== '') {
+            $query->where(function ($q) use ($term) {
+                $q->where('gateway_reference', 'like', "%{$term}%")
+                    ->orWhereHas('order', fn ($o) => $o->where('order_number', 'like', "%{$term}%"));
+            });
+        }
+
+        return $query;
+    }
+
+    /** @return object Uniform row the blade renders regardless of source. */
+    private function paymentRow(PaymentAttempt $attempt): object
+    {
+        return (object) [
+            'key' => 'pay-'.$attempt->id,
+            'is_credit' => false,
+            'title' => $attempt->customerMethodLabel(),
+            'sub' => $attempt->order?->order_number ? 'Order '.$attempt->order->order_number : 'Order payment',
+            'amount' => (float) $attempt->amount,
+            'symbol' => Product::currencySymbol($attempt->currency),
+            'date' => $attempt->confirmed_at ?? $attempt->created_at,
+            'balance_after' => null,
+        ];
+    }
+
+    private function walletRow(\App\Models\WalletTransaction $txn): object
+    {
+        return (object) [
+            'key' => 'txn-'.$txn->id,
+            'is_credit' => $txn->type === WalletTransactionType::Credit,
+            'title' => $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction'),
+            'sub' => $txn->transaction_category?->label() ?? $txn->type->label(),
+            'amount' => (float) $txn->amount,
+            'symbol' => $txn->currency?->symbol() ?? '',
+            'date' => $txn->created_at,
+            'balance_after' => $txn->balance_after !== null ? (float) $txn->balance_after : null,
+        ];
+    }
+
     public function with(): array
     {
+        $term = trim($this->search);
+
         $query = Auth::user()->walletTransactions()->latest();
 
-        if (($term = trim($this->search)) !== '') {
+        if ($term !== '') {
             $query->where(function ($q) use ($term) {
                 $q->where('reference', 'like', "%{$term}%")
                     ->orWhere('description', 'like', "%{$term}%");
@@ -106,6 +187,28 @@ class extends Component {
             $query->where('type', WalletTransactionType::Debit);
         }
 
+        // Unified feed: wallet ledger + paid order payments, newest first. Both
+        // sources are capped so a pathological account can't blow memory; 500
+        // each is years of activity for a normal customer.
+        $rows = $query->limit(500)->get()->map(fn ($txn) => $this->walletRow($txn));
+
+        if ($this->filter !== 'credit') {
+            $rows = $rows->concat(
+                $this->orderPaymentsQuery($term)->limit(500)->get()->map(fn ($a) => $this->paymentRow($a))
+            );
+        }
+
+        $rows = $rows->sortByDesc('date')->values();
+
+        $page = Paginator::resolveCurrentPage();
+        $transactions = new LengthAwarePaginator(
+            $rows->forPage($page, 12)->values(),
+            $rows->count(),
+            12,
+            $page,
+            ['path' => Paginator::resolveCurrentPath()],
+        );
+
         // Non-completed funding attempts. A completed deposit already appears in
         // the ledger below as a credit, so here we surface only the in-flight and
         // failed ones so the customer can see a deposit is still pending or failed.
@@ -116,7 +219,7 @@ class extends Component {
             ->get();
 
         return [
-            'transactions' => $query->paginate(12),
+            'transactions' => $transactions,
             'recentDeposits' => $recentDeposits,
         ];
     }
@@ -146,7 +249,7 @@ class extends Component {
                 type="text"
                 wire:model.live.debounce.300ms="search"
                 placeholder="Search by reference or description"
-                class="w-full rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                class="w-full rounded-[10px] border-2 border-zinc-100 bg-[#eff6ff] px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:text-white"
             >
             <div wire:loading wire:target="search" class="absolute right-3 top-1/2 -translate-y-1/2">
                 <svg class="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -196,7 +299,7 @@ class extends Component {
     @if ($recentDeposits->isNotEmpty())
         <div class="flex flex-col gap-2">
             <p class="text-sm font-bold text-zinc-900">Recent deposits</p>
-            <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+            <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
                 @foreach ($recentDeposits as $deposit)
                     @php [$depLabel, $depClass] = $depositStatusUi[$deposit->status->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30']; @endphp
                     <div class="flex items-center gap-3 px-4 py-3" wire:key="dep-{{ $deposit->id }}">
@@ -225,7 +328,7 @@ class extends Component {
     <div
         wire:loading.flex
         wire:target="search, setFilter, gotoPage, nextPage, previousPage"
-        class="skeleton-stagger-fast flex-col divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white"
+        class="skeleton-stagger-fast flex-col divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none"
     >
         @for ($i = 0; $i < 6; $i++)
             <x-skeletons.table-row style="--i: {{ $i }}" />
@@ -235,42 +338,37 @@ class extends Component {
     {{-- Ledger --}}
     <div wire:loading.remove wire:target="search, setFilter, gotoPage, nextPage, previousPage" class="flex flex-col gap-5">
     @if ($transactions->isNotEmpty())
-        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             @foreach ($transactions as $txn)
-                @php
-                    $isCredit = $txn->type === WalletTransactionType::Credit;
-                    $sym = $txn->currency?->symbol() ?? '';
-                @endphp
-                <div class="flex items-center gap-3 px-4 py-3.5" wire:key="txn-{{ $txn->id }}">
-                    {{-- Direction icon — money in = arrow down, money out = arrow up. --}}
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            @if ($isCredit)
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
-                            @else
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l6 6m-6-6l-6 6"/>
-                            @endif
-                        </svg>
-                    </span>
+                <div class="flex items-center gap-3 px-4 py-3.5" wire:key="{{ $txn->key }}">
+                    {{-- Animated direction icon - green incoming arrow for
+                         money in, red outgoing for money out. --}}
+                    @if ($txn->is_credit)
+                        <x-icons.txn-credit class="h-10 w-10" />
+                    @else
+                        <x-icons.txn-debit class="h-10 w-10" />
+                    @endif
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-bold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
+                        <p class="truncate text-sm font-bold text-zinc-900">{{ $txn->title }}</p>
                         <p class="truncate text-xs text-zinc-500">
-                            {{ $txn->transaction_category?->label() ?? $txn->type->label() }}
-                            &middot; {{ $txn->created_at->format('d M Y, H:i') }}
+                            {{ $txn->sub }}
+                            &middot; {{ $txn->date->format('d M Y, H:i') }}
                         </p>
                     </div>
                     <div class="flex shrink-0 flex-col items-end gap-0.5">
-                        <p class="text-sm font-bold {{ $isCredit ? 'text-emerald-600' : 'text-zinc-900' }}">
-                            {{ $isCredit ? '+' : '-' }}{{ $sym }}{{ number_format((float) $txn->amount, 2) }}
+                        <p class="text-sm font-bold {{ $txn->is_credit ? 'text-emerald-600' : 'text-zinc-900' }}">
+                            {{ $txn->is_credit ? '+' : '-' }}{{ $txn->symbol }}{{ number_format($txn->amount, 2) }}
                         </p>
-                        <p class="text-[11px] text-zinc-400">Balance {{ $sym }}{{ number_format((float) $txn->balance_after, 2) }}</p>
+                        @if ($txn->balance_after !== null)
+                            <p class="text-[11px] text-zinc-400">Balance {{ $txn->symbol }}{{ number_format($txn->balance_after, 2) }}</p>
+                        @endif
                     </div>
                 </div>
             @endforeach
         </div>
     @else
         {{-- Empty state --}}
-        <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+        <div class="dash-shimmer rounded-[10px] bg-[#eff6ff] px-6 py-16 text-center border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600">
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/>

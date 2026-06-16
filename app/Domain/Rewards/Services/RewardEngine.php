@@ -53,32 +53,52 @@ class RewardEngine
     }
 
     /**
-     * Award buyer cashback for their purchase.
+     * The Rcoin cashback an order earns (before velocity caps): settlement
+     * USD x cashback percentage, through the buyer's multiplier. Public so
+     * the delivery email can print the same figure the credit will use -
+     * there is no separate "you earned Rcoin" email.
+     */
+    public function cashbackPreviewFor(Order $order): int
+    {
+        if (! Setting::get('rcoin_enabled', true)) {
+            return 0;
+        }
+
+        $percentage = (float) Setting::get('cashback_percentage', 1.0);
+        if ($percentage <= 0) {
+            return 0;
+        }
+
+        // Reward is based on total USD spent. total_amount is stored in the
+        // customer's display currency (4000 XAF, 12000 NGN, ...), so it must
+        // never feed the Rcoin formula directly - usdTotal() resolves the true
+        // settlement USD from the order's rate snapshot.
+        $rcoinAmount = $this->usdToRcoin($order->usdTotal() * ($percentage / 100));
+
+        // Per-user multiplier - power users / influencers earn proportionally
+        // more for the same activity. Defaults to 1.00 (no change) for the
+        // vast majority of accounts. Admin edits this from the customer page.
+        $multiplier = (float) ($order->user?->rcoin_multiplier ?? 1.00);
+        if ($multiplier > 0 && $multiplier !== 1.0) {
+            $rcoinAmount = (int) floor($rcoinAmount * $multiplier);
+        }
+
+        return max(0, $rcoinAmount);
+    }
+
+    /**
+     * Award buyer cashback for their purchase. The figure is surfaced on the
+     * order-delivery email instead of a dedicated cashback email.
      */
     private function awardCashback(Order $order): void
     {
-        $percentage = (float) Setting::get('cashback_percentage', 1.0);
-        if ($percentage <= 0) {
-            return;
-        }
-
-        // Calculate reward based on total USD spent
-        $usdAmount = (float) $order->total_amount;
-        $rcoinAmount = $this->usdToRcoin($usdAmount * ($percentage / 100));
+        $rcoinAmount = $this->cashbackPreviewFor($order);
 
         if ($rcoinAmount <= 0) {
             return;
         }
 
         $user = $order->user;
-
-        // Per-user multiplier - power users / influencers earn proportionally
-        // more for the same activity. Defaults to 1.00 (no change) for the
-        // vast majority of accounts. Admin edits this from the customer page.
-        $multiplier = (float) ($user->rcoin_multiplier ?? 1.00);
-        if ($multiplier > 0 && $multiplier !== 1.0) {
-            $rcoinAmount = (int) floor($rcoinAmount * $multiplier);
-        }
 
         // Enforce daily/monthly max limits
         if (! $this->canEarnRcoin($user, $rcoinAmount)) {
@@ -98,26 +118,9 @@ class RewardEngine
             metadata: [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
-                'cashback_percentage' => $percentage,
+                'cashback_percentage' => (float) Setting::get('cashback_percentage', 1.0),
             ]
         );
-
-        // Notify the buyer their cashback landed. Queued so a slow mailer
-        // never blocks the credit. Best-effort - swallow exceptions so a
-        // mail-server outage doesn't roll back the wallet credit.
-        try {
-            Mail::to($user->email)->queue(
-                new RcoinEarnedMail(
-                    recipient: $user,
-                    rcoinAmount: $rcoinAmount,
-                    newBalance: (int) $wallet->refresh()->balance,
-                    kind: 'cashback',
-                    orderNumber: $order->order_number,
-                )
-            );
-        } catch (\Throwable $e) {
-            report($e);
-        }
     }
 
     /**
@@ -163,8 +166,9 @@ class RewardEngine
 
         $referrer = $referral->referrer;
 
-        // Calculate referral reward
-        $usdAmount = (float) $order->total_amount;
+        // Calculate referral reward from the true settlement USD (total_amount
+        // is the display-currency figure - see awardCashback).
+        $usdAmount = $order->usdTotal();
         $rcoinAmount = $this->usdToRcoin($usdAmount * ($percentage / 100));
 
         if ($rcoinAmount <= 0) {
@@ -300,7 +304,7 @@ class RewardEngine
      */
     public function usdToRcoin(float $usdAmount): int
     {
-        $rate = (float) Setting::get('rcoin_usd_rate', 0.01);
+        $rate = (float) Setting::rcoinUsdRate();
         if ($rate <= 0) {
             return 0;
         }
@@ -313,7 +317,7 @@ class RewardEngine
      */
     public function rcoinToUsd(int $rcoinAmount): float
     {
-        $rate = (float) Setting::get('rcoin_usd_rate', 0.01);
+        $rate = (float) Setting::rcoinUsdRate();
 
         return round($rcoinAmount * $rate, 4);
     }

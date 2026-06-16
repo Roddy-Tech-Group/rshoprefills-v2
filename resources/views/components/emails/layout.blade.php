@@ -1,6 +1,10 @@
 @props([
     'title' => 'RshopRefills',
     'preheader' => null,
+    // The Illuminate\Mail\Message for the send in progress. Blade components
+    // do not inherit the parent view's $message variable, so templates pass
+    // it in (:mail-message="$message ?? null") to enable CID inline images.
+    'mailMessage' => null,
 ])
 {{--
     Shared branded email shell. Table-based + inline styles for broad email-client
@@ -42,10 +46,29 @@
                     {{-- Brand accent bar --}}
                     <tr><td style="height:5px; background:#2563eb; line-height:5px; font-size:5px;">&nbsp;</td></tr>
 
-                    {{-- Logo header --}}
+                    {{-- Logo header. Flattened-on-white PNG, NOT the transparent
+                         webp the site uses: email image proxies (Gmail) convert
+                         webp to jpeg, which has no alpha — the transparency
+                         renders as a solid black box behind the logo. Embedded
+                         inline (CID) on real sends because remote fetches
+                         through those proxies are unreliable; $message is only
+                         set while actually sending, so render()/previews fall
+                         back to the public URL. --}}
+                    @php
+                        // ?v= busts email-client image-proxy caches that may
+                        // still hold a 404 from before the logo file shipped.
+                        $emailLogoSrc = asset('assets/email-logo.png').'?v=2';
+                        if ($mailMessage instanceof \Illuminate\Mail\Message && is_file(public_path('assets/email-logo.png'))) {
+                            try {
+                                $emailLogoSrc = $mailMessage->embed(public_path('assets/email-logo.png'));
+                            } catch (\Throwable $e) {
+                                // Keep the URL; a missing logo must never block the email.
+                            }
+                        }
+                    @endphp
                     <tr>
                         <td align="center" class="em-pad" style="padding:32px 40px 4px;">
-                            <img src="{{ asset('assets/Rshoprefillslogo.webp') }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block;">
+                            <img src="{{ $emailLogoSrc }}" alt="RshopRefills" width="190" style="width:190px; max-width:62%; height:auto; display:block; background:#ffffff;">
                         </td>
                     </tr>
 
@@ -68,7 +91,7 @@
                                 <a href="{{ \App\Models\SiteSetting::get('social.instagram', 'https://instagram.com/rshoprefills') }}" style="color:#2563eb; text-decoration:none; margin:0 7px;">Instagram</a>
                             </p>
                             <p style="margin:0 0 6px; color:#a1a1aa;">RshopRefills, your digital marketplace for gift cards, eSIMs, top-ups and bills.</p>
-                            <p style="margin:0 0 6px;">Need a hand? <a href="https://wa.me/237676700173" style="color:#2563eb; text-decoration:none;">Chat with support</a></p>
+                            <p style="margin:0 0 6px;">Need a hand? <a href="https://wa.me/19402386229" style="color:#2563eb; text-decoration:none;">Chat with support</a></p>
                             <p style="margin:0; color:#a1a1aa;">&copy; 2026 RshopRefills. All rights reserved.</p>
                         </td>
                     </tr>

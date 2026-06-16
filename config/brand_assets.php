@@ -34,6 +34,7 @@ return [
         // appears in — e.g. MTN across CM/NG/GH, not just Cameroon.
         'MTN' => 'mtn.webp',
         'Orange' => 'orange.webp',
+        'Camtel' => 'camtel.png',
         'Att' => 'at&t-prepaid_2_300x190.webp',
         'Boost' => 'boost-mobile_300x190.webp',
         'Cricket' => 'cricket-wireless_300x190.webp',

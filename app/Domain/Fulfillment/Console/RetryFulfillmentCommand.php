@@ -3,7 +3,9 @@
 namespace App\Domain\Fulfillment\Console;
 
 use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Domain\Fulfillment\Services\FulfillmentProviderFactory;
 use App\Jobs\FulfillOrderItemJob;
+use App\Jobs\PollPendingFulfillmentJob;
 use App\Models\OrderItem;
 use Illuminate\Console\Command;
 
@@ -13,7 +15,7 @@ class RetryFulfillmentCommand extends Command
 
     protected $description = 'Manually retry fulfillment for a failed order item';
 
-    public function handle()
+    public function handle(FulfillmentProviderFactory $providerFactory): void
     {
         $itemId = $this->argument('item');
         $allFailed = $this->option('all-failed');
@@ -23,7 +25,7 @@ class RetryFulfillmentCommand extends Command
             $this->info("Found {$items->count()} failed items. Re-dispatching...");
 
             foreach ($items as $item) {
-                FulfillOrderItemJob::dispatch($item);
+                $this->retryItem($item, $providerFactory);
             }
 
             $this->info('Done.');
@@ -51,8 +53,46 @@ class RetryFulfillmentCommand extends Command
             return;
         }
 
-        $this->info("Re-dispatching FulfillOrderItemJob for item {$itemId}...");
+        $this->retryItem($item, $providerFactory);
+    }
+
+    /**
+     * Retry one item without risking a double purchase. When the provider
+     * already holds a transaction for this item (a real reference exists),
+     * ask it for the truth first: anything other than a terminal failure is
+     * routed through the poller, which finalizes delivery without buying
+     * again. Only a confirmed-dead transaction gets a fresh purchase - with
+     * a bumped retry sequence, because Zendit permanently burns the
+     * transaction ID of a failed purchase.
+     */
+    private function retryItem(OrderItem $item, FulfillmentProviderFactory $providerFactory): void
+    {
+        $reference = (string) ($item->fulfillment_reference ?? '');
+
+        if ($reference !== '' && ! str_starts_with($reference, 'PENDING-')) {
+            try {
+                $provider = $providerFactory->getProvider($item->provider_name);
+                $result = $provider->verifyStatus($item);
+            } catch (\InvalidArgumentException) {
+                $result = null;
+            }
+
+            if ($result !== null && $result['status'] !== FulfillmentStatus::Failed) {
+                $item->fulfillment_status = FulfillmentStatus::Processing;
+                $item->save();
+
+                PollPendingFulfillmentJob::dispatch($item);
+                $this->info("Item {$item->id}: provider reports the original transaction is still alive - polling it instead of re-buying.");
+
+                return;
+            }
+        }
+
+        $retrySequence = (int) data_get($item->metadata, 'fulfillment_retry', 0) + 1;
+        $item->metadata = array_merge($item->metadata ?? [], ['fulfillment_retry' => $retrySequence]);
+        $item->save();
+
         FulfillOrderItemJob::dispatch($item);
-        $this->info('Dispatched.');
+        $this->info("Item {$item->id}: re-dispatched as attempt {$retrySequence}.");
     }
 }

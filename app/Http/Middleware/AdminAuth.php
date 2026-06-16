@@ -32,6 +32,20 @@ class AdminAuth
                 ->withErrors(['email' => __('Your admin account has been deactivated.')]);
         }
 
+        // Role authorization: Moderators and Admins are scoped to a subset of
+        // the panel (see AdminRole::canAccessAdminRoute). The dashboard, login
+        // and logout are always reachable so a denied admin still lands
+        // somewhere sane.
+        $routeName = $request->route()?->getName() ?? '';
+        if ($routeName !== '' && ! $admin->canAccessAdminRoute($routeName)) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                abort(403, 'Your role does not have access to this area.');
+            }
+
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'You do not have access to that section.');
+        }
+
         return $next($request);
     }
 }

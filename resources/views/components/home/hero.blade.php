@@ -219,7 +219,7 @@
         </style>
 
         {{-- Floating expandable chip bar (single row, one chip expanded at a time) --}}
-        <div data-anim="hero-banner" class="mx-auto mt-14 w-full max-w-5xl">
+        <div data-anim="hero-banner" class="mx-auto mt-14 w-full max-w-5xl min-h-[84px] sm:min-h-[100px]">
             <div
                 x-data="{
                     total: {{ count($heroChips) }},
@@ -254,6 +254,7 @@
                     }
                 }"
                 x-init="cycle()"
+                x-cloak
                 @mouseenter="paused = true"
                 @mouseleave="paused = false"
                 class="flex flex-nowrap items-center justify-center gap-5"

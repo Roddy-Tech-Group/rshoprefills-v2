@@ -14,7 +14,7 @@ class MoneyTest extends TestCase
         $this->assertSame('$25.00', Money::format(25, 'USD'));
         $this->assertSame('£12.50', Money::format(12.5, 'GBP'));
         $this->assertSame('₵100.00', Money::format(100, 'GHS'));
-        $this->assertSame('FCFA3,000.00', Money::format(3000, 'XAF'));
+        $this->assertSame('XAF 3,000.00', Money::format(3000, 'XAF'));
     }
 
     public function test_it_handles_lowercase_currency_codes(): void

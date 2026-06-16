@@ -8,6 +8,7 @@ use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Order\Events\FulfillmentFailed;
 use App\Domain\Order\Events\FulfillmentQueued;
 use App\Domain\Order\Events\FulfillmentSucceeded;
+use App\Domain\Order\Services\GatewayRefundService;
 use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Providers\WalletPaymentProvider;
@@ -24,8 +25,6 @@ use Illuminate\Support\Facades\Log;
 class FulfillOrderItemJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-
 
     public int $tries = 3;
 
@@ -98,6 +97,8 @@ class FulfillOrderItemJob implements ShouldQueue
                 if ($status === FulfillmentStatus::Fulfilled) {
                     $item->fulfillment_payload = $provider->normalizeResponse($result['payload'] ?? []);
                     $item->delivered_at = now();
+                    // A recovered retry must not keep advertising its old failure
+                    $item->failed_at = null;
                     $item->save();
 
                     FulfillmentSucceeded::dispatch($item);
@@ -208,7 +209,14 @@ class FulfillOrderItemJob implements ShouldQueue
                 }
                 // If Reserved, the full reservation will be settled when remaining items resolve.
             }
+
+            return;
         }
+
+        // Non-wallet (card / mobile money / crypto) paid order: the money
+        // settled to us, so honour the wallet-first refund policy by crediting
+        // the customer's wallet for this failed item. Idempotent per item.
+        app(GatewayRefundService::class)->refundFailedItemToWallet($item);
     }
 
     private function checkOrderCompletion(string $orderId, OrderService $orderService): void

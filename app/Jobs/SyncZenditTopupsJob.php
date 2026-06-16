@@ -14,7 +14,9 @@ class SyncZenditTopupsJob implements ShouldQueue
     use Queueable;
 
     public $timeout = 600;
+
     public int $tries = 3;
+
     public int $maxExceptions = 1;
 
     public function __construct(private int $page = 1) {}
