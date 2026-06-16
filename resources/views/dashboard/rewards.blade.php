@@ -299,15 +299,58 @@
                                 placeholder="Rcoin to withdraw"
                                 class="w-full rounded-[10px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                             >
-                            <div class="relative">
-                                <select name="withdraw_method" x-model="method" class="w-full appearance-none rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-3 pr-9 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15">
-                                    <option value="wallet">RShop wallet</option>
-                                    <option value="bank">Bank transfer</option>
-                                    <option value="mobile_money">Mobile money</option>
-                                </select>
-                                <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                                </svg>
+                            {{-- Brand dropdown (custom Alpine listbox, not the
+                                 native select): same recipe as the admin and
+                                 storefront pickers. A hidden input carries the
+                                 chosen value into the POST. --}}
+                            <div
+                                x-data="{ openMethod: false, methodLabels: { wallet: 'RShop wallet', bank: 'Bank transfer', mobile_money: 'Mobile money' } }"
+                                @click.outside="openMethod = false"
+                                @keydown.escape.window="openMethod = false"
+                                class="relative"
+                            >
+                                <input type="hidden" name="withdraw_method" :value="method">
+                                <button
+                                    type="button"
+                                    @click="openMethod = ! openMethod"
+                                    :aria-expanded="openMethod.toString()"
+                                    aria-haspopup="listbox"
+                                    :class="openMethod ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
+                                    class="flex w-full items-center justify-between gap-2 rounded-[10px] border bg-white py-2.5 pl-3 pr-3 text-sm font-medium text-zinc-900 outline-none transition-colors"
+                                >
+                                    <span x-text="methodLabels[method] ?? 'Choose method'">RShop wallet</span>
+                                    <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-150" :class="openMethod && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div
+                                    x-show="openMethod"
+                                    x-transition:enter="transition ease-out duration-150"
+                                    x-transition:enter-start="opacity-0 -translate-y-1"
+                                    x-transition:enter-end="opacity-100 translate-y-0"
+                                    x-transition:leave="transition ease-in duration-100"
+                                    x-transition:leave-start="opacity-100 translate-y-0"
+                                    x-transition:leave-end="opacity-0 -translate-y-1"
+                                    style="display:none;"
+                                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] bg-white p-1 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    role="listbox"
+                                >
+                                    <template x-for="(label, value) in methodLabels" :key="value">
+                                        <button
+                                            type="button"
+                                            role="option"
+                                            :aria-selected="(method === value).toString()"
+                                            @click="method = value; openMethod = false"
+                                            :class="method === value ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
+                                            class="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors"
+                                        >
+                                            <span x-text="label"></span>
+                                            <svg x-show="method === value" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                        </button>
+                                    </template>
+                                </div>
                             </div>
                             <button type="submit" class="mt-1 w-full rounded-[10px] bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700">
                                 Request withdrawal

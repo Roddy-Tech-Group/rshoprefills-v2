@@ -360,7 +360,7 @@
 
                         {{-- KYC verified tick over the storefront account avatar. --}}
                         @if (($authUser?->kyc_status ?? null) === 'verified')
-                            <x-ui.verified-badge class="pointer-events-none absolute -bottom-1 -right-1 h-4 w-4 drop-shadow-sm" />
+                            <x-ui.verified-badge class="pointer-events-none absolute -bottom-1.5 -right-1.5 h-4 w-4 drop-shadow-sm" />
                         @endif
 
                         <div

@@ -213,6 +213,24 @@ class CheckoutController extends Controller
     }
 
     /**
+     * Lightweight status probe for the order page's fulfillment watcher: the
+     * pending view polls this and swaps itself for the completed view the
+     * moment fulfillment lands, so the customer never has to reload by hand.
+     */
+    public function orderStatus(Request $request, string $orderNumber)
+    {
+        $order = Order::query()
+            ->where('order_number', $orderNumber)
+            ->where('user_id', $request->user()?->id)
+            ->firstOrFail();
+
+        return response()->json([
+            'order_status' => $order->order_status?->value,
+            'fulfillment_status' => $order->fulfillment_status?->value,
+        ]);
+    }
+
+    /**
      * Hosted-checkout return URL. Flutterwave redirects the customer here
      * after a USSD / Pay With Bank / Bank QR / Mobile Wallet payment. We
      * verify by tx_ref (the only field we trust from the query string) and

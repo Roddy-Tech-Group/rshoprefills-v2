@@ -36,15 +36,15 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
 
 <div class="flex flex-col sm:flex-1">
     {{-- Centered form --}}
-    <div class="mx-auto flex w-full max-w-md flex-col py-3 sm:flex-1 sm:justify-center sm:py-8">
+    <div class="mx-auto flex w-full max-w-sm flex-col py-3 sm:flex-1 sm:justify-center sm:py-6">
 
-        <h1 class="flex items-center justify-center gap-2 text-3xl font-bold tracking-tight text-zinc-900">
+        <h1 class="flex items-center justify-center gap-2 text-2xl font-bold tracking-tight text-zinc-900">
             <span>Check your inbox</span>
             <svg class="h-7 w-7 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 9v.906a2.25 2.25 0 0 1-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 0 0 1.183 1.981l6.478 3.488m8.839 2.51-4.66-2.51m0 0-1.023-.55a2.25 2.25 0 0 0-2.134 0l-1.022.55m0 0-4.661 2.51m16.5 1.615a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V8.844a2.25 2.25 0 0 1 1.183-1.981l7.5-4.039a2.25 2.25 0 0 1 2.134 0l7.5 4.039a2.25 2.25 0 0 1 1.183 1.981V19.5Z" />
             </svg>
         </h1>
-        <p class="mt-2 text-center text-base text-zinc-600">
+        <p class="mt-2 text-center text-sm text-zinc-600">
             We sent a verification link to
             <span class="font-medium text-zinc-700">{{ Auth::user()?->email }}</span>.
             Click the link inside to activate your account.
@@ -61,11 +61,11 @@ new #[Layout('components.layouts.auth.centered')] class extends Component {
         @endif
 
         {{-- Actions --}}
-        <div class="mt-4 flex flex-col gap-3 sm:mt-6">
+        <div class="mt-4 flex flex-col gap-3">
             <button
                 wire:click="sendVerification"
                 type="button"
-                class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                class="flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
             >
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />

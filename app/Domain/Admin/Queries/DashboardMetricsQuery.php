@@ -4,8 +4,11 @@ namespace App\Domain\Admin\Queries;
 
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Payment\Enums\PaymentStatus;
+use App\Domain\Shared\Enums\Currency;
+use App\Models\CurrencyRate;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
@@ -58,9 +61,14 @@ class DashboardMetricsQuery
         // (order_status = Completed). A paid-but-still-processing order is
         // money in the till but not yet earned — excluded here so the KPI
         // matches the Revenue Overview chart's "completed and fulfilled" rule.
+        //
+        // Summed via Order::usdTotal(): total_amount is the display-currency
+        // figure (4000 XAF, 12000 NGN, ...), so summing it raw would mix
+        // currencies into a number the dashboard then labels "USD".
         $totalRevenue = (clone $ordersQuery)
             ->where('order_status', OrderStatus::Completed->value)
-            ->sum('total_amount');
+            ->get(['id', 'total_amount', 'display_currency', 'metadata'])
+            ->sum(fn (Order $order) => $order->usdTotal());
 
         $paymentCount = (clone $paymentQuery)->count();
         $walletTxCount = $walletTxQuery->count();
@@ -72,7 +80,7 @@ class DashboardMetricsQuery
         $successRate = $paymentCount > 0 ? round(($successfulPayments / $paymentCount) * 100, 2) : 0.0;
 
         // Wallet balance total stays all-time — current value, not a transaction.
-        $walletBalanceTotal = Wallet::sum('balance');
+        $walletBalanceTotal = $this->walletBalanceTotalUsd();
 
         // ── Per-card donut breakdowns ───────────────────────────────────
         // Each KPI card gets a mini donut chart that visualises a meaningful
@@ -159,6 +167,111 @@ class DashboardMetricsQuery
             'year' => [now()->startOfYear(), now()],
             default => [null, null],
         };
+    }
+
+    /**
+     * Sum every wallet into a single honest USD figure. Balances are stored in
+     * the wallet's own currency, so a raw SUM(balance) would add 4000 XAF to
+     * 20 USD and call the result dollars.
+     *
+     *   - USD wallets count at face value (never divided by the USD spread row).
+     *   - Rcoin converts at the platform's rcoin_usd_rate setting.
+     *   - Other currencies divide by their active currency_rates rate_per_usd.
+     *   - Currencies with no usable rate are skipped — no rate, no claim.
+     */
+    private function walletBalanceTotalUsd(): float
+    {
+        $balancesByCurrency = Wallet::query()
+            ->selectRaw('currency, SUM(balance) as total')
+            ->groupBy('currency')
+            ->pluck('total', 'currency');
+
+        if ($balancesByCurrency->isEmpty()) {
+            return 0.0;
+        }
+
+        $ratesPerUsd = CurrencyRate::query()
+            ->where('is_active', true)
+            ->pluck('rate_per_usd', 'code');
+
+        $rcoinUsdRate = (float) Setting::get('rcoin_usd_rate', 0.01);
+
+        $total = 0.0;
+        foreach ($balancesByCurrency as $code => $balance) {
+            $code = strtoupper((string) $code);
+            $balance = (float) $balance;
+
+            if ($code === 'USD') {
+                $total += $balance;
+
+                continue;
+            }
+
+            if ($code === Currency::RCOIN->value) {
+                $total += $balance * $rcoinUsdRate;
+
+                continue;
+            }
+
+            $rate = (float) ($ratesPerUsd[$code] ?? 0.0);
+            if ($rate > 0) {
+                $total += $balance / $rate;
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    /**
+     * SQL expression converting order_items.subtotal_amount (display currency)
+     * to USD via the order's metadata exchange-rate snapshot. Orders without a
+     * snapshot divide by 1 — for those legacy rows the stored amount is the
+     * only honest figure available (mirrors Order::usdTotal()'s fallback).
+     */
+    private function itemUsdSql(): string
+    {
+        $rate = $this->jsonDecimalSql('orders.metadata', '$.exchange_rate');
+
+        return "order_items.subtotal_amount / COALESCE(NULLIF({$rate}, 0), 1)";
+    }
+
+    /**
+     * Driver-aware numeric extraction from a JSON column. MySQL needs
+     * JSON_UNQUOTE + DECIMAL cast; SQLite (the test driver) unquotes inside
+     * json_extract already and casts with NUMERIC.
+     */
+    private function jsonDecimalSql(string $column, string $path): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return "CAST(json_extract({$column}, '{$path}') AS NUMERIC)";
+        }
+
+        return "CAST(JSON_UNQUOTE(JSON_EXTRACT({$column}, '{$path}')) AS DECIMAL(16,8))";
+    }
+
+    /**
+     * Driver-aware text extraction from a JSON column.
+     */
+    private function jsonTextSql(string $column, string $path): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return "json_extract({$column}, '{$path}')";
+        }
+
+        return "JSON_UNQUOTE(JSON_EXTRACT({$column}, '{$path}'))";
+    }
+
+    /**
+     * Driver-aware date bucketing. The format tokens used here (%Y, %m, %d)
+     * mean the same thing to MySQL's DATE_FORMAT and SQLite's strftime.
+     */
+    private function dateFormatSql(string $column, string $format): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return "strftime('{$format}', {$column})";
+        }
+
+        return "DATE_FORMAT({$column}, '{$format}')";
     }
 
     /**
@@ -343,13 +456,15 @@ class DashboardMetricsQuery
             ->where('orders.order_status', OrderStatus::Completed->value)
             ->where('orders.completed_at', '>=', $startDate)
             ->select(
-                DB::raw("DATE_FORMAT(orders.completed_at, '%Y-%m-%d') as date"),
-                DB::raw('SUM(order_items.subtotal_amount) as sales'),
-                // JSON_UNQUOTE strips the surrounding quotes from a JSON string
-                // value, then CAST converts the resulting text to DECIMAL so it
+                DB::raw($this->dateFormatSql('orders.completed_at', '%Y-%m-%d').' as date'),
+                // Item subtotals are display-currency figures; divide by the
+                // order's exchange-rate snapshot so the chart's "sales" are
+                // real USD, comparable against the USD supplier cost below.
+                DB::raw('SUM('.$this->itemUsdSql().') as sales'),
+                // Cost extracts variant_snapshot.cost_price as a number so it
                 // multiplies cleanly. Items without a cost_price contribute NULL
                 // here, which SUM skips — yielding honest, source-of-truth cost.
-                DB::raw('SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(order_items.variant_snapshot, \'$.cost_price\')) AS DECIMAL(12,4)) * order_items.quantity) as cost'),
+                DB::raw('SUM('.$this->jsonDecimalSql('order_items.variant_snapshot', '$.cost_price').' * order_items.quantity) as cost'),
             )
             ->groupBy('date')
             ->orderBy('date')
@@ -394,8 +509,11 @@ class DashboardMetricsQuery
             ->where('orders.order_status', OrderStatus::Completed->value)
             ->where('orders.completed_at', '>=', $startDate)
             ->select(
-                DB::raw('UPPER(JSON_UNQUOTE(JSON_EXTRACT(order_items.product_snapshot, \'$.country_code\'))) as cc'),
-                DB::raw('SUM(order_items.subtotal_amount) as total'),
+                DB::raw('UPPER('.$this->jsonTextSql('order_items.product_snapshot', '$.country_code').') as cc'),
+                // Converted to USD via the order's rate snapshot — the map
+                // labels these figures "USD", so a 4373 XAF sale must show
+                // as ~$7, not as $4373.
+                DB::raw('SUM('.$this->itemUsdSql().') as total'),
             )
             ->groupBy('cc');
 
@@ -447,9 +565,10 @@ class DashboardMetricsQuery
             ->where('orders.order_status', OrderStatus::Completed->value)
             ->where('orders.completed_at', '>=', $startDate)
             ->select(
-                DB::raw("DATE_FORMAT(orders.completed_at, '{$dateFormat}') as date"),
+                DB::raw($this->dateFormatSql('orders.completed_at', $dateFormat).' as date'),
                 'categories.slug as category_slug',
-                DB::raw('SUM(order_items.subtotal_amount) as total')
+                // USD via the order's rate snapshot, matching the other charts.
+                DB::raw('SUM('.$this->itemUsdSql().') as total')
             )
             ->groupBy('date', 'categories.slug')
             ->orderBy('date')

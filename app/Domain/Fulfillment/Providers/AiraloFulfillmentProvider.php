@@ -95,6 +95,54 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
         }
     }
 
+    /**
+     * eSIMs Cloud sharing link + access code for an installed eSIM. Airalo
+     * does NOT include the sharing block in the submit-order response — it is
+     * only returned by the Get eSIM endpoint (GET /sims/{iccid}), per their
+     * "How to get the eSIMs Cloud sharing link through API" guide. Returns
+     * ['link' => ?string, 'access_code' => ?string]; both null on any failure
+     * so fulfilment never breaks over a missing portal link.
+     *
+     * @return array{link: ?string, access_code: ?string}
+     */
+    public function fetchSharing(string $iccid): array
+    {
+        $none = ['link' => null, 'access_code' => null];
+
+        $iccid = trim($iccid);
+        if ($iccid === '') {
+            return $none;
+        }
+
+        try {
+            $response = Http::withoutVerifying()
+                ->timeout(10)
+                ->withToken($this->getAccessToken())
+                ->acceptJson()
+                ->get("{$this->baseUrl}/sims/{$iccid}");
+
+            if ($response->failed()) {
+                Log::warning('Airalo fetchSharing failed', [
+                    'iccid' => $iccid,
+                    'status' => $response->status(),
+                ]);
+
+                return $none;
+            }
+
+            $data = $response->json('data') ?? [];
+
+            return [
+                'link' => $data['sharing']['link'] ?? $data['sharing_link'] ?? null,
+                'access_code' => $data['sharing']['access_code'] ?? $data['sharing_access_code'] ?? null,
+            ];
+        } catch (\Exception $e) {
+            Log::warning('Airalo fetchSharing exception: '.$e->getMessage(), ['iccid' => $iccid]);
+
+            return $none;
+        }
+    }
+
     public function fulfill(OrderItem $item): array
     {
         // provider_offer_id was saved as "airalo_{id}" by the normalizer, so strip prefix
@@ -232,12 +280,27 @@ class AiraloFulfillmentProvider implements FulfillmentProviderInterface
         // in the Airalo Partners dashboard; on partners without branding it is
         // still returned but un-branded. Access code lets the customer re-claim
         // the eSIM on another device.
+        // The sharing block has appeared both per-sim and at the order level
+        // across Airalo payload revisions, so check every known location.
         $sharingLink = $firstSim['sharing']['link']
             ?? $firstSim['sharing_link']
+            ?? $data['sharing']['link']
+            ?? $data['sharing_link']
             ?? null;
         $sharingAccessCode = $firstSim['sharing']['access_code']
             ?? $firstSim['sharing_access_code']
+            ?? $data['sharing']['access_code']
+            ?? $data['sharing_access_code']
             ?? null;
+
+        // The submit-order response never carries the sharing block — Airalo
+        // only returns it from Get eSIM. One extra call per fulfilment buys
+        // the branded portal link + access code for the email and dashboard.
+        if ($sharingLink === null && ! empty($firstSim['iccid'])) {
+            $sharing = $this->fetchSharing((string) $firstSim['iccid']);
+            $sharingLink = $sharing['link'];
+            $sharingAccessCode = $sharingAccessCode ?? $sharing['access_code'];
+        }
 
         // Compile manual text if applicable
         $manualText = null;

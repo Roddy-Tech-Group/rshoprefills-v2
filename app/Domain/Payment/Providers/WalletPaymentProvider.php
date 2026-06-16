@@ -6,6 +6,7 @@ use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Interfaces\PaymentProviderInterface;
 use App\Domain\Shared\Enums\Currency;
 use App\Domain\Shared\Enums\TransactionCategory;
+use App\Domain\Wallet\Exceptions\MissingTransactionPinException;
 use App\Domain\Wallet\Services\TransactionPinService;
 use App\Domain\Wallet\Services\WalletService;
 use App\Models\PaymentAttempt;
@@ -27,7 +28,7 @@ class WalletPaymentProvider implements PaymentProviderInterface
         }
 
         if (! $user->hasTransactionPin()) {
-            throw new \App\Domain\Wallet\Exceptions\MissingTransactionPinException(
+            throw new MissingTransactionPinException(
                 'You must set up a Wallet Transaction PIN in your profile settings before you can pay with your wallet.'
             );
         }

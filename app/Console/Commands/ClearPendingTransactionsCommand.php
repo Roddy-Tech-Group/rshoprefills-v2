@@ -34,6 +34,7 @@ class ClearPendingTransactionsCommand extends Command
 
         if (! $this->option('force') && ! $this->confirm('Are you sure you want to proceed?')) {
             $this->info('Operation cancelled.');
+
             return;
         }
 
@@ -58,13 +59,13 @@ class ClearPendingTransactionsCommand extends Command
                 $attempts = PaymentAttempt::where('payable_type', WalletFunding::class)
                     ->where('payable_id', $funding->id)
                     ->get();
-                
+
                 foreach ($attempts as $attempt) {
                     $sessionsDeleted += PaymentSession::where('payment_attempt_id', $attempt->id)->delete();
                     $attempt->delete();
                     $attemptsDeleted++;
                 }
-                
+
                 $funding->delete();
             }
 

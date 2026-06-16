@@ -9,6 +9,16 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Stable page width ────────────────────────────────────────────────────
+   Reserve the scrollbar gutter permanently. Without this, the vertical
+   scrollbar appears/disappears as content height changes (category filters,
+   Livewire updates), nudging the entire layout left/right a few pixels -
+   the storefront grid looked like it was "shaking" against the category
+   labels. */
+html {
+    scrollbar-gutter: stable;
+}
+
 /* ── Flatpickr dark theme ─────────────────────────────────────────────────
    The base flatpickr.css (imported in app.js) themes light mode; these rules
    repaint the calendar to the admin navy palette (#1d3252 surface, blue accent)

@@ -20,7 +20,7 @@ class ResendProvider implements MailProviderInterface
         $this->fromName = config('services.resend.from_name') ?? 'RshopRefills';
     }
 
-    public function send(string $to, string $subject, string $htmlBody, array $headers = []): array
+    public function send(string $to, string $subject, string $htmlBody, array $headers = [], array $attachments = []): array
     {
         if (empty($this->apiKey) || $this->apiKey === 'testing' || app()->environment('testing')) {
             Log::info('Resend dry-run / sandbox mode. Email intercepted.', [
@@ -35,14 +35,23 @@ class ResendProvider implements MailProviderInterface
             ];
         }
 
+        $body = [
+            'from' => "{$this->fromName} <{$this->fromAddress}>",
+            'to' => [$to],
+            'subject' => $subject,
+            'html' => $htmlBody,
+            'headers' => (object) $headers,
+        ];
+
+        // Attachments carry inline CID images (brand logo, eSIM QR): Resend
+        // renders parts with a content_id wherever the HTML references
+        // src="cid:{content_id}".
+        if ($attachments !== []) {
+            $body['attachments'] = $attachments;
+        }
+
         $response = Http::withToken($this->apiKey)
-            ->post('https://api.resend.com/emails', [
-                'from' => "{$this->fromName} <{$this->fromAddress}>",
-                'to' => [$to],
-                'subject' => $subject,
-                'html' => $htmlBody,
-                'headers' => (object) $headers,
-            ]);
+            ->post('https://api.resend.com/emails', $body);
 
         if ($response->failed()) {
             Log::error('Resend API call failed', [

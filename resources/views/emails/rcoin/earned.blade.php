@@ -7,7 +7,7 @@
         ? "Hi {$recipient->name}, ".($referredName ?: 'one of your referrals')." just completed an order - and you've been credited for sending them our way."
         : "Hi {$recipient->name}, your purchase earned you Rcoin cashback. It's already in your wallet and ready to spend.";
 @endphp
-<x-emails.layout :title="$headline" preheader="Rcoin credited to your wallet.">
+<x-emails.layout :mail-message="$message ?? null" :title="$headline" preheader="Rcoin credited to your wallet.">
     <h1 style="margin:0 0 14px; font-size:22px; line-height:1.3; font-weight:800; color:#0c1a2e;">{{ $headline }}</h1>
 
     <p style="margin:0 0 16px; font-size:16px; line-height:1.65; color:#3f3f46;">{{ $intro }}</p>

@@ -38,7 +38,7 @@
     $currency = $product->currency_code ?: 'USD';
 
     $symbols = [
-        'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦', 'XAF' => 'FCFA', 'ZAR' => 'R',
+        'USD' => '$', 'EUR' => '€', 'GBP' => '£', 'NGN' => '₦', 'XAF' => 'XAF ', 'ZAR' => 'R',
         'KES' => 'KSh', 'GHS' => '₵', 'EGP' => 'E£', 'MAD' => 'DH', 'CAD' => 'CA$', 'AUD' => 'A$',
         'JPY' => '¥', 'CNY' => '¥', 'INR' => '₹', 'BRL' => 'R$', 'AED' => 'AED', 'SAR' => 'SAR',
         'TRY' => '₺', 'CHF' => 'Fr', 'MXN' => 'MX$', 'KRW' => '₩', 'SGD' => 'S$', 'HKD' => 'HK$',

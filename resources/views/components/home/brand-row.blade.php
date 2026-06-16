@@ -51,9 +51,22 @@
             const t    = this.$refs.track;
             const list = this.$refs.list;
             if (! t || ! list) { return; }
-            const padLeft = Math.round(this.$el.getBoundingClientRect().left);
-            list.style.paddingLeft   = padLeft + 'px';
-            t.style.scrollPaddingLeft = padLeft + 'px';
+            // rect.left can read ~0 mid entrance-animation or when the page
+            // carries a few px of horizontal overflow - applying that pinned
+            // the first card to the screen edge and made the row's left edge
+            // jump between re-measures. Clamp to the content column's static
+            // padding (matches the heading) so alignment can never collapse,
+            // and re-settle once after animations finish.
+            const minPad  = window.innerWidth >= 1024 ? 32 : (window.innerWidth >= 640 ? 24 : 16);
+            const apply = () => {
+                const padLeft = Math.max(minPad, Math.round(this.$el.getBoundingClientRect().left));
+                if (list.style.paddingLeft !== padLeft + 'px') {
+                    list.style.paddingLeft    = padLeft + 'px';
+                    t.style.scrollPaddingLeft = padLeft + 'px';
+                }
+            };
+            apply();
+            setTimeout(apply, 700);
             const cardW = window.innerWidth >= 1024 ? 280 : window.innerWidth >= 640 ? 200 : 160;
             list.style.setProperty('--card-w', cardW + 'px');
             this.$nextTick(() => this.refresh());

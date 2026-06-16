@@ -8,7 +8,7 @@
     $bgTint = $isWarning ? '#fef3c7' : '#dbeafe';   // amber-100 vs blue-100
     $badge  = $isWarning ? 'Warning' : 'Notification';
 @endphp
-<x-emails.layout :title="$headline" :preheader="$preheader">
+<x-emails.layout :mail-message="$message ?? null" :title="$headline" :preheader="$preheader">
     <p style="margin:0 0 12px;">
         <span style="display:inline-block; padding:4px 10px; border-radius:5px; background:{{ $bgTint }}; color:{{ $accent }}; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;">{{ $badge }}</span>
     </p>

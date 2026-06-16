@@ -18,28 +18,44 @@
 ])
 
 @php
-    // Each mode maps to its hero PNG. Filenames carry the raw asset names so
-    // rawurlencode handles the spaces / mixed casing at render time. The
-    // segmented + dropdown variants both consume this array.
+    // Each mode maps to its animated inline-SVG icon component
+    // (components/icons/theme-*). Inline SVGs inherit currentColor, so the
+    // same icon recolors automatically on light, dark, and selected rows.
     $themeChoices = [
-        ['value' => 'light',  'label' => 'Light', 'image' => 'Light mode respects theme.webp'],
-        ['value' => 'dark',   'label' => 'Dark',  'image' => 'Dark mode respects light and dark mode.webp'],
-        ['value' => 'system', 'label' => 'Auto',  'image' => 'Auto Mode.webp'],
+        ['value' => 'light',  'label' => 'Light', 'icon' => 'icons.theme-light'],
+        ['value' => 'dark',   'label' => 'Dark',  'icon' => 'icons.theme-dark'],
+        ['value' => 'system', 'label' => 'Auto',  'icon' => 'icons.theme-auto'],
     ];
 @endphp
+
+{{-- Flashy switch animation: the freshly picked control does a full spin-pop.
+     Shared by both variants; safe to repeat when several toggles render. --}}
+<style>
+    @keyframes theme-toggle-pop {
+        0%   { transform: rotate(0deg) scale(1); }
+        45%  { transform: rotate(180deg) scale(1.35); }
+        100% { transform: rotate(360deg) scale(1); }
+    }
+    .theme-toggle-pop { animation: theme-toggle-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    @media (prefers-reduced-motion: reduce) { .theme-toggle-pop { animation: none; } }
+</style>
 
 @if ($variant === 'segmented')
     {{-- ── Segmented chip (Light / Dark / Auto) ─────────────────────── --}}
     <div
         x-data="{
             choice: (window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system')),
+            switching: false,
             pick(v) {
                 this.choice = v;
                 if (window.setTheme) { window.setTheme(v); }
+                this.switching = true;
+                clearTimeout(this._popTimer);
+                this._popTimer = setTimeout(() => this.switching = false, 650);
             },
         }"
         x-on:theme-changed.window="choice = (window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'))"
-        {{ $attributes->class('inline-flex w-fit items-center gap-1 rounded-[10px] border-2 border-blue-400 p-0.5 dark:border-blue-500/60') }}
+        {{ $attributes->class('inline-flex w-fit items-center gap-0.5 rounded-[10px] border border-blue-400 p-0.5 dark:border-blue-500/60') }}
         role="radiogroup"
         aria-label="Theme"
     >
@@ -47,21 +63,19 @@
             <button
                 type="button"
                 @click="pick('{{ $opt['value'] }}')"
-                :class="choice === '{{ $opt['value'] }}'
-                    ? 'bg-zinc-200 dark:bg-black dark:ring-1 dark:ring-white/10'
-                    : 'hover:bg-zinc-100 dark:hover:bg-white/5'"
-                class="flex h-8 w-8 items-center justify-center rounded-[7px] transition-colors duration-150"
+                :class="[
+                    choice === '{{ $opt['value'] }}'
+                        ? 'bg-zinc-200 dark:bg-black dark:ring-1 dark:ring-white/10'
+                        : 'hover:bg-zinc-100 dark:hover:bg-white/5',
+                    switching && choice === '{{ $opt['value'] }}' ? 'theme-toggle-pop' : '',
+                ].join(' ')"
+                class="flex h-7 w-7 items-center justify-center rounded-[7px] transition-colors duration-150"
                 :aria-checked="(choice === '{{ $opt['value'] }}').toString()"
                 role="radio"
                 aria-label="{{ $opt['label'] }}"
                 title="{{ $opt['label'] }}"
             >
-                {{-- brightness-0 strips the PNG's own colour to pure black for
-                     light mode; dark:invert then flips it to pure white in
-                     dark mode. That's the "respects theme" behaviour the
-                     filename promises - icons stay legible on both surfaces
-                     without needing two separate assets. --}}
-                <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-5 w-5 object-contain brightness-0 dark:invert" loading="lazy">
+                <x-dynamic-component :component="$opt['icon']" class="h-4 w-4 text-zinc-900 dark:text-white" />
             </button>
         @endforeach
     </div>
@@ -77,11 +91,15 @@
             dark: (window.themeIsDark ? window.themeIsDark() : document.documentElement.classList.contains('dark')),
             open: false,
             locked: false,
+            switching: false,
             pick(v) {
                 this.choice = v;
                 if (window.setTheme) { window.setTheme(v); }
                 this.open = false;
                 this.locked = false;
+                this.switching = true;
+                clearTimeout(this._popTimer);
+                this._popTimer = setTimeout(() => this.switching = false, 650);
             },
         }"
         x-on:theme-changed.window="dark = $event.detail.dark; choice = (window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'))"
@@ -97,36 +115,17 @@
             :aria-expanded="open.toString()"
             aria-label="Theme"
             title="Theme"
+            :class="switching ? 'theme-toggle-pop' : ''"
             {{ $attributes->class('inline-flex items-center justify-center transition-colors') }}
         >
-            {{-- Trigger shows the PNG that matches the user's CHOICE (not the
+            {{-- Trigger shows the icon that matches the user's CHOICE (not the
                  resolved theme). That means the Auto icon is visible when
                  system mode is selected - same surface area for all three
-                 modes. brightness-0 + dark:invert keeps the monochrome icon
-                 legible on whichever chrome it sits on. --}}
-            <img
-                x-show="choice === 'light'"
-                src="{{ asset('assets/' . rawurlencode('Light mode respects theme.webp')) }}"
-                alt=""
-                class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
-                loading="lazy"
-            >
-            <img
-                x-show="choice === 'dark'"
-                x-cloak
-                src="{{ asset('assets/' . rawurlencode('Dark mode respects light and dark mode.webp')) }}"
-                alt=""
-                class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
-                loading="lazy"
-            >
-            <img
-                x-show="choice === 'system'"
-                x-cloak
-                src="{{ asset('assets/' . rawurlencode('Auto Mode.webp')) }}"
-                alt=""
-                class="h-[22px] w-[22px] shrink-0 object-contain brightness-0 dark:invert"
-                loading="lazy"
-            >
+                 modes. Inline SVGs follow currentColor on whichever chrome
+                 they sit on. --}}
+            <x-icons.theme-light x-show="choice === 'light'" class="h-5 w-5 text-zinc-900 dark:text-white" />
+            <x-icons.theme-dark x-show="choice === 'dark'" x-cloak class="h-5 w-5 text-zinc-900 dark:text-white" />
+            <x-icons.theme-auto x-show="choice === 'system'" x-cloak class="h-5 w-5 text-zinc-900 dark:text-white" />
         </button>
 
         <div
@@ -138,11 +137,11 @@
             x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 {{ $offStart }}"
-            class="absolute right-0 {{ $panelPos }} z-50 min-w-[150px] overflow-hidden rounded-[5px] bg-white/70 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-2 ring-blue-400 dark:bg-[#1d3252]/70 dark:ring-blue-500/60"
+            class="absolute right-0 {{ $panelPos }} z-50 w-max overflow-hidden rounded-[5px] bg-white/70 backdrop-blur-md shadow-xl shadow-zinc-900/10 ring-2 ring-blue-400 dark:bg-[#1d3252]/70 dark:ring-blue-500/60"
             role="menu"
             aria-label="Theme"
         >
-            <div class="p-1">
+            <div class="p-0.5">
                 @foreach ($themeChoices as $opt)
                     <button
                         type="button"
@@ -150,11 +149,11 @@
                         :class="choice === '{{ $opt['value'] }}'
                             ? 'bg-blue-600 text-white'
                             : 'text-zinc-900 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-[#26416b]'"
-                        class="flex w-full items-center gap-2.5 whitespace-nowrap rounded-[5px] px-3 py-1.5 text-left text-sm font-medium transition-colors"
+                        class="flex w-full items-center gap-2 whitespace-nowrap rounded-[5px] py-1.5 pl-2 pr-4 text-left text-xs font-medium transition-colors"
                         role="menuitemradio"
                         :aria-checked="(choice === '{{ $opt['value'] }}').toString()"
                     >
-                        <img src="{{ asset('assets/' . rawurlencode($opt['image'])) }}" alt="" class="h-5 w-5 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
+                        <x-dynamic-component :component="$opt['icon']" class="h-4 w-4" />
                         <span>{{ $opt['label'] }}</span>
                     </button>
                 @endforeach

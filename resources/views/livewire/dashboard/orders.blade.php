@@ -281,6 +281,10 @@ class extends Component {
                                             'manage'  => is_scalar($payload['sharing_link'] ?? null)
                                                 ? (string) $payload['sharing_link']
                                                 : (is_scalar($esimManual['sharingLink'] ?? null) ? (string) $esimManual['sharingLink'] : null),
+                                            // Access code for re-claiming the eSIM on the hosted page.
+                                            'access'  => is_scalar($payload['sharing_access_code'] ?? null)
+                                                ? (string) $payload['sharing_access_code']
+                                                : (is_scalar($esimManual['sharingAccessCode'] ?? null) ? (string) $esimManual['sharingAccessCode'] : null),
                                         ];
                                     }
                                     // Mobile top-up confirmation: no code/PIN — the airtime is
@@ -382,7 +386,7 @@ class extends Component {
                                                     Top up this eSIM
                                                 </a>
                                             @endif
-                                            @foreach (array_filter(['SM-DP+' => $esim['lpa'], 'Code' => $esim['code'], 'ICCID' => $esim['iccid']]) as $credLabel => $credValue)
+                                            @foreach (array_filter(['SM-DP+' => $esim['lpa'], 'Code' => $esim['code'], 'ICCID' => $esim['iccid'], 'Access' => $esim['access']]) as $credLabel => $credValue)
                                                 <div class="flex items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3" wire:key="esim-{{ $item->id }}-{{ $credLabel }}">
                                                     <span class="w-14 shrink-0 text-xs font-semibold uppercase tracking-wide text-zinc-500">{{ $credLabel }}</span>
                                                     <span class="min-w-0 flex-1 truncate text-sm font-bold tracking-wider text-zinc-900">{{ $credValue }}</span>

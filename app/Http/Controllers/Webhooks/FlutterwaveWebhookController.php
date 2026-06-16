@@ -10,6 +10,7 @@ use App\Jobs\VerifyPaymentJob;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
 use App\Models\PaymentWebhook;
+use App\Models\WalletFunding;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -80,18 +81,18 @@ class FlutterwaveWebhookController extends Controller
         if ($attempt) {
             if ($attempt->payable_type === Order::class || ! empty($attempt->order_id)) {
                 VerifyPaymentJob::dispatch($attempt);
-            } elseif ($attempt->payable_type === \App\Models\WalletFunding::class) {
+            } elseif ($attempt->payable_type === WalletFunding::class) {
                 ProcessFundingWebhookJob::dispatch($webhook->id);
             } else {
                 $webhook->update([
                     'processing_status' => 'ignored',
-                    'exception_traces' => 'Unhandled payable_type: ' . $attempt->payable_type,
+                    'exception_traces' => 'Unhandled payable_type: '.$attempt->payable_type,
                 ]);
             }
         } else {
             $webhook->update([
                 'processing_status' => 'ignored',
-                'exception_traces' => 'No matching PaymentAttempt found for tx_ref: ' . $txRef,
+                'exception_traces' => 'No matching PaymentAttempt found for tx_ref: '.$txRef,
             ]);
         }
 

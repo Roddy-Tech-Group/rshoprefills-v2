@@ -58,6 +58,13 @@ class DashboardContent extends Component
     public function setRevenueDays(int $days): void
     {
         $this->revenueDays = max(1, min(365, $days));
+
+        // The chart canvas is wire:ignore (Livewire would wipe the Apex SVG on
+        // re-render), so the fresh series travels via a browser event and the
+        // salesCostChart factory swaps it into the live chart in place.
+        $this->dispatch('trends-data-updated',
+            series: app(DashboardMetricsQuery::class)->getSalesCostTimeseries($this->revenueDays),
+        );
     }
 
     /** Best Selling Countries period dropdown. */

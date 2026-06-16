@@ -20,7 +20,9 @@ class SyncZenditBrandsJob implements ShouldQueue
     use Queueable;
 
     public $timeout = 1800; // 30 minutes; brand catalogue can be hundreds of brands.
+
     public int $tries = 1;          // One-shot sync — idempotent, re-dispatched on next schedule cycle.
+
     public int $maxExceptions = 1;  // Fail immediately on unhandled exception.
 
     public function __construct()

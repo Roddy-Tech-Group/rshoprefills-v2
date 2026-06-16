@@ -817,15 +817,22 @@
             $rateService = app(\App\Domain\Wallet\Services\CurrencyRateService::class);
 
             // Wallet headline: convert each wallet's balance into USD using its
-            // native currency, then sum. A stale or unavailable FX rate throws
-            // (a deliberate guard on transactional paths), but it must never take
-            // down this read-only admin view - so an unconvertible wallet is
-            // skipped and the headline is flagged approximate ("~").
+            // native currency, then sum. Uses the display-safe resolver - the
+            // transactional convert() throws on stale rates (a deliberate
+            // checkout guard), which used to zero this headline whenever the
+            // rates cron lagged. Rcoin is points, not cash: it converts at the
+            // platform's rcoin_usd_rate, never via FX (the FX fallback would
+            // count it 1:1 as dollars).
+            $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.01);
             $walletTotalUsd = 0.0;
             $walletTotalApprox = false;
             foreach ($user->wallets as $w) {
+                if ($w->currency->value === 'RCOIN') {
+                    $walletTotalUsd += (float) $w->balance * $rcoinUsdRate;
+                    continue;
+                }
                 try {
-                    $walletTotalUsd += $rateService->convert((float) $w->balance, $w->currency->value, 'USD');
+                    $walletTotalUsd += $rateService->convertForDisplay((float) $w->balance, $w->currency->value, 'USD');
                 } catch (\Throwable $e) {
                     $walletTotalApprox = true;
                 }

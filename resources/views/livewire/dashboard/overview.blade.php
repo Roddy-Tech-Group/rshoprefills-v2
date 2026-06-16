@@ -26,9 +26,9 @@ new #[Lazy] class extends Component
         $user = auth()->user();
 
         // ── Wallet data ──────────────────────────────────────────────
-        // Default to the user's USD wallet (auto-created on registration).
-        $primaryWallet = $user->wallets()->where('currency', 'USD')->first()
-            ?? $user->wallets()->first();
+        // The default wallet is the funded one; with several funded, the
+        // largest USD-equivalent balance leads (User::defaultWallet()).
+        $primaryWallet = $user->defaultWallet();
 
         $walletBalance = (float) ($primaryWallet?->balance ?? 0);
         $walletCurrencyCode = $primaryWallet?->currency?->value ?? 'USD';
@@ -37,8 +37,10 @@ new #[Lazy] class extends Component
 
         // Exclude RCOIN: it's a rewards balance shown via the loyalty/tier
         // section below ($rcoinWallet), not a fundable wallet, so it must not
-        // appear as a top-up-able wallet card.
-        $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get();
+        // appear as a top-up-able wallet card. The default wallet leads the list.
+        $allWallets = $user->wallets()->where('is_active', true)->where('currency', '!=', 'RCOIN')->get()
+            ->sortByDesc(fn ($w) => $primaryWallet && $w->id === $primaryWallet->id)
+            ->values();
 
         // Recent wallet ledger movements - covers both top-ups (credits) and
         // purchases (debits) since they both write WalletTransaction rows. Latest 8
@@ -49,18 +51,18 @@ new #[Lazy] class extends Component
         // desktop card slices ->take(3) to keep its right-rail compact.
         $recentOrders = $user->orders()->with('items')->latest()->limit(5)->get();
 
-        // Popular gift cards - same source as the storefront's "Popular Gift Cards"
-        // row: the hand-curated config/popular_brands.php list, region-locked to the
-        // customer's resolved region (ResolveRegion middleware). One product per
-        // brand (MIN id dedupes the per-country rows), ordered by the curated list.
-        // (Admin-managed curation of this list is a planned follow-up.)
+        // Popular gift cards - same rule as the storefront's "Popular Gift Cards"
+        // row: products the admin flagged is_popular lead (region-locked via
+        // ResolveRegion, one product per brand). The hand-curated
+        // config/popular_brands.php list is only a fallback for regions where
+        // nothing has been flagged yet.
         $region = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
-        $popularKeys = config('popular_brands.keys', []);
 
         $popularIds = Product::query()
             ->where('is_active', true)
             ->where('country_code', $region)
-            ->whereIn('brand_key', $popularKeys)
+            ->where('is_popular', true)
+            ->whereNotNull('brand_key')
             ->groupBy('brand_key')
             ->selectRaw('MIN(id) as id')
             ->pluck('id');
@@ -68,10 +70,29 @@ new #[Lazy] class extends Component
         $popularProducts = Product::query()
             ->whereIn('id', $popularIds)
             ->with('variants')
-            ->get()
-            ->sortBy(fn ($p) => array_search($p->brand_key, $popularKeys))
+            ->orderBy('name')
             ->take(5)
-            ->values();
+            ->get();
+
+        if ($popularProducts->isEmpty()) {
+            $popularKeys = config('popular_brands.keys', []);
+
+            $curatedIds = Product::query()
+                ->where('is_active', true)
+                ->where('country_code', $region)
+                ->whereIn('brand_key', $popularKeys)
+                ->groupBy('brand_key')
+                ->selectRaw('MIN(id) as id')
+                ->pluck('id');
+
+            $popularProducts = Product::query()
+                ->whereIn('id', $curatedIds)
+                ->with('variants')
+                ->get()
+                ->sortBy(fn ($p) => array_search($p->brand_key, $popularKeys))
+                ->take(5)
+                ->values();
+        }
 
         // Fallback so the row never renders empty in a small region - any active
         // gift-card brands available there.
@@ -98,7 +119,7 @@ new #[Lazy] class extends Component
         $symbolFor = function (string $code): string {
             return match (strtoupper($code)) {
                 'USD' => '$',  'NGN'  => '₦', 'GHS'  => '₵', 'GBP' => '£',
-                'XAF' => 'FCFA','XOF' => 'CFA','EUR' => '€',
+                'XAF' => 'XAF ','XOF' => 'CFA','EUR' => '€',
                 'KES' => 'KSh','ZAR'  => 'R', 'UGX'  => 'USh','TZS' => 'TSh',
                 'RWF' => 'FRw','ZMW'  => 'K', 'MWK'  => 'MK', 'ETB' => 'Br',
                 'EGP' => 'E£', 'MAD'  => 'DH',
@@ -371,15 +392,11 @@ new #[Lazy] class extends Component
                         $sym = $txn->currency?->symbol() ?? '';
                     @endphp
                     <li class="flex items-center gap-3">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                @if ($isCredit)
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
-                                @else
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l6 6m-6-6l-6 6"/>
-                                @endif
-                            </svg>
-                        </span>
+                        @if ($isCredit)
+                            <x-icons.txn-credit class="h-11 w-11" />
+                        @else
+                            <x-icons.txn-debit class="h-11 w-11" />
+                        @endif
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
                             <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>
@@ -535,9 +552,9 @@ new #[Lazy] class extends Component
                         >
                             <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Appearance</p>
                             @foreach ([
-                                ['value' => 'light',  'label' => 'Light',  'png' => 'Light mode respects theme.webp'],
-                                ['value' => 'dark',   'label' => 'Dark',   'png' => 'Dark mode respects light and dark mode.webp'],
-                                ['value' => 'system', 'label' => 'System', 'png' => 'Auto Mode.webp'],
+                                ['value' => 'light',  'label' => 'Light',  'icon' => 'icons.theme-light'],
+                                ['value' => 'dark',   'label' => 'Dark',   'icon' => 'icons.theme-dark'],
+                                ['value' => 'system', 'label' => 'System', 'icon' => 'icons.theme-auto'],
                             ] as $opt)
                                 <button
                                     type="button"
@@ -547,12 +564,7 @@ new #[Lazy] class extends Component
                                     role="menuitem"
                                 >
                                     <span class="inline-flex items-center gap-2.5">
-                                        <img
-                                            src="{{ asset('assets/' . rawurlencode($opt['png'])) }}"
-                                            alt=""
-                                            class="h-4 w-4 shrink-0 brightness-0 dark:invert"
-                                            loading="lazy"
-                                        >
+                                        <x-dynamic-component :component="$opt['icon']" class="h-4 w-4" />
                                         {{ $opt['label'] }}
                                     </span>
                                     <svg x-show="theme === '{{ $opt['value'] }}'" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -962,15 +974,11 @@ new #[Lazy] class extends Component
                                 $sym = $txn->currency?->symbol() ?? '';
                             @endphp
                             <li class="flex items-center gap-3">
-                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] {{ $isCredit ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600' }}">
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                        @if ($isCredit)
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6-6m-6 6l-6-6"/>
-                                        @else
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l6 6m-6-6l-6 6"/>
-                                        @endif
-                                    </svg>
-                                </span>
+                                @if ($isCredit)
+                                    <x-icons.txn-credit class="h-11 w-11" />
+                                @else
+                                    <x-icons.txn-debit class="h-11 w-11" />
+                                @endif
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
                                     <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>

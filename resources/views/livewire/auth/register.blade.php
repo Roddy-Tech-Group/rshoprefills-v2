@@ -149,18 +149,18 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
 <div class="flex flex-col sm:flex-1">
     {{-- Centered form --}}
-    <div class="mx-auto flex w-full max-w-md flex-col py-3 sm:flex-1 sm:justify-center sm:py-8">
+    <div class="mx-auto flex w-full max-w-sm flex-col py-3 sm:flex-1 sm:justify-center sm:py-6">
 
         <p class="text-center text-base text-zinc-600">Join RshopRefills and start shopping today</p>
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 
         {{-- OAuth buttons --}}
-        <div class="mt-4 flex flex-col gap-3 sm:mt-6">
+        <div class="mt-4 flex flex-col gap-3">
             <a
                 href="{{ route('auth.google.redirect', ['popup' => 1]) }}"
                 @click.prevent="window.rshopOpenGoogleOAuth($el.href)"
-                class="flex items-center justify-center gap-3 rounded-[10px] border border-zinc-300 bg-white px-4 py-3 text-base font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                class="flex items-center justify-center gap-3 rounded-[10px] border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
                 <svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -173,7 +173,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
 
         {{-- "or" divider --}}
-        <div class="my-4 flex items-center gap-4 sm:my-6">
+        <div class="my-3 flex items-center gap-4 sm:my-4">
             <span class="h-px flex-1 bg-zinc-200"></span>
             <span class="text-sm uppercase tracking-wider text-zinc-600">or</span>
             <span class="h-px flex-1 bg-zinc-200"></span>
@@ -184,7 +184,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
             {{-- Name --}}
             <div>
-                <label for="name" class="mb-1.5 block text-base font-medium text-zinc-700">Full Name</label>
+                <label for="name" class="mb-1.5 block text-sm font-medium text-zinc-700">Full Name</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -200,7 +200,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         autofocus
                         autocomplete="name"
                         placeholder="Enter your full name"
-                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
                 @error('name') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
@@ -208,7 +208,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
             {{-- Email --}}
             <div>
-                <label for="email" class="mb-1.5 block text-base font-medium text-zinc-700">Email Address</label>
+                <label for="email" class="mb-1.5 block text-sm font-medium text-zinc-700">Email Address</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -223,7 +223,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="email"
                         placeholder="Enter your email address"
-                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
                 @error('email') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
@@ -231,7 +231,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
             {{-- Password --}}
             <div x-data="{ show: false }">
-                <label for="password" class="mb-1.5 block text-base font-medium text-zinc-700">Password</label>
+                <label for="password" class="mb-1.5 block text-sm font-medium text-zinc-700">Password</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -246,7 +246,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="new-password"
                         placeholder="Create a password"
-                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-12 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                     <button
                         type="button"
@@ -268,7 +268,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
             {{-- Confirm Password --}}
             <div x-data="{ show: false }">
-                <label for="password_confirmation" class="mb-1.5 block text-base font-medium text-zinc-700">Confirm Password</label>
+                <label for="password_confirmation" class="mb-1.5 block text-sm font-medium text-zinc-700">Confirm Password</label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -283,7 +283,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         required
                         autocomplete="new-password"
                         placeholder="Re-enter your password"
-                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-12 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                     <button
                         type="button"
@@ -307,7 +307,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                  when the customer arrived through a friend's invite link, but
                  always editable so anyone can paste a code in by hand. --}}
             <div>
-                <label for="referral" class="mb-1.5 block text-base font-medium text-zinc-700">
+                <label for="referral" class="mb-1.5 block text-sm font-medium text-zinc-700">
                     Referral code <span class="font-normal text-zinc-500">(optional)</span>
                 </label>
                 <div class="relative">
@@ -323,7 +323,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
                         type="text"
                         autocomplete="off"
                         placeholder="Enter a friend's referral code"
-                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     />
                 </div>
                 @error('referral') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
@@ -344,7 +344,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
             <button
                 type="submit"
-                class="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                class="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
             >
                 <span>Create Account</span>
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

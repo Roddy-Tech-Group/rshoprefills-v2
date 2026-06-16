@@ -88,7 +88,7 @@
         ['code' => 'EUR', 'symbol' => '€',   'name' => 'Euro'],
         ['code' => 'GBP', 'symbol' => '£',   'name' => 'British Pound'],
         ['code' => 'NGN', 'symbol' => '₦',   'name' => 'Nigerian Naira'],
-        ['code' => 'XAF', 'symbol' => 'FCFA','name' => 'Central African CFA Franc'],
+        ['code' => 'XAF', 'symbol' => 'XAF ','name' => 'Central African CFA Franc'],
         ['code' => 'ZAR', 'symbol' => 'R',   'name' => 'South African Rand'],
         ['code' => 'KES', 'symbol' => 'KSh', 'name' => 'Kenyan Shilling'],
         ['code' => 'GHS', 'symbol' => '₵',   'name' => 'Ghanaian Cedi'],
@@ -221,8 +221,9 @@
                         </div>
                     </div>
 
-                    {{-- Options --}}
-                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain p-1">
+                    {{-- Options - capped at ~8 rows so the dropdown never
+                         spills past the modal; the list itself scrolls. --}}
+                    <div class="max-h-80 overflow-y-auto overscroll-contain p-1">
                         <template x-for="[name, flag] in Object.entries(options).filter(([n]) => n.toLowerCase().includes(search.toLowerCase()))" :key="name">
                             <button
                                 type="button"
@@ -303,8 +304,9 @@
                         </div>
                     </div>
 
-                    {{-- Options --}}
-                    <div class="max-h-[45vh] overflow-y-auto overscroll-contain p-1">
+                    {{-- Options - capped at ~8 rows so the dropdown never
+                         spills past the modal; the list itself scrolls. --}}
+                    <div class="max-h-80 overflow-y-auto overscroll-contain p-1">
                         <template x-for="lang in options.filter(l => l.toLowerCase().includes(search.toLowerCase()))" :key="lang">
                             <button
                                 type="button"

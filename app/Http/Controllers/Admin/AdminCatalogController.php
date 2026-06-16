@@ -12,6 +12,7 @@ use App\Models\PricingRule;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AdminCatalogController extends Controller
@@ -61,18 +62,53 @@ class AdminCatalogController extends Controller
         return response()->json(['is_active' => $product->is_active]);
     }
 
+    /**
+     * Storefront curation slots: at most this many products may carry each
+     * of the Featured / Popular badges at once. Keeps the homepage rows a
+     * deliberate shortlist instead of an ever-growing pile.
+     */
+    private const MAX_FLAGGED_PRODUCTS = 10;
+
     public function toggleFeatured(Product $product)
     {
-        $product->update(['is_featured' => ! $product->is_featured]);
-
-        return response()->json(['is_featured' => $product->is_featured]);
+        return $this->toggleCurationFlag($product, 'is_featured', 'Featured');
     }
 
     public function togglePopular(Product $product)
     {
-        $product->update(['is_popular' => ! $product->is_popular]);
+        return $this->toggleCurationFlag($product, 'is_popular', 'Popular');
+    }
 
-        return response()->json(['is_popular' => $product->is_popular]);
+    /**
+     * Flip a curation flag with the slot cap enforced atomically: the count
+     * and the write run inside one transaction with the flagged rows locked,
+     * so two admins toggling at the same moment can never overshoot the cap.
+     * Responses always carry the live slot usage so the UI can surface
+     * "X of 10 used" without a second request.
+     */
+    private function toggleCurationFlag(Product $product, string $flag, string $label)
+    {
+        return DB::transaction(function () use ($product, $flag, $label) {
+            $product = Product::whereKey($product->getKey())->lockForUpdate()->firstOrFail();
+
+            $flaggedCount = Product::where($flag, true)->lockForUpdate()->count();
+
+            if (! $product->{$flag} && $flaggedCount >= self::MAX_FLAGGED_PRODUCTS) {
+                return response()->json([
+                    'message' => "{$label} limit reached: up to ".self::MAX_FLAGGED_PRODUCTS." products can carry the {$label} badge at once. Remove one first.",
+                    'flagged_count' => $flaggedCount,
+                    'max' => self::MAX_FLAGGED_PRODUCTS,
+                ], 422);
+            }
+
+            $product->update([$flag => ! $product->{$flag}]);
+
+            return response()->json([
+                $flag => $product->{$flag},
+                'flagged_count' => $flaggedCount + ($product->{$flag} ? 1 : -1),
+                'max' => self::MAX_FLAGGED_PRODUCTS,
+            ]);
+        });
     }
 
     /**

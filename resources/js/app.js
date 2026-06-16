@@ -1480,6 +1480,10 @@ window.bestSellingCountriesMap = function (payload) {
             const bg = dark ? '#26416b' : '#e5e7eb';
             const stroke = dark ? '#34507a' : '#cbd5e1';
 
+            // Initial fill, kept so _refresh() can un-shade countries that
+            // drop out when a filter narrows the window.
+            this._baseFill = bg;
+
             // Cursor affordance: grab on idle, grabbing during a drag pan.
             el.style.cursor = 'grab';
             el.addEventListener('mousedown', () => { el.style.cursor = 'grabbing'; });
@@ -1522,6 +1526,10 @@ window.bestSellingCountriesMap = function (payload) {
                 },
             });
 
+            // Seed the shaded-codes memory with the initial paint so the first
+            // filter change can reset countries that drop out.
+            this._lastShaded = Object.keys(this._values());
+
             this.$watch('view', () => this._refresh());
             this.$watch('continent', () => this._refresh());
         },
@@ -1533,6 +1541,13 @@ window.bestSellingCountriesMap = function (payload) {
 
         setView(v) { this.view = v; },
         setContinent(c) { this.continent = c; },
+
+        // No sales in the selected window — drives the client-side empty
+        // overlay; the map SVG stays mounted (wire:ignore) so a later filter
+        // with data re-shades it in place instead of facing a dead canvas.
+        isEmpty() {
+            return Object.keys(this.countries || {}).length === 0;
+        },
 
         // Called from the dashboard's Livewire layer (via the
         // map-data-updated browser event) when the Period or Product filter
@@ -1560,15 +1575,18 @@ window.bestSellingCountriesMap = function (payload) {
         },
 
         _scale() {
-            // Two near-identical brand blues — jsvectormap collapses to black
-            // when both ends of the scale are exactly equal, so we use a
-            // hairline gradient (#1d4ed8 → #0044FF) that reads as uniform blue
-            // but keeps the interpolator happy.
-            return ['#1d4ed8', '#0044FF'];
+            // jsvectormap's Series only understands an ORDINAL scale: an
+            // object of named keys -> colors, with values mapping each region
+            // to one of those keys. (An array scale + numeric values makes
+            // every lookup return undefined, which SVG paints BLACK - the
+            // "black country" bug.) Four brand-blue intensity tiers; _values()
+            // buckets each country's USD total into one of them.
+            return { t1: '#93c5fd', t2: '#60a5fa', t3: '#3b82f6', t4: '#1d4ed8' };
         },
 
-        _values() {
-            // Country mode: shade per-country, filtered by continent scope.
+        // Numeric USD totals per country for the current view + continent
+        // scope. The tooltip reads these directly.
+        _numericValues() {
             if (this.view === 'country') {
                 const out = {};
                 Object.keys(this.countries).forEach((cc) => {
@@ -1588,6 +1606,19 @@ window.bestSellingCountriesMap = function (payload) {
             return out;
         },
 
+        // Bucket the numeric totals into the ordinal tier keys the scale
+        // understands: top seller gets the deepest blue, others scale down.
+        _values() {
+            const nums = this._numericValues();
+            const max = Math.max(0, ...Object.values(nums));
+            const out = {};
+            Object.keys(nums).forEach((cc) => {
+                const ratio = max > 0 ? nums[cc] / max : 0;
+                out[cc] = ratio > 0.75 ? 't4' : (ratio > 0.5 ? 't3' : (ratio > 0.25 ? 't2' : 't1'));
+            });
+            return out;
+        },
+
         _tooltipValue(code) {
             if (!this._inScope(code)) { return null; }
             if (this.view === 'country') { return this.countries[code] ?? null; }
@@ -1597,7 +1628,20 @@ window.bestSellingCountriesMap = function (payload) {
 
         _refresh() {
             if (!this.map) { return; }
-            this.map.series.regions[0].setValues(this._values());
+            const series = this.map.series.regions[0];
+            const tiers = this._values();
+
+            // setValues() only paints the codes it is given - countries shaded
+            // by the previous filter would keep their old blue, so reset any
+            // that dropped out of the new window back to the base fill first.
+            const reset = {};
+            (this._lastShaded || []).forEach((cc) => {
+                if (!(cc in tiers)) { reset[cc] = this._baseFill; }
+            });
+            series.setAttributes(reset);
+
+            series.setValues(tiers);
+            this._lastShaded = Object.keys(tiers);
         },
     };
 };
@@ -1815,6 +1859,33 @@ window.salesCostChart = function (series) {
             return this.mode === 'sales' ? 'Sales' : (this.mode === 'cost' ? 'Cost' : 'Sales / Cost');
         },
 
+        // No data in the selected window — drives the client-side empty
+        // overlay so the canvas can stay in the DOM (wire:ignore) across
+        // filter changes instead of being swapped out by a server re-render.
+        isEmpty() {
+            return !this.series
+                || this.series.length === 0
+                || this.series.every((p) => !Number(p.sales) && !Number(p.cost));
+        },
+
+        // Called via the trends-data-updated browser event when the period
+        // filter changes server-side. Swaps the series into the live chart -
+        // no page reload, no re-init. Livewire 3 wraps named params in
+        // different detail shapes depending on the consumer; accept both.
+        updateData(detail) {
+            if (! detail) return;
+            const payload = Array.isArray(detail?.params)
+                ? (detail.params[0] || {})
+                : detail;
+            this.series = payload.series || [];
+            if (! this.chart) return; // init() will pick the series up when it lands
+
+            this.chart.updateSeries([
+                { name: 'Sales', data: this.series.map((p) => [new Date(p.date).getTime(), p.sales]) },
+                { name: 'Cost',  data: this.series.map((p) => [new Date(p.date).getTime(), p.cost])  },
+            ]);
+        },
+
         _update() {
             const wanted = this.mode === 'both' ? ['Sales', 'Cost'] : (this.mode === 'sales' ? ['Sales'] : ['Cost']);
             ['Sales', 'Cost'].forEach((name) => {
@@ -1854,7 +1925,11 @@ window.salesCostChart = function (series) {
                     type: 'datetime',
                     labels: {
                         style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
-                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                        // The series is daily buckets, but with a short data
+                        // window Apex zooms to hour-level ticks whose default
+                        // format is HH:mm — every label reads "00:00". Override
+                        // hour/minute so sub-day ticks still print the day.
+                        datetimeFormatter: { day: 'MMM dd, ddd', hour: 'MMM dd', minute: 'MMM dd' },
                     },
                     axisBorder: { show: false },
                     axisTicks: { show: false },
@@ -2037,7 +2112,10 @@ window.reportChart = function (series, chartType) {
                     type: 'datetime',
                     labels: {
                         style: { colors: textColor, fontSize: '11px', fontWeight: 500 },
-                        datetimeFormatter: { day: 'MMM dd, ddd' },
+                        // Same fix as the dashboard Trends chart: short data
+                        // windows make Apex pick hour-level ticks, whose
+                        // default HH:mm format prints "00:00" everywhere.
+                        datetimeFormatter: { day: 'MMM dd, ddd', hour: 'MMM dd', minute: 'MMM dd' },
                     },
                     axisBorder: { show: false },
                     axisTicks: { show: false },

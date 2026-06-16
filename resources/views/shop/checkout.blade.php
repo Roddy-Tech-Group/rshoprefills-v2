@@ -50,6 +50,15 @@
         'redemption_min'     => (int) \App\Models\Setting::get('redemption_min_rcoin', 2000),
         'redemption_max_pct' => (float) \App\Models\Setting::get('redemption_max_percentage', 30.0),
     ];
+
+    // Processing-fee disclosure rates (config/payment_fees.php). The gateway
+    // charges the customer these on top of the order amount; the totals block
+    // surfaces them up front so the statement never surprises anyone.
+    $paymentFees = [
+        'fee_free' => array_values((array) config('payment_fees.fee_free_methods', [])),
+        'methods'  => (array) config('payment_fees.methods', []),
+        'default'  => (array) config('payment_fees.default', ['transaction' => 0.0, 'international' => 0.0]),
+    ];
 @endphp
 
 <x-layouts.app.header :title="'Checkout | RshopRefills'">
@@ -75,7 +84,7 @@
             class="mt-4"
         />
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false), @js($paymentFees))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
             <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white py-24 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
@@ -85,9 +94,10 @@
                 </svg>
             </div>
 
-            {{-- Empty cart --}}
+            {{-- Empty cart - same animated inline illustration as the cart
+                 page and the nav/dashboard cart popups. --}}
             <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white px-6 py-20 text-center shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                <img src="{{ asset('assets/' . rawurlencode('Empty cart.webp')) }}" alt="" class="mx-auto h-40 w-auto object-contain animate-float" loading="lazy">
+                <x-illo name="emptyCart" class="mx-auto w-full max-w-[280px]" />
                 <p class="mt-4 text-base font-semibold text-zinc-900">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600">Add a gift card before heading to checkout.</p>
                 <a href="{{ request()->routeIs('dashboard.*') ? route('dashboard.shop.gift-cards') : route('shop.gift-cards') }}" wire:navigate class="mt-5 inline-flex items-center gap-1.5 rounded-[10px] bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
@@ -421,12 +431,20 @@
                                 </div>
                             </div>
                         @else
-                            <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4 text-center">
-                                <div class="flex justify-center gap-3 mb-3">
-                                    <img src="/assets/visa.svg" alt="Visa" class="h-8 object-contain">
-                                    <img src="/assets/mastercard.svg" alt="Mastercard" class="h-8 object-contain">
+                            <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-700/60 dark:bg-white/5">
+                                {{-- Brand marks keep their real colours in dark mode:
+                                     no-dark-invert opts them out of the global
+                                     .dark img[src$=".svg"] invert filter, and the
+                                     white chips keep them legible on the dark panel. --}}
+                                <div class="mb-3 flex justify-center gap-3">
+                                    <span class="flex h-9 items-center rounded-[6px] bg-white px-2 ring-1 ring-zinc-200 dark:ring-white/20">
+                                        <img src="/assets/visa.svg" alt="Visa" class="no-dark-invert h-6 object-contain">
+                                    </span>
+                                    <span class="flex h-9 items-center rounded-[6px] bg-white px-2 ring-1 ring-zinc-200 dark:ring-white/20">
+                                        <img src="/assets/mastercard.svg" alt="Mastercard" class="no-dark-invert h-6 object-contain">
+                                    </span>
                                 </div>
-                                <p class="text-sm font-medium text-zinc-700">
+                                <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                                     Secure and encrypted payment with bank-level security.
                                 </p>
                             </div>
@@ -559,8 +577,22 @@
 
                     @error('payment_method') <p class="mt-3 text-xs text-red-600">{{ $message }}</p> @enderror
 
+                    {{-- Fee breakdown - rendered only when the selected method
+                         carries a gateway processing fee, so fee-free methods
+                         (wallet, crypto) keep the simple single-line total. --}}
+                    <div x-show="processingFee() > 0" x-cloak class="mt-5 border-t border-zinc-100 pt-5">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="font-medium text-zinc-600">Subtotal</span>
+                            <span class="font-semibold tabular-nums text-zinc-900" x-text="$store.cart.pay($store.cart.subtotal)"></span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between text-sm">
+                            <span class="font-medium text-zinc-600">Processing fee</span>
+                            <span class="font-semibold tabular-nums text-zinc-900" x-text="$store.cart.pay(processingFee())"></span>
+                        </div>
+                    </div>
+
                     {{-- Total --}}
-                    <div class="mt-5 flex items-center justify-between border-t border-zinc-100 pt-5">
+                    <div class="mt-5 flex items-center justify-between border-t border-zinc-100 pt-5" :class="processingFee() > 0 && 'mt-3 border-t-0 pt-0'">
                         <span class="text-base font-bold text-zinc-900">Total amount to pay</span>
                         <span x-data="valueFlip()" x-effect="totalLabel(); flash()" class="inline-block text-lg font-extrabold tabular-nums text-zinc-900" x-text="totalLabel()">0.00</span>
                     </div>
@@ -857,24 +889,17 @@
                             <p class="mt-1 text-xs text-zinc-500">Please do not close this window.</p>
                         </div>
 
-                        <!-- Success state -->
+                        <!-- Success state: same animated tick as the order-complete
+                             page so every payment method celebrates identically. -->
                         <div x-show="paymentState === 'success'" class="flex flex-col items-center py-8 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-emerald-50 ring-8 ring-emerald-100">
-                                <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                </svg>
-                            </span>
+                            <x-success-tick />
                             <h3 class="mt-4 text-base font-bold text-zinc-950">Payment Complete!</h3>
                             <p class="mt-1.5 text-xs text-zinc-600 font-medium">Your order is confirmed. Redirecting now...</p>
                         </div>
 
-                        <!-- Error state -->
+                        <!-- Error state: animated red cross, the tick's counterpart. -->
                         <div x-show="paymentState === 'error'" class="flex flex-col items-center py-6 text-center">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-50 ring-8 ring-red-100">
-                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </span>
+                            <x-error-cross />
                             <h3 class="mt-4 text-sm font-bold text-zinc-900">Payment Failed</h3>
                             <p class="mt-1.5 text-xs text-red-600 px-4" x-html="errorMessage"></p>
                             
@@ -892,7 +917,7 @@
     </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin) {
+        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin, paymentFees) {
             return {
                 method: 'card',
                 crypto: '',
@@ -901,6 +926,7 @@
                 walletBalances: walletBalances || {},
                 isLoggedIn: isLoggedIn || false,
                 hasTransactionPin: hasTransactionPin || false,
+                paymentFees: paymentFees || { fee_free: [], methods: {}, default: { transaction: 0, international: 0 } },
 
                 // Rcoin redemption state — three values:
                 //   ''     = off (default)
@@ -1124,6 +1150,27 @@
                     return this.cryptoRates[this.crypto] || null;
                 },
 
+                // Estimated gateway processing fee for the selected method
+                // (config/payment_fees.php). The provider charges the customer
+                // this on top of the order amount, so we disclose it before
+                // payment. The international surcharge applies when the
+                // checkout currency is not NGN (the account's home market).
+                processingFee() {
+                    const method = this.method;
+                    if ((this.paymentFees.fee_free || []).includes(method)) {
+                        return 0;
+                    }
+                    const amount = Number(this.$store.cart.subtotal || 0);
+                    if (! (amount > 0)) {
+                        return 0;
+                    }
+                    const rates = (this.paymentFees.methods || {})[method] || this.paymentFees.default || { transaction: 0, international: 0 };
+                    const international = (this.$store.cart.currency || 'NGN') !== 'NGN';
+                    const pct = Number(rates.transaction || 0) + (international ? Number(rates.international || 0) : 0);
+
+                    return Math.round(amount * pct) / 100;
+                },
+
                 totalLabel() {
                     const usd = Number(this.$store.cart.subtotalUsd || 0);
                     if (this.method === 'crypto') {
@@ -1133,7 +1180,7 @@
                         }
                         return (usd * coin.perUsd).toFixed(coin.decimals) + ' ' + coin.code;
                     }
-                    return this.$store.cart.pay(this.$store.cart.subtotal);
+                    return this.$store.cart.pay(Number(this.$store.cart.subtotal || 0) + this.processingFee());
                 },
 
                 points() {
