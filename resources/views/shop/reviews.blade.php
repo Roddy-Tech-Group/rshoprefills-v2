@@ -23,7 +23,7 @@
     <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
 
     {{-- Hero --}}
-    <section class="border-b border-zinc-100 bg-blue-50">
+    <section class="border-b border-zinc-100 bg-blue-50 dark:bg-[#0c1a36]!">
         <div class="mx-auto w-full max-w-[1140px] px-4 py-14 text-center sm:px-6 sm:py-20">
             <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Customer reviews</span>
             <h1 class="mt-5 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">What our customers say</h1>
@@ -32,11 +32,13 @@
             </p>
 
             @if ($aggregate['count'] > 0)
-                <div class="mx-auto mt-6 inline-flex items-center gap-3 rounded-[10px] bg-white px-4 py-2.5 ring-1 ring-zinc-100">
+                <div class="mx-auto mt-6 inline-flex items-center gap-3 rounded-[10px] bg-white px-4 py-2.5 ring-1 ring-zinc-100 dark:bg-[#0c1a36]!">
                     <div class="flex items-center gap-0.5">
                         @for ($i = 1; $i <= 5; $i++)
-                            <span class="flex h-5 w-5 items-center justify-center {{ $i <= round($aggregate['rating']) ? 'bg-emerald-500' : 'bg-zinc-200' }}">
-                                <svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            @php $fillPct = max(0, min(100, ($aggregate['rating'] - ($i - 1)) * 100)); @endphp
+                            <span class="relative flex h-5 w-5 items-center justify-center overflow-hidden bg-zinc-200">
+                                <span class="absolute inset-y-0 left-0 bg-emerald-500" style="width: {{ $fillPct }}%"></span>
+                                <svg class="relative h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                     <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                                 </svg>
                             </span>
@@ -50,9 +52,9 @@
     </section>
 
     {{-- Trustpilot Review Collector - lets visitors leave a review directly --}}
-    <section class="border-b border-zinc-100 bg-white">
+    <section class="border-b border-zinc-100 bg-white dark:bg-[#0c1a36]!">
         <div class="mx-auto w-full max-w-[1140px] px-4 py-10 sm:px-6">
-            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8">
+            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8 dark:bg-[#0c1a36]!">
                 <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                     <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-emerald-100">
                         <svg class="h-6 w-6 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -61,28 +63,30 @@
                     </div>
                     <div class="min-w-0 flex-1">
                         <h2 class="text-lg font-bold text-zinc-900">Bought from us recently?</h2>
-                        <p class="mt-1 text-sm text-zinc-600">Take a minute to share your experience on {{ $aggregate['source'] }}. Reviews help other customers make confident choices.</p>
+                        <p class="mt-1 text-sm text-zinc-600">Take a minute to share your experience on {{ $aggregate['source'] }}. Reviews help other customers make confident choices and helps us improve services for you.</p>
                     </div>
                 </div>
 
-                {{-- TrustBox widget - Review Collector --}}
-                <div class="mt-6">
-                    <div class="trustpilot-widget"
-                        data-locale="{{ $tp['locale'] }}"
-                        data-template-id="{{ $tp['review_collector_template_id'] }}"
-                        data-businessunit-id="{{ $tp['business_unit_id'] }}"
-                        data-style-height="52px"
-                        data-style-width="100%"
-                        data-token="{{ $tp['review_collector_token'] }}">
-                        <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-700 hover:underline">Leave a review on Trustpilot</a>
+                {{-- Review CTAs - Trustpilot + Google side by side (stack on mobile). --}}
+                <div class="mt-6 grid items-center gap-4 sm:grid-cols-2">
+                    {{-- TrustBox widget - Review Collector --}}
+                    <div class="flex justify-center">
+                        <div class="inline-flex overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-md shadow-zinc-900/20 dark:border-white/10">
+                            <div class="trustpilot-widget"
+                                data-locale="{{ $tp['locale'] }}"
+                                data-template-id="{{ $tp['review_collector_template_id'] }}"
+                                data-businessunit-id="{{ $tp['business_unit_id'] }}"
+                                data-style-height="52px"
+                                data-style-width="240px"
+                                data-token="{{ $tp['review_collector_token'] }}">
+                                <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-700 hover:underline">Leave a review on Trustpilot, on the website or Google.</a>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                {{-- Google CTA - mirror of the Trustpilot collector for the
-                     other major review surface. QR sits beside the button so
-                     desktop visitors can scan with their phone, mobile visitors
-                     can just tap. Both routes hit the same Google review URL. --}}
-                <div class="mt-3 flex flex-wrap items-center gap-4 rounded-[10px] bg-white p-4 ring-1 ring-zinc-200">
+                    {{-- Google CTA - the other major review surface. QR sits beside
+                         the button so desktop visitors can scan, mobile can tap. --}}
+                    <div class="flex flex-wrap items-center gap-4 rounded-[10px] bg-white p-4 ring-1 ring-zinc-200">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
                         <svg class="h-6 w-6 shrink-0" viewBox="0 0 48 48" aria-hidden="true">
                             <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917"/>
@@ -104,6 +108,7 @@
                             <img src="{{ asset('assets/' . rawurlencode($google['qr_asset'])) }}" alt="" class="h-16 w-16 object-contain">
                         </a>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -174,12 +179,12 @@
         }
     </style>
 
-    <section class="w-full overflow-hidden bg-zinc-50 py-14 sm:py-16">
+    <section class="w-full overflow-hidden bg-zinc-50 py-14 sm:py-16 dark:bg-[#0c1a36]!">
         <div class="mx-auto mb-8 w-full max-w-[1140px] px-4 sm:px-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Recent reviews</h2>
-                    <p class="mt-1 text-sm text-zinc-600">Reviews collected from our system, Trustpilot and Google Business. Hover any card to pause.</p>
+                    <p class="mt-1 text-sm text-zinc-600">Reviews collected from our system, Trustpilot and Google Business. Hover any card to pause and read.
                 </div>
                 <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800">
                     View all on {{ $aggregate['source'] }}
@@ -241,17 +246,17 @@
 
     {{-- Leave a review - our own collector, posting straight into the wall
          above (after approval). These are general, non-product reviews. --}}
-    <section class="border-t border-zinc-100 bg-white">
+    <section class="border-t border-zinc-100 bg-white dark:bg-[#0c1a36]!">
         <div class="mx-auto w-full max-w-[640px] px-4 py-14 sm:px-6 sm:py-16">
-            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8">
+            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8 dark:bg-[#0c1a36]!">
                 @include('shop._review-form')
             </div>
         </div>
     </section>
 
-    {{-- Final CTA --}}
-    <section class="bg-blue-600">
-        <div class="mx-auto w-full max-w-[1140px] px-4 py-14 text-center sm:px-6">
+    {{-- Final CTA - contained rounded banner rather than a full-bleed strip. --}}
+    <section class="px-4 py-12 sm:px-6">
+        <div class="mx-auto w-full max-w-[1140px] rounded-[10px] bg-blue-600 px-4 py-14 text-center sm:px-6">
             <h2 class="text-2xl font-bold text-white sm:text-3xl">Loved using RshopRefills?</h2>
             <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-blue-100">Drop us a review on {{ $aggregate['source'] }} - it takes less than a minute and helps other customers find us.</p>
             <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-white px-6 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50">

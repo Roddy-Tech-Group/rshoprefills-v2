@@ -932,10 +932,11 @@ window.customerReviewsCarousel = function () {
         cardW: 288,
         gap: 20,
         padLeft: 0,
+        timer: null,
 
         // Measure the card width + content-column padding so the arrow steps by
-        // whole cards and the first card lines up with the header title. The
-        // actual swipe is native overflow scrolling (smooth momentum on touch).
+        // whole cards and the first card lines up with the header title. Native
+        // overflow scrolling drives manual swipes; play() auto-advances on a timer.
         setup() {
             const viewport = this.$refs.track;
             const list     = this.$refs.list;
@@ -969,6 +970,22 @@ window.customerReviewsCarousel = function () {
 
             const cardsPerStep = window.innerWidth >= 640 ? 2 : 1;
             viewport.scrollBy({ left: cardsPerStep * (this.cardW + this.gap), behavior: 'smooth' });
+        },
+
+        // Auto-advance on a timer (slideshow). Paused while the user hovers or
+        // touches the row so they can read; resumed afterwards. Skips ticks while
+        // the tab is hidden.
+        play() {
+            this.stop();
+            this.timer = setInterval(() => {
+                if (! document.hidden) { this.next(); }
+            }, 4500);
+        },
+        stop() {
+            if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        },
+        destroy() {
+            this.stop();
         },
     };
 };

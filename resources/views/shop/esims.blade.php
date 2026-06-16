@@ -5,7 +5,7 @@
     $catalog = $catalog ?? collect();
 @endphp
 
-<x-shop.layout :title="'eSIMs | RshopRefills'">
+<x-shop.layout :title="'eSIMs | RshopRefills'" :og-image="asset('assets/'.rawurlencode('Esim.webp'))">
 
     <div
         x-data="{

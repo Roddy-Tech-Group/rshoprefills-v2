@@ -14,6 +14,9 @@
 @php
     $sourceKey = strtolower(trim((string) $review->source));
     $isGoogle = $sourceKey === 'google';
+    // Our own "system" reviews (source set by ReviewController, e.g. "RshopRefills")
+    // use the brand mark + blue stars, distinct from Trustpilot's emerald.
+    $isSystem = str_contains($sourceKey, 'rshop');
 
     // Half-star bucketing: 3.5 renders as 3 full + 1 half + 1 empty.
     $r        = max(0, min(5, (float) $review->rating));
@@ -23,7 +26,7 @@
     $empty    = 5 - $full - ($hasHalf ? 1 : 0);
 @endphp
 
-<article class="flex w-72 shrink-0 flex-col rounded-[14px] dash-shimmer border border-zinc-200 bg-transparent p-5 transition-colors hover:border-green-200 sm:w-80 dark:border-zinc-700 dark:hover:border-white">
+<article class="flex w-72 shrink-0 flex-col rounded-[14px] dash-shimmer border border-zinc-200 bg-transparent p-5 transition-colors hover:border-green-200 sm:w-80 dark:border-white dark:hover:border-white">
 
     <div class="flex items-start justify-between gap-3">
         <div class="flex min-w-0 items-start gap-3">
@@ -50,8 +53,11 @@
                         <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44"/>
                         <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917"/>
                     </svg>
+                @elseif ($isSystem)
+                    {{-- Our own brand mark for system reviews --}}
+                    <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-4 w-4 object-contain" loading="lazy">
                 @else
-                    {{-- Trustpilot-style emerald star (default for Trustpilot + our own) --}}
+                    {{-- Trustpilot-style emerald star (default for Trustpilot) --}}
                     <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                     </svg>
@@ -63,6 +69,10 @@
                 @for ($i = 0; $i < $full; $i++)
                     @if ($isGoogle)
                         <svg class="h-4 w-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                        </svg>
+                    @elseif ($isSystem)
+                        <svg class="h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                         </svg>
                     @else
@@ -81,6 +91,12 @@
                             <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z" fill="currentColor" fill-opacity="0.25"/>
                             <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897V.587z" fill="currentColor" transform="scale(-1, 1) translate(-24, 0)"/>
                         </svg>
+                    @elseif ($isSystem)
+                        {{-- Half blue star --}}
+                        <svg class="h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z" fill="currentColor" fill-opacity="0.25"/>
+                            <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897V.587z" fill="currentColor" transform="scale(-1, 1) translate(-24, 0)"/>
+                        </svg>
                     @else
                         {{-- Half emerald square: left half emerald, right half neutral grey --}}
                         <span class="relative flex h-4 w-4 overflow-hidden">
@@ -96,6 +112,10 @@
                 @for ($i = 0; $i < $empty; $i++)
                     @if ($isGoogle)
                         <svg class="h-4 w-4 text-amber-400/30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
+                        </svg>
+                    @elseif ($isSystem)
+                        <svg class="h-4 w-4 text-blue-600/20 dark:text-blue-400/20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                         </svg>
                     @else

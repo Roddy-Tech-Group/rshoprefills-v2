@@ -298,7 +298,7 @@
         ->values();
 @endphp
 
-<x-shop.layout :title="$regionLabel . ' eSIM | RshopRefills'">
+<x-shop.layout :title="$regionLabel . ' eSIM | RshopRefills'" :og-image="asset('assets/'.rawurlencode('Esim.webp'))">
 
     {{-- translate="no": the page translator (Google) rewrites text nodes, which
          corrupts Alpine's reactive <template x-for> package list (it renders then

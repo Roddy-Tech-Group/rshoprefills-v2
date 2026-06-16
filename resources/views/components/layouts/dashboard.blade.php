@@ -275,7 +275,7 @@
             $defaultAvatar = $user?->initialsAvatar() ?? '';
         @endphp
 
-        <flux:sidebar sticky stashable class="relative hidden w-[256px] m-3 rounded-[14px] border border-zinc-200 bg-[#eff6ff] dark:border-zinc-700 dark:bg-[#0c1a36] lg:flex" style="height: calc(100dvh - 1.5rem); top: 0.75rem;">
+        <flux:sidebar sticky stashable class="relative hidden w-[256px] m-3 rounded-[14px] border border-zinc-200 bg-[#eff6ff] dark:border-[#24364f] dark:bg-[#0c1a36] lg:flex" style="height: calc(100dvh - 1.5rem); top: 0.75rem;">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
             {{-- Glass round toggle on the seam — mirrors the admin sidebar.
@@ -923,7 +923,7 @@
                     class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
                     role="menu"
                 >
-                    <div class="border-b border-zinc-100 px-4 py-3">
+                    <div class="border-b border-zinc-200 px-4 py-3">
                         <p class="truncate text-sm font-semibold text-zinc-900">{{ $user?->name ?? 'Account' }}</p>
                         <p class="truncate text-xs text-zinc-600">{{ $user?->email ?? '' }}</p>
                     </div>
@@ -965,7 +965,7 @@
                         </a>
                     </div>
 
-                    <div class="border-t border-zinc-100 p-1.5">
+                    <div class="border-t border-zinc-200 p-1.5">
                         <form method="POST" action="{{ route('logout') }}" class="w-full">
                             @csrf
                             <button type="submit" class="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/15 dark:hover:text-red-300">
@@ -1113,7 +1113,7 @@
                     x-data
                     x-on:click="$dispatch('open-connect-panel')"
                     aria-label="Connect with us"
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors active:scale-95"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
@@ -1125,7 +1125,7 @@
                         @locale-updated.window="code = ($event.detail.countryCode || code).toLowerCase()"
                         x-on:click="$dispatch('open-locale-modal')"
                         aria-label="Region, language and currency"
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors active:scale-95"
                     >
                         <img :src="'https://flagcdn.com/w80/' + code + '.png'" alt="" class="h-6 w-6 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/25" loading="lazy">
                     </button>
@@ -1135,7 +1135,7 @@
                         href="{{ route('dashboard.shop.cart') }}"
                         wire:navigate.hover
                         aria-label="Cart"
-                        class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                        class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors active:scale-95"
                     >
                         <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                         <span
@@ -1145,7 +1145,7 @@
                             class="absolute -top-0.5 -right-0.5 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold leading-none text-white"
                         ></span>
                     </a>
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-white/10 dark:ring-white/20">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200">
                         <livewire:notifications-menu tone="dark" wire:key="inner-bar-notif" />
                     </div>
                 </div>
@@ -1187,7 +1187,7 @@
                     type="button"
                     @click="$dispatch('open-connect-panel')"
                     aria-label="Connect with us"
-                    class="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                    class="pointer-events-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors active:scale-95"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('Hamburger menu.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                 </button>
@@ -1201,7 +1201,7 @@
                         @locale-updated.window="code = ($event.detail.countryCode || code).toLowerCase()"
                         x-on:click="$dispatch('open-locale-modal')"
                         aria-label="Region, language and currency"
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors active:scale-95"
                     >
                         <img :src="'https://flagcdn.com/w80/' + code + '.png'" alt="" class="h-6 w-6 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/25" loading="lazy">
                     </button>
@@ -1210,7 +1210,7 @@
                         href="{{ route('dashboard.shop.cart') }}"
                         wire:navigate.hover
                         aria-label="Cart"
-                        class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/55 active:scale-95 dark:bg-white/10 dark:ring-white/20 dark:hover:bg-white/15"
+                        class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors active:scale-95"
                     >
                         <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 dark:brightness-0 dark:invert" style="filter: brightness(0) saturate(100%);" loading="lazy">
                         <span
@@ -1220,7 +1220,7 @@
                             class="absolute -top-1 -right-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white/60 dark:ring-[#0c1a36]"
                         ></span>
                     </a>
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/40 shadow-lg shadow-zinc-900/15 ring-1 ring-white/50 backdrop-blur-xl backdrop-saturate-150 dark:bg-white/10 dark:ring-white/20">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200">
                         <livewire:notifications-menu tone="dark" wire:key="floating-notif-inner" />
                     </div>
                 </div>

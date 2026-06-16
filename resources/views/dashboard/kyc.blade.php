@@ -88,7 +88,7 @@
                     @elseif ($emailVerified)
                         <span class="inline-flex items-center rounded-[5px] bg-emerald-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">Email Verified</span>
                     @else
-                        <span class="inline-flex items-center rounded-[5px] bg-zinc-400 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">Basic</span>
+                        <span class="inline-flex items-center rounded-[5px] bg-zinc-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white dark:bg-zinc-700 dark:text-zinc-200">Basic</span>
                     @endif
                 </div>
 

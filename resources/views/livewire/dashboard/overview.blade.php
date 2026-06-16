@@ -332,7 +332,7 @@ new #[Lazy] class extends Component
 
         {{-- Give the Perfect Gift promo - placed here on mobile (desktop keeps its own copy in the right rail). --}}
         <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
-            <div class="relative z-10 max-w-[64%]">
+            <div class="relative z-10 max-w-[54%]">
                 <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
                 <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
                 <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
@@ -343,15 +343,16 @@ new #[Lazy] class extends Component
             <img
                 src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
                 alt=""
-                class="pointer-events-none absolute -right-4 bottom-2 h-40 w-auto select-none object-contain drop-shadow-2xl"
+                class="pointer-events-none absolute -right-3 bottom-2 w-[46%] max-w-[260px] select-none object-contain object-bottom drop-shadow-2xl"
                 loading="lazy"
             >
         </div>
 
         {{-- Recent Orders - mobile shows up to 5; sits directly above Recent
              Transactions so the latest spending activity reads as one block. --}}
-        <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
-            <div class="flex items-center justify-between">
+        <div class="relative overflow-hidden rounded-[10px] bg-green-100/50 p-5 border border-green-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-green-500/50 dark:bg-green-500/15 dark:shadow-none">
+            <x-ui.floating-confetti />
+            <div class="relative z-10 flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Orders</h3>
                 <a href="{{ route('dashboard.orders') }}" wire:navigate aria-label="View all orders" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-blue-700 border border-zinc-200 transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -360,7 +361,7 @@ new #[Lazy] class extends Component
                 </a>
             </div>
 
-            <ul class="mt-4 space-y-3">
+            <ul class="relative z-10 mt-4 space-y-3">
                 @forelse ($recentOrders as $order)
                     @php
                         $groupedItems = $order->items->groupBy('product_variant_id');
@@ -373,6 +374,11 @@ new #[Lazy] class extends Component
                         $extraVariants = max(0, $groupedItems->count() - 1);
                         $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                         [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+                        // The green Recent Orders card would swallow the emerald "Completed"
+                        // pill, so back it with the neutral card surface (white / navy in dark).
+                        if (($order->order_status?->value) === 'completed') {
+                            $statusTone = 'bg-white text-emerald-700 ring-emerald-200 dark:text-emerald-300 dark:ring-emerald-500/30';
+                        }
                     @endphp
                     <li>
                         <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -410,8 +416,9 @@ new #[Lazy] class extends Component
              Shows top-ups (credits) and purchases (debits) interleaved since both
              write to wallet_transactions. Capped at 8 here, full history is on
              /dashboard/transactions via the See more "+" button. --}}
-        <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
-            <div class="flex items-center justify-between">
+        <div class="relative overflow-hidden rounded-[10px] bg-red-100/50 p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+            <x-ui.floating-confetti />
+            <div class="relative z-10 flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
                 <a href="{{ route('dashboard.transactions') }}" wire:navigate aria-label="View all transactions" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-blue-700 border border-zinc-200 transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -420,14 +427,16 @@ new #[Lazy] class extends Component
                 </a>
             </div>
 
-            <ul class="mt-4 space-y-3">
+            <ul class="relative z-10 mt-4 space-y-3">
                 @forelse ($recentTransactions as $txn)
                     <li class="flex items-center gap-3">
-                        @if ($txn->is_credit)
-                            <x-icons.txn-credit class="h-11 w-11" />
-                        @else
-                            <x-icons.txn-debit class="h-11 w-11" />
-                        @endif
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm shadow-zinc-900/5">
+                            @if ($txn->is_credit)
+                                <x-icons.txn-credit class="h-9 w-9" />
+                            @else
+                                <x-icons.txn-debit class="h-9 w-9" />
+                            @endif
+                        </span>
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->title }}</p>
                             <p class="truncate text-[11px] text-zinc-600">{{ $txn->sub }}</p>
@@ -511,7 +520,7 @@ new #[Lazy] class extends Component
                             type="button"
                             @click="open = ! open"
                             :aria-expanded="open.toString()"
-                            class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                            class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors"
                         >
                             {{-- Theme indicator - swaps Light / Dark / Auto PNG icons
                                  (project-canonical, brightness-0 dark:invert so they
@@ -689,6 +698,7 @@ new #[Lazy] class extends Component
                             get current() { return this.wallets[this.$store.wallet.active] ?? { code: 'USD', symbol: '$', label: 'US Dollar', formatted: '$0.00', type: 'fiat', color: 'bg-blue-800', icon: null }; }
                         }"
                         class="wallet-glass flex flex-col justify-center gap-4 rounded-2xl p-5 text-left text-blue-950 dark:text-white"
+                        :class="walletOpen && 'relative z-40'"
                     >
                         <div class="flex items-start justify-between">
                             <div class="min-w-0">
@@ -796,13 +806,14 @@ new #[Lazy] class extends Component
 
                     {{-- Recent Order card. Capped at 3 on desktop's right-rail
                          even though the query fetches 5 (mobile renders all 5). --}}
-                    <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
-                        <div class="flex items-center justify-between">
+                    <div class="relative overflow-hidden rounded-[10px] bg-green-100/50 p-5 border border-green-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-green-500/50 dark:bg-green-500/15 dark:shadow-none">
+                        <x-ui.floating-confetti />
+                        <div class="relative z-10 flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
                             <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
                         </div>
 
-                        <ul class="mt-4 space-y-3">
+                        <ul class="relative z-10 mt-4 space-y-3">
                             @forelse ($recentOrders->take(3) as $order)
                                 @php
                                     $groupedItems = $order->items->groupBy('product_variant_id');
@@ -815,6 +826,11 @@ new #[Lazy] class extends Component
                                     $extraVariants = max(0, $groupedItems->count() - 1);
                                     $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                                     [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+                                    // The green Recent Orders card would swallow the emerald "Completed"
+                                    // pill, so back it with the neutral card surface (white / navy in dark).
+                                    if (($order->order_status?->value) === 'completed') {
+                                        $statusTone = 'bg-white text-emerald-700 ring-emerald-200 dark:text-emerald-300 dark:ring-emerald-500/30';
+                                    }
                                 @endphp
                                 <li>
                                     <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -853,8 +869,8 @@ new #[Lazy] class extends Component
                      + dark/light variants live on .trust-glow in resources/css/app.css
                      so the Tailwind utilities here stay structural only. --}}
                 <div class="flex items-center gap-4 rounded-full bg-[#eff6ff] py-3 pl-3 pr-6 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-blue-100">
-                        <img src="{{ asset('assets/secure payments.svg') }}" alt="" class="h-6 w-6" loading="lazy">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center">
+                        <img src="{{ asset('assets/secure payments.svg') }}" alt="" class="h-9 w-9" loading="lazy">
                     </span>
                     <div class="min-w-0 flex-1">
                         <p class="text-sm font-semibold text-zinc-900">Secure. Fast. Reliable.</p>
@@ -972,7 +988,7 @@ new #[Lazy] class extends Component
 
                 {{-- Give the Perfect Gift promo --}}
                 <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
-                    <div class="relative z-10 max-w-[60%]">
+                    <div class="relative z-10 max-w-[54%]">
                         <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
                         <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
                         {{-- Literal-hex bg + no-dark-invert icon so this light button stays
@@ -986,26 +1002,29 @@ new #[Lazy] class extends Component
                     <img
                         src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
                         alt=""
-                        class="pointer-events-none absolute -right-4 bottom-2 h-48 w-auto select-none object-contain drop-shadow-2xl"
+                        class="pointer-events-none absolute -right-3 bottom-2 w-[46%] max-w-[230px] select-none object-contain object-bottom drop-shadow-2xl"
                         loading="lazy"
                     >
                 </div>
 
                 {{-- Recent Transactions (stretches to match left column height) --}}
-                <div class="flex flex-1 flex-col rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
-                    <div class="flex items-center justify-between">
+                <div class="relative flex flex-1 flex-col overflow-hidden rounded-[10px] bg-red-100/50 p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+                    <x-ui.floating-confetti />
+                    <div class="relative z-10 flex items-center justify-between">
                         <h3 class="text-base font-semibold text-zinc-900">Recent Transactions</h3>
                         <a href="{{ route('dashboard.transactions') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
                     </div>
 
-                    <ul class="mt-4 flex-1 space-y-3">
+                    <ul class="relative z-10 mt-4 flex-1 space-y-3">
                         @forelse ($recentTransactions as $txn)
                             <li class="flex items-center gap-3">
-                                @if ($txn->is_credit)
-                                    <x-icons.txn-credit class="h-11 w-11" />
-                                @else
-                                    <x-icons.txn-debit class="h-11 w-11" />
-                                @endif
+                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm shadow-zinc-900/5">
+                                    @if ($txn->is_credit)
+                                        <x-icons.txn-credit class="h-9 w-9" />
+                                    @else
+                                        <x-icons.txn-debit class="h-9 w-9" />
+                                    @endif
+                                </span>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->title }}</p>
                                     <p class="truncate text-[11px] text-zinc-600">{{ $txn->sub }}</p>

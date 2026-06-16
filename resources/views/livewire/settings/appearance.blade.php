@@ -43,7 +43,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     @click="theme = '{{ $opt['value'] }}'"
                     :aria-checked="(theme === '{{ $opt['value'] }}').toString()"
                     :class="theme === '{{ $opt['value'] }}'
-                        ? 'bg-zinc-200 text-black shadow-sm dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10'
+                        ? 'text-black ring-1 ring-blue-400 dark:text-white dark:ring-blue-500/60'
                         : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'"
                     class="inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold transition-colors"
                 >

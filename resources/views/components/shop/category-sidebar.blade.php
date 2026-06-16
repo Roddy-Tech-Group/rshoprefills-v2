@@ -30,7 +30,7 @@
      navigation is identical everywhere. Sticky as one unit; the inner panel
      scrolls if the subcategory list outgrows the viewport. --}}
 <aside class="hidden self-start lg:sticky lg:top-[156px] lg:block">
-    <div class="max-h-[calc(100vh-180px)] overflow-y-auto rounded-[14px] bg-[#eff6ff] p-3 border border-zinc-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:bg-[#0c1a36] dark:border-zinc-700">
+    <div class="max-h-[calc(100vh-180px)] overflow-y-auto rounded-[14px] bg-[#eff6ff] p-3 border border-zinc-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:bg-[#0c1a36] dark:border-[#24364f]">
 
         {{-- Categories — switches the storefront entirely --}}
         <p class="px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">Categories</p>

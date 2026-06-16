@@ -844,7 +844,11 @@ select:focus[data-flux-control] {
 
 /* Borders, rings and dividers. */
 .dark .border-zinc-100,
-.dark .border-zinc-200 { border-color: #24364f; }
+.dark .border-zinc-200,
+/* The thin-black (light-mode) cards/sidebars/pills use border-zinc-900; in dark
+   mode they must read the SAME navy border as every other card, not a stray
+   zinc-900/700. */
+.dark .border-zinc-900 { border-color: #24364f; }
 .dark .ring-zinc-100,
 .dark .ring-zinc-200   { --tw-ring-color: #24364f; }
 .dark .divide-zinc-100 > *,

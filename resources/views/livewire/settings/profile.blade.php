@@ -354,7 +354,7 @@ new #[Layout('components.layouts.dashboard')] #[Lazy] class extends Component {
                             @elseif ($emailVerified)
                                 <span class="inline-flex items-center rounded-[5px] bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Email Verified</span>
                             @else
-                                <a href="{{ route('dashboard.kyc') }}" wire:navigate class="inline-flex items-center rounded-[5px] bg-zinc-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Basic</a>
+                                <a href="{{ route('dashboard.kyc') }}" wire:navigate class="inline-flex items-center rounded-[5px] bg-zinc-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white dark:bg-zinc-700 dark:text-zinc-200">Basic</a>
                             @endif
                         </div>
                         <p class="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-zinc-600">
@@ -377,8 +377,8 @@ new #[Layout('components.layouts.dashboard')] #[Lazy] class extends Component {
                     <button
                         type="button"
                         @click="editingProfile = !editingProfile"
-                        class="hidden shrink-0 items-center gap-1.5 self-start rounded-[10px] border border-zinc-200 bg-white px-3.5 py-2 text-xs font-semibold text-zinc-700 shadow-sm transition-all hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700 active:scale-95 sm:inline-flex"
-                        :class="editingProfile && 'border-blue-600 bg-blue-50 text-blue-700'"
+                        class="hidden shrink-0 items-center gap-1.5 self-start rounded-[10px] border border-zinc-200 px-3.5 py-2 text-xs font-semibold text-zinc-700 transition-all hover:border-blue-600 hover:text-blue-700 active:scale-95 sm:inline-flex"
+                        :class="editingProfile && 'border-blue-600 text-blue-700'"
                     >
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M12 18.75h7.5"/>

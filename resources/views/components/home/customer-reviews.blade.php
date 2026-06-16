@@ -30,10 +30,14 @@
     aria-label="What our customers say"
     class="w-full"
     x-data="customerReviewsCarousel()"
-    x-init="$nextTick(() => setup())"
+    x-init="$nextTick(() => { setup(); play(); })"
     @resize.window.debounce.200ms="setup()"
-    x-on:livewire:navigate.window="navigating = true"
-    x-on:livewire:navigated.window="navigating = false; $nextTick(() => setup())"
+    @mouseenter="stop()"
+    @mouseleave="play()"
+    @touchstart.passive="stop()"
+    @touchend.passive="play()"
+    x-on:livewire:navigate.window="navigating = true; stop()"
+    x-on:livewire:navigated.window="navigating = false; $nextTick(() => { setup(); play(); })"
 >
 
     {{-- Header aligns with the page content width. --}}

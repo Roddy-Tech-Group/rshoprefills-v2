@@ -65,8 +65,8 @@
                 @click="pick('{{ $opt['value'] }}')"
                 :class="[
                     choice === '{{ $opt['value'] }}'
-                        ? 'bg-zinc-200 dark:bg-black dark:ring-1 dark:ring-white/10'
-                        : 'hover:bg-zinc-100 dark:hover:bg-white/5',
+                        ? 'text-blue-600 dark:text-blue-300'
+                        : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300',
                     switching && choice === '{{ $opt['value'] }}' ? 'theme-toggle-pop' : '',
                 ].join(' ')"
                 class="flex h-7 w-7 items-center justify-center rounded-[7px] transition-colors duration-150"
@@ -75,7 +75,7 @@
                 aria-label="{{ $opt['label'] }}"
                 title="{{ $opt['label'] }}"
             >
-                <x-dynamic-component :component="$opt['icon']" class="h-4 w-4 text-zinc-900 dark:text-white" />
+                <x-dynamic-component :component="$opt['icon']" class="h-4 w-4" />
             </button>
         @endforeach
     </div>

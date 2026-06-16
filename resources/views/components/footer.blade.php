@@ -19,7 +19,7 @@
                 </a>
 
                 <p class="mt-6 max-w-sm text-base leading-relaxed text-zinc-600">
-                    Your digital world, all in one place. Gift cards, eSIMs, top-ups, flights and more. Instant, secure, worldwide.
+                    Making global digital services accessible to everyone, and direct brand shopping with zero payment failure while keeping your connected with family and friends world wide
                 </p>
 
                 {{-- Social links --}}
