@@ -108,7 +108,34 @@ Route::get('api/search/brands', function (Request $request) {
 // locked to ONE country - whichever the user selected in the locale modal, passed
 // through as `?country=XX`. If the brand isn't sold in that country the page 404s
 // (the listing already only links to countries that have stock).
-$resolveGiftCardBrand = function (string $brandSlug) {
+// When a brand slug no longer maps to an ACTIVE brand, decide how to respond:
+// if the brand once existed in that category it was removed from the catalogue,
+// so 301 to the listing (keeps removed-brand URLs out of Google's "not found"
+// bucket and lands the visitor on a live page); if it never existed at all, 404.
+// Context-aware so a logged-in user stays inside the dashboard storefront.
+$brandGoneResponse = function (string $brandSlug, string $categorySlug) {
+    $everExisted = TaggedCache::for(['catalog'])->remember("brand_existed_{$categorySlug}_{$brandSlug}", 3600, function () use ($brandSlug, $categorySlug) {
+        return Product::query()
+            ->whereNotNull('brand_key')
+            ->whereHas('category', fn ($q) => $q->where('slug', $categorySlug))
+            ->distinct()
+            ->pluck('brand_key')
+            ->contains(fn ($key) => Str::kebab($key) === $brandSlug);
+    });
+
+    abort_unless($everExisted, 404);
+
+    $inDashboard = request()->routeIs('dashboard.*');
+    $listing = match ($categorySlug) {
+        'mobile-airtime' => $inDashboard ? 'dashboard.shop.topups' : 'shop.topups',
+        'bill-payments' => $inDashboard ? 'dashboard.shop.bills' : 'shop.bills',
+        default => $inDashboard ? 'dashboard.shop.gift-cards' : 'shop.gift-cards',
+    };
+
+    return redirect()->route($listing, [], 301);
+};
+
+$resolveGiftCardBrand = function (string $brandSlug) use ($brandGoneResponse) {
     $brandSlug = strtolower($brandSlug);
 
     $brandKey = TaggedCache::for(['catalog'])->remember("brand_slug_{$brandSlug}", 3600, function () use ($brandSlug) {
@@ -120,7 +147,9 @@ $resolveGiftCardBrand = function (string $brandSlug) {
             ->first(fn ($key) => Str::kebab($key) === $brandSlug);
     });
 
-    abort_if(! $brandKey, 404);
+    if (! $brandKey) {
+        return $brandGoneResponse($brandSlug, 'gift-cards');
+    }
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
@@ -173,7 +202,7 @@ Route::get('esims/{slug}', [EsimStoreController::class, 'show'])->name('shop.esi
 // shared `shop.product` view.
 Route::view('topups', 'shop.topups')->name('shop.topups');
 
-$resolveTopupBrand = function (string $brandSlug) {
+$resolveTopupBrand = function (string $brandSlug) use ($brandGoneResponse) {
     $brandSlug = strtolower($brandSlug);
 
     // Resolve the kebab-cased URL slug back to the actual brand_key, scoped to
@@ -188,7 +217,9 @@ $resolveTopupBrand = function (string $brandSlug) {
             ->first(fn ($key) => Str::kebab($key) === $brandSlug);
     });
 
-    abort_if(! $brandKey, 404);
+    if (! $brandKey) {
+        return $brandGoneResponse($brandSlug, 'mobile-airtime');
+    }
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
@@ -220,7 +251,7 @@ Route::get('topups/{brandSlug}', $resolveTopupBrand)->name('shop.topup');
 // a brand-level detail page reusing the shared `shop.product` view.
 Route::view('bills', 'shop.bills')->name('shop.bills');
 
-$resolveBillBrand = function (string $brandSlug) {
+$resolveBillBrand = function (string $brandSlug) use ($brandGoneResponse) {
     $brandSlug = strtolower($brandSlug);
 
     $brandKey = TaggedCache::for(['catalog'])->remember("bill_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
@@ -233,7 +264,9 @@ $resolveBillBrand = function (string $brandSlug) {
             ->first(fn ($key) => Str::kebab($key) === $brandSlug);
     });
 
-    abort_if(! $brandKey, 404);
+    if (! $brandKey) {
+        return $brandGoneResponse($brandSlug, 'bill-payments');
+    }
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
