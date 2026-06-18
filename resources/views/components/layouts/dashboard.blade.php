@@ -15,12 +15,19 @@
             html.dashboard-sidebar-collapsed [data-flux-sidebar] {
                 width: 72px !important;
             }
-            /* Nav stays scrollable when expanded, but in collapsed mode we
-               force overflow visible — otherwise the flyout submenu popups
-               and the inner scroll wrapper clip at the rail's right edge. */
-            html.dashboard-sidebar-collapsed [data-flux-sidebar] nav,
-            html.dashboard-sidebar-collapsed [data-flux-sidebar] > div {
+            /* Collapsed: the scroll wrapper keeps scrolling vertically (so every
+               icon stays reachable on short viewports) but clips horizontally;
+               the flyout submenus are position:fixed (placed per-hover by the
+               flyout positioner script below) so they escape that clip instead
+               of forcing the whole rail to overflow:visible, which used to
+               disable scrolling. nav itself stays visible — only the wrapper
+               scrolls. */
+            html.dashboard-sidebar-collapsed [data-flux-sidebar] nav {
                 overflow: visible !important;
+            }
+            html.dashboard-sidebar-collapsed [data-flux-sidebar] > div {
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
             }
             html.dashboard-sidebar-collapsed [data-flux-sidebar] nav a,
             html.dashboard-sidebar-collapsed [data-flux-sidebar] nav button {
@@ -140,10 +147,10 @@
                 position: relative;
             }
             html.dashboard-sidebar-collapsed [data-flux-sidebar] .nav-submenu {
-                position: absolute !important;
-                left: 100% !important;
-                top: 0 !important;
-                margin-left: 0.875rem !important;
+                /* Fixed so it escapes the scroll wrapper's overflow clip. left/top
+                   are set on hover by the flyout positioner script (the gap to the
+                   rail is baked into the JS left, replacing the old margin-left). */
+                position: fixed !important;
                 width: 220px !important;
                 padding: 0.5rem !important;
                 background: white !important;
@@ -249,14 +256,14 @@
             // subtle zinc on light, deep-charcoal seam on dark; sub-items use
             // the same shape one indent deeper.
             $navItem = fn (bool $active) => $active
-                ? 'group flex items-center justify-between gap-3 rounded-[10px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                : 'group flex items-center justify-between gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
+                ? 'group flex items-center justify-between gap-3 rounded-[20px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                : 'group flex items-center justify-between gap-3 rounded-[20px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-blue-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-transparent! dark:hover:text-white dark:hover:ring-1 dark:hover:ring-[#24364f]';
             $iconCls = fn (bool $active) => $active
                 ? 'h-5 w-5 shrink-0 text-black dark:text-white'
                 : 'h-5 w-5 shrink-0 text-zinc-600 transition-colors';
             $subItem = fn (bool $active) => $active
-                ? 'flex items-center gap-3 rounded-[10px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                : 'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
+                ? 'flex items-center gap-3 rounded-[20px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                : 'flex items-center gap-3 rounded-[20px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-blue-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-transparent! dark:hover:text-white dark:hover:ring-1 dark:hover:ring-[#24364f]';
             // Active no longer needs a white invert filter — the soft-blue
             // tint background keeps icons readable in their natural colour.
             // Black filter for the idle state keeps mixed-source SVGs visually
@@ -503,9 +510,11 @@
                         <p class="text-sm font-semibold text-zinc-900 dark:text-white">Need help?</p>
                         <p class="truncate text-xs text-zinc-600 dark:text-zinc-300">Chat with support</p>
                     </div>
-                    <svg class="h-4 w-4 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                    </svg>
+                    {{-- Shortcut hint: the global Ctrl+F shortcut opens a support
+                         ticket from anywhere on the site (see partials/shortcuts). --}}
+                    <span class="inline-flex shrink-0 items-center gap-1 rounded-[10px] border border-zinc-200 bg-zinc-50 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-500 dark:border-zinc-700/60 dark:bg-white/5 dark:text-zinc-300">
+                        CTRL <span class="opacity-70">+</span> F
+                    </span>
                 </button>
 
                 {{-- Support picker modal. Lives inside the same x-data so the
@@ -617,7 +626,7 @@
                     role="search"
                     @click="$refs.searchInput.focus(); open = true"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-400 hover:border-zinc-500'"
-                    class="group flex w-full items-center gap-3 cursor-text rounded-[10px] border-2 bg-[#eff6ff] px-4 py-2 transition-all duration-200"
+                    class="group flex w-full items-center gap-3 cursor-text rounded-[15px] border-2 bg-[#eff6ff] px-4 py-2 transition-all duration-200"
                 >
                     <svg class="h-5 w-5 shrink-0 text-zinc-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -660,7 +669,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 translate-y-1"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                    class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[10px] bg-[#eff6ff] shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:ring-[#24364f]"
                 >
                     {{-- Filter tabs --}}
                     <div class="border-b border-zinc-100 p-3">
@@ -785,7 +794,7 @@
                     @click="locked = !locked; $store.cart.open = locked"
                     :aria-expanded="$store.cart.open.toString()"
                     aria-haspopup="menu"
-                    class="relative flex h-11 w-11 items-center justify-center rounded-[10px] text-zinc-600 transition-colors hover:bg-zinc-50"
+                    class="relative flex h-11 w-11 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-50"
                     aria-label="Shopping cart"
                 >
                     <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-7 w-7" loading="lazy">
@@ -902,7 +911,7 @@
                      bell icon to the left of this button already surfaces the
                      unread count, and doubling the indicator made the chrome
                      read noisier than the data warranted. --}}
-                <button type="button" @click="locked = !locked; open = locked" :aria-expanded="open.toString()" aria-label="{{ $user?->name ?? 'Account' }}" class="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
+                <button type="button" @click="locked = !locked; open = locked" :aria-expanded="open.toString()" aria-label="{{ $user?->name ?? 'Account' }}" class="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40">
                     <img src="{{ $user?->avatar_url ?: $defaultAvatar }}" alt="{{ $user?->name ?? 'Account' }}" class="h-full w-full object-cover">
                 </button>
 
@@ -920,7 +929,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-2xl bg-[#eff6ff] shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:ring-[#24364f]"
                     role="menu"
                 >
                     <div class="border-b border-zinc-200 px-4 py-3">
@@ -1048,7 +1057,7 @@
                         @locale-updated.window="code = ($event.detail.countryCode || code).toLowerCase()"
                         x-on:click="$dispatch('open-locale-modal')"
                         aria-label="Region, language and currency"
-                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200 transition-colors hover:bg-blue-200 dark:bg-white/15 dark:ring-white/30 dark:hover:bg-white/25"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors dark:border-zinc-700"
                     >
                         <img :src="'https://flagcdn.com/w80/' + code + '.png'" alt="" class="h-6 w-6 rounded-full object-cover ring-1 ring-black/10 dark:ring-white/25" loading="lazy">
                     </button>
@@ -1059,7 +1068,7 @@
                         href="{{ route('dashboard.shop.cart') }}"
                         wire:navigate.hover
                         aria-label="Cart"
-                        class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200 transition-colors hover:bg-blue-200 dark:bg-white/15 dark:ring-white/30 dark:hover:bg-white/25"
+                        class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 transition-colors dark:border-zinc-700"
                     >
                         <img src="{{ asset('assets/' . rawurlencode('new cart.svg')) }}" alt="" class="h-5 w-5 brightness-0 dark:invert" loading="lazy">
                         <span
@@ -1069,7 +1078,9 @@
                             class="absolute -top-1 -right-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-blue-700"
                         ></span>
                     </a>
-                    <livewire:notifications-menu tone="light" />
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff6ff] border border-zinc-200 dark:border-zinc-700">
+                        <livewire:notifications-menu tone="dark" wire:key="overview-header-notif" />
+                    </div>
                 </div>
             </div>
 
@@ -1282,10 +1293,26 @@
              a pill highlight behind the active tab. The wrapper's bottom padding
              keeps it clear of the iOS home indicator. --}}
         <div
-            x-data="{ active: {{ $activeIndex }} }"
+            x-data="{
+                active: {{ $activeIndex }},
+                shaking: false,
+                tap() {
+                    // Haptic feedback on supported devices (Android); iOS Safari has
+                    // no Vibration API, so it just no-ops there. The shake gives a
+                    // visual tap response on every device.
+                    try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
+                    this.shaking = false;
+                    requestAnimationFrame(() => { this.shaking = true; });
+                },
+            }"
             class="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden"
         >
-            <nav class="nav-glass mx-auto max-w-md rounded-full p-1.5" aria-label="Primary">
+            <nav
+                class="nav-glass mx-auto max-w-md rounded-full p-1.5"
+                aria-label="Primary"
+                :class="shaking && 'pill-shake'"
+                @animationend="shaking = false"
+            >
                 <div class="relative flex items-stretch">
                     {{-- Apple-glass sliding pill: one frosted bubble that fills the
                          bar height and glides to the active tab. Width = one of
@@ -1302,7 +1329,7 @@
                         <a
                             href="{{ $t['href'] }}"
                             @if ($t['nav'] && $t['href'] !== '#') wire:navigate.hover @endif
-                            @click="active = {{ $t['idx'] }}"
+                            @click="active = {{ $t['idx'] }}; tap()"
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
                         >
@@ -1319,7 +1346,7 @@
                     {{-- Menu — opens the bottom-sheet menu (slot 2). --}}
                     <button
                         type="button"
-                        x-on:click="$dispatch('open-mobile-menu')"
+                        x-on:click="tap(); $dispatch('open-mobile-menu')"
                         aria-label="Open menu"
                         class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
                     >
@@ -1336,7 +1363,7 @@
                         <a
                             href="{{ $t['href'] }}"
                             @if ($t['nav'] && $t['href'] !== '#') wire:navigate.hover @endif
-                            @click="active = {{ $t['idx'] }}"
+                            @click="active = {{ $t['idx'] }}; tap()"
                             aria-label="{{ $t['label'] }}"
                             class="relative z-10 flex flex-1 flex-col items-center gap-1 py-1.5 transition-transform duration-200 active:scale-95"
                         >
@@ -1352,6 +1379,10 @@
                 </div>
             </nav>
         </div>
+
+        {{-- Action flashes pop as a floating pill toast (status / success / error /
+             wallet_created), so pages don't need their own inline banners. --}}
+        <x-flash-toast />
 
         {{-- Locale modal at body root.
              Mounted outside flux:header so its position:fixed centers against the viewport
@@ -1645,11 +1676,13 @@
                                 <h3 class="mt-4 text-lg font-bold leading-tight tracking-tight">{{ $channel['heading'] }}</h3>
                                 <p class="mt-1 text-xs text-white/80">{{ $channel['tagline'] }}</p>
 
-                                {{-- Inline style forces dark text regardless of any dark-mode
-                                     CSS remaps that would otherwise wash the label out on the
-                                     white pill (the parent has .theme-static to lock brand
-                                     colours but the child text still gets remapped). --}}
-                                <span class="mt-4 inline-flex items-center rounded-[10px] bg-white px-4 py-2 text-sm font-bold transition-colors hover:bg-zinc-100" style="color: #09090b;">
+                                {{-- Inline bg + text colour force a white pill with dark text
+                                     in BOTH themes. Without the inline `background`, the
+                                     `bg-white` class hits the `.dark .bg-white` -> navy remap
+                                     and the button vanishes into the brand card in dark mode.
+                                     hover:brightness-95 gives a press affordance that survives
+                                     the locked inline background. --}}
+                                <span class="mt-4 inline-flex items-center rounded-[10px] px-4 py-2 text-sm font-bold transition-[filter] hover:brightness-95" style="background: #ffffff; color: #09090b;">
                                     {{ $channel['cta'] }}
                                 </span>
                             </a>
@@ -1659,10 +1692,32 @@
             </div>
         </div>
 
-        <x-chatway-widget />
-
         {{-- PWA pull-to-refresh (standalone mode only). --}}
         <x-pull-to-refresh />
+
+        {{-- Collapsed-sidebar flyout positioner. In collapsed mode the submenu
+             popups are position:fixed so they escape the now-scrollable rail's
+             overflow clip; on hover we pin each .nav-submenu beside its icon
+             using live viewport coords (so it lands correctly even after the
+             rail has been scrolled). Delegated + guarded so wire:navigate never
+             double-binds. --}}
+        <script>
+            (function () {
+                if (window.__sidebarFlyoutInit) { return; }
+                window.__sidebarFlyoutInit = true;
+                const GAP = 14; // px gap from the rail edge (~0.875rem bridge)
+                document.addEventListener('pointerover', function (e) {
+                    if (! document.documentElement.classList.contains('dashboard-sidebar-collapsed')) { return; }
+                    const group = e.target.closest && e.target.closest('[data-flux-sidebar] .nav-group');
+                    if (! group) { return; }
+                    const sub = group.querySelector('.nav-submenu');
+                    if (! sub) { return; }
+                    const r = group.getBoundingClientRect();
+                    sub.style.top = r.top + 'px';
+                    sub.style.left = (r.right + GAP) + 'px';
+                });
+            })();
+        </script>
 
         @fluxScripts
     </body>

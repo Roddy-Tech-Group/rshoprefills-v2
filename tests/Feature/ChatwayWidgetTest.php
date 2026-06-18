@@ -10,7 +10,7 @@ class ChatwayWidgetTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_widget_renders_on_storefront_and_dashboard_when_configured(): void
+    public function test_widget_renders_on_storefront_when_configured(): void
     {
         $this->withoutVite();
         config(['services.chatway.widget_id' => 'test-widget-123']);
@@ -18,11 +18,17 @@ class ChatwayWidgetTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('cdn.chatway.app/widget.js?id=test-widget-123', false);
+    }
+
+    public function test_widget_is_absent_on_the_dashboard(): void
+    {
+        $this->withoutVite();
+        config(['services.chatway.widget_id' => 'test-widget-123']);
 
         $this->actingAs(User::factory()->create())
             ->get('/dashboard')
             ->assertOk()
-            ->assertSee('cdn.chatway.app/widget.js?id=test-widget-123', false);
+            ->assertDontSee('cdn.chatway.app/widget.js', false);
     }
 
     public function test_widget_is_absent_when_no_id_is_configured(): void
