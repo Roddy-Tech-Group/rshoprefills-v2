@@ -41,7 +41,7 @@
         {{-- Header card --}}
         <div class="rounded-[10px] bg-[#eff6ff] p-6 ring-1 ring-zinc-200 shadow-md shadow-zinc-900/[0.06] sm:p-8 dark:ring-zinc-700/60 dark:shadow-none">
             <h1 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Top up your {{ $countryName }} eSIM</h1>
-            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Refill the same eSIM you installed last time. No new QR. The data just lands on your existing line.</p>
+            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Refill the same eSIM you installed last time. No new QR. The eSIM auto-renews to the bundle you choose. Don't let your plan days finish if you plan to keep using it.</p>
             <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">ICCID</p>
             <p class="font-mono text-sm font-bold tracking-wider text-zinc-900 dark:text-white">{{ $iccid }}</p>
         </div>
