@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminRewardSettingsController;
 use App\Http\Controllers\Admin\AdminSreController;
 use App\Http\Controllers\Admin\AdminTransactionExportController;
 use App\Http\Controllers\Admin\Auth\AdminLoginController;
+use App\Http\Controllers\Admin\Auth\AdminTwoFactorController;
 use App\Http\Controllers\Admin\NotificationAdminApiController;
 use App\Http\Controllers\ThemeController;
 use App\Models\Order;
@@ -28,9 +29,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('login', [AdminLoginController::class, 'create'])->name('login');
         Route::post('login', [AdminLoginController::class, 'store']);
 
-        Route::get('2fa', [\App\Http\Controllers\Admin\Auth\AdminTwoFactorController::class, 'create'])->name('2fa.challenge');
-        Route::post('2fa', [\App\Http\Controllers\Admin\Auth\AdminTwoFactorController::class, 'store'])->name('2fa.verify');
-        Route::post('2fa/resend', [\App\Http\Controllers\Admin\Auth\AdminTwoFactorController::class, 'resend'])->name('2fa.resend');
+        Route::get('2fa', [AdminTwoFactorController::class, 'create'])->name('2fa.challenge');
+        Route::post('2fa', [AdminTwoFactorController::class, 'store'])->name('2fa.verify');
+        Route::post('2fa/resend', [AdminTwoFactorController::class, 'resend'])->name('2fa.resend');
     });
 
     // Authenticated admin routes
@@ -90,6 +91,74 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ];
             }));
         })->name('products.search-suggest');
+
+        // Global command-bar search for the admin header. Unlike products/search-
+        // suggest (catalogue only), this powers the bar's "products, orders,
+        // customers" promise: it returns TYPED rows (customer + product), each
+        // with a ready-made `url`, so a customer hit links straight to that
+        // customer's page instead of dead-ending on the products list.
+        Route::get('search-suggest', function (Request $request) {
+            $q = trim((string) $request->query('q', ''));
+            if (mb_strlen($q) < 2) {
+                return response()->json([]);
+            }
+
+            // Customers by name or email - the most common admin lookup, shown first.
+            $customers = User::query()
+                ->where(function ($qq) use ($q) {
+                    $qq->where('name', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%");
+                })
+                ->orderByDesc('id')
+                ->limit(6)
+                ->get(['id', 'name', 'email', 'avatar_url'])
+                ->map(fn (User $user) => [
+                    'type' => 'customer',
+                    'id' => 'c'.$user->id, // prefixed so it never collides with a product id (Alpine :key)
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar_url ?: $user->initialsAvatar(),
+                    'url' => route('admin.customer', $user),
+                ]);
+
+            // Products - same matching as products/search-suggest so the bar keeps
+            // its existing catalogue search alongside customers.
+            $products = ProductVariant::query()
+                ->select('product_variants.id', 'product_variants.product_id', 'product_variants.sku', 'product_variants.cost_price')
+                ->with(['product:id,name,brand_key,country_code,category_id,logo_url', 'product.category:id,name'])
+                ->join('products', 'products.id', '=', 'product_variants.product_id')
+                ->where(function ($qq) use ($q) {
+                    $qq->where('products.name', 'like', "%{$q}%")
+                        ->orWhere('products.brand_key', 'like', "%{$q}%")
+                        ->orWhere('products.country_code', 'like', strtoupper($q).'%')
+                        ->orWhere('product_variants.sku', 'like', "%{$q}%");
+                })
+                ->orderByDesc('product_variants.id')
+                ->limit(6)
+                ->get()
+                ->map(function ($variant) {
+                    $product = $variant->product;
+                    $brand = $product?->brand_key
+                        ? Product::brandDisplayName($product->brand_key)
+                        : ($product?->name ?? 'Unknown');
+
+                    return [
+                        'type' => 'product',
+                        'id' => 'p'.$variant->id,
+                        'name' => $product?->name,
+                        'brand' => $brand,
+                        'logo' => $product ? Product::brandLogoUrl($product->brand_key, $product->logo_url) : null,
+                        'country' => $product?->country_code,
+                        'category' => $product?->category?->name,
+                        'sku' => $variant->sku,
+                        'cost' => (float) $variant->cost_price,
+                        'url' => route('admin.products').'?q='.urlencode($product?->name ?? (string) $variant->sku),
+                    ];
+                });
+
+            return response()->json($customers->concat($products)->values());
+        })->name('search-suggest');
+
         Route::view('orders', 'admin.orders')->name('orders');
         Route::get('orders/{order}', function (Order $order) {
             return view('admin.order', [
