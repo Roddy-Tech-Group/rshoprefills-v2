@@ -115,6 +115,7 @@ class EsimDetailPageTest extends TestCase
             ->assertSee('Check compatibility')
             ->assertSee('Why travelers choose RshopRefills eSIMs')
             ->assertSee('Frequently asked questions')
+            ->assertSee("All purchases are final unless you don't receive your order", false)
             ->assertSee('Buy now');
     }
 

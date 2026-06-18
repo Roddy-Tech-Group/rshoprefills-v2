@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 /**
@@ -66,14 +67,68 @@ class DiscoverGlobalTest extends TestCase
         $this->assertNull(EsimStoreController::discoverGlobal());
     }
 
+    public function test_catalog_pins_discover_global_usa_first_and_drops_us_from_popular(): void
+    {
+        $product = $this->makeGlobalEsim();
+        $categoryId = $product->category_id;
+
+        // A real United States local eSIM - it must no longer be flagged popular,
+        // because the pinned Discover Global USA card now fills the USA slot.
+        $us = Product::create([
+            'category_id' => $categoryId,
+            'provider_name' => 'airalo',
+            'country_code' => 'US',
+            'currency_code' => 'USD',
+            'name' => 'United States Data eSIM',
+            'slug' => 'esim-us-united-states',
+            'is_active' => true,
+        ]);
+        ProductVariant::factory()->for($us)->create([
+            'currency' => 'USD',
+            'face_value' => 7,
+            'retail_price' => 7,
+            'is_available' => true,
+            'is_variable' => false,
+            'metadata' => ['data_limit' => '1 GB', 'duration_days' => 7],
+        ]);
+
+        Cache::flush();
+        $catalog = EsimStoreController::catalogSummary();
+
+        $first = $catalog->first();
+        $this->assertStringContainsString('discover-global', $first['slug']);
+        $this->assertSame('Discover Global USA eSIM', $first['name']);
+        $this->assertSame(Product::flagUrl('US'), $first['flag']);
+        $this->assertTrue($first['popular']);
+
+        $usCard = $catalog->firstWhere('slug', 'esim-us-united-states');
+        $this->assertNotNull($usCard);
+        $this->assertFalse($usCard['popular']);
+    }
+
     public function test_home_page_renders_discover_global_section(): void
     {
         $this->withoutVite();
-        $this->makeGlobalEsim();
+        $product = $this->makeGlobalEsim();
+
+        // makeGlobalEsim() seeds a data-only plan; add a voice plan (numeric
+        // voice/sms allowance) so the "Global United States real numbers" group
+        // renders alongside the "Browsing globally anywhere you are" data group.
+        ProductVariant::factory()->for($product)->create([
+            'currency' => 'USD',
+            'face_value' => 10,
+            'retail_price' => 10,
+            'is_available' => true,
+            'is_variable' => false,
+            'metadata' => ['data_limit' => '5 GB', 'duration_days' => 15, 'voice_limit' => 100, 'sms_limit' => 100],
+        ]);
 
         $this->get(route('home'))
             ->assertOk()
-            ->assertSee('Discover Global eSIM');
+            ->assertSee('Discover Global USA')
+            ->assertSee('Global United States real numbers')
+            ->assertSee('Browsing globally anywhere you are')
+            ->assertSee('Choose voice if you want the +1 real USA number');
     }
 
     /**

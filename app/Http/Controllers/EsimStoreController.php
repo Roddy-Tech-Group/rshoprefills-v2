@@ -45,18 +45,21 @@ class EsimStoreController extends Controller
     public static function catalogSummary(): Collection
     {
         // Popular destinations, mirroring Airalo's "Popular" set for this market.
-        $popularIso = ['CM', 'FR', 'GB', 'CG', 'US', 'MA', 'CF', 'EG', 'IN', 'CI', 'CD', 'SN', 'GH', 'GA', 'KE', 'AZ', 'AU', 'ZA', 'TR', 'TH'];
+        // US is intentionally left out: the pinned "Discover Global USA eSIM" card
+        // (a real +1 USA number with worldwide coverage) fills the USA slot here.
+        $popularIso = ['CM', 'FR', 'GB', 'CG', 'MA', 'CF', 'EG', 'IN', 'CI', 'CD', 'SN', 'GH', 'GA', 'KE', 'AZ', 'AU', 'ZA', 'TR', 'TH'];
 
         // Cache key carries the Zendit-eSIM flag so toggling it doesn't serve a
-        // stale catalog (the summary is cached for an hour). v6 adds the per-card
-        // data-size label.
-        $cacheKey = 'esim-catalog-summary-v6-z'.(FeatureFlag::on('zendit_esims') ? '1' : '0');
+        // stale catalog (the summary is cached for an hour). v6 added the per-card
+        // data-size label; v7 pins the Discover Global USA card first + drops US
+        // from Popular.
+        $cacheKey = 'esim-catalog-summary-v7-z'.(FeatureFlag::on('zendit_esims') ? '1' : '0');
 
         return Cache::remember($cacheKey, now()->addHour(), function () use ($popularIso) {
             $pricing = app(CartPricingService::class);
             $cat = Category::where('slug', 'esims')->first();
 
-            return Product::query()
+            $catalog = Product::query()
                 ->where('is_active', true)
                 ->when($cat, fn ($q) => $q->where('category_id', $cat->id))
                 ->tap(fn ($q) => self::applyEsimSupplierFlags($q))
@@ -95,6 +98,20 @@ class EsimStoreController extends Controller
                 ->filter()
                 ->sortBy('name')
                 ->values();
+
+            // Pin the worldwide eSIM to the front of every grid, rebadged as a USA
+            // number card (real +1 number, worldwide coverage) with the US flag and
+            // surfaced in Popular - so country browsers meet it before the A-Z list.
+            $key = $catalog->search(fn ($item) => str_contains($item['slug'], 'discover-global'));
+            if ($key !== false) {
+                $global = $catalog[$key];
+                $global['name'] = 'Discover Global USA eSIM';
+                $global['flag'] = Product::flagUrl('US');
+                $global['popular'] = true;
+                $catalog = $catalog->forget($key)->prepend($global)->values();
+            }
+
+            return $catalog;
         });
     }
 

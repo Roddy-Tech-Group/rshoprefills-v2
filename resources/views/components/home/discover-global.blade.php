@@ -1,7 +1,7 @@
 {{-- Discover Global eSIM: the worldwide-coverage eSIM's plans rendered with the
      SAME card as the eSIM detail page (tier + type badges, data/validity/mins/SMS/
      iMessage/FaceTime list, See more, price), inside the shared gift-card carousel
-     (with desktop scroll buttons). Unlimited Voice plans first, Data Only under.
+     (with desktop scroll buttons). Voice (US number) plans first, data-only under.
      Tapping a card selects it and pops a glass buy bar from the top - wired to the
      global cart so customers Add to cart / Buy now in place (no navigation).
      Self-fetching + self-guarding: renders nothing when the product/plans aren't
@@ -29,8 +29,12 @@
         $tiers = ['TRIP', 'EXPLORER', 'ADVENTURER', 'NOMAD'];
         $tierDots = [null, 'blue', 'purple', 'amber'];
         $groups = [
-            ['title' => 'Unlimited Voice', 'plans' => $voicePlans],
-            ['title' => 'Data Only', 'plans' => $dataPlans],
+            ['title' => 'Global United States real numbers', 'plans' => $voicePlans],
+            [
+                'title' => 'Browsing globally anywhere you are',
+                'subtitle' => 'This plan is for global data only, no phone number. Choose voice if you want the +1 real USA number.',
+                'plans' => $dataPlans,
+            ],
         ];
     }
 @endphp
@@ -69,14 +73,14 @@
         x-effect="showDetails ? window.rshopScrollLock?.lock() : window.rshopScrollLock?.unlock()"
     >
         <div>
-            <h2 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-2xl">Discover Global eSIM</h2>
-            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">One eSIM, worldwide coverage. Tap a plan to add it to your cart - instant activation in 190+ countries, no SIM swap.</p>
+            <h2 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-2xl">Discover Global USA <img src="{{ \App\Models\Product::flagUrl('US') }}" alt="USA flag" class="inline-block h-5 w-7 rounded-[2px] object-cover align-middle ring-1 ring-zinc-200 dark:ring-zinc-700"> eSIM</h2>
+            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">A USA number for you - whether you're not in the United States, or you're not traveling there but still want a US number that can call worldwide from wherever you are. Choose from the plans below.</p>
         </div>
 
         @foreach ($groups as $group)
             @if ($group['plans']->isNotEmpty())
                 <div class="mt-6">
-                    <x-home.brand-row :title="$group['title']" :view-all-href="$esimUrl" :carousel="true" :cols="5" :bleed="! $contained">
+                    <x-home.brand-row :title="$group['title']" :subtitle="$group['subtitle'] ?? null" :view-all-href="$esimUrl" :carousel="true" :cols="5" :bleed="! $contained">
                         @foreach ($group['plans'] as $idx => $plan)
                             <button
                                 type="button"
@@ -266,8 +270,9 @@
                         <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-white">This is a data-only plan - it keeps you connected online with mobile data for the full validity period. It has no calls, texts or phone number, just internet access.</p>
                     </div>
 
-                    {{-- What happens when the allowance runs out. --}}
-                    <div class="mt-4 rounded-[10px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                    {{-- What happens when the allowance runs out - voice plans only
+                         (it talks about calls/SMS/iMessage, which data-only plans lack). --}}
+                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[10px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                         <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">After your data, SMS and calls finish, you can still call, text and FaceTime over iMessage, WhatsApp and your WiFi. To keep using normal texts, calls and data, top up before you let your eSIM expire. If you plan to keep using it, a top-up auto-renews your eSIM to the top-up plan you choose. On your Web App orders page you can manage your eSIM, see remaining data, credit and SMS, top up your eSIM (only from there) and install your eSIM from there too. Have fun 😊</p>
                     </div>
 

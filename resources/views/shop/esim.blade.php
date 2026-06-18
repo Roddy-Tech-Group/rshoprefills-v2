@@ -410,6 +410,10 @@
                             </p>
                         </div>
                     @endunless
+
+                    {{-- Sales-final policy. Applies to every eSIM (including the
+                         Discover Global page), so it sits outside the guard above. --}}
+                    <p class="mt-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">All purchases are final unless you don't receive your order.</p>
                 </div>
 
                 {{-- Region switcher --}}
