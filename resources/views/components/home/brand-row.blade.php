@@ -13,6 +13,11 @@
     // 'link' (default) renders an underlined "See all" text link. 'plus' swaps it
     // for a small rounded "+" pill that matches the dashboard's see-more pattern.
     'viewAllVariant' => 'link',
+    // Full-bleed carousel (track spans 100vw) only lines up when the section sits
+    // in a viewport-centered container. Inside an off-center column (e.g. the
+    // dashboard's left rail) it overflows its neighbours, so pass :bleed="false"
+    // to keep the track contained to its own width.
+    'bleed' => true,
 ])
 
 @php
@@ -31,6 +36,7 @@
     aria-label="{{ $title }}"
     x-data="{
         navigating: false,
+        bleed: {{ $bleed ? 'true' : 'false' }},
         canPrev: false,
         canNext: true,
         // Native horizontal scroll (no JS hand-drag). Touch + trackpad get the
@@ -59,7 +65,11 @@
             // and re-settle once after animations finish.
             const minPad  = window.innerWidth >= 1024 ? 32 : (window.innerWidth >= 640 ? 24 : 16);
             const apply = () => {
-                const padLeft = Math.max(minPad, Math.round(this.$el.getBoundingClientRect().left));
+                // Contained (non-bleed) tracks sit inside their own column, so the
+                // first card lines up at the track's left edge - no viewport offset.
+                const padLeft = this.bleed
+                    ? Math.max(minPad, Math.round(this.$el.getBoundingClientRect().left))
+                    : 0;
                 if (list.style.paddingLeft !== padLeft + 'px') {
                     list.style.paddingLeft    = padLeft + 'px';
                     t.style.scrollPaddingLeft = padLeft + 'px';
@@ -106,7 +116,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                     </svg>
                 </a>
-            @else
+            @elseif ($viewAllVariant !== 'none')
                 <a href="{{ $viewAllHref }}" class="shrink-0 text-base font-medium text-zinc-700 underline underline-offset-4 transition-colors hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white">
                     See all
                 </a>
@@ -150,7 +160,7 @@
             x-ref="track"
             @scroll.passive="refresh()"
             @resize.window.debounce.200ms="setup()"
-            class="mx-[calc(50%-50vw)] w-screen overflow-x-auto overflow-y-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] scroll-pl-4 sm:scroll-pl-6 lg:scroll-pl-8"
+            class="{{ $bleed ? 'mx-[calc(50%-50vw)] w-screen' : 'w-full' }} overflow-x-auto overflow-y-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] scroll-pl-4 sm:scroll-pl-6 lg:scroll-pl-8"
             style="scroll-behavior: smooth;"
         >
             {{-- pl-* / --card-w fallbacks: setup() overrides paddingLeft and sets

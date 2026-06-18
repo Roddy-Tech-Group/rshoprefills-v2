@@ -13,20 +13,21 @@
                 </span>
             </div>
 
-            {{-- Admin access illustration --}}
-            <div class="mt-4 flex justify-center">
+            {{-- Admin access illustration - kept small; the chip above already
+                 carries the admin mark, so this is just a compact accent. --}}
+            <div class="mt-3 flex justify-center">
                 <img
                     src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}"
                     alt=""
-                    class="h-28 w-auto select-none object-contain sm:h-32"
+                    class="h-12 w-auto select-none object-contain sm:h-14"
                     loading="eager"
                     fetchpriority="high"
                 />
             </div>
 
             {{-- Heading --}}
-            <h1 class="mt-3 text-center text-3xl font-bold tracking-tight text-zinc-900">Admin Access</h1>
-            <p class="mt-2 text-center text-base text-zinc-600">Sign in to the RshopRefills administration panel.</p>
+            <h1 class="mt-2 text-center text-2xl font-bold tracking-tight text-zinc-900">Admin Access</h1>
+            <p class="mt-1 text-center text-sm text-zinc-600">Sign in to the RshopRefills administration panel.</p>
 
             {{-- Status flash --}}
             <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
@@ -37,7 +38,7 @@
 
                 {{-- Email --}}
                 <div>
-                    <label for="email" class="mb-1.5 block text-base font-medium text-zinc-700">Admin Email</label>
+                    <label for="email" class="mb-1.5 block text-sm font-medium text-zinc-700">Admin Email</label>
                     <div class="relative">
                         <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -53,7 +54,7 @@
                             autofocus
                             autocomplete="email"
                             placeholder="Enter your admin email"
-                            class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-3 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                         />
                     </div>
                     @error('email') <p class="mt-1 text-center text-sm text-red-600">{{ $message }}</p> @enderror
@@ -61,7 +62,7 @@
 
                 {{-- Password --}}
                 <div x-data="{ show: false }">
-                    <label for="password" class="mb-1.5 block text-base font-medium text-zinc-700">Password</label>
+                    <label for="password" class="mb-1.5 block text-sm font-medium text-zinc-700">Password</label>
                     <div class="relative">
                         <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -75,7 +76,7 @@
                             required
                             autocomplete="current-password"
                             placeholder="Enter your password"
-                            class="w-full rounded-xl border border-zinc-300 bg-white py-3 pl-10 pr-12 text-base text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                            class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-10 pr-12 text-sm text-zinc-900 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                         />
                         <button
                             type="button"
@@ -99,14 +100,14 @@
                 <div class="flex items-center">
                     <label class="flex cursor-pointer select-none items-center gap-2">
                         <input name="remember" type="checkbox" class="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500/30" />
-                        <span class="text-base text-zinc-700">Keep me signed in on this device</span>
+                        <span class="text-sm text-zinc-700">Keep me signed in on this device</span>
                     </label>
                 </div>
 
                 {{-- Submit --}}
                 <button
                     type="submit"
-                    class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-base font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                    class="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                 >
                     <span>Sign in to Admin</span>
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">

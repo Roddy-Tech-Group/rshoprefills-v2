@@ -164,6 +164,22 @@ class EsimDetailPageTest extends TestCase
             ->assertDontSee('Choose your package');
     }
 
+    public function test_the_esims_landing_shows_the_first_visit_destination_nudge(): void
+    {
+        $this->withoutVite();
+        Cache::flush();
+
+        $this->esimRegion();
+
+        // First-visit "where are you going?" modal, gated to one appearance per
+        // session, using the World Cup hero illustration.
+        $this->get(route('shop.esims'))
+            ->assertOk()
+            ->assertSee('rshopEsimTip', false)   // once-per-session gate
+            ->assertSee('Where are you going')    // the travel hook
+            ->assertSee('Find my eSIM');          // dismiss CTA
+    }
+
     public function test_the_esims_landing_accepts_a_scope_filter(): void
     {
         $this->withoutVite();

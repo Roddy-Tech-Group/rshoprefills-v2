@@ -127,7 +127,7 @@ class extends Component {
                 <ul class="divide-inset">
                     @foreach ($card['settings'] as $setting)
                         @php $displayVal = $this->displayValue($setting->value); @endphp
-                        <li class="group relative mx-3 flex flex-col gap-3 px-5 py-4 transition-all hover:bg-blue-50 hover:rounded-[10px] hover:ring-1 hover:ring-inset hover:ring-blue-500 hover:after:hidden sm:flex-row sm:items-center sm:gap-6 dark:hover:bg-blue-600/15 dark:hover:ring-blue-400">
+                        <li class="group relative mx-3 flex flex-col gap-3 px-5 py-4 transition-all hover:bg-blue-50 hover:rounded-[10px] sm:flex-row sm:items-center sm:gap-6 dark:hover:bg-blue-600/15 dark:hover:ring-blue-400">
                             {{-- Key + description --}}
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-2">

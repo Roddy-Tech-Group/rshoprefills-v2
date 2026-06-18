@@ -18,7 +18,7 @@
     <ul class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">
 
         {{-- Best Prices --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-900 bg-blue-100/50 p-4 backdrop-blur-sm transition-colors duration-200 hover:bg-blue-100/70 sm:min-h-0 sm:p-5 dark:border-zinc-700 dark:bg-blue-500/10 dark:hover:bg-blue-500/20">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-200 p-4 sm:min-h-0 sm:p-5 dark:border-zinc-700">
             <img src="{{ asset('assets/' . rawurlencode('best prices.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">Best Prices</p>
@@ -27,7 +27,7 @@
         </li>
 
         {{-- Wide Selection --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-900 bg-blue-100/50 p-4 backdrop-blur-sm transition-colors duration-200 hover:bg-blue-100/70 sm:min-h-0 sm:p-5 dark:border-zinc-700 dark:bg-blue-500/10 dark:hover:bg-blue-500/20">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-200 p-4 sm:min-h-0 sm:p-5 dark:border-zinc-700">
             <img src="{{ asset('assets/' . rawurlencode('wide selection.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">Wide Selection</p>
@@ -36,7 +36,7 @@
         </li>
 
         {{-- Trusted by Thousands --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-900 bg-blue-100/50 p-4 backdrop-blur-sm transition-colors duration-200 hover:bg-blue-100/70 sm:min-h-0 sm:p-5 dark:border-zinc-700 dark:bg-blue-500/10 dark:hover:bg-blue-500/20">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-200 p-4 sm:min-h-0 sm:p-5 dark:border-zinc-700">
             <img src="{{ asset('assets/' . rawurlencode('trusted by millions.svg')) }}" alt="" class="h-7 w-7 shrink-0 object-contain" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">Trusted by Thousands</p>
@@ -45,7 +45,7 @@
         </li>
 
         {{-- Easy & Fast --}}
-        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-900 bg-blue-100/50 p-4 backdrop-blur-sm transition-colors duration-200 hover:bg-blue-100/70 sm:min-h-0 sm:p-5 dark:border-zinc-700 dark:bg-blue-500/10 dark:hover:bg-blue-500/20">
+        <li class="flex min-h-[110px] items-center gap-3 rounded-[14px] border border-zinc-200 p-4 sm:min-h-0 sm:p-5 dark:border-zinc-700">
             <img src="{{ asset('assets/' . rawurlencode('Easy & Fast.webp')) }}" alt="" class="h-7 w-7 shrink-0 object-contain brightness-0 dark:invert" loading="lazy">
             <div class="min-w-0 leading-tight">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">Easy & Fast</p>

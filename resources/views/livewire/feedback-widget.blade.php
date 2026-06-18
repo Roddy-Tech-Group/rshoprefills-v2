@@ -155,7 +155,7 @@ new class extends Component {
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100 translate-x-0 scale-100"
             x-transition:leave-end="opacity-0 translate-x-4 scale-75"
-            class="absolute right-full mr-2 w-72 origin-right rounded-[10px] bg-white p-4 shadow-2xl shadow-zinc-900/25 ring-1 ring-zinc-200 motion-reduce:transition-none dark:bg-[#0c1a36] dark:ring-white/15"
+            class="absolute right-full mr-2 w-72 origin-right rounded-[10px] bg-[#eff6ff] p-4 shadow-2xl shadow-zinc-900/25 ring-1 ring-zinc-200 motion-reduce:transition-none dark:bg-[#0c1a36] dark:ring-white/15"
             role="dialog"
             aria-modal="false"
             aria-labelledby="feedback-title"

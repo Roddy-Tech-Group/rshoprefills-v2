@@ -72,7 +72,7 @@
             {{-- Desktop: the three adverts as side-by-side cards. --}}
             <div class="hidden gap-5 lg:grid lg:grid-cols-3">
                 @foreach ($esimSlides as $slide)
-                    <article class="flex flex-col overflow-hidden rounded-[20px] bg-[#0c1a36] p-4 border border-white dark:border-zinc-700">
+                    <article class="flex flex-col overflow-hidden rounded-[20px] bg-[#0c1a36] p-4 border border-zinc-300 dark:border-zinc-700">
                         <x-dynamic-component :component="$slide['illo']" class="h-auto w-full rounded-[14px]" aria-hidden="true" />
                         @if ($loop->first)
                             <h1 class="mt-4 text-xl font-bold tracking-tight text-white xl:text-2xl">{{ $slide['heading'] }}</h1>
@@ -113,7 +113,7 @@
                     <div class="flex transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" :style="`transform: translateX(-${current * 100}%)`">
                         @foreach ($esimSlides as $slide)
                             <article class="w-full shrink-0">
-                                <div class="rounded-[20px] bg-[#0c1a36] p-5 border border-white dark:border-zinc-700">
+                                <div class="rounded-[20px] bg-[#0c1a36] p-5 border border-zinc-300 dark:border-zinc-700">
                                     <x-dynamic-component :component="$slide['illo']" class="mx-auto h-auto w-full max-w-sm rounded-[14px]" aria-hidden="true" />
                                     <div class="mx-auto mt-4 max-w-md text-center">
                                         <h2 class="text-2xl font-bold tracking-tight text-white">{{ $slide['heading'] }}</h2>
@@ -167,5 +167,8 @@
         </section>
 
     </div>
+
+    {{-- First-visit "where are you going?" eSIM nudge (once per session). --}}
+    <x-esim.destination-tip />
 
 </x-shop.layout>

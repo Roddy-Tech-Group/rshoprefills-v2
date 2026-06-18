@@ -499,7 +499,7 @@
                                 @click="setTab(t)"
                                 :class="activeTab === t ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white'"
                                 class="relative z-10 flex-1 rounded-[8px] px-4 py-2.5 text-sm font-bold transition-colors"
-                                x-text="t === 'voice' ? 'Voice' : 'Data Only'"
+                                x-text="t === 'voice' ? 'Unlimited Voice' : 'Data Only'"
                             ></button>
                         </template>
                     </div>
@@ -538,14 +538,20 @@
                             <button
                                 type="button"
                                 @click="selectedId = p.id"
-                                :class="selectedId === p.id ? 'border-2 border-blue-600 dark:border-blue-500' : 'border border-white hover:border-green-200 dark:border-zinc-700 dark:hover:border-white'"
+                                :class="selectedId === p.id ? 'border-2 border-blue-600 dark:border-blue-500' : 'border border-white hover:border-green-200 dark:border-[#24364f] dark:hover:border-white'"
                                 class="flex flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none"
                             >
                                 {{-- Badges: tier (TRIP/EXPLORER/ADVENTURER/NOMAD, cycles by
                                      position) + a Data only / Voice type badge. --}}
                                 <div class="flex flex-wrap items-center gap-1.5">
-                                    <span x-show="tiers[idx % 4] !== 'TRIP'" class="rounded-[8px] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider" :class="tierClasses[idx % 4]" x-text="tiers[idx % 4]"></span>
-                                    <span class="rounded-[8px] border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider" :class="p.is_voice ? 'border-blue-300 text-blue-700 dark:border-blue-500/40 dark:text-blue-300' : 'border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300'" x-text="p.is_voice ? 'Voice' : 'Data only'"></span>
+                                    <span x-show="tiers[idx % 4] !== 'TRIP'" class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
+                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="tierDotClasses[idx % 4]"></span>
+                                        <span x-text="tiers[idx % 4]"></span>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
+                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="p.is_voice ? 'bg-blue-500' : 'bg-zinc-400'"></span>
+                                        <span x-text="p.is_voice ? 'Voice' : 'Data only'"></span>
+                                    </span>
                                 </div>
 
                                 <p class="mt-3 text-lg font-bold" :class="selectedId === p.id ? 'text-blue-700 dark:text-white' : 'text-zinc-900 dark:text-white'">
@@ -632,7 +638,7 @@
                             {{-- Same card style + responsive grid as the plan cards. --}}
                             <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                                 @foreach ($broaderCoverage as $b)
-                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex flex-col rounded-[14px] border border-white bg-transparent px-4 py-4 transition-colors hover:border-blue-600 dark:border-zinc-700 dark:hover:border-white">
+                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex flex-col rounded-[14px] border border-white bg-transparent px-4 py-4 transition-colors hover:border-blue-600 dark:border-[#24364f] dark:hover:border-white">
                                         <span class="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-blue-50 ring-1 ring-zinc-200 dark:bg-blue-950/40 dark:ring-zinc-700">
                                             @if ($b['flag'])
                                                 <img src="{{ $b['flag'] }}" alt="" class="h-full w-full object-cover" loading="lazy">
@@ -874,7 +880,7 @@
                             <span x-text="selectedCrypto"></span>
                             <svg class="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div x-show="open" x-transition style="display:none;" class="absolute top-full left-0 z-20 mt-2 max-h-72 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40" role="listbox">
+                        <div x-show="open" x-transition style="display:none;" class="absolute top-full left-0 z-20 mt-2 max-h-72 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-700 dark:bg-[#1d3252] dark:shadow-black/40" role="listbox">
                             <template x-for="(meta, code) in cryptos" :key="code">
                                 <button type="button" @click="selectedCrypto = code; open = false" :class="selectedCrypto === code ? 'bg-blue-50 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300' : 'text-zinc-800 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-[#26416b]'" class="flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left text-sm font-medium transition-colors">
                                     <template x-if="meta.icon"><img :src="meta.icon" :alt="code" class="h-5 w-5 shrink-0 rounded-[10px]"></template>
@@ -945,7 +951,7 @@
                         <div class="mt-4" x-data="{ netQ: '' }">
                             <div class="relative">
                                 <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                                <input x-model="netQ" type="text" placeholder="Search by country" aria-label="Search by country" class="w-full rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:bg-[#26416b] dark:text-white dark:placeholder:text-zinc-400">
+                                <input x-model="netQ" type="text" placeholder="Search by country" aria-label="Search by country" class="w-full rounded-[15px] border border-zinc-200 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:bg-[#26416b] dark:text-white dark:placeholder:text-zinc-400">
                             </div>
                             <div class="mt-3 max-h-80 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                                 <ul class="divide-y divide-zinc-100 dark:divide-zinc-700/60">
@@ -1034,7 +1040,7 @@
                 <div class="p-4">
                     <div class="relative">
                         <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <input x-model="compatSearch" type="text" placeholder="Search your device" aria-label="Search your device" class="w-full rounded-[10px] border border-zinc-300 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:bg-[#26416b] dark:text-white dark:placeholder:text-zinc-400">
+                        <input x-model="compatSearch" type="text" placeholder="Search your device" aria-label="Search your device" class="w-full rounded-[15px] border border-zinc-300 bg-white py-2.5 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-500 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:bg-[#26416b] dark:text-white dark:placeholder:text-zinc-400">
                     </div>
                 </div>
 
@@ -1194,6 +1200,17 @@
                         @endif
                     </div>
 
+                    {{-- What happens when the allowance runs out + how to manage the
+                         eSIM. Two variants: the voice copy talks about SMS / calls /
+                         credit, the data-only copy must NOT (a data-only plan has no
+                         number, SMS or calls) - it only covers data + app messaging. --}}
+                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[10px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-[#24364f]">
+                        <p class="text-sm leading-relaxed text-zinc-700 dark:text-white">After your data, SMS and calls finish, you can still call, text and FaceTime over iMessage, WhatsApp and your WiFi. To keep using normal texts, calls and data, top up before you let your eSIM expire. If you plan to keep using it, a top-up auto-renews your eSIM to the top-up plan you choose. On your Web App orders page you can manage your eSIM, see remaining data, credit and SMS, top up your eSIM (only from there) and install your eSIM from there too. Have fun 😊</p>
+                    </div>
+                    <div x-show="detailsPlan() && ! detailsPlan().is_voice" x-cloak class="mt-4 rounded-[10px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-[#24364f]">
+                        <p class="text-sm leading-relaxed text-zinc-700 dark:text-white">After your data runs out you can still chat and FaceTime over iMessage, WhatsApp and WiFi. To keep browsing, top up before your eSIM expires - a top-up auto-renews it to the plan you choose. On your Web App orders page you can manage your eSIM, check your remaining data, top up (only from there) and install it. Have fun 😊</p>
+                    </div>
+
                     <p class="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">To complete your order, confirm your device is eSIM-compatible and network-unlocked.</p>
                 </div>
             </div>
@@ -1217,14 +1234,10 @@
                 selectedId: null,
                 detailsId: null,       // plan previewed in the details modal (independent of selection)
 
-                // Display-only tier badges, cycled by card position.
+                // Display-only tier badges, cycled by card position. Each tier maps
+                // to a status-dot colour on the global pill (matches x-ui.pill).
                 tiers: ['TRIP', 'EXPLORER', 'ADVENTURER', 'NOMAD'],
-                tierClasses: [
-                    'bg-zinc-100 text-zinc-600 dark:bg-white/10 dark:text-zinc-300',
-                    'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
-                    'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
-                    'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-                ],
+                tierDotClasses: [null, 'bg-blue-500', 'bg-purple-500', 'bg-amber-500'],
 
                 cartState: 'idle',
                 _t: null,

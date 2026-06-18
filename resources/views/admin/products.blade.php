@@ -279,7 +279,7 @@
                                 <a
                                     :href="'{{ route('admin.products') }}?q=' + encodeURIComponent(row.name || row.sku)"
                                     wire:navigate
-                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 hover:ring-1 hover:ring-blue-500 dark:hover:bg-blue-500/10"
+                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 dark:hover:bg-blue-500/10"
                                 >
                                     <template x-if="row.logo">
                                         <img :src="row.logo" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
@@ -931,7 +931,7 @@
                 @endphp
                 <article
                     @click="$dispatch('variant-show', @js($drawerPayload))"
-                    class="variant-row variant-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
+                    class="variant-row variant-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
                 >
                     {{-- Brand (text only, no logo) --}}
                     <span class="col-brand min-w-0 truncate text-[13px] font-semibold text-zinc-900 dark:text-white">{{ $brandLabel }}</span>

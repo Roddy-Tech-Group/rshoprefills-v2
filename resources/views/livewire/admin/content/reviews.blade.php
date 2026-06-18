@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Attributes\Validate;
 use Livewire\Volt\Component;
 
@@ -16,6 +17,11 @@ class extends Component {
     public ?int $editingId = null;
 
     public bool $showForm = false;
+
+    // Name/text search so an admin can check whether a customer's Google or
+    // Trustpilot review has already been collected into the system.
+    #[Url(as: 'q')]
+    public string $search = '';
 
     #[Validate('required|string|max:80')]
     public string $authorName = '';
@@ -45,8 +51,17 @@ class extends Component {
     public function reviews()
     {
         // Pending customer submissions float to the top so the admin sees what
-        // needs approval first.
+        // needs approval first. The search matches the customer name (or review
+        // text) so the admin can confirm whether a Google/Trustpilot review for
+        // that person is already in the system.
         return Review::with('user:id,kyc_status')
+            ->when($this->search !== '', function ($query) {
+                $term = '%'.trim($this->search).'%';
+                $query->where(function ($q) use ($term) {
+                    $q->where('author_name', 'like', $term)
+                        ->orWhere('body', 'like', $term);
+                });
+            })
             ->orderByRaw('(is_customer_submitted = 1 AND is_published = 0) DESC')
             ->orderByDesc('reviewed_at')
             ->get();
@@ -187,6 +202,24 @@ class extends Component {
         @endforeach
     </div>
 
+    {{-- Name search: look up a customer to confirm their Google/Trustpilot review
+         is already collected into the system. Matches author name or review text. --}}
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+        <div class="relative w-full max-w-sm">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+            <input
+                type="search"
+                wire:model.live.debounce.300ms="search"
+                placeholder="Search by customer name or review text"
+                class="w-full rounded-[10px] border border-zinc-300 bg-white py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-600 dark:bg-[#0c1a36] dark:text-white dark:placeholder:text-zinc-500"
+            >
+        </div>
+        @if (trim($this->search) !== '')
+            <span class="text-xs text-zinc-500 dark:text-zinc-400">{{ $this->reviews->count() }} {{ \Illuminate\Support\Str::plural('match', $this->reviews->count()) }}</span>
+            <button type="button" wire:click="$set('search', '')" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-300">Clear</button>
+        @endif
+    </div>
+
     <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
         <div class="overflow-x-auto p-3">
             <table class="admin-table w-full text-left text-sm">
@@ -236,7 +269,13 @@ class extends Component {
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-12 text-center text-sm text-zinc-600 dark:text-zinc-400">No reviews yet. Click "New review" to add the first one.</td>
+                            <td colspan="7" class="px-5 py-12 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                                @if (trim($this->search) !== '')
+                                    No reviews match "{{ $this->search }}" - this customer's Google/Trustpilot review may not have been collected yet.
+                                @else
+                                    No reviews yet. Click "New review" to add the first one.
+                                @endif
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

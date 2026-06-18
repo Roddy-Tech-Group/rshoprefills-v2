@@ -330,6 +330,11 @@ new #[Lazy] class extends Component
             </div>
         @endif
 
+        {{-- Discover Global eSIM - tap a plan to Add to cart / Buy now inline --}}
+        <div class="rounded-[10px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+            <x-home.discover-global :contained="true" />
+        </div>
+
         {{-- Give the Perfect Gift promo - placed here on mobile (desktop keeps its own copy in the right rail). --}}
         <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
             <div class="relative z-10 max-w-[54%]">
@@ -416,7 +421,7 @@ new #[Lazy] class extends Component
              Shows top-ups (credits) and purchases (debits) interleaved since both
              write to wallet_transactions. Capped at 8 here, full history is on
              /dashboard/transactions via the See more "+" button. --}}
-        <div class="relative overflow-hidden rounded-[10px] bg-red-100/50 p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+        <div class="relative overflow-hidden rounded-[10px] bg-red-100/50 dash-shimmer p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
             <x-ui.floating-confetti />
             <div class="relative z-10 flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
@@ -485,7 +490,11 @@ new #[Lazy] class extends Component
                         @php $firstName = strtok(trim((string) $user->name), ' ') ?: $user->name; @endphp
                         <h1 class="flex items-center gap-2 text-lg font-bold tracking-tight text-zinc-900 dark:text-white sm:text-xl"
                             x-data="typewriterGreeting(@js(['Hi ' . $firstName, 'Welcome', 'Your shop is ready']))">
-                            <span x-text="display"></span><span class="animate-pulse font-normal text-blue-600" aria-hidden="true">|</span>
+                            {{-- translateZ(0) puts the changing text + the pulsing cursor on
+                                 their own GPU layer, so their constant repaints stay composited
+                                 and don't force the glass/gradient cards below to re-render
+                                 (which read as a flicker/blink). --}}
+                            <span x-text="display" style="transform: translateZ(0);"></span><span class="animate-pulse font-normal text-blue-600" style="transform: translateZ(0);" aria-hidden="true">|</span>
                             <svg class="h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15"/>
                             </svg>
@@ -504,14 +513,24 @@ new #[Lazy] class extends Component
                     <div
                         x-data="{
                             open: false,
-                            theme: localStorage.getItem('theme') || 'system',
+                            theme: window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'),
+                            extraDark: window.pureDarkOn ? window.pureDarkOn() : (localStorage.getItem('theme.pure_dark') === '1'),
                             choose(value) {
                                 this.theme = value;
                                 window.setTheme(value);
                                 this.open = false;
                             },
+                            toggleExtraDark() {
+                                this.extraDark = ! this.extraDark;
+                                window.setPureDark(this.extraDark);
+                                if (this.extraDark && ! window.themeIsDark()) {
+                                    this.theme = 'dark';
+                                    window.setTheme('dark');
+                                }
+                            },
                         }"
                         x-on:theme-changed.window="theme = localStorage.getItem('theme') || 'system'"
+                        x-on:pure-dark-changed.window="extraDark = window.pureDarkOn()"
                         @click.outside="open = false"
                         @keydown.escape="open = false"
                         class="relative self-start"
@@ -609,6 +628,33 @@ new #[Lazy] class extends Component
                                     </svg>
                                 </button>
                             @endforeach
+
+                            {{-- Extra dark (true black) - pure-black variant of dark mode.
+                                 Flipping it on switches to dark immediately and swaps the
+                                 navy palette for black (window.setPureDark). --}}
+                            <button
+                                type="button"
+                                @click="toggleExtraDark()"
+                                class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                                role="menuitemcheckbox"
+                                :aria-checked="extraDark.toString()"
+                            >
+                                <span class="inline-flex items-center gap-2.5">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                                    </svg>
+                                    Extra dark
+                                </span>
+                                <span
+                                    :class="extraDark ? 'bg-blue-600' : 'bg-zinc-200'"
+                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[10px] transition-colors"
+                                >
+                                    <span
+                                        :class="extraDark ? 'translate-x-4' : 'translate-x-0.5'"
+                                        class="inline-block h-4 w-4 transform rounded-[10px] bg-white shadow transition-transform"
+                                    ></span>
+                                </span>
+                            </button>
 
                             {{-- Divider --}}
                             <div class="my-1 h-px bg-zinc-100"></div>
@@ -956,6 +1002,11 @@ new #[Lazy] class extends Component
                         @endif
                     </div>
                 </div>
+
+                {{-- Discover Global eSIM - tap a plan to Add to cart / Buy now inline --}}
+                <div class="mt-6 rounded-[10px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+                    <x-home.discover-global :contained="true" />
+                </div>
             </div>
 
             {{-- RIGHT RAIL: points, gift promo, recent transactions --}}
@@ -1008,7 +1059,7 @@ new #[Lazy] class extends Component
                 </div>
 
                 {{-- Recent Transactions (stretches to match left column height) --}}
-                <div class="relative flex flex-1 flex-col overflow-hidden rounded-[10px] bg-red-100/50 p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+                <div class="relative flex flex-1 flex-col overflow-hidden rounded-[10px] bg-red-100/50 dash-shimmer p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
                     <x-ui.floating-confetti />
                     <div class="relative z-10 flex items-center justify-between">
                         <h3 class="text-base font-semibold text-zinc-900">Recent Transactions</h3>

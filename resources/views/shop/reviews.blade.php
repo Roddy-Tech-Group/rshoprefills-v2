@@ -118,75 +118,23 @@
          so curated entries + future Trustpilot + Google reviews all blend in
          one continuous wall. Pause on hover. CSS-only marquee (no JS). --}}
     @php
-        // Even indices feed the top row, odd indices feed the bottom row, so
-        // the two rows always look distinct even when the list is small.
-        $row1 = $reviews->values()->filter(fn ($_, $i) => $i % 2 === 0)->values();
-        $row2 = $reviews->values()->filter(fn ($_, $i) => $i % 2 === 1)->values();
-        // If the bottom row is empty (1 review case), mirror the top into both.
-        if ($row2->isEmpty() && $row1->isNotEmpty()) {
-            $row2 = $row1;
-        }
-
-        // Stretch each row so it fills a wide screen even when the review
-        // count is small. 14 cards x ~320px ≈ 4480px which covers 4K monitors.
-        // The translateX(-50%) loop seam stays clean because we then double
-        // the stretched row in the template - so a -50% shift always lands on
-        // the start of an identical copy.
-        $minCardsPerRow = 14;
-        $stretch = function ($collection) use ($minCardsPerRow) {
-            if ($collection->isEmpty()) {
-                return $collection;
-            }
-            $copies = (int) ceil($minCardsPerRow / $collection->count());
-            $out = collect();
-            for ($i = 0; $i < $copies; $i++) {
-                $out = $out->concat($collection);
-            }
-            return $out;
-        };
-        $row1 = $stretch($row1);
-        $row2 = $stretch($row2);
+        // Split the published reviews across three rows (interleaved so each row
+        // mixes sources). Rendered as three independent, manually-scrollable
+        // carousels using the shared gift-card scroll controls - no auto-scroll.
+        $reviewRows = collect(range(0, 2))
+            ->map(fn ($r) => $reviews->values()->filter(fn ($_, $i) => $i % 3 === $r)->values())
+            ->filter->isNotEmpty()
+            ->values();
     @endphp
 
-    {{-- Marquee CSS - kept before the carousels so the animations are
-         registered before the elements need them. Hover on a row pauses both
-         rows so a buyer can read a card without losing it. --}}
-    <style>
-        @keyframes rshop-marquee-left {
-            from { transform: translateX(0); }
-            to   { transform: translateX(-50%); }
-        }
-        @keyframes rshop-marquee-right {
-            from { transform: translateX(-50%); }
-            to   { transform: translateX(0); }
-        }
-        .rshop-marquee-track {
-            display: flex;
-            width: max-content;
-            gap: 1rem;
-            will-change: transform;
-        }
-        @media (min-width: 640px) {
-            .rshop-marquee-track { gap: 1.25rem; }
-        }
-        .rshop-marquee-left  { animation: rshop-marquee-left 140s linear infinite; }
-        .rshop-marquee-right { animation: rshop-marquee-right 170s linear infinite; }
-        .rshop-marquee-row:hover .rshop-marquee-track {
-            animation-play-state: paused;
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .rshop-marquee-left, .rshop-marquee-right { animation: none; }
-        }
-    </style>
-
-    <section class="w-full overflow-hidden bg-zinc-50 py-14 sm:py-16 dark:bg-[#0c1a36]!">
+    <section class="w-full bg-zinc-50 py-14 sm:py-16 dark:bg-[#0c1a36]!">
         <div class="mx-auto mb-8 w-full max-w-[1140px] px-4 sm:px-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Recent reviews</h2>
-                    <p class="mt-1 text-sm text-zinc-600">Reviews collected from our system, Trustpilot and Google Business. Hover any card to pause and read.
+                    <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl">Recent reviews</h2>
+                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Reviews collected from our system, Trustpilot and Google Business. Scroll each row to read more.</p>
                 </div>
-                <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800">
+                <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-400">
                     View all on {{ $aggregate['source'] }}
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
                 </a>
@@ -194,39 +142,15 @@
         </div>
 
         @if ($reviews->isNotEmpty())
-            {{-- Helper to render one review card - kept inline so both rows
-                 stay in sync visually. Card shape mirrors the homepage carousel. --}}
-            @php
-                $renderCard = function ($review) {
-                    return view('shop._review-card', ['review' => $review])->render();
-                };
-            @endphp
-
-            <div class="space-y-4">
-                {{-- Top row: scrolls left --}}
-                <div class="rshop-marquee-row w-full overflow-hidden">
-                    <div class="rshop-marquee-track rshop-marquee-left">
-                        @foreach ($row1 as $review)
+            {{-- Three manually-scrollable carousels (gift-card scroll controls). --}}
+            <div class="mx-auto w-full max-w-[1140px] space-y-8 px-4 sm:px-6">
+                @foreach ($reviewRows as $row)
+                    <x-home.brand-row :title="''" view-all-variant="none" :carousel="true" :cols="5">
+                        @foreach ($row as $review)
                             @include('shop._review-card', ['review' => $review])
                         @endforeach
-                        {{-- Duplicate so the loop appears seamless (-50% translation lands on the start of the second copy) --}}
-                        @foreach ($row1 as $review)
-                            @include('shop._review-card', ['review' => $review])
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- Bottom row: scrolls right --}}
-                <div class="rshop-marquee-row w-full overflow-hidden">
-                    <div class="rshop-marquee-track rshop-marquee-right">
-                        @foreach ($row2 as $review)
-                            @include('shop._review-card', ['review' => $review])
-                        @endforeach
-                        @foreach ($row2 as $review)
-                            @include('shop._review-card', ['review' => $review])
-                        @endforeach
-                    </div>
-                </div>
+                    </x-home.brand-row>
+                @endforeach
             </div>
         @else
             <div class="mx-auto max-w-2xl rounded-[10px] bg-white p-10 text-center ring-1 ring-zinc-100 shadow-sm">

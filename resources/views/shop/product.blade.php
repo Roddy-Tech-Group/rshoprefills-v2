@@ -416,8 +416,8 @@
                 {{-- top offset clears the sticky header (top-bar 36 + nav 64 + category bar 40)
                      so the card parks below it instead of sliding up behind the nav. --}}
                 <div class="lg:sticky lg:top-[156px]">
-                    <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#e8e8f7] p-10 sm:p-14 dark:bg-[#1d3252]">
-                        <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-[10px] bg-[#ffffff] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
+                    <div class="mx-auto lg:mr-0 flex w-full max-w-lg items-center justify-center rounded-[24px] bg-[#e8e8f7] p-10 sm:p-14 dark:border dark:border-[#24364f] dark:bg-[#0c1a36]">
+                        <div class="relative flex aspect-[8/5] w-4/5 items-center justify-center overflow-hidden rounded-[20px] bg-[#ffffff] shadow-[0_10px_28px_-8px_rgba(0,0,0,0.25)]">
                             @if ($logoSrc)
                                 <img src="{{ $logoSrc }}" alt="{{ $brandName }} {{ $kindNoun }}" class="h-full w-full object-cover" loading="eager" fetchpriority="high">
                             @else
@@ -528,7 +528,7 @@
                                 <button
                                     type="button"
                                     @click="open = ! open; locked = open"
-                                    :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
+                                    :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-blue-300 dark:border-zinc-700 dark:hover:border-blue-400/40'"
                                     class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <span class="font-semibold text-zinc-600">{{ $variable ? $customSymbol : $displaySymbol }}</span>
@@ -562,7 +562,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute left-0 right-0 top-full z-20 max-h-[27rem] overflow-y-auto rounded-[10px] border border-zinc-200 bg-white/80 backdrop-blur-xl p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute left-0 right-0 top-full z-20 max-h-[27rem] overflow-y-auto rounded-[10px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     @foreach ($fixedDenoms as $i => $v)
@@ -646,7 +646,7 @@
                                 <button
                                     type="button"
                                     @click="open = ! open; locked = open"
-                                    :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
+                                    :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-blue-300 dark:border-zinc-700 dark:hover:border-blue-400/40'"
                                     class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <span x-data="valueFlip()" x-effect="quantity; flash()" class="flex-1 text-left tabular-nums" x-text="quantity">1</span>
@@ -661,7 +661,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute left-0 right-0 top-full z-20 max-h-60 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white/80 backdrop-blur-xl p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute left-0 right-0 top-full z-20 max-h-60 overflow-y-auto rounded-[10px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     @for ($n = 1; $n <= 10; $n++)
@@ -692,7 +692,7 @@
                                 <button
                                     type="button"
                                     @click="open = ! open; locked = open"
-                                    :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-zinc-400'"
+                                    :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-blue-300 dark:border-zinc-700 dark:hover:border-blue-400/40'"
                                     class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <template x-if="cryptos[selectedCrypto]?.icon">
@@ -716,7 +716,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute right-0 top-full z-20 max-h-80 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-white/80 backdrop-blur-xl p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute right-0 top-full z-20 max-h-80 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     <template x-for="(meta, code) in cryptos" :key="code">

@@ -737,6 +737,10 @@
                  admin account and kept separate from the customer side. --}}
             <x-theme-toggle class="h-11 w-11 rounded-[10px] text-zinc-600 hover:bg-blue-100" />
 
+            {{-- Extra Dark now lives inside the theme toggle's popup (the
+                 component renders an "Extra dark" row), so no separate admin
+                 button is needed - it stays admin-only via the admin.theme key. --}}
+
             {{-- Admin notifications bell — real AdminNotification feed (KYC, orders, etc.). --}}
             <livewire:admin.notifications-menu />
 
@@ -759,7 +763,7 @@
                     @click="locked = !locked; open = locked"
                     :aria-expanded="open.toString()"
                     aria-label="{{ $admin?->name ?? 'Admin' }}"
-                    class="ml-1 relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                    class="ml-1 relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img src="{{ $admin?->avatar_url ?: $adminDefaultAvatar }}" alt="{{ $admin?->name ?? 'Admin' }}" class="h-full w-full object-cover" loading="lazy">
                 </button>
@@ -773,7 +777,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-2xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
                     role="menu"
                 >
                     {{-- Admin info card --}}

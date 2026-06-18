@@ -177,11 +177,11 @@
 
                 {{-- Two ways referrals pay out Rcoin. --}}
                 <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
-                    <div class="rounded-[10px] bg-zinc-50 px-3 py-2.5">
+                    <div class="rounded-[10px] bg-blue-50 px-3 py-2.5 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:ring-blue-500/20">
                         <p class="font-semibold text-zinc-900">On sign-up</p>
                         <p class="text-xs text-zinc-600">Rcoin lands when your referral creates their account.</p>
                     </div>
-                    <div class="rounded-[10px] bg-zinc-50 px-3 py-2.5">
+                    <div class="rounded-[10px] bg-emerald-50 px-3 py-2.5 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
                         <p class="font-semibold text-zinc-900">On every order</p>
                         <p class="text-xs text-zinc-600">Keep earning Rcoin each time they buy.</p>
                     </div>
@@ -204,7 +204,7 @@
                     <p class="mt-3 text-base font-bold text-black">Convert to wallet balance</p>
                     <p class="mt-1 text-sm text-zinc-600">Swap your Rcoin for instant USD wallet credit. Spend it on any product - gift cards, eSIMs, top-ups, flights.</p>
 
-                    <div class="mt-4 rounded-[10px] bg-zinc-50 px-3 py-2.5 text-sm">
+                    <div class="mt-4 rounded-[10px] bg-blue-50 px-3 py-2.5 text-sm ring-1 ring-blue-200 dark:bg-blue-500/10 dark:ring-blue-500/20">
                         <div class="flex items-center justify-between">
                             <span class="text-zinc-600">Available</span>
                             <span class="inline-flex items-center gap-1 font-bold text-zinc-900">
@@ -217,9 +217,7 @@
                         </div>
                     </div>
 
-                    @if (session('status') && str_contains(session('status'), 'Converted'))
-                        <p class="mt-3 rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">{{ session('status') }}</p>
-                    @endif
+                    {{-- Status flash pops as the global flash-toast pill (dashboard layout). --}}
                     @error('convert_amount')
                         <p class="mt-3 rounded-[10px] bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{{ $message }}</p>
                     @enderror
@@ -265,7 +263,7 @@
                     <p class="mt-3 text-base font-bold text-black">Withdraw to cash</p>
                     <p class="mt-1 text-sm text-zinc-600">Cash out your Rcoin balance once you reach the minimum.</p>
 
-                    <div class="mt-4 rounded-[10px] bg-zinc-50 px-3 py-2.5 text-sm">
+                    <div class="mt-4 rounded-[10px] bg-emerald-50 px-3 py-2.5 text-sm ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
                         <div class="flex items-center justify-between">
                             <span class="text-zinc-600">Available</span>
                             <span class="inline-flex items-center gap-1 font-bold text-zinc-900">
@@ -282,9 +280,7 @@
                         {{-- Withdrawal request form. Posts to RcoinWithdrawalController
                              which validates settings, debits the user's Rcoin wallet, and
                              creates a `pending` RcoinWithdrawal row for admin review. --}}
-                        @if (session('status'))
-                            <p class="mt-3 rounded-[10px] bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">{{ session('status') }}</p>
-                        @endif
+                        {{-- Status flash pops as the global flash-toast pill (dashboard layout). --}}
                         @error('withdraw_amount')
                             <p class="mt-3 rounded-[10px] bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{{ $message }}</p>
                         @enderror
@@ -332,7 +328,7 @@
                                     x-transition:leave-start="opacity-100 translate-y-0"
                                     x-transition:leave-end="opacity-0 -translate-y-1"
                                     style="display:none;"
-                                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] bg-white p-1 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
                                     role="listbox"
                                 >
                                     <template x-for="(label, value) in methodLabels" :key="value">
@@ -399,14 +395,14 @@
                         $m = $medals[$tier['name']] ?? $medals['Bronze'];
                     @endphp
                     <div @class([
-                        'rounded-[10px] p-2.5 text-center ring-1 transition-colors',
+                        'rounded-full p-2 text-center ring-1 transition-colors hover:ring-blue-300 dark:hover:ring-blue-400/50',
                         'bg-blue-600 text-white ring-blue-600' => $isCurrent,
                         'bg-white text-zinc-900 ring-zinc-100' => ! $isCurrent && $reached,
                         'bg-white text-zinc-400 ring-zinc-100' => ! $reached,
                     ])>
                         {{-- Tier medal - reduced to a compact 36×32 medallion so
                              the whole tile reads as a chip instead of a card. --}}
-                        <svg viewBox="0 0 48 56" class="mx-auto mb-1.5 h-9 w-8 {{ $reached ? '' : 'opacity-40' }}" aria-hidden="true">
+                        <svg viewBox="0 0 48 56" class="mx-auto mb-1 h-7 w-6 {{ $reached ? '' : 'opacity-40' }}" aria-hidden="true">
                             <path d="M15 24 L9 54 L19 46 Z" fill="{{ $m['ribbon'] }}"/>
                             <path d="M33 24 L39 54 L29 46 Z" fill="{{ $m['ribbon'] }}"/>
                             <circle cx="24" cy="20" r="19" fill="{{ $m['rim'] }}"/>
@@ -418,12 +414,19 @@
                         <p class="text-xs font-bold">{{ $tier['name'] }}</p>
                         <p @class(['mt-0.5 text-[10px]', 'text-white/80' => $isCurrent, 'text-zinc-500' => ! $isCurrent])>{{ number_format($tier['min']) }} Rcoin</p>
                         @if ($tier['requires'])
-                            <p @class(['mt-1.5 inline-flex items-center gap-1 rounded-[5px] px-1.5 py-0.5 text-[10px] font-semibold', 'bg-white/15 text-white' => $isCurrent, 'bg-amber-50 text-amber-700' => ! $isCurrent])>
+                            @php
+                                // eSIM-category-style pill: tinted border + fill + text.
+                                // Blue for email verification, green for ID verification.
+                                $reqPill = $tier['requires'] === 'Email verified'
+                                    ? 'border-blue-600 bg-blue-600/10 text-blue-700 dark:border-blue-400/60 dark:bg-blue-500/20 dark:text-blue-200'
+                                    : 'border-emerald-600 bg-emerald-600/10 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/20 dark:text-emerald-200';
+                            @endphp
+                            <span class="mt-1.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold {{ $reqPill }}">
                                 <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75M3.75 21.75h16.5a.75.75 0 00.75-.75v-9a.75.75 0 00-.75-.75H3.75a.75.75 0 00-.75.75v9c0 .414.336.75.75.75z"/>
                                 </svg>
                                 {{ $tier['requires'] }}
-                            </p>
+                            </span>
                         @endif
                     </div>
                 @endforeach

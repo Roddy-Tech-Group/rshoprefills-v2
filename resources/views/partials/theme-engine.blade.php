@@ -25,6 +25,11 @@
     $themeEndpoint = $themeAccount
         ? ($themeIsAdminArea ? route('admin.theme') : route('preferences.theme'))
         : null;
+
+    // Admin-controlled global default (System Settings -> system.global_extra_dark).
+    // When on, every user falls back to Extra Dark unless they have set their own
+    // theme / Extra Dark choice. Cached read (SiteSetting::get uses Cache::remember).
+    $themeGlobalExtraDark = \App\Models\SiteSetting::get('system.global_extra_dark', 'off') === 'on';
 @endphp
 <script>
     (function () {
@@ -34,6 +39,7 @@
         const cfg = {
             server: @json($themeServerChoice),
             endpoint: @json($themeEndpoint),
+            globalExtraDark: @json($themeGlobalExtraDark),
             csrf: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
         };
 
@@ -43,7 +49,11 @@
             return location.pathname.startsWith('/admin') ? 'admin.theme' : 'theme';
         }
         function themeChoice() {
-            return localStorage.getItem(themeKey()) || 'system';
+            const v = localStorage.getItem(themeKey());
+            if (v) { return v; }
+            // No explicit choice: when the admin has switched on the global Extra
+            // Dark default, unconfigured users start in dark so pure-dark can show.
+            return cfg.globalExtraDark ? 'dark' : 'system';
         }
 
         function prefersDark() {
@@ -87,10 +97,23 @@
             try { localStorage.setItem('flux.appearance', choice); } catch (_) {}
         }
 
+        // Extra-dark (true black) is a sub-preference of dark mode, stored per
+        // area exactly like the theme key — admin and customer each remember
+        // their own choice. Only applies while dark is the resolved theme.
+        function pureDarkKey() {
+            return location.pathname.startsWith('/admin') ? 'admin.theme.pure_dark' : 'theme.pure_dark';
+        }
+        function pureDarkOn() {
+            const v = localStorage.getItem(pureDarkKey());
+            if (v !== null) { return v === '1'; }   // the user's own choice always wins
+            return !! cfg.globalExtraDark;            // else fall back to the admin default
+        }
+
         function applyTheme() {
             const choice = themeChoice();
             const isDark = resolveDark();
             root.classList.toggle('dark', isDark);
+            root.classList.toggle('pure-dark', isDark && pureDarkOn());
             writeCookie(isDark);
             syncFlux(choice);
         }
@@ -123,6 +146,15 @@
         };
         window.themeIsDark = resolveDark;
         window.themeChoice = themeChoice;
+
+        // Appearance -> Extra dark toggles the true-black variant. Stored locally
+        // (no server round-trip); applyTheme re-evaluates the .pure-dark class.
+        window.setPureDark = function (on) {
+            try { localStorage.setItem(pureDarkKey(), on ? '1' : '0'); } catch (_) {}
+            applyTheme();
+            window.dispatchEvent(new CustomEvent('pure-dark-changed', { detail: { on: pureDarkOn() } }));
+        };
+        window.pureDarkOn = pureDarkOn;
 
         // The account's saved theme wins over a stale cache from another login.
         if (cfg.server) {

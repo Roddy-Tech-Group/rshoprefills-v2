@@ -4,8 +4,9 @@
         @include('partials.head')
 
         {{-- Auth-page-only extras. Shared bits (SEO meta, theme engine, page
-             transition, vite, scroll-lock, dark-mode bg) come from partials/head. --}}
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:700" rel="stylesheet" />
+             transition, vite, scroll-lock, dark-mode bg) come from partials/head.
+             Fonts: Satoshi only (from partials/head). The old Instrument Sans
+             link was dropped - nothing on the auth pages referenced it. --}}
 
         {{-- .auth-form-slide scopes a slide-from-right animation to the form
              panel only. The script below re-applies it on every Livewire

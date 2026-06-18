@@ -30,14 +30,10 @@
     aria-label="What our customers say"
     class="w-full"
     x-data="customerReviewsCarousel()"
-    x-init="$nextTick(() => { setup(); play(); })"
+    x-init="$nextTick(() => { setup(); })"
     @resize.window.debounce.200ms="setup()"
-    @mouseenter="stop()"
-    @mouseleave="play()"
-    @touchstart.passive="stop()"
-    @touchend.passive="play()"
-    x-on:livewire:navigate.window="navigating = true; stop()"
-    x-on:livewire:navigated.window="navigating = false; $nextTick(() => { setup(); play(); })"
+    x-on:livewire:navigate.window="navigating = true"
+    x-on:livewire:navigated.window="navigating = false; $nextTick(() => { setup(); })"
 >
 
     {{-- Header aligns with the page content width. --}}
@@ -113,7 +109,7 @@
                     }"
                     @mouseenter="paused = true"
                     @mouseleave="paused = false"
-                    class="relative flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm"
+                    class="relative flex w-72 shrink-0 flex-col rounded-[10px] bg-[#eff6ff] p-5 ring-1 ring-zinc-200 dark:ring-[#24364f]"
                 >
                     @foreach ($aggSources as $i => $agg)
                         @php $isGoogle = $agg['key'] === 'Google'; @endphp

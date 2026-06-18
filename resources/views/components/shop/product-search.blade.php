@@ -16,7 +16,7 @@
         action="{{ route('shop.gift-cards') }}"
         @click="$refs.search.focus()"
         :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-700'"
-        class="group flex cursor-text items-center gap-3 rounded-[10px] border bg-[#eff6ff] px-4 py-2.5 transition-all duration-200"
+        class="group flex cursor-text items-center gap-3 rounded-[15px] border bg-[#eff6ff] px-4 py-2.5 transition-all duration-200"
     >
         <button type="submit" class="shrink-0 text-zinc-900 transition-colors hover:text-blue-600 focus:outline-none dark:text-white" aria-label="Search">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>

@@ -265,4 +265,25 @@ class CustomerReviewSubmissionTest extends TestCase
 
         $this->assertSame(0, Review::count());
     }
+
+    public function test_reviews_page_renders_published_reviews_in_carousels(): void
+    {
+        $this->withoutVite();
+
+        Review::create([
+            'author_name' => 'Wanderer Jane',
+            'initials' => 'WJ',
+            'body' => 'Bought a global eSIM and it worked the moment I landed.',
+            'rating' => 5.0,
+            'source' => 'Trustpilot',
+            'reviewed_at' => now()->toDateString(),
+            'is_published' => true,
+            'is_customer_submitted' => false,
+        ]);
+
+        $this->get(route('shop.reviews'))
+            ->assertOk()
+            ->assertSee('Recent reviews')
+            ->assertSee('Wanderer Jane');
+    }
 }

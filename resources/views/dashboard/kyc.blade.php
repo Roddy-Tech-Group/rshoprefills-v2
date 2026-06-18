@@ -49,14 +49,7 @@
 <x-layouts.dashboard>
     <div class="flex w-full flex-col gap-8">
 
-        @if (session('status'))
-            <div class="flex items-center gap-2 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                </svg>
-                {{ session('status') }}
-            </div>
-        @endif
+        {{-- Status flash now pops as the global flash-toast pill (dashboard layout). --}}
 
         {{-- ─── Header (desktop only — mobile uses the layout's slim top bar) ─── --}}
         <section class="hidden lg:block">
@@ -235,7 +228,7 @@
                                     x-transition:enter="transition ease-out duration-150"
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
-                                    class="absolute left-0 z-30 mt-1 w-[300px] rounded-[10px] bg-white p-3 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    class="absolute left-0 z-30 mt-1 w-[300px] rounded-[10px] bg-[#eff6ff] p-3 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
                                 >
                                     {{-- Month / year stepper --}}
                                     <div class="flex items-center justify-between">
@@ -313,7 +306,7 @@
                                     x-transition:enter="transition ease-out duration-150"
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
-                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-white shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-[#eff6ff] shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
                                 >
                                     <div class="border-b border-zinc-100 p-2">
                                         <input
@@ -374,7 +367,7 @@
                                     x-transition:enter="transition ease-out duration-150"
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
-                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-white p-1 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-[#eff6ff] p-1 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
                                 >
                                     <template x-for="opt in options" :key="opt.value">
                                         <button

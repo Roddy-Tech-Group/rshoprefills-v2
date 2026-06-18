@@ -3,7 +3,7 @@
     // standard keys an action redirect sets - status/success are positive,
     // error/danger are negative. Renders nothing when none are present, so it's
     // safe to drop into any layout once.
-    $flashSuccess = session('status') ?? session('success');
+    $flashSuccess = session('status') ?? session('success') ?? session('wallet_created') ?? session('message');
     $flashError = session('error') ?? session('danger');
     $flashMessage = $flashSuccess ?? $flashError;
     $flashIsError = $flashError !== null;
@@ -21,7 +21,7 @@
         x-transition:leave-start="opacity-100 translate-x-0"
         x-transition:leave-end="opacity-0 translate-x-4"
         style="display:none;"
-        class="fixed inset-x-4 top-4 z-[100] mx-auto flex max-w-sm items-start gap-2.5 rounded-[10px] px-4 py-3 text-sm font-medium shadow-lg shadow-zinc-900/15 ring-1 sm:inset-x-auto sm:right-5 sm:top-5
+        class="fixed inset-x-4 top-4 z-[100] mx-auto flex max-w-sm items-center gap-2.5 rounded-full px-5 py-3 text-sm font-medium shadow-lg shadow-zinc-900/15 ring-1 sm:inset-x-auto sm:right-5 sm:top-5
             {{ $flashIsError
                 ? 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30'
                 : 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30' }}"

@@ -26,7 +26,7 @@
     $empty    = 5 - $full - ($hasHalf ? 1 : 0);
 @endphp
 
-<article class="flex w-72 shrink-0 flex-col rounded-[14px] dash-shimmer border border-zinc-200 bg-transparent p-5 transition-colors hover:border-green-200 sm:w-80 dark:border-white dark:hover:border-white">
+<article class="flex w-72! shrink-0 flex-col rounded-[14px] dash-shimmer border border-zinc-200 bg-transparent p-5 transition-colors hover:border-green-200 sm:w-80! dark:border-white dark:hover:border-white">
 
     <div class="flex items-start justify-between gap-3">
         <div class="flex min-w-0 items-start gap-3">

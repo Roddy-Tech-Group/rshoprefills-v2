@@ -244,12 +244,15 @@ class extends Component {
     <div>
         <label for="txn-search" class="block text-sm font-bold text-zinc-900">Search transactions</label>
         <div class="relative mt-2">
+            <svg class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-900 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
             <input
                 id="txn-search"
                 type="text"
                 wire:model.live.debounce.300ms="search"
                 placeholder="Search by reference or description"
-                class="w-full rounded-[10px] border-2 border-zinc-100 bg-[#eff6ff] px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700 dark:text-white"
+                class="w-full rounded-full py-2 sm:rounded-[15px] sm:py-3 border-2 border-zinc-400 bg-[#eff6ff] pl-12 pr-4 text-sm text-zinc-900 placeholder:text-zinc-500 outline-none transition-colors hover:border-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:text-white"
             >
             <div wire:loading wire:target="search" class="absolute right-3 top-1/2 -translate-y-1/2">
                 <svg class="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -269,7 +272,7 @@ class extends Component {
                 <button
                     type="button"
                     wire:click="setFilter('{{ $key }}')"
-                    class="rounded-[6px] px-3.5 py-2 text-sm font-semibold transition-colors {{ $filter === $key ? 'bg-blue-600 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50' }}"
+                    class="rounded-full px-3.5 py-2 text-sm font-semibold transition-colors {{ $filter === $key ? 'bg-blue-600 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50' }}"
                 >
                     {{ $label }}
                 </button>
@@ -281,7 +284,7 @@ class extends Component {
             wire:click="downloadCsv"
             wire:loading.attr="disabled"
             wire:target="downloadCsv"
-            class="inline-flex items-center gap-1.5 rounded-[6px] border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-zinc-200 dark:hover:bg-[#26416b]"
+            class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-zinc-200 dark:hover:bg-[#26416b]"
         >
             <svg wire:loading.remove wire:target="downloadCsv" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>

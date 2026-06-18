@@ -250,8 +250,13 @@
     }
 </script>
 
-<link rel="preconnect" href="https://fonts.bunny.net">
-<link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+{{-- Satoshi is the only web font we load (the primary --font-sans). It is
+     @imported inside app.css, so its connection only opens after the CSS
+     parses. Pre-opening api.fontshare.com here lets the font fetch start in
+     parallel with the CSS, cutting first-text delay. We deliberately do NOT
+     load Instrument Sans any more: it was only ever a fallback behind Satoshi,
+     so system-ui covers the brief pre-Satoshi window without a second origin. --}}
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
 
 {{-- Flag CDN used by the locale modal, top-bar country chip, and admin
      country pickers. Pre-resolving the DNS shaves ~50-100ms off the first
@@ -259,10 +264,29 @@
 <link rel="dns-prefetch" href="https://flagcdn.com">
 <link rel="preconnect" href="https://flagcdn.com" crossorigin>
 
+{{-- Async third-party origins (chat, analytics, captcha). These load async/defer
+     and sit OFF the critical render path, so dns-prefetch (resolve DNS early) is
+     the right hint - not preconnect, which would spend a full TCP+TLS connection
+     the fonts/flags need first. Each is gated on its own config so we never hint
+     an origin this install doesn't actually use. --}}
+@if (config('services.chatway.widget_id'))
+    <link rel="dns-prefetch" href="https://cdn.chatway.app">
+@endif
+@if (config('services.turnstile.enabled'))
+    <link rel="dns-prefetch" href="https://challenges.cloudflare.com">
+@endif
+@if (! request()->is('admin*') && (\App\Models\SiteSetting::get('seo.google_analytics_id') ?: config('services.google.analytics_id') ?: \App\Models\SiteSetting::get('seo.google_tag_manager_id')))
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+@endif
+
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
 
 @include('partials.scroll-lock')
+
+{{-- Global keyboard shortcuts (Ctrl+J chat, Ctrl+F ticket, Ctrl+M theme,
+     Ctrl+P profile). Site-wide, customer side only. --}}
+@include('partials.shortcuts')
 
 {{-- Page transition - the incoming page slides up from the bottom on every
      navigation (full page load + wire:navigate SPA swap). Driven entirely

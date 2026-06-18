@@ -40,6 +40,12 @@
     .dark .app-loader {
         background: #0c1a36;
     }
+    /* Extra Dark (pure black): match the true-black page so the loader follows
+       the theme. .pure-dark is applied to <html> before first paint by the
+       theme engine, so this resolves with no flash. */
+    .dark.pure-dark .app-loader {
+        background: #000000;
+    }
     /* Hidden state: fade out, then drop out of the layout so it can't trap
        clicks once the page is usable. */
     .app-loader.app-loader--hidden {

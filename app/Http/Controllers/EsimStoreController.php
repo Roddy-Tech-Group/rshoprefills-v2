@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Cart\Services\CartPricingService;
+use App\Domain\Shared\Services\Money;
 use App\Models\Category;
 use App\Models\Product;
 use App\Support\FeatureFlag;
@@ -193,6 +194,70 @@ class EsimStoreController extends Controller
         }
 
         return view('shop.esim', ['product' => $product, 'variants' => $variants]);
+    }
+
+    /**
+     * The global-coverage "Discover Global" eSIM and its available plans, priced
+     * exactly the way the detail page prices them. Used to surface worldwide eSIM
+     * plans on the home page and the dashboard. Returns null when the product
+     * isn't in the catalogue (or its supplier is flagged off) so callers render
+     * nothing rather than an empty shell.
+     *
+     * @return array{product: Product, plans: Collection}|null
+     */
+    public static function discoverGlobal(): ?array
+    {
+        $product = Product::query()
+            ->where('is_active', true)
+            ->where('country_code', 'WW')
+            ->whereHas('category', fn ($q) => $q->where('slug', 'esims'))
+            ->where('slug', 'like', '%discover-global%')
+            ->tap(fn ($q) => self::applyEsimSupplierFlags($q))
+            ->with(['variants' => fn ($q) => $q->where('is_available', true)->orderBy('cost_price')])
+            ->first();
+
+        if (! $product || $product->variants->isEmpty()) {
+            return null;
+        }
+
+        $pricing = app(CartPricingService::class);
+
+        $plans = $product->variants
+            ->map(function ($variant) use ($pricing, $product) {
+                $variant->setRelation('product', $product);
+                $meta = (array) ($variant->metadata ?? []);
+                $raw = (array) ($meta['raw_payload'] ?? []);
+
+                // Mirror the detail page's plan mapping so the home/dashboard cards
+                // can render exactly the same content. A plan is "Voice" only when
+                // it actually carries minutes or texts.
+                $voiceVal = $raw['voice'] ?? ($meta['voice_limit'] ?? null);
+                $smsVal = $raw['text'] ?? ($meta['sms_limit'] ?? null);
+                $hasVoice = is_numeric($voiceVal) && (float) $voiceVal > 0;
+                $hasSms = is_numeric($smsVal) && (float) $smsVal > 0;
+
+                $data = self::planDataLabel($variant) ?? 'Data';
+                $isUnlimited = strcasecmp($data, 'Unlimited') === 0;
+                $price = round((float) $pricing->calculatePricing($variant, 1)['unit_price_snapshot'], 2);
+
+                return [
+                    'id' => $variant->id,
+                    'data' => $data,
+                    'days' => (int) ($meta['validity_days'] ?? $meta['duration_days'] ?? $raw['durationDays'] ?? 0),
+                    'is_voice' => $hasVoice || $hasSms,
+                    'voice' => $hasVoice ? $voiceVal.' mins' : null,
+                    'sms' => $hasSms ? $smsVal.' SMS' : null,
+                    'note' => $isUnlimited ? trim((string) ($raw['shortNotes'] ?? '')) : '',
+                    'price' => $price,
+                    'price_label' => Money::format($price, 'USD'),
+                ];
+            })
+            ->filter(fn ($p) => $p['price'] > 0)
+            ->unique(fn ($p) => ($p['is_voice'] ? 'v' : 'd').'|'.strtolower($p['data']).'|'.$p['days'])
+            ->sortBy('price')
+            ->values();
+
+        return $plans->isEmpty() ? null : ['product' => $product, 'plans' => $plans];
     }
 
     /**

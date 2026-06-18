@@ -78,7 +78,7 @@
         x-transition:leave="transition-transform duration-200 ease-in"
         x-transition:leave-start="translate-y-0"
         x-transition:leave-end="translate-y-full"
-        class="fixed inset-x-0 bottom-0 z-[71] max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-[#eff6ff]/85 ring-1 ring-zinc-200/70 pb-6 shadow-2xl shadow-zinc-900/30 backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/80 dark:ring-white/10"
+        class="fixed inset-x-0 bottom-0 z-[71] max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-[#eff6ff] ring-1 ring-zinc-200 pb-6 shadow-2xl shadow-zinc-900/30 dark:bg-[#0c1a36] dark:ring-[#24364f]"
         role="dialog"
         aria-modal="true"
         aria-label="Pick a category"
@@ -99,9 +99,9 @@
                         href="{{ $cat['url'] }}"
                         wire:navigate
                         @class([
-                            'flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm transition-colors',
+                            'flex items-center gap-3 rounded-[6px] px-3 py-3 text-sm transition-colors',
                             'bg-blue-50 font-bold text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30' => $isActive,
-                            'font-medium text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/10' => ! $isActive,
+                            'font-medium text-zinc-800 hover:ring-1 hover:ring-zinc-200 dark:text-zinc-200 dark:hover:ring-[#24364f]' => ! $isActive,
                         ])
                         @if ($isActive) aria-current="page" @endif
                     >
@@ -132,9 +132,9 @@
                             href="{{ $item['url'] }}"
                             wire:navigate
                             @class([
-                                'flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors',
+                                'flex items-center gap-3 rounded-[6px] px-3 py-2.5 text-sm transition-colors',
                                 'bg-blue-50 font-bold text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30' => $item['active'] ?? false,
-                                'font-medium text-zinc-800 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-white/10' => ! ($item['active'] ?? false),
+                                'font-medium text-zinc-800 hover:ring-1 hover:ring-zinc-200 dark:text-zinc-200 dark:hover:ring-[#24364f]' => ! ($item['active'] ?? false),
                             ])
                         >
                             <span class="flex-1">{{ $item['label'] }}</span>

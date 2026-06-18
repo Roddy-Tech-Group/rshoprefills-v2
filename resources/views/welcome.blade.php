@@ -158,6 +158,11 @@
         @endif
     @endforeach
 
+    {{-- Discover Global eSIM - tap a plan to add to cart inline (no page change) --}}
+    <div class="mt-12">
+        <x-home.discover-global />
+    </div>
+
     {{-- How it works --}}
     <div class="mt-12">
         <x-home.how-it-works />

@@ -112,7 +112,7 @@
             <a
                 href="{{ route('admin.customer', $user) }}"
                 wire:navigate
-                class="cust-row cust-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
+                class="cust-row cust-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
             >
                 {{-- User — avatar + name + email stacked. --}}
                 <div class="col-user flex min-w-0 items-center gap-3">

@@ -11,18 +11,24 @@
     ];
 @endphp
 
-{{-- Equal-width cards (flex-1) so all five always fit on one line - no
-     horizontal scroll, no layout shift. Active card gets a blue border + tint. --}}
-<div class="flex items-stretch gap-2" role="tablist">
+{{-- Small pill tabs (icon + label inline). On mobile they're a horizontal-scroll
+     carousel that bleeds to the screen edge; from sm+ they sit in a normal row
+     where all five fit. Active pill gets a blue border + tint. --}}
+<div
+    class="-mx-4 flex items-center gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [scroll-snap-type:x_proximity] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+    role="tablist"
+>
     @foreach ($tabs as $key => $tab)
         <button
             type="button"
             @click="locTab = '{{ $key }}'"
+            role="tab"
+            :aria-selected="(locTab === '{{ $key }}').toString()"
             :class="locTab === '{{ $key }}' ? 'border-blue-600 bg-blue-600/10 text-blue-700 dark:border-blue-400/60 dark:bg-blue-500/20 dark:text-blue-200' : 'border-zinc-200 bg-[#eff6ff] text-zinc-600 hover:border-blue-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-blue-400/40'"
-            class="flex flex-1 min-w-0 flex-col items-center justify-center gap-1.5 rounded-[10px] border px-1 py-3 text-[12px] font-bold transition-colors focus:outline-none"
+            class="flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors focus:outline-none"
         >
-            <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">{!! $tab['icon'] !!}</svg>
-            <span class="truncate">{{ $tab['label'] }}</span>
+            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">{!! $tab['icon'] !!}</svg>
+            <span>{{ $tab['label'] }}</span>
         </button>
     @endforeach
 </div>
