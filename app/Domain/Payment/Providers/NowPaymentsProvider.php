@@ -273,21 +273,26 @@ class NowPaymentsProvider implements PaymentProviderInterface
         }
 
         try {
-            $invoiceId = $attempt->gateway_reference;
+            // gateway_reference holds the NOWPayments payment_id, so the status
+            // lives at GET /payment/{id} (the old /invoice/{id} endpoint is a
+            // different flow and 404s here), and the field is payment_status.
+            $paymentId = $attempt->gateway_reference;
             $response = Http::withHeaders([
                 'x-api-key' => $this->apiKey,
-            ])->get("{$this->baseUrl}/invoice/{$invoiceId}");
+            ])->get("{$this->baseUrl}/payment/{$paymentId}");
 
             if ($response->failed()) {
-                Log::error("NowPayments verify failed for invoice: {$invoiceId}");
+                Log::error("NowPayments verify failed for payment: {$paymentId}");
 
                 return false;
             }
 
             $body = $response->json();
-            $status = $body['invoice_status'] ?? null;
+            $status = strtolower((string) ($body['payment_status'] ?? ''));
 
-            if (in_array($status, ['confirmed', 'paid', 'completed'])) {
+            // confirmed/sending/finished all mean the customer's crypto has landed
+            // (mirrors the webhook trigger set); partially_paid/failed/expired do not.
+            if (in_array($status, ['confirmed', 'sending', 'finished', 'paid', 'completed'])) {
                 $attempt->payment_status = PaymentStatus::Paid;
                 $attempt->confirmed_at = now();
                 $attempt->verification_payload = $body;
