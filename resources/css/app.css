@@ -1094,6 +1094,23 @@ select:focus[data-flux-control] {
     .dark.pure-dark .lg\:bg-white  { background-color: #000000; }
 }
 
+/* Static cards keep their light surface in Extra Dark too. Elements marked
+   `theme-static` (e.g. the order / dashboard gift-card visual) opt out of the
+   dark ramp, but the surface overrides above don't know that - so re-assert the
+   light values one specificity step higher (`.dark.pure-dark .theme-static`
+   = 0,4,0 beats the `.dark.pure-dark .bg-*` = 0,3,0 rules). Without this the
+   gift card renders pure black with dark, unreadable text. Mirrors the normal
+   dark theme-static block; text stays correct via those same `.dark
+   .theme-static .text-*` rules (Extra Dark never touches text). */
+.dark.pure-dark .theme-static.bg-white,
+.dark.pure-dark .theme-static .bg-white      { background-color: #ffffff; }
+.dark.pure-dark .theme-static.bg-zinc-50,
+.dark.pure-dark .theme-static .bg-zinc-50    { background-color: #fafafa; }
+.dark.pure-dark .theme-static.bg-zinc-100,
+.dark.pure-dark .theme-static .bg-zinc-100   { background-color: #f5f5f5; }
+.dark.pure-dark .theme-static.bg-zinc-200,
+.dark.pure-dark .theme-static .bg-zinc-200   { background-color: #e5e5e5; }
+
 /* Glass white tints -> translucent black */
 .dark.pure-dark .bg-white\/40 { background-color: rgb(0 0 0 / 0.55); }
 .dark.pure-dark .bg-white\/70 { background-color: rgb(0 0 0 / 0.80); }
