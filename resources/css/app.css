@@ -1088,6 +1088,11 @@ select:focus[data-flux-control] {
 .dark.pure-dark .bg-\[\#eff6ff\]   { background-color: #000000; }
 .dark.pure-dark .bg-\[\#f9fafb\]   { background-color: #000000; }
 .dark.pure-dark .bg-\[\#ededee\]   { background-color: #0a0a0a; }
+/* Plain (non-`dark:`) navy hex used for always-dark pills, banners and dropdown
+   triggers (the mobile eSIM category picker, the eSIM promo banner cards). Only
+   the dark: variant was remapped above, so these stayed navy on the black page;
+   map them onto the card surface. Their text is already light, so it stays readable. */
+.dark.pure-dark .bg-\[\#0c1a36\]   { background-color: #0d0d0d; }
 .dark.pure-dark .bg-blue-50        { background-color: #0d0d0d; }
 .dark.pure-dark .bg-blue-100       { background-color: #161616; }
 @media (min-width: 64rem) {
@@ -1179,6 +1184,8 @@ select:focus[data-flux-control] {
 .dark.pure-dark .hover\:bg-white:hover,
 .dark.pure-dark .hover\:bg-zinc-50:hover,
 .dark.pure-dark .hover\:bg-zinc-100:hover  { background-color: #1a1a1a; }
+/* Hover lift for the always-dark navy pill (mobile category picker trigger). */
+.dark.pure-dark .hover\:bg-\[\#1d3252\]:hover { background-color: #161616; }
 .dark.pure-dark .hover\:bg-zinc-200:hover  { background-color: #1f1f1f; }
 .dark.pure-dark .hover\:bg-zinc-300:hover  { background-color: #262626; }
 .dark.pure-dark .hover\:bg-blue-50:hover   { background-color: #1a1a1a; }

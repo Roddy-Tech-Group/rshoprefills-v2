@@ -29,11 +29,11 @@
         <div class="flex w-max gap-4 sm:grid sm:w-full sm:grid-cols-3 sm:gap-5">
 
         {{-- Step 1 — Pick a product --}}
-        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
-            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
+        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 dark:bg-[#1d3252] ring-1 ring-zinc-200 shadow-sm sm:w-auto">
+            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100 dark:bg-[#1d3252]">
                 <x-illo name="cardFan" class="h-full w-full" />
             </div>
-            <div class="bg-zinc-100 p-5">
+            <div class="bg-zinc-100 dark:bg-[#1d3252] p-5">
                 <h3 class="text-base font-semibold text-zinc-900">1. Pick a product or service</h3>
                 <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
                     Choose from {{ $productsRounded }}+ gift cards, eSIMs, flights, stays and mobile top-ups made ready for you to simplify your shopping experience.
@@ -42,11 +42,11 @@
         </article>
 
         {{-- Step 2 — Pay with crypto --}}
-        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
-            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
+        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 dark:bg-[#1d3252] ring-1 ring-zinc-200 shadow-sm sm:w-auto">
+            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100 dark:bg-[#1d3252]">
                 <x-illo name="payWeb" class="h-full w-full" />
             </div>
-            <div class="bg-zinc-100 p-5">
+            <div class="bg-zinc-100 dark:bg-[#1d3252] p-5">
                 <h3 class="text-base font-semibold text-zinc-900">2. Pay with Cards, Crypto, Mobile Money, Bank Transfers etc</h3>
                 <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
                     Access {{ $productsRounded }}+ digital products including gift cards, eSIMs, flights, hotel stays, mobile top-ups, and more, all in one seamless platform.
@@ -55,11 +55,11 @@
         </article>
 
         {{-- Step 3 — Receive instantly --}}
-        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 ring-1 ring-zinc-200 shadow-sm sm:w-auto">
-            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100">
+        <article class="w-72 shrink-0 overflow-hidden rounded-[10px] bg-zinc-100 dark:bg-[#1d3252] ring-1 ring-zinc-200 shadow-sm sm:w-auto">
+            <div class="flex aspect-[4/3] items-center justify-center overflow-hidden bg-zinc-100 dark:bg-[#1d3252]">
                 <x-illo name="payout" class="h-full w-full" />
             </div>
-            <div class="bg-zinc-100 p-5">
+            <div class="bg-zinc-100 dark:bg-[#1d3252] p-5">
                 <h3 class="text-base font-semibold text-zinc-900">3. Receive instantly</h3>
                 <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">
                     Your product arrives in seconds, to your email address and your clients dashboard if you are signed up with us ready to use.
