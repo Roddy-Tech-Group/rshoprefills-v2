@@ -162,15 +162,42 @@ new class extends Component
                 script.src = 'https://checkout.flutterwave.com/v3.js';
                 document.head.appendChild(script);
             }
+            this.detectApplePay();
+        },
+
+        /**
+         * Detect Apple Pay support across browsers:
+         *  - Safari: window.ApplePaySession.canMakePayments()
+         *  - Chrome/Edge on iOS 16+: PaymentRequest with apple-pay method
+         * Our backend uses Flutterwave's redirect flow, so we only need
+         * to know the device *can* use Apple Pay — we don't create a
+         * local ApplePaySession ourselves.
+         */
+        async detectApplePay() {
+            // 1. Safari-native check (fastest, synchronous)
             try {
-                this.applePayAvailable = !! (
-                    window.ApplePaySession
+                if (window.ApplePaySession
                     && typeof window.ApplePaySession.canMakePayments === 'function'
-                    && window.ApplePaySession.canMakePayments()
-                );
-            } catch (_) {
-                this.applePayAvailable = false;
-            }
+                    && window.ApplePaySession.canMakePayments()) {
+                    this.applePayAvailable = true;
+                    return;
+                }
+            } catch (_) {}
+
+            // 2. W3C PaymentRequest fallback (Chrome / Edge on iOS 16+)
+            try {
+                if (window.PaymentRequest) {
+                    const methods = [{ supportedMethods: 'https://apple.com/apple-pay' }];
+                    const details = { total: { label: 'Check', amount: { currency: 'USD', value: '0.01' } } };
+                    const request = new PaymentRequest(methods, details);
+                    if (typeof request.canMakePayment === 'function') {
+                        this.applePayAvailable = await request.canMakePayment();
+                        return;
+                    }
+                }
+            } catch (_) {}
+
+            this.applePayAvailable = false;
         },
 
         getFilteredMethods() {

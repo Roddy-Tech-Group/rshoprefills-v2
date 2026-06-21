@@ -185,7 +185,7 @@ class PaymentSessionController extends Controller
         } catch (\Exception $e) {
             Log::error('Explicit payment session verify failed: '.$e->getMessage());
 
-            return response()->json(['message' => 'Verification failed: '.$e->getMessage()], 500);
+            return response()->json(['message' => 'Verification could not be completed. Please try again or contact support.'], 500);
         }
     }
 

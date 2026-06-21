@@ -1138,23 +1138,20 @@
                 timerText: '30:00',
                 copiedStates: {},
 
-                // Apple Pay availability — only shown on Safari + Apple devices that
-                // have it set up. ApplePaySession is undefined on other browsers, and
-                // throws if called in an unsupported context, so we guard fully.
+                // Apple Pay availability — shown on Apple devices that have it
+                // set up. We check two APIs:
+                //   1. ApplePaySession (Safari-native, always preferred)
+                //   2. PaymentRequest with 'https://apple.com/apple-pay'
+                //      (Chrome / Edge on iOS 16+, other W3C-compliant browsers)
+                // Either one proving capable is enough — our backend uses
+                // Flutterwave's redirect flow, not a local ApplePaySession.
                 applePayAvailable: false,
 
                 init() {
                     this.rcoinConfig = rcoinConfig;
                     this.resetCardDetails();
-                    try {
-                        this.applePayAvailable = !! (
-                            window.ApplePaySession
-                            && typeof window.ApplePaySession.canMakePayments === 'function'
-                            && window.ApplePaySession.canMakePayments()
-                        );
-                    } catch (_) {
-                        this.applePayAvailable = false;
-                    }
+                    this.detectApplePay();
+                    
                     this.$watch('$store.cart.currency', (newVal) => {
                         const methods = this.getFilteredMethods();
                         const currentSupported = methods.some(m => m.key === this.method);
@@ -1162,6 +1159,41 @@
                             this.method = methods[0].key;
                         }
                     });
+                },
+
+                /**
+                 * Detect Apple Pay support across browsers:
+                 *  - Safari: window.ApplePaySession.canMakePayments()
+                 *  - Chrome/Edge on iOS 16+: PaymentRequest with apple-pay method
+                 * Our backend uses Flutterwave's redirect flow, so we only need
+                 * to know the device *can* use Apple Pay — we don't create a
+                 * local ApplePaySession ourselves.
+                 */
+                async detectApplePay() {
+                    // 1. Safari-native check (fastest, synchronous)
+                    try {
+                        if (window.ApplePaySession
+                            && typeof window.ApplePaySession.canMakePayments === 'function'
+                            && window.ApplePaySession.canMakePayments()) {
+                            this.applePayAvailable = true;
+                            return;
+                        }
+                    } catch (_) {}
+
+                    // 2. W3C PaymentRequest fallback (Chrome / Edge on iOS 16+)
+                    try {
+                        if (window.PaymentRequest) {
+                            const methods = [{ supportedMethods: 'https://apple.com/apple-pay' }];
+                            const details = { total: { label: 'Check', amount: { currency: 'USD', value: '0.01' } } };
+                            const request = new PaymentRequest(methods, details);
+                            if (typeof request.canMakePayment === 'function') {
+                                this.applePayAvailable = await request.canMakePayment();
+                                return;
+                            }
+                        }
+                    } catch (_) {}
+
+                    this.applePayAvailable = false;
                 },
 
                 detectCardType() {
