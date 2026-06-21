@@ -155,7 +155,7 @@
         x-transition:leave="transition duration-200 ease-in"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
         x-transition:leave-end="opacity-0 translate-y-8 scale-[0.98]"
-        class="pointer-events-auto relative w-full max-w-2xl rounded-[10px] bg-white/70 ring-1 ring-white/40 shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/65 dark:ring-white/15"
+        class="pointer-events-auto relative w-full max-w-2xl rounded-[10px] bg-[#eff6ff] ring-1 ring-zinc-200 shadow-2xl shadow-zinc-900/25 px-[15px] pt-[30px] pb-[30px] dark:ring-[#24364f]"
     >
         {{-- Close button (positioned outside the card's top-right corner) --}}
         <x-close-button @click="localeModalOpen = false" class="absolute -top-3 -right-3 z-10 shadow-lg shadow-zinc-900/20" />
@@ -183,7 +183,7 @@
                     :aria-expanded="open.toString()"
                     aria-haspopup="listbox"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-[10px] border bg-white/40 backdrop-blur-xl backdrop-saturate-150 px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors dark:bg-white/10 dark:text-white"
+                    class="flex w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors dark:text-white"
                 >
                     <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                     <span class="flex-1 text-left" x-text="country">United States</span>
@@ -201,7 +201,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-xl shadow-zinc-900/15 dark:border-white/15 dark:bg-[#13294d]"
+                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-xl shadow-zinc-900/15 dark:border-zinc-700"
                     role="listbox"
                 >
                     {{-- Search --}}
@@ -216,7 +216,7 @@
                                 type="text"
                                 placeholder="Search countries"
                                 aria-label="Search countries"
-                                class="w-full rounded-[10px] border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                class="w-full rounded-[15px] border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                             />
                         </div>
                     </div>
@@ -233,7 +233,7 @@
                                 :class="country === name ? 'bg-blue-50 text-blue-700' : 'text-zinc-700 hover:bg-zinc-50'"
                                 class="flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left text-base font-medium transition-colors"
                             >
-                                <img :src="'https://flagcdn.com/w40/' + (codes[name] || 'us').toLowerCase() + '.png'" alt="" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
+                                <img :src="'https://flagcdn.com/w40/' + (codes[name] || 'us').toLowerCase() + '.png'" alt="" loading="lazy" decoding="async" class="h-3.5 w-5 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
                                 <span class="flex-1" x-text="name"></span>
                                 <svg x-show="country === name" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -267,7 +267,7 @@
                     :aria-expanded="open.toString()"
                     aria-haspopup="listbox"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-300 hover:border-zinc-400'"
-                    class="flex w-full items-center gap-2 rounded-[10px] border bg-white/40 backdrop-blur-xl backdrop-saturate-150 px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors dark:bg-white/10 dark:text-white"
+                    class="flex w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 py-2.5 text-base font-medium text-zinc-900 outline-none transition-colors dark:text-white"
                 >
                     <span class="flex-1 text-left" x-text="language">English</span>
                     <svg class="h-4 w-4 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -284,7 +284,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-xl shadow-zinc-900/15 dark:border-white/15 dark:bg-[#13294d]"
+                    class="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-xl shadow-zinc-900/15 dark:border-zinc-700"
                     role="listbox"
                 >
                     {{-- Search --}}
@@ -299,14 +299,14 @@
                                 type="text"
                                 placeholder="Search languages"
                                 aria-label="Search languages"
-                                class="w-full rounded-[10px] border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                class="w-full rounded-[15px] border border-zinc-200 bg-zinc-50 py-2 pl-8 pr-3 text-base text-zinc-800 placeholder:text-zinc-600 outline-none transition-colors focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                             />
                         </div>
                     </div>
 
-                    {{-- Options - capped at ~8 rows so the dropdown never
-                         spills past the modal; the list itself scrolls. --}}
-                    <div class="max-h-80 overflow-y-auto overscroll-contain p-1">
+                    {{-- Options - capped at ~6 rows for a compact mobile-friendly
+                         list; the list itself scrolls for the rest. --}}
+                    <div class="max-h-60 overflow-y-auto overscroll-contain p-1">
                         <template x-for="lang in options.filter(l => l.toLowerCase().includes(search.toLowerCase()))" :key="lang">
                             <button
                                 type="button"

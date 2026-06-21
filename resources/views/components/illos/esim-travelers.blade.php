@@ -44,8 +44,7 @@
     </clipPath>
   </defs>
 
-  {{-- Background card --}}
-  <rect width="820" height="640" rx="28" fill="#070D1A"/>
+  {{-- Transparent background: the parent card provides the dark surface. --}}
 
   {{-- Decor --}}
   <circle cx="88" cy="96" r="3" fill="#3B82F6" opacity="0.22"/>

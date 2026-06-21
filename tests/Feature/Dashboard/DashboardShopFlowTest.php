@@ -20,6 +20,22 @@ class DashboardShopFlowTest extends TestCase
         $this->assertTrue(Route::has('dashboard.shop.order'));
     }
 
+    public function test_checkout_carries_the_esim_coverage_notice(): void
+    {
+        $this->withoutVite();
+
+        // Both notices ship in the checkout markup (Alpine shows each only when
+        // the cart holds a matching category). The eSIM one warns that plans
+        // only work inside their coverage area - the blind-buy guard.
+        $response = $this->actingAs(User::factory()->create())
+            ->get('/checkout')
+            ->assertOk();
+
+        $response->assertSee('eSIMs are region-based and only work inside their coverage area', false);
+        $response->assertSee('Gift cards are region-locked', false);
+        $response->assertSee("i.category_slug === 'esims'", false);
+    }
+
     public function test_dashboard_cart_keeps_its_links_inside_the_dashboard(): void
     {
         $this->withoutVite();

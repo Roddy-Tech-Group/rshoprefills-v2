@@ -19,15 +19,20 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
          light mode, pure black in dark mode (same palette the sidebar active
          link uses). The radio group is bound to window.setTheme via Alpine so
          it persists through reloads, exactly like the old flux variant did. --}}
-    <div class="rounded-[10px] bg-white p-6 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+    <div
+        x-data="{ theme: window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'), extraDark: window.pureDarkOn ? window.pureDarkOn() : (localStorage.getItem('theme.pure_dark') === '1') }"
+        x-init="
+            $watch('theme', v => window.setTheme(v));
+            $watch('extraDark', v => { window.setPureDark(v); if (v && ! window.themeIsDark()) theme = 'dark'; });
+        "
+        class="rounded-[10px] bg-[#eff6ff] p-6 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none"
+    >
         <div class="mb-5">
             <h2 class="text-base font-semibold text-black">Theme</h2>
             <p class="mt-0.5 text-xs text-zinc-600">Switch between light and dark mode, or follow your system.</p>
         </div>
 
         <div
-            x-data="{ theme: localStorage.getItem('theme') || 'system' }"
-            x-init="$watch('theme', v => window.setTheme(v))"
             role="radiogroup"
             aria-label="Theme"
             class="grid grid-cols-3 gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#0c1a36]"
@@ -43,7 +48,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     @click="theme = '{{ $opt['value'] }}'"
                     :aria-checked="(theme === '{{ $opt['value'] }}').toString()"
                     :class="theme === '{{ $opt['value'] }}'
-                        ? 'bg-zinc-200 text-black shadow-sm dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10'
+                        ? 'text-black ring-1 ring-blue-400 dark:text-white dark:ring-blue-500/60'
                         : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'"
                     class="inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold transition-colors"
                 >
@@ -53,6 +58,28 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     {{ $opt['label'] }}
                 </button>
             @endforeach
+        </div>
+
+        {{-- Extra dark (true black). A sub-option of dark mode: flipping it on
+             switches to dark right away and swaps the navy palette for pure black
+             (OLED-friendly). Saved locally via window.setPureDark; the theme
+             engine adds `.pure-dark` to <html> whenever dark is active. --}}
+        <div class="mt-5 flex items-center justify-between gap-4 border-t border-zinc-200 pt-5 dark:border-zinc-700">
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-black dark:text-white">Extra dark</p>
+                <p class="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">Turn dark mode pure black. Best for OLED screens and night use.</p>
+            </div>
+            <button
+                type="button"
+                role="switch"
+                @click="extraDark = ! extraDark"
+                :aria-checked="extraDark.toString()"
+                aria-label="Extra dark"
+                :class="extraDark ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-[#26416b]'"
+                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+            >
+                <span :class="extraDark ? 'translate-x-6' : 'translate-x-1'" class="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform"></span>
+            </button>
         </div>
     </div>
 </div>

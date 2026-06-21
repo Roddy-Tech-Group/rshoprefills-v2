@@ -8,7 +8,7 @@
     // Trustpilot collect the actual reviews behind the scenes.
     $tp = config('services.trustpilot');
     $google = config('services.google_reviews');
-    $reviews = \App\Models\Review::published()->ordered()->get();
+    $reviews = \App\Models\Review::published()->with('user:id,kyc_status')->ordered()->get();
     $aggregate = [
         'rating' => (float) \App\Models\SiteSetting::get('reviews.aggregate.rating', 0),
         'count' => (int) \App\Models\SiteSetting::get('reviews.aggregate.count', 0),
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
 
     {{-- Hero --}}
-    <section class="border-b border-zinc-100 bg-blue-50">
+    <section class="border-b border-zinc-100 bg-blue-50 dark:bg-[#0c1a36]!">
         <div class="mx-auto w-full max-w-[1140px] px-4 py-14 text-center sm:px-6 sm:py-20">
             <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Customer reviews</span>
             <h1 class="mt-5 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">What our customers say</h1>
@@ -32,11 +32,13 @@
             </p>
 
             @if ($aggregate['count'] > 0)
-                <div class="mx-auto mt-6 inline-flex items-center gap-3 rounded-[10px] bg-white px-4 py-2.5 ring-1 ring-zinc-100">
+                <div class="mx-auto mt-6 inline-flex items-center gap-3 rounded-[10px] bg-white px-4 py-2.5 ring-1 ring-zinc-100 dark:bg-[#0c1a36]!">
                     <div class="flex items-center gap-0.5">
                         @for ($i = 1; $i <= 5; $i++)
-                            <span class="flex h-5 w-5 items-center justify-center {{ $i <= round($aggregate['rating']) ? 'bg-emerald-500' : 'bg-zinc-200' }}">
-                                <svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            @php $fillPct = max(0, min(100, ($aggregate['rating'] - ($i - 1)) * 100)); @endphp
+                            <span class="relative flex h-5 w-5 items-center justify-center overflow-hidden bg-zinc-200">
+                                <span class="absolute inset-y-0 left-0 bg-emerald-500" style="width: {{ $fillPct }}%"></span>
+                                <svg class="relative h-3 w-3 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                     <path d="M12 .587l3.668 7.568L24 9.423l-6 5.951L19.336 24 12 19.897 4.664 24 6 15.374 0 9.423l8.332-1.268z"/>
                                 </svg>
                             </span>
@@ -50,9 +52,9 @@
     </section>
 
     {{-- Trustpilot Review Collector - lets visitors leave a review directly --}}
-    <section class="border-b border-zinc-100 bg-white">
+    <section class="border-b border-zinc-100 bg-white dark:bg-[#0c1a36]!">
         <div class="mx-auto w-full max-w-[1140px] px-4 py-10 sm:px-6">
-            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8">
+            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8 dark:bg-[#0c1a36]!">
                 <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                     <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-emerald-100">
                         <svg class="h-6 w-6 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -61,28 +63,30 @@
                     </div>
                     <div class="min-w-0 flex-1">
                         <h2 class="text-lg font-bold text-zinc-900">Bought from us recently?</h2>
-                        <p class="mt-1 text-sm text-zinc-600">Take a minute to share your experience on {{ $aggregate['source'] }}. Reviews help other customers make confident choices.</p>
+                        <p class="mt-1 text-sm text-zinc-600">Take a minute to share your experience on {{ $aggregate['source'] }}. Reviews help other customers make confident choices and helps us improve services for you.</p>
                     </div>
                 </div>
 
-                {{-- TrustBox widget - Review Collector --}}
-                <div class="mt-6">
-                    <div class="trustpilot-widget"
-                        data-locale="{{ $tp['locale'] }}"
-                        data-template-id="{{ $tp['review_collector_template_id'] }}"
-                        data-businessunit-id="{{ $tp['business_unit_id'] }}"
-                        data-style-height="52px"
-                        data-style-width="100%"
-                        data-token="{{ $tp['review_collector_token'] }}">
-                        <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-700 hover:underline">Leave a review on Trustpilot</a>
+                {{-- Review CTAs - Trustpilot + Google side by side (stack on mobile). --}}
+                <div class="mt-6 grid items-center gap-4 sm:grid-cols-2">
+                    {{-- TrustBox widget - Review Collector --}}
+                    <div class="flex justify-center">
+                        <div class="inline-flex overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-md shadow-zinc-900/20 dark:border-white/10">
+                            <div class="trustpilot-widget"
+                                data-locale="{{ $tp['locale'] }}"
+                                data-template-id="{{ $tp['review_collector_template_id'] }}"
+                                data-businessunit-id="{{ $tp['business_unit_id'] }}"
+                                data-style-height="52px"
+                                data-style-width="240px"
+                                data-token="{{ $tp['review_collector_token'] }}">
+                                <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-700 hover:underline">Leave a review on Trustpilot, on the website or Google.</a>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                {{-- Google CTA - mirror of the Trustpilot collector for the
-                     other major review surface. QR sits beside the button so
-                     desktop visitors can scan with their phone, mobile visitors
-                     can just tap. Both routes hit the same Google review URL. --}}
-                <div class="mt-3 flex flex-wrap items-center gap-4 rounded-[10px] bg-white p-4 ring-1 ring-zinc-200">
+                    {{-- Google CTA - the other major review surface. QR sits beside
+                         the button so desktop visitors can scan, mobile can tap. --}}
+                    <div class="flex flex-wrap items-center gap-4 rounded-[10px] bg-white p-4 ring-1 ring-zinc-200">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
                         <svg class="h-6 w-6 shrink-0" viewBox="0 0 48 48" aria-hidden="true">
                             <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917"/>
@@ -105,6 +109,7 @@
                         </a>
                     </div>
                 </div>
+                </div>
             </div>
         </div>
     </section>
@@ -113,75 +118,23 @@
          so curated entries + future Trustpilot + Google reviews all blend in
          one continuous wall. Pause on hover. CSS-only marquee (no JS). --}}
     @php
-        // Even indices feed the top row, odd indices feed the bottom row, so
-        // the two rows always look distinct even when the list is small.
-        $row1 = $reviews->values()->filter(fn ($_, $i) => $i % 2 === 0)->values();
-        $row2 = $reviews->values()->filter(fn ($_, $i) => $i % 2 === 1)->values();
-        // If the bottom row is empty (1 review case), mirror the top into both.
-        if ($row2->isEmpty() && $row1->isNotEmpty()) {
-            $row2 = $row1;
-        }
-
-        // Stretch each row so it fills a wide screen even when the review
-        // count is small. 14 cards x ~320px ≈ 4480px which covers 4K monitors.
-        // The translateX(-50%) loop seam stays clean because we then double
-        // the stretched row in the template - so a -50% shift always lands on
-        // the start of an identical copy.
-        $minCardsPerRow = 14;
-        $stretch = function ($collection) use ($minCardsPerRow) {
-            if ($collection->isEmpty()) {
-                return $collection;
-            }
-            $copies = (int) ceil($minCardsPerRow / $collection->count());
-            $out = collect();
-            for ($i = 0; $i < $copies; $i++) {
-                $out = $out->concat($collection);
-            }
-            return $out;
-        };
-        $row1 = $stretch($row1);
-        $row2 = $stretch($row2);
+        // Split the published reviews across three rows (interleaved so each row
+        // mixes sources). Rendered as three independent, manually-scrollable
+        // carousels using the shared gift-card scroll controls - no auto-scroll.
+        $reviewRows = collect(range(0, 2))
+            ->map(fn ($r) => $reviews->values()->filter(fn ($_, $i) => $i % 3 === $r)->values())
+            ->filter->isNotEmpty()
+            ->values();
     @endphp
 
-    {{-- Marquee CSS - kept before the carousels so the animations are
-         registered before the elements need them. Hover on a row pauses both
-         rows so a buyer can read a card without losing it. --}}
-    <style>
-        @keyframes rshop-marquee-left {
-            from { transform: translateX(0); }
-            to   { transform: translateX(-50%); }
-        }
-        @keyframes rshop-marquee-right {
-            from { transform: translateX(-50%); }
-            to   { transform: translateX(0); }
-        }
-        .rshop-marquee-track {
-            display: flex;
-            width: max-content;
-            gap: 1rem;
-            will-change: transform;
-        }
-        @media (min-width: 640px) {
-            .rshop-marquee-track { gap: 1.25rem; }
-        }
-        .rshop-marquee-left  { animation: rshop-marquee-left 140s linear infinite; }
-        .rshop-marquee-right { animation: rshop-marquee-right 170s linear infinite; }
-        .rshop-marquee-row:hover .rshop-marquee-track {
-            animation-play-state: paused;
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .rshop-marquee-left, .rshop-marquee-right { animation: none; }
-        }
-    </style>
-
-    <section class="w-full overflow-hidden bg-zinc-50 py-14 sm:py-16">
+    <section class="w-full bg-zinc-50 py-14 sm:py-16 dark:bg-[#0c1a36]!">
         <div class="mx-auto mb-8 w-full max-w-[1140px] px-4 sm:px-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Recent reviews</h2>
-                    <p class="mt-1 text-sm text-zinc-600">Collected from {{ $aggregate['source'] }}, Google, and our own customers. Hover any card to pause.</p>
+                    <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl">Recent reviews</h2>
+                    <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Reviews collected from our system, Trustpilot and Google Business. Scroll each row to read more.</p>
                 </div>
-                <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800">
+                <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-400">
                     View all on {{ $aggregate['source'] }}
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
                 </a>
@@ -189,39 +142,15 @@
         </div>
 
         @if ($reviews->isNotEmpty())
-            {{-- Helper to render one review card - kept inline so both rows
-                 stay in sync visually. Card shape mirrors the homepage carousel. --}}
-            @php
-                $renderCard = function ($review) {
-                    return view('shop._review-card', ['review' => $review])->render();
-                };
-            @endphp
-
-            <div class="space-y-4">
-                {{-- Top row: scrolls left --}}
-                <div class="rshop-marquee-row w-full overflow-hidden">
-                    <div class="rshop-marquee-track rshop-marquee-left">
-                        @foreach ($row1 as $review)
+            {{-- Three manually-scrollable carousels (gift-card scroll controls). --}}
+            <div class="mx-auto w-full max-w-[1140px] space-y-8 px-4 sm:px-6">
+                @foreach ($reviewRows as $row)
+                    <x-home.brand-row :title="''" view-all-variant="none" :carousel="true" :cols="5">
+                        @foreach ($row as $review)
                             @include('shop._review-card', ['review' => $review])
                         @endforeach
-                        {{-- Duplicate so the loop appears seamless (-50% translation lands on the start of the second copy) --}}
-                        @foreach ($row1 as $review)
-                            @include('shop._review-card', ['review' => $review])
-                        @endforeach
-                    </div>
-                </div>
-
-                {{-- Bottom row: scrolls right --}}
-                <div class="rshop-marquee-row w-full overflow-hidden">
-                    <div class="rshop-marquee-track rshop-marquee-right">
-                        @foreach ($row2 as $review)
-                            @include('shop._review-card', ['review' => $review])
-                        @endforeach
-                        @foreach ($row2 as $review)
-                            @include('shop._review-card', ['review' => $review])
-                        @endforeach
-                    </div>
-                </div>
+                    </x-home.brand-row>
+                @endforeach
             </div>
         @else
             <div class="mx-auto max-w-2xl rounded-[10px] bg-white p-10 text-center ring-1 ring-zinc-100 shadow-sm">
@@ -239,9 +168,19 @@
     </section>
 
 
-    {{-- Final CTA --}}
-    <section class="bg-blue-600">
-        <div class="mx-auto w-full max-w-[1140px] px-4 py-14 text-center sm:px-6">
+    {{-- Leave a review - our own collector, posting straight into the wall
+         above (after approval). These are general, non-product reviews. --}}
+    <section class="border-t border-zinc-100 bg-white dark:bg-[#0c1a36]!">
+        <div class="mx-auto w-full max-w-[640px] px-4 py-14 sm:px-6 sm:py-16">
+            <div class="rounded-[10px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8 dark:bg-[#0c1a36]!">
+                @include('shop._review-form')
+            </div>
+        </div>
+    </section>
+
+    {{-- Final CTA - contained rounded banner rather than a full-bleed strip. --}}
+    <section class="px-4 py-12 sm:px-6">
+        <div class="mx-auto w-full max-w-[1140px] rounded-[10px] bg-blue-600 px-4 py-14 text-center sm:px-6">
             <h2 class="text-2xl font-bold text-white sm:text-3xl">Loved using RshopRefills?</h2>
             <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-blue-100">Drop us a review on {{ $aggregate['source'] }} - it takes less than a minute and helps other customers find us.</p>
             <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="mt-6 inline-flex items-center justify-center gap-2 rounded-[10px] bg-white px-6 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50">

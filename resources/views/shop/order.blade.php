@@ -245,35 +245,13 @@
                 @endforeach
             </div>
 
-            {{-- ── Order-level actions: wallet + side-by-side help links ──
-                 Mirrors the mobile mockup: "Add to wallet" on its own row,
-                 then two small text links that toggle an inline collapsible
-                 panel beneath them. Single Alpine root tracks which panel
-                 is open at a time. --}}
+            {{-- ── Order-level actions: side-by-side help links that toggle an
+                 inline collapsible panel beneath them. Single Alpine root tracks
+                 which panel is open at a time. --}}
             <div class="mt-6" x-data="{
                     open: null,
                     toggle(name) { this.open = this.open === name ? null : name; },
-                    isApple: /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent),
                 }">
-
-                {{-- Add to Apple Wallet - shown only on Apple devices that
-                     actually have Wallet (iPhone / iPad / Mac). x-if (not
-                     x-show) so the button never enters the DOM at all on
-                     Windows / Android. Gift-card orders only - eSIMs and
-                     top-ups don't go in Wallet. --}}
-                @if ($orderHasGiftCards)
-                    <template x-if="isApple">
-                        <div class="flex justify-center">
-                            <a href="{{ route('shop.order.codes.pdf', $order->order_number) }}" class="inline-flex items-center gap-2 text-sm font-semibold text-zinc-900 transition-colors hover:text-blue-700 dark:text-white dark:hover:text-blue-300">
-                                <svg class="h-5 w-5 text-zinc-700 dark:text-zinc-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M16 16.5c0.8284 0 1.5 -0.6716 1.5 -1.5s-0.6716 -1.5 -1.5 -1.5 -1.5 0.6716 -1.5 1.5 0.6716 1.5 1.5 1.5"/>
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M15.7041 0.0447311c0.2313 -0.0716753 0.482 -0.0571144 0.7051 0.0429688 0.255 0.1145191 0.4506 0.3305361 0.539 0.5957031l1.7725 5.316407H20c0.5523 0 1 0.44771 1 1v3h2c0.5523 0 1 0.44769 1 0.99999v8c0 0.5523 -0.4477 1 -1 1h-2v3c0 0.5523 -0.4477 1 -1 1H1c-0.552285 0 -1 -0.4477 -1 -1V6.99981c0 -0.55229 0.447715 -1 1 -1h0.7959L15.6064 0.0808639zM11.4141 14.9998l3 3H22v-6h-7.5859zM6.87109 5.99981h9.74121l-1.2178 -3.65332z"/>
-                                </svg>
-                                Add to wallet
-                            </a>
-                        </div>
-                    </template>
-                @endif
 
                 {{-- Side-by-side text links --}}
                 <div class="mt-3 flex items-center justify-center gap-8 text-xs">
@@ -328,39 +306,11 @@
                 </div>
             </div>
 
-            {{-- Review prompt - clicking any star opens Trustpilot in a new tab --}}
-            <div class="mt-10 text-center">
-                <h2 class="text-base font-bold text-zinc-900 dark:text-white">Share your experience</h2>
-                <p class="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">Your review helps other people decide with confidence.</p>
-                {{-- Trustpilot-style interactive rating: empty/outlined stars
-                     by default, fill in blue as the cursor passes over them
-                     (left-to-right wave via staggered transition-delay). Click
-                     any star to open Trustpilot's review form in a new tab. --}}
-                <div class="mt-5 flex items-center justify-center gap-3" x-data="{ hovered: 0 }">
-                    @for ($i = 1; $i <= 5; $i++)
-                        <a
-                            href="{{ $tpProfileUrl }}"
-                            target="_blank"
-                            rel="noopener"
-                            aria-label="Rate {{ $i }} out of 5 on Trustpilot"
-                            @mouseenter="hovered = {{ $i }}"
-                            @mouseleave="hovered = 0"
-                            class="transition-transform duration-200 hover:scale-110"
-                        >
-                            <svg
-                                class="h-9 w-9 transition-all duration-300 ease-out"
-                                :class="hovered >= {{ $i }} ? 'fill-blue-600 stroke-blue-600 drop-shadow-[0_0_8px_rgba(37,99,235,0.45)] dark:fill-blue-400 dark:stroke-blue-400' : 'fill-transparent stroke-zinc-300 dark:stroke-zinc-600'"
-                                :style="hovered >= {{ $i }} ? 'transition-delay: {{ ($i - 1) * 60 }}ms' : 'transition-delay: 0ms'"
-                                viewBox="0 0 24 24"
-                                stroke-width="1.5"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/>
-                            </svg>
-                        </a>
-                    @endfor
-                </div>
+            {{-- Native review prompt, tied to this order so the rating rolls up
+                 under every gift card bought in it. Shared with the public
+                 reviews page (which renders it without an order). --}}
+            <div class="mt-10">
+                @include('shop._review-form', ['reviewOrderNumber' => $order->order_number])
             </div>
 
             {{-- Back to dashboard --}}

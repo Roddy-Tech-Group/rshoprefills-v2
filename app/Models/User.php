@@ -169,6 +169,16 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Whether the customer has passed identity verification (KYC). Drives the
+     * verified badge shown next to their name across the admin and on the
+     * reviews they leave.
+     */
+    public function isKycVerified(): bool
+    {
+        return strtolower((string) $this->kyc_status) === 'verified';
+    }
+
+    /**
      * The currency the user sees prices in across the app. Resolution order:
      *   1. Explicit `users.display_currency` preference (when the user picked one)
      *   2. Their primary wallet's currency

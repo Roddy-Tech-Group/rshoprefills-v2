@@ -39,9 +39,9 @@
         @endif
 
         {{-- Header card --}}
-        <div class="rounded-[10px] bg-white/60 p-6 ring-1 ring-white/60 shadow-xl shadow-zinc-900/5 backdrop-blur-xl sm:p-8 dark:bg-[#1d3252] dark:ring-zinc-800/60 dark:shadow-black/40">
+        <div class="rounded-[10px] bg-[#eff6ff] p-6 ring-1 ring-zinc-200 shadow-md shadow-zinc-900/[0.06] sm:p-8 dark:ring-zinc-700/60 dark:shadow-none">
             <h1 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Top up your {{ $countryName }} eSIM</h1>
-            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Refill the same eSIM you installed last time. No new QR. The data just lands on your existing line.</p>
+            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Refill the same eSIM you installed last time. No new QR. The eSIM auto-renews to the bundle you choose. Don't let your plan days finish if you plan to keep using it.</p>
             <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">ICCID</p>
             <p class="font-mono text-sm font-bold tracking-wider text-zinc-900 dark:text-white">{{ $iccid }}</p>
         </div>
@@ -58,7 +58,7 @@
                 </a>
             </div>
         @elseif ($sorted->isEmpty())
-            <div class="mt-4 rounded-[10px] bg-white px-6 py-12 text-center ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+            <div class="mt-4 rounded-[10px] bg-[#eff6ff] px-6 py-12 text-center ring-1 ring-zinc-200 dark:ring-zinc-700/60">
                 <p class="text-base font-semibold text-zinc-900 dark:text-white">No top-ups available right now</p>
                 <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">This eSIM either expired or the carrier doesn't offer refills. Buy a fresh one to keep going.</p>
                 <a href="{{ route('shop.esims') }}" wire:navigate class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Browse eSIMs</a>
@@ -86,7 +86,7 @@
                         $voice = (int) ($pkg['voice'] ?? 0);
                         $sms = (int) ($pkg['text'] ?? 0);
                     @endphp
-                        <button type="button" @click="openModal('{{ $pkg['id'] }}', '{{ $netPrice }}')" class="group flex w-full items-center justify-between gap-4 rounded-[10px] border-2 border-transparent bg-white px-4 py-4 text-left ring-1 ring-zinc-200 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-600 hover:shadow-md dark:bg-[#1d3252] dark:ring-zinc-700/60 dark:hover:border-blue-400">
+                        <button type="button" @click="openModal('{{ $pkg['id'] }}', '{{ $netPrice }}')" class="group flex w-full items-center justify-between gap-4 rounded-[10px] border-2 border-transparent bg-[#eff6ff] px-4 py-4 text-left ring-1 ring-zinc-200 shadow-sm transition-all hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md dark:ring-zinc-700/60 dark:hover:border-white">
                             <div class="min-w-0">
                                 <p class="flex flex-wrap items-baseline gap-x-2 text-base">
                                     <span class="font-bold text-zinc-900 dark:text-white">{{ $dataLabel ?: 'Data' }}</span>

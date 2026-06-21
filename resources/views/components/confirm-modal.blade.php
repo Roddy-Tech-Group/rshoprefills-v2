@@ -53,7 +53,7 @@
         x-transition:leave="transition ease-in duration-100"
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-95"
-        class="relative w-full max-w-md overflow-hidden rounded-[10px] bg-white shadow-2xl dark:bg-[#1d3252] dark:ring-1 dark:ring-zinc-700/60"
+        class="relative w-full max-w-md overflow-hidden rounded-[10px] bg-[#eff6ff] shadow-2xl ring-1 ring-zinc-200 dark:ring-[#24364f]"
     >
         <div class="px-5 py-4">
             <div class="flex items-start gap-3">
@@ -85,7 +85,7 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 border-t border-zinc-100 bg-zinc-50 px-5 py-3 dark:border-zinc-700/60 dark:bg-[#162a4a]">
+        <div class="flex items-center justify-end gap-2 border-t border-zinc-100 px-5 py-3 dark:border-zinc-700/60">
             <button
                 type="button"
                 @click="cancel()"

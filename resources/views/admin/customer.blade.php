@@ -30,14 +30,8 @@
 
     <div class="flex flex-1 flex-col gap-6">
 
-        @if (session('status'))
-            <div class="flex items-center gap-2 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                </svg>
-                {{ session('status') }}
-            </div>
-        @endif
+        {{-- Action flashes (e.g. "Returned to your admin account") surface as a
+             floating auto-dismissing toast from the layout - no inline banner. --}}
 
         {{-- Back link --}}
         <a href="{{ route('admin.customers') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700">
@@ -53,7 +47,12 @@
                 <img src="{{ $avatar }}" alt="" class="h-16 w-16 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100">
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                        <h2 class="text-lg font-bold text-zinc-900">{{ $user->name }}</h2>
+                        <h2 class="inline-flex items-center gap-1.5 text-lg font-bold text-zinc-900">
+                            {{ $user->name }}
+                            @if ($user->isKycVerified())
+                                <x-verified-badge size="sm" />
+                            @endif
+                        </h2>
                         @if ($user->email_verified_at)
                             <span class="inline-flex items-center rounded-[5px] bg-emerald-400 px-2.5 py-0.5 text-xs font-semibold text-white">Active</span>
                         @else
@@ -490,7 +489,7 @@
                     \App\Domain\Shared\Enums\TransactionCategory::RewardReferral->value,
                 ])
                 ->sum('amount');
-            $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.0001);
+            $rcoinUsdRate = (float) \App\Models\Setting::rcoinUsdRate();
         @endphp
 
         {{-- Wallet balances + manual credit/debit. Admin can pick any of
@@ -823,7 +822,7 @@
             // rates cron lagged. Rcoin is points, not cash: it converts at the
             // platform's rcoin_usd_rate, never via FX (the FX fallback would
             // count it 1:1 as dollars).
-            $rcoinUsdRate = (float) \App\Models\Setting::get('rcoin_usd_rate', 0.01);
+            $rcoinUsdRate = (float) \App\Models\Setting::rcoinUsdRate();
             $walletTotalUsd = 0.0;
             $walletTotalApprox = false;
             foreach ($user->wallets as $w) {

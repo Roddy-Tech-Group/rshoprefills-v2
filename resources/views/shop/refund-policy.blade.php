@@ -2,7 +2,10 @@
     // Refund & Cancellation Policy — customer-facing legal page. Dark-mode safe:
     // backgrounds use remapped classes (bg-white/bg-zinc-50/bg-blue-50 -> navy in
     // dark) while coloured accents (text-red-600 / text-blue-700) read in both modes.
-    $supportEmail = 'info@rshoprefill.com';
+    $supportEmail = 'support@rshoprefill.com';
+    // The written-record / disputes channel intentionally routes to the
+    // info@ inbox, which keeps the formal audit trail for high-value cases.
+    $disputesEmail = 'info@rshoprefill.com';
     $lastUpdated = 'May 23, 2026';
 @endphp
 
@@ -25,6 +28,24 @@
             products that are delivered instantly, so please read this page before you buy. By making a purchase you agree
             to the terms below. This policy is part of our Terms of Service.
         </p>
+
+        {{-- Delivery: digital products ship free and arrive instantly. --}}
+        <div class="mt-5 grid gap-3 sm:grid-cols-2">
+            <div class="flex items-start gap-3 rounded-[10px] bg-emerald-50 p-4 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:ring-emerald-500/20">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75l2.25 2.25 4.5-4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div>
+                    <p class="text-sm font-bold text-emerald-700">Free delivery, always</p>
+                    <p class="mt-1 text-sm leading-relaxed text-zinc-600">Every product is digital, so there are no shipping or delivery fees. The price you see is the price you pay.</p>
+                </div>
+            </div>
+            <div class="flex items-start gap-3 rounded-[10px] bg-blue-50 p-4 ring-1 ring-zinc-100">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                <div>
+                    <p class="text-sm font-bold text-blue-700">Instant delivery</p>
+                    <p class="mt-1 text-sm leading-relaxed text-zinc-600">Your code, eSIM or top-up is delivered to your email and dashboard within seconds of your payment being confirmed.</p>
+                </div>
+            </div>
+        </div>
 
         {{-- On this page --}}
         <nav class="mt-7 rounded-[10px] bg-zinc-50 p-5 ring-1 ring-zinc-100" aria-label="On this page">
@@ -140,6 +161,15 @@
                 </div>
             </div>
 
+            {{-- Wrong-region purchase --}}
+            <div class="my-5 flex items-start gap-3 rounded-[10px] bg-blue-50 p-4 ring-1 ring-zinc-100">
+                <svg class="mt-0.5 h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a9.004 9.004 0 018.716 6.747M12 3a9.004 9.004 0 00-8.716 6.747M21.75 12H2.25"/></svg>
+                <div>
+                    <p class="text-sm font-bold text-blue-700">Bought the wrong region?</p>
+                    <p class="mt-1 text-sm leading-relaxed text-zinc-600">If you bought an eSIM for the wrong country or region, refunds are processed within 24 to 48 hours after our team confirms the case. Whether a refund is granted still depends on whether the eSIM was installed: an eSIM that has not been installed or activated is refunded to your wallet, while one that has already been installed or used is not refundable.</p>
+                </div>
+            </div>
+
             {{-- Flights & stays --}}
             <h3 class="mt-8 text-base font-bold text-zinc-900">Flights and hotel stays</h3>
             <p class="mt-2 text-sm leading-relaxed text-zinc-600 sm:text-base">
@@ -177,19 +207,21 @@
         <section id="failed-protection" class="mt-12 scroll-mt-24">
             <h2 class="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">3. Automated failed-transaction protection</h2>
             <p class="mt-3 text-sm leading-relaxed text-zinc-600 sm:text-base">
-                We built protection directly into the platform so that a failed delivery never costs you money.
+                We built protection directly into the platform so that a failed delivery never costs you money. You never lose
+                money on RshopRefills: every payment is either delivered or refunded to your wallet, and our support team is
+                available 24/7 if you ever need a human.
             </p>
 
             <div class="mt-5 rounded-[10px] bg-blue-600 p-6 sm:p-8">
                 <span class="flex h-12 w-12 items-center justify-center rounded-[10px] bg-white/15">
                     <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
-                <h3 class="mt-4 text-lg font-bold text-white sm:text-xl">Failed delivery? Automatic refund within 60 seconds.</h3>
+                <h3 class="mt-4 text-lg font-bold text-white sm:text-xl">Failed delivery? Automatic refund after a fast system check.</h3>
                 <p class="mt-2 text-sm leading-relaxed text-blue-100">
-                    If your payment is taken but our delivery partner fails to deliver your digital product because of a network
+                    If your payment is taken but our delivery system fails to deliver your digital product because of a network
                     timeout, our system detects the failure automatically and issues an instant refund to your wallet, usually
                     within 60 seconds. You do not need to contact us or fill out any form. Your money is returned to your wallet
-                    so you can try again right away.
+                    so you can try again right away - and if anything ever looks wrong, our 24/7 support team will make it right.
                 </p>
             </div>
         </section>
@@ -209,8 +241,8 @@
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
                     </span>
                     <div>
-                        <p class="text-sm font-bold text-zinc-900">Live Chat</p>
-                        <p class="mt-1 text-sm leading-relaxed text-zinc-600">The fastest way to resolve a transaction issue. Open Live Chat while you are logged in to the app and our team can see your account and order details securely.</p>
+                        <p class="text-sm font-bold text-zinc-900">Live Chat <span class="ml-1 rounded-[5px] bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">24/7</span></p>
+                        <p class="mt-1 text-sm leading-relaxed text-zinc-600">The fastest way to resolve a transaction issue, available around the clock. Open Live Chat while you are logged in to the app and our team can see your account and order details securely.</p>
                     </div>
                 </div>
 
@@ -232,7 +264,7 @@
                     </span>
                     <div>
                         <p class="text-sm font-bold text-zinc-900">Email</p>
-                        <p class="mt-1 text-sm leading-relaxed text-zinc-600">Best for high-value disputes, travel changes and digital real estate issues, where a written record keeps a clear audit trail. Write to <a href="mailto:{{ $supportEmail }}" class="font-medium text-blue-600 hover:underline">{{ $supportEmail }}</a>.</p>
+                        <p class="mt-1 text-sm leading-relaxed text-zinc-600">Best for high-value disputes, travel changes and digital real estate issues, where a written record keeps a clear audit trail. Write to <a href="mailto:{{ $disputesEmail }}" class="font-medium text-blue-600 hover:underline">{{ $disputesEmail }}</a>. For everyday help, email <a href="mailto:{{ $supportEmail }}" class="font-medium text-blue-600 hover:underline">{{ $supportEmail }}</a>.</p>
                     </div>
                 </div>
             </div>

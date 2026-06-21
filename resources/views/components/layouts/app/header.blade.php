@@ -11,10 +11,13 @@
     <head>
         @include('partials.head')
 
-        {{-- Storefront-only head additions (extra display font, Turnstile loader).
-             All SEO (title, description, OG, Twitter, JSON-LD) lives in one place
-             in partials/head, overridable per page via the props above. --}}
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:700|urbanist:800" rel="stylesheet" />
+        {{-- Storefront-only head additions (Urbanist display font for the hero
+             headings, Turnstile loader). All SEO (title, description, OG,
+             Twitter, JSON-LD) lives in one place in partials/head, overridable
+             per page via the props above. Urbanist is the only extra font here;
+             Instrument Sans was dropped (nothing references it). --}}
+        <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
+        <link href="https://fonts.bunny.net/css?family=urbanist:800" rel="stylesheet" />
 
         @if(config('services.turnstile.enabled') && (config('services.turnstile.enforce_auth') || config('services.turnstile.enforce_contact') || config('services.turnstile.enforce_checkout')))
             {{-- Cloudflare Turnstile (explicit render mode) - loaded once per
@@ -40,6 +43,9 @@
                  Sits above the sticky header so it announces itself first. --}}
             @include('partials.maintenance-banner')
 
+            {{-- Announcement / coupon bar - blue strip rotating admin-set promos. --}}
+            @include('partials.announcement-bar')
+
             {{-- The whole header is sticky as one block (sticky needs a tall
                  containing block, the body provides that here). main-nav's
                  own Alpine then collapses the primary row on scroll, leaving
@@ -54,7 +60,7 @@
                  <main> made <main> clip its fixed-position descendants (the eSIM buy
                  bar + modals rendered trapped inside the content box instead of the
                  viewport). <html> is the viewport root, so it never traps fixed. --}}
-            <main class="flex-1 bg-zinc-100">
+            <main data-page-content class="flex-1 bg-[#eff6ff]">
                 {{ $slot }}
             </main>
 
@@ -65,6 +71,10 @@
             <x-cookie-consent />
 
             <x-nav.locale-modal />
+
+            {{-- First-visit nudge pointing new visitors at the country pill so they
+                 can switch the catalogue to their own region. Once per session. --}}
+            <x-nav.country-tip />
 
             {{-- Global confirm modal — intercepts any form/button with `data-confirm`. --}}
             <x-confirm-modal />
@@ -82,6 +92,11 @@
                 <livewire:feedback-widget />
             @endfeature
         </div>
+
+        <x-chatway-widget />
+
+        {{-- PWA pull-to-refresh (standalone mode only). --}}
+        <x-pull-to-refresh />
 
         @fluxScripts
     </body>

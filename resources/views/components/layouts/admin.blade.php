@@ -296,6 +296,10 @@
             --}}
             @php
                 $isCurrent = fn (...$patterns) => request()->routeIs(...$patterns);
+                // Role-aware nav gate: only show links the current admin's role
+                // can actually open (same logic the AdminAuth middleware enforces).
+                $adminUser = auth('admin')->user();
+                $can = fn (string $routeName) => $adminUser?->canAccessAdminRoute($routeName) ?? false;
                 $navItemClass = fn (bool $active) => $active
                     ? 'group flex items-center gap-3 rounded-[10px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
                     : 'group flex items-center gap-3 rounded-[10px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
@@ -319,6 +323,7 @@
                 </a>
 
                 {{-- Products (expandable group — SoC for product/service categories) --}}
+                @if ($can('admin.products'))
                 @php
                     $productPatterns = ['admin.products*', 'admin.gift-cards*', 'admin.esims*', 'admin.mobile-topups*', 'admin.bill-payments*', 'admin.flights*', 'admin.stays*'];
                     $productActive = $isCurrent(...$productPatterns);
@@ -367,50 +372,64 @@
                         <a href="{{ route('admin.products', ['category' => 'stays']) }}" wire:navigate class="{{ $subItemClass($isCategory('stays')) }}">Stays</a>
                     </div>
                 </div>
+                @endif
 
                 {{-- Orders --}}
+                @if ($can('admin.orders'))
                 @php $active = $isCurrent('admin.orders*'); @endphp
                 <a href="{{ route('admin.orders') }}" wire:navigate data-tip="Orders" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('order.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Orders
                 </a>
+                @endif
 
                 {{-- Customers --}}
+                @if ($can('admin.customers'))
                 @php $active = $isCurrent('admin.customers*'); @endphp
                 <a href="{{ route('admin.customers') }}" wire:navigate data-tip="Customers" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('customer.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Customers
                 </a>
+                @endif
 
                 {{-- Transactions --}}
+                @if ($can('admin.transactions'))
                 @php $active = $isCurrent('admin.transactions*'); @endphp
                 <a href="{{ route('admin.transactions') }}" wire:navigate data-tip="Transactions" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('transactions.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Transactions
                 </a>
+                @endif
 
                 {{-- Wallets --}}
+                @if ($can('admin.wallets'))
                 @php $active = $isCurrent('admin.wallets*'); @endphp
                 <a href="{{ route('admin.wallets') }}" wire:navigate data-tip="Wallets" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Wallets
                 </a>
+                @endif
 
                 {{-- Reports --}}
+                @if ($can('admin.reports'))
                 @php $active = $isCurrent('admin.reports*'); @endphp
                 <a href="{{ route('admin.reports') }}" wire:navigate data-tip="Reports" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/report.svg') }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Reports
                 </a>
+                @endif
 
                 {{-- Newsletter --}}
+                @if ($can('admin.newsletter'))
                 @php $active = $isCurrent('admin.newsletter*'); @endphp
                 <a href="{{ route('admin.newsletter') }}" wire:navigate data-tip="Newsletter" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('marketing.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Newsletter
                 </a>
+                @endif
 
                 {{-- Pricing Rules --}}
+                @if ($can('admin.pricing-rules'))
                 @php $active = $isCurrent('admin.pricing-rules*'); @endphp
                 <a href="{{ route('admin.pricing-rules') }}" wire:navigate data-tip="Pricing Rules" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -418,10 +437,12 @@
                     </svg>
                     Pricing Rules
                 </a>
+                @endif
 
                 {{-- Content — CMS-managed marketing copy (blog / press / reviews / FAQs).
                      Sub-items expand inline so the rail stays scannable when collapsed
                      they hide behind the parent label. --}}
+                @if ($can('admin.content.blog'))
                 @php $contentActive = $isCurrent('admin.content.*'); @endphp
                 <div
                     x-data="{ open: {{ $contentActive ? 'true' : 'false' }} }"
@@ -464,6 +485,7 @@
                         <a href="{{ route('admin.content.rewards.withdrawals') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.rewards.withdrawals')) }}">Rcoin Withdrawals</a>
                     </div>
                 </div>
+                @endif
 
                 {{-- Account Activity --}}
                 @php $active = $isCurrent('admin.account-activity*'); @endphp
@@ -475,20 +497,25 @@
                 </a>
 
                 {{-- Support Tickets --}}
+                @if ($can('admin.support-tickets'))
                 @php $active = $isCurrent('admin.support-tickets*'); @endphp
                 <a href="{{ route('admin.support-tickets') }}" wire:navigate data-tip="Support Tickets" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/support.svg') }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Support Tickets
                 </a>
+                @endif
 
                 {{-- Admins --}}
+                @if ($can('admin.admins'))
                 @php $active = $isCurrent('admin.admins*'); @endphp
                 <a href="{{ route('admin.admins') }}" wire:navigate data-tip="Admins" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('admin access.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     Admins
                 </a>
+                @endif
 
                 {{-- Rate Management --}}
+                @if ($can('admin.rates'))
                 @php $active = $isCurrent('admin.rates*'); @endphp
                 <a href="{{ route('admin.rates') }}" wire:navigate data-tip="Rate Management" class="{{ $navItemClass($active) }}">
                     <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -497,20 +524,25 @@
                     </svg>
                     Rate Management
                 </a>
+                @endif
 
                 {{-- System Settings --}}
+                @if ($can('admin.settings'))
                 @php $active = $isCurrent('admin.settings*'); @endphp
                 <a href="{{ route('admin.settings') }}" wire:navigate data-tip="System Settings" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     System Settings
                 </a>
+                @endif
 
                 {{-- API & Integrations - partner API keys + provider credentials --}}
+                @if ($can('admin.api-settings'))
                 @php $active = $isCurrent('admin.api-settings*'); @endphp
                 <a href="{{ route('admin.api-settings') }}" wire:navigate data-tip="API & Integrations" class="{{ $navItemClass($active) }}">
                     <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     API & Integrations
                 </a>
+                @endif
             </nav>
 
         </flux:sidebar>
@@ -566,6 +598,7 @@
                     role="search"
                     method="GET"
                     action="{{ route('admin.products') }}"
+                    @submit.prevent="if (results.length) { window.location.href = results[0].url; }"
                     @click="$refs.search.focus()"
                     :class="open ? 'border-blue-500 ring-2 ring-blue-500/15' : 'border-zinc-400 hover:border-zinc-500 dark:border-white/10 dark:hover:border-white/20'"
                     class="group flex items-center gap-3 cursor-text rounded-[10px] border-2 bg-white px-4 py-2 transition-all duration-200 dark:bg-[#162a4a]"
@@ -623,28 +656,45 @@
                         <template x-for="row in results" :key="row.id">
                             <li>
                                 <a
-                                    :href="'{{ route('admin.products') }}?q=' + encodeURIComponent(row.name || row.sku)"
+                                    :href="row.url"
                                     wire:navigate
-                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                                    class="block rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 dark:hover:bg-blue-500/10"
                                 >
-                                    <template x-if="row.logo">
-                                        <img :src="row.logo" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
-                                    </template>
-                                    <template x-if="! row.logo">
-                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-[11px] font-bold uppercase text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/80/20" x-text="(row.brand || row.name || row.sku || '').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase() || '—'"></span>
-                                    </template>
-                                    <span class="min-w-0 flex-1 leading-tight">
-                                        <span class="block truncate text-[13px] font-semibold text-zinc-900 dark:text-white" x-text="row.brand || row.name || row.sku"></span>
-                                        <span class="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
-                                            <span x-show="row.category" x-text="row.category"></span>
-                                            <span x-show="row.country"> · <span x-text="row.country"></span></span>
-                                            <span x-show="row.sku"> · <span class="font-mono" x-text="row.sku"></span></span>
+                                    {{-- Customer hit — avatar + name + email, links straight to the customer page. --}}
+                                    <template x-if="row.type === 'customer'">
+                                        <span class="flex items-center gap-3">
+                                            <img :src="row.avatar" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-cover ring-1 ring-blue-100 dark:ring-blue-500/30" loading="lazy">
+                                            <span class="min-w-0 flex-1 leading-tight">
+                                                <span class="block truncate text-[13px] font-semibold text-zinc-900 dark:text-white" x-text="row.name"></span>
+                                                <span class="block truncate text-[11px] text-zinc-500 dark:text-zinc-400" x-text="row.email"></span>
+                                            </span>
+                                            <span class="shrink-0 rounded-[10px] bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">Customer</span>
                                         </span>
-                                    </span>
-                                    <span class="shrink-0 text-right text-[11px] tabular-nums">
-                                        <span class="block text-zinc-500 dark:text-zinc-400">Cost</span>
-                                        <span class="block font-semibold text-zinc-900 dark:text-white" x-text="'USD ' + Number(row.cost).toFixed(2)"></span>
-                                    </span>
+                                    </template>
+
+                                    {{-- Product hit — brand logo + name + meta + cost. --}}
+                                    <template x-if="row.type === 'product'">
+                                        <span class="flex items-center gap-3">
+                                            <template x-if="row.logo">
+                                                <img :src="row.logo" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
+                                            </template>
+                                            <template x-if="! row.logo">
+                                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-[11px] font-bold uppercase text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-200" x-text="(row.brand || row.name || row.sku || '').replace(/[^A-Za-z0-9]/g,'').slice(0,2).toUpperCase() || '—'"></span>
+                                            </template>
+                                            <span class="min-w-0 flex-1 leading-tight">
+                                                <span class="block truncate text-[13px] font-semibold text-zinc-900 dark:text-white" x-text="row.brand || row.name || row.sku"></span>
+                                                <span class="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                                                    <span x-show="row.category" x-text="row.category"></span>
+                                                    <span x-show="row.country"> · <span x-text="row.country"></span></span>
+                                                    <span x-show="row.sku"> · <span class="font-mono" x-text="row.sku"></span></span>
+                                                </span>
+                                            </span>
+                                            <span class="shrink-0 text-right text-[11px] tabular-nums">
+                                                <span class="block text-zinc-500 dark:text-zinc-400">Cost</span>
+                                                <span class="block font-semibold text-zinc-900 dark:text-white" x-text="'USD ' + Number(row.cost).toFixed(2)"></span>
+                                            </span>
+                                        </span>
+                                    </template>
                                 </a>
                             </li>
                         </template>
@@ -655,7 +705,7 @@
                     </div>
 
                     <div x-show="results.length > 0" class="border-t border-zinc-200/60 px-4 py-2 text-[11px] text-zinc-500 dark:border-white/10 dark:text-zinc-400">
-                        Press <kbd class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:bg-transparent dark:text-zinc-200">Enter</kbd> to see all matches
+                        Press <kbd class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-700 dark:bg-transparent dark:text-zinc-200">Enter</kbd> to open the top match
                     </div>
                 </div>
             </div>
@@ -678,7 +728,7 @@
                             this.loading = true;
                             this.open = true;
                             try {
-                                const res = await fetch('{{ route('admin.products.search-suggest') }}?q=' + encodeURIComponent(q), {
+                                const res = await fetch('{{ route('admin.search-suggest') }}?q=' + encodeURIComponent(q), {
                                     headers: { 'Accept': 'application/json' },
                                 });
                                 if (mySeq !== this._seq) { return; }
@@ -705,6 +755,10 @@
                  admin account and kept separate from the customer side. --}}
             <x-theme-toggle class="h-11 w-11 rounded-[10px] text-zinc-600 hover:bg-blue-100" />
 
+            {{-- Extra Dark now lives inside the theme toggle's popup (the
+                 component renders an "Extra dark" row), so no separate admin
+                 button is needed - it stays admin-only via the admin.theme key. --}}
+
             {{-- Admin notifications bell — real AdminNotification feed (KYC, orders, etc.). --}}
             <livewire:admin.notifications-menu />
 
@@ -727,7 +781,7 @@
                     @click="locked = !locked; open = locked"
                     :aria-expanded="open.toString()"
                     aria-label="{{ $admin?->name ?? 'Admin' }}"
-                    class="ml-1 relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                    class="ml-1 relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 ring-1 ring-blue-200 transition-all hover:ring-2 hover:ring-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     <img src="{{ $admin?->avatar_url ?: $adminDefaultAvatar }}" alt="{{ $admin?->name ?? 'Admin' }}" class="h-full w-full object-cover" loading="lazy">
                 </button>
@@ -741,7 +795,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 -translate-y-1"
                     style="display:none;"
-                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+                    class="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-2xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
                     role="menu"
                 >
                     {{-- Admin info card --}}
@@ -910,6 +964,9 @@
                 </div>
             </div>
         </div>
+
+        {{-- Floating action toasts (session flashes) - auto-dismiss top-right. --}}
+        <x-flash-toast />
 
         @fluxScripts
     </body>

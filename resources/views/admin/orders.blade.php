@@ -92,7 +92,7 @@
             <a
                 href="{{ route('admin.order', $order) }}"
                 wire:navigate
-                class="order-row order-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
+                class="order-row order-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
             >
                 {{-- Order # — click-to-copy chip. Stops the link nav so a
                      copy click doesn't open the order page. --}}

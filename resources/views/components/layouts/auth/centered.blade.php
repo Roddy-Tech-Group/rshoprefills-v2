@@ -3,17 +3,27 @@
     <head>
         @include('partials.head')
 
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:700" rel="stylesheet" />
+        {{-- Fonts: Satoshi only (from partials/head). The old Instrument Sans
+             link was dropped - nothing on these pages referenced it. --}}
 
-        {{-- App-style slide-up sheet entrance - same animation pattern as the split auth layout. --}}
+        {{-- Entrance: a bottom-sheet that slides up from the bottom edge on
+             mobile (matching the eSIM package details modal), and a gentle rise
+             on sm+ where the card is centered. --}}
         <style>
-            @keyframes authSlideUp {
-                from { transform: translateY(110px) scale(0.97); opacity: 0; }
-                to   { transform: translateY(0)     scale(1);    opacity: 1; }
+            @keyframes authSheetUp {
+                from { transform: translateY(100%); opacity: 0; }
+                to   { transform: translateY(0);    opacity: 1; }
+            }
+            @keyframes authCardRise {
+                from { transform: translateY(28px) scale(0.98); opacity: 0; }
+                to   { transform: translateY(0)    scale(1);    opacity: 1; }
             }
             .auth-slide-up {
-                animation: authSlideUp 600ms cubic-bezier(0.16, 1, 0.3, 1);
+                animation: authSheetUp 460ms cubic-bezier(0.22, 1, 0.36, 1);
                 will-change: transform, opacity;
+            }
+            @media (min-width: 640px) {
+                .auth-slide-up { animation-name: authCardRise; }
             }
         </style>
         <script>
@@ -28,8 +38,8 @@
     </head>
     <body class="min-h-screen bg-zinc-100 text-zinc-900 antialiased">
 
-        <div class="flex min-h-screen items-start justify-center p-4 sm:items-center sm:p-6 lg:p-[60px]">
-            <div class="auth-slide-up my-auto w-full max-w-xl overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-900/5 sm:my-0 lg:shadow-2xl lg:shadow-zinc-900/15">
+        <div class="flex min-h-screen items-end justify-center p-0 sm:items-center sm:p-6 lg:p-[60px]">
+            <div class="auth-slide-up w-full max-w-xl overflow-hidden rounded-t-3xl bg-white shadow-2xl shadow-zinc-900/20 ring-1 ring-zinc-900/5 sm:rounded-[10px] sm:shadow-xl sm:shadow-zinc-900/10 lg:shadow-2xl lg:shadow-zinc-900/15">
 
                 <main class="relative flex flex-col bg-white px-6 py-[50px] sm:px-10 sm:py-10">
                     {{-- Brand (centered at the top) --}}

@@ -144,7 +144,7 @@
                 <div>
                     {{-- Mobile category picker (dark pill + slide-up sheet). --}}
                     <div class="mb-4 sm:hidden">
-                        <x-shop.category-picker active="bill-payments" />
+                        <x-shop.category-picker active="bill-payments" :sub-items="$sidebarSubItems" />
                     </div>
 
                     {{-- Heading + search row --}}

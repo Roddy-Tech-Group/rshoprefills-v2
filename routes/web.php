@@ -11,13 +11,16 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\EmailPreviewController;
 use App\Http\Controllers\EsimStoreController;
 use App\Http\Controllers\EsimTopupController;
+use App\Http\Controllers\GoogleMerchantFeedController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\PressController;
 use App\Http\Controllers\RcoinConvertController;
 use App\Http\Controllers\RcoinWithdrawalController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
 use App\Models\BlogPost;
+use App\Models\Coupon;
 use App\Models\CurrencyRate;
 use App\Models\PressArticle;
 use App\Models\Product;
@@ -105,7 +108,34 @@ Route::get('api/search/brands', function (Request $request) {
 // locked to ONE country - whichever the user selected in the locale modal, passed
 // through as `?country=XX`. If the brand isn't sold in that country the page 404s
 // (the listing already only links to countries that have stock).
-$resolveGiftCardBrand = function (string $brandSlug) {
+// When a brand slug no longer maps to an ACTIVE brand, decide how to respond:
+// if the brand once existed in that category it was removed from the catalogue,
+// so 301 to the listing (keeps removed-brand URLs out of Google's "not found"
+// bucket and lands the visitor on a live page); if it never existed at all, 404.
+// Context-aware so a logged-in user stays inside the dashboard storefront.
+$brandGoneResponse = function (string $brandSlug, string $categorySlug) {
+    $everExisted = TaggedCache::for(['catalog'])->remember("brand_existed_{$categorySlug}_{$brandSlug}", 3600, function () use ($brandSlug, $categorySlug) {
+        return Product::query()
+            ->whereNotNull('brand_key')
+            ->whereHas('category', fn ($q) => $q->where('slug', $categorySlug))
+            ->distinct()
+            ->pluck('brand_key')
+            ->contains(fn ($key) => Str::kebab($key) === $brandSlug);
+    });
+
+    abort_unless($everExisted, 404);
+
+    $inDashboard = request()->routeIs('dashboard.*');
+    $listing = match ($categorySlug) {
+        'mobile-airtime' => $inDashboard ? 'dashboard.shop.topups' : 'shop.topups',
+        'bill-payments' => $inDashboard ? 'dashboard.shop.bills' : 'shop.bills',
+        default => $inDashboard ? 'dashboard.shop.gift-cards' : 'shop.gift-cards',
+    };
+
+    return redirect()->route($listing, [], 301);
+};
+
+$resolveGiftCardBrand = function (string $brandSlug) use ($brandGoneResponse) {
     $brandSlug = strtolower($brandSlug);
 
     $brandKey = TaggedCache::for(['catalog'])->remember("brand_slug_{$brandSlug}", 3600, function () use ($brandSlug) {
@@ -117,7 +147,9 @@ $resolveGiftCardBrand = function (string $brandSlug) {
             ->first(fn ($key) => Str::kebab($key) === $brandSlug);
     });
 
-    abort_if(! $brandKey, 404);
+    if (! $brandKey) {
+        return $brandGoneResponse($brandSlug, 'gift-cards');
+    }
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
@@ -170,7 +202,7 @@ Route::get('esims/{slug}', [EsimStoreController::class, 'show'])->name('shop.esi
 // shared `shop.product` view.
 Route::view('topups', 'shop.topups')->name('shop.topups');
 
-$resolveTopupBrand = function (string $brandSlug) {
+$resolveTopupBrand = function (string $brandSlug) use ($brandGoneResponse) {
     $brandSlug = strtolower($brandSlug);
 
     // Resolve the kebab-cased URL slug back to the actual brand_key, scoped to
@@ -185,7 +217,9 @@ $resolveTopupBrand = function (string $brandSlug) {
             ->first(fn ($key) => Str::kebab($key) === $brandSlug);
     });
 
-    abort_if(! $brandKey, 404);
+    if (! $brandKey) {
+        return $brandGoneResponse($brandSlug, 'mobile-airtime');
+    }
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
@@ -217,7 +251,7 @@ Route::get('topups/{brandSlug}', $resolveTopupBrand)->name('shop.topup');
 // a brand-level detail page reusing the shared `shop.product` view.
 Route::view('bills', 'shop.bills')->name('shop.bills');
 
-$resolveBillBrand = function (string $brandSlug) {
+$resolveBillBrand = function (string $brandSlug) use ($brandGoneResponse) {
     $brandSlug = strtolower($brandSlug);
 
     $brandKey = TaggedCache::for(['catalog'])->remember("bill_brand_{$brandSlug}", 3600, function () use ($brandSlug) {
@@ -230,7 +264,9 @@ $resolveBillBrand = function (string $brandSlug) {
             ->first(fn ($key) => Str::kebab($key) === $brandSlug);
     });
 
-    abort_if(! $brandKey, 404);
+    if (! $brandKey) {
+        return $brandGoneResponse($brandSlug, 'bill-payments');
+    }
 
     $requested = strtoupper((string) (request()->attributes->get('region') ?: 'US'));
 
@@ -350,6 +386,12 @@ Route::get('robots.txt', function () {
 
     return response(implode("\n", $lines), 200, ['Content-Type' => 'text/plain']);
 })->name('robots');
+
+// Google Merchant Center product feed (XML). Scoped to eSIMs - the digital-goods
+// category Shopping approves. Register as a scheduled-fetch feed in Merchant
+// Center (XML = no column-delimiter issues). Self-caches for 6h.
+Route::get('feeds/google-merchant.xml', [GoogleMerchantFeedController::class, 'esims'])
+    ->name('feeds.google-merchant');
 
 // XML sitemap for search engines. Lists every public, rankable page: marketing
 // pages + one URL per product brand (gift cards / top-ups / bill payments).
@@ -506,6 +548,74 @@ $renderCheckout = function (CartManager $cartManager, CartPricingService $pricin
     return view('shop.checkout', ['cart' => $cart, 'totals' => $totals, 'rate' => $rate]);
 };
 Route::get('checkout', $renderCheckout)->name('shop.checkout');
+
+// Customer review submission. Open to guests too (they supply a name); signed-in
+// customers review under their account name. Stored unpublished for admin
+// approval, then it appears on the storefront reviews wall.
+Route::post('reviews', [ReviewController::class, 'store'])
+    ->middleware(['throttle:6,1'])
+    ->name('reviews.store');
+
+// Coupon live preview. Validates a code against the active cart and returns the
+// USD + display-currency discount, computed EXACTLY like CheckoutService applies
+// it at order time (per-variant, per-unit x qty), so the checkout total the
+// customer sees matches what they're charged. No state is changed here.
+Route::post('coupon/preview', function (Request $request, CartManager $cartManager) {
+    $code = Str::upper(trim((string) $request->input('code', '')));
+    $currency = strtoupper(trim((string) $request->input('currency', 'USD'))) ?: 'USD';
+
+    if ($code === '') {
+        return response()->json(['valid' => false, 'message' => 'Enter a coupon code.']);
+    }
+
+    $userId = auth()->id();
+    $guestToken = $request->cookie('guest_token') ?? $request->header('X-Guest-Token');
+
+    try {
+        $cart = $cartManager->resolveCart($userId, $guestToken);
+        $cart->load('items');
+    } catch (Throwable $e) {
+        $cart = null;
+    }
+
+    if (! $cart || $cart->items->isEmpty()) {
+        return response()->json(['valid' => false, 'message' => 'Your cart is empty.']);
+    }
+
+    $coupon = Coupon::where('code', $code)->first();
+    if ($coupon === null) {
+        return response()->json(['valid' => false, 'message' => 'This coupon code is not valid.']);
+    }
+    if (! $coupon->isRedeemable()) {
+        return response()->json(['valid' => false, 'message' => 'This coupon has expired or is no longer available.']);
+    }
+
+    $item = $cart->items->firstWhere('product_variant_id', $coupon->product_variant_id);
+    if ($item === null) {
+        return response()->json(['valid' => false, 'message' => 'This coupon does not apply to anything in your cart.']);
+    }
+
+    $unitPriceUsd = (float) $item->subtotal_snapshot / max(1, (int) $item->quantity);
+    $discountedUnit = $coupon->applyTo($unitPriceUsd);
+    $discountUsd = round(($unitPriceUsd - $discountedUnit) * max(1, (int) $item->quantity), 2);
+
+    if ($discountUsd <= 0) {
+        return response()->json(['valid' => false, 'message' => 'This coupon gives no discount on your cart.']);
+    }
+
+    // Convert the USD discount into the customer's display currency for the
+    // on-screen line (CurrencyRate::resolve returns the rate row + a convert()).
+    $discountDisplay = round(CurrencyRate::resolve($currency)->convert($discountUsd), 2);
+
+    return response()->json([
+        'valid' => true,
+        'code' => $coupon->code,
+        'discount_usd' => $discountUsd,
+        'discount_display' => $discountDisplay,
+        'currency' => $currency,
+        'message' => 'Coupon applied.',
+    ]);
+})->middleware(['not-suspended', 'maintenance-guard', 'throttle:20,1'])->name('coupon.preview');
 
 // Checkout submission - creates the Order + OrderItems + a pending Payment from the
 // cart. Gateway hand-off (Flutterwave / NowPayments / wallet debit) is the TODO inside

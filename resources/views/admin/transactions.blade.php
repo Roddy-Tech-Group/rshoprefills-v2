@@ -167,7 +167,7 @@
                 $reference = $payment->gateway_reference ?: $payment->idempotency_key;
                 $isWalletFunding = ! $payment->order;
             @endphp
-            <article class="txn-row txn-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400">
+            <article class="txn-row txn-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400">
 
                 {{-- Customer — name + reference / order link stacked. The
                      reference line is a click-to-copy chip; clicking it puts

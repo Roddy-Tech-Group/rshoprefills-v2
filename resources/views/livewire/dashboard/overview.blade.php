@@ -42,10 +42,45 @@ new #[Lazy] class extends Component
             ->sortByDesc(fn ($w) => $primaryWallet && $w->id === $primaryWallet->id)
             ->values();
 
-        // Recent wallet ledger movements - covers both top-ups (credits) and
-        // purchases (debits) since they both write WalletTransaction rows. Latest 8
-        // so the mobile and desktop overview cards have enough content to feel full.
-        $recentTransactions = $user->walletTransactions()->latest()->limit(8)->get();
+        // Recent money activity - the wallet ledger (top-ups, wallet purchases,
+        // Rcoin credits) MERGED with paid gateway order payments (card / mobile
+        // money / crypto), which never touch a wallet and were otherwise
+        // invisible here. Wallet-gateway attempts are excluded: their ledger
+        // debit already covers them. Uniform row shape for the blade.
+        $walletRecent = $user->walletTransactions()->latest()->limit(8)->get()->map(fn ($txn) => (object) [
+            'key' => 'txn-'.$txn->id,
+            'is_credit' => $txn->type === \App\Domain\Shared\Enums\WalletTransactionType::Credit,
+            'title' => $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction'),
+            'sub' => $txn->transaction_category?->label() ?? $txn->type->label(),
+            'amount' => (float) $txn->amount,
+            'symbol' => $txn->currency?->symbol() ?? '',
+            'date' => $txn->created_at,
+        ]);
+
+        $paymentRecent = \App\Models\PaymentAttempt::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('order_id')
+            ->where('gateway', '!=', 'wallet')
+            ->whereIn('payment_status', [
+                \App\Domain\Payment\Enums\PaymentStatus::Paid,
+                \App\Domain\Payment\Enums\PaymentStatus::Refunded,
+                \App\Domain\Payment\Enums\PaymentStatus::PartiallyRefunded,
+            ])
+            ->with('order:id,order_number')
+            ->latest()
+            ->limit(8)
+            ->get()
+            ->map(fn ($attempt) => (object) [
+                'key' => 'pay-'.$attempt->id,
+                'is_credit' => false,
+                'title' => $attempt->customerMethodLabel(),
+                'sub' => $attempt->order?->order_number ? 'Order '.$attempt->order->order_number : 'Order payment',
+                'amount' => (float) $attempt->amount,
+                'symbol' => \App\Models\Product::currencySymbol($attempt->currency),
+                'date' => $attempt->confirmed_at ?? $attempt->created_at,
+            ]);
+
+        $recentTransactions = $walletRecent->concat($paymentRecent)->sortByDesc('date')->take(8)->values();
 
         // Latest 5 orders for the Recent Orders card. Mobile renders all 5; the
         // desktop card slices ->take(3) to keep its right-rail compact.
@@ -141,8 +176,8 @@ new #[Lazy] class extends Component
                 'USDT' => 'USDT.svg',
                 'BUSD' => 'USDT.svg',
                 'SOL'  => 'SOLANA.svg',
-                'BNB'  => 'BNB.webp',
-                'LTC'  => 'LTC.webp',
+                'BNB'  => 'BNB.svg',
+                'LTC'  => 'LTC.svg',
                 default => null,
             };
         };
@@ -229,10 +264,10 @@ new #[Lazy] class extends Component
     <div class="flex flex-col gap-5 lg:hidden">
 
         {{-- Quick Actions - 4-col grid (2 rows of 4). --}}
-        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Quick Actions</h3>
-                <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate aria-label="See more categories" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate aria-label="See more categories" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-blue-700 border border-zinc-200 transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                     </svg>
@@ -250,7 +285,7 @@ new #[Lazy] class extends Component
                     ['More',       'More.svg',         'bg-blue-500',    route('dashboard.shop.gift-cards')],
                 ] as [$label, $icon, $bg, $href])
                     <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
-                        <span class="flex h-12 w-12 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105 group-active:scale-95">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-full {{ $bg }} transition-transform group-hover:scale-105 group-active:scale-95">
                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
                         </span>
                         <span class="text-[11px] font-medium text-zinc-700">{{ $label }}</span>
@@ -263,7 +298,7 @@ new #[Lazy] class extends Component
              See-more "+" sends the user to the dashboard gift-cards page so they stay
              inside the dashboard chrome instead of bouncing out to the storefront. --}}
         @if ($popularProducts->isNotEmpty())
-            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                 <x-home.brand-row
                     title="Popular Gift Cards"
                     subtitle="Top-rated in your region"
@@ -295,9 +330,14 @@ new #[Lazy] class extends Component
             </div>
         @endif
 
+        {{-- Discover Global eSIM - tap a plan to Add to cart / Buy now inline --}}
+        <div class="rounded-[10px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+            <x-home.discover-global :contained="true" />
+        </div>
+
         {{-- Give the Perfect Gift promo - placed here on mobile (desktop keeps its own copy in the right rail). --}}
         <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
-            <div class="relative z-10 max-w-[64%]">
+            <div class="relative z-10 max-w-[54%]">
                 <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
                 <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
                 <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#ffffff] px-4 py-2 text-sm font-semibold text-blue-950 transition-colors hover:bg-[#dbeafe]">
@@ -308,24 +348,25 @@ new #[Lazy] class extends Component
             <img
                 src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
                 alt=""
-                class="pointer-events-none absolute -right-4 bottom-2 h-40 w-auto select-none object-contain drop-shadow-2xl"
+                class="pointer-events-none absolute -right-3 bottom-2 w-[46%] max-w-[260px] select-none object-contain object-bottom drop-shadow-2xl"
                 loading="lazy"
             >
         </div>
 
         {{-- Recent Orders - mobile shows up to 5; sits directly above Recent
              Transactions so the latest spending activity reads as one block. --}}
-        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <div class="flex items-center justify-between">
+        <div class="relative overflow-hidden rounded-[10px] bg-green-100/50 p-5 border border-green-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-green-500/50 dark:bg-green-500/15 dark:shadow-none">
+            <x-ui.floating-confetti />
+            <div class="relative z-10 flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Orders</h3>
-                <a href="{{ route('dashboard.orders') }}" wire:navigate aria-label="View all orders" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                <a href="{{ route('dashboard.orders') }}" wire:navigate aria-label="View all orders" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-blue-700 border border-zinc-200 transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                     </svg>
                 </a>
             </div>
 
-            <ul class="mt-4 space-y-3">
+            <ul class="relative z-10 mt-4 space-y-3">
                 @forelse ($recentOrders as $order)
                     @php
                         $groupedItems = $order->items->groupBy('product_variant_id');
@@ -338,6 +379,11 @@ new #[Lazy] class extends Component
                         $extraVariants = max(0, $groupedItems->count() - 1);
                         $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                         [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+                        // The green Recent Orders card would swallow the emerald "Completed"
+                        // pill, so back it with the neutral card surface (white / navy in dark).
+                        if (($order->order_status?->value) === 'completed') {
+                            $statusTone = 'bg-white text-emerald-700 ring-emerald-200 dark:text-emerald-300 dark:ring-emerald-500/30';
+                        }
                     @endphp
                     <li>
                         <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -375,35 +421,34 @@ new #[Lazy] class extends Component
              Shows top-ups (credits) and purchases (debits) interleaved since both
              write to wallet_transactions. Capped at 8 here, full history is on
              /dashboard/transactions via the See more "+" button. --}}
-        <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-            <div class="flex items-center justify-between">
+        <div class="relative overflow-hidden rounded-[10px] bg-red-100/50 dash-shimmer p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+            <x-ui.floating-confetti />
+            <div class="relative z-10 flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
-                <a href="{{ route('dashboard.transactions') }}" wire:navigate aria-label="View all transactions" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-100">
+                <a href="{{ route('dashboard.transactions') }}" wire:navigate aria-label="View all transactions" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-blue-700 border border-zinc-200 transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                     </svg>
                 </a>
             </div>
 
-            <ul class="mt-4 space-y-3">
+            <ul class="relative z-10 mt-4 space-y-3">
                 @forelse ($recentTransactions as $txn)
-                    @php
-                        $isCredit = $txn->type === \App\Domain\Shared\Enums\WalletTransactionType::Credit;
-                        $sym = $txn->currency?->symbol() ?? '';
-                    @endphp
                     <li class="flex items-center gap-3">
-                        @if ($isCredit)
-                            <x-icons.txn-credit class="h-11 w-11" />
-                        @else
-                            <x-icons.txn-debit class="h-11 w-11" />
-                        @endif
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm shadow-zinc-900/5">
+                            @if ($txn->is_credit)
+                                <x-icons.txn-credit class="h-9 w-9" />
+                            @else
+                                <x-icons.txn-debit class="h-9 w-9" />
+                            @endif
+                        </span>
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
-                            <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>
+                            <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->title }}</p>
+                            <p class="truncate text-[11px] text-zinc-600">{{ $txn->sub }}</p>
                         </div>
                         <div class="shrink-0 text-right">
-                            <p class="text-sm font-bold {{ $isCredit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $isCredit ? '+' : '-' }}{{ $sym }}{{ number_format((float) $txn->amount, 2) }}</p>
-                            <p class="text-[10px] text-zinc-600">{{ $txn->created_at->format('d M, H:i') }}</p>
+                            <p class="text-sm font-bold {{ $txn->is_credit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $txn->is_credit ? '+' : '-' }}{{ $txn->symbol }}{{ number_format($txn->amount, 2) }}</p>
+                            <p class="text-[10px] text-zinc-600">{{ $txn->date->format('d M, H:i') }}</p>
                         </div>
                     </li>
                 @empty
@@ -421,11 +466,8 @@ new #[Lazy] class extends Component
 
             @if ($recentTransactions->isNotEmpty())
                 <a href="{{ route('dashboard.transactions') }}" wire:navigate
-                    class="mt-4 flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
+                    class="mt-4 flex w-full items-center justify-center rounded-[10px] bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
                     View more
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
-                    </svg>
                 </a>
             @endif
         </div>
@@ -448,7 +490,11 @@ new #[Lazy] class extends Component
                         @php $firstName = strtok(trim((string) $user->name), ' ') ?: $user->name; @endphp
                         <h1 class="flex items-center gap-2 text-lg font-bold tracking-tight text-zinc-900 dark:text-white sm:text-xl"
                             x-data="typewriterGreeting(@js(['Hi ' . $firstName, 'Welcome', 'Your shop is ready']))">
-                            <span x-text="display"></span><span class="animate-pulse font-normal text-blue-600" aria-hidden="true">|</span>
+                            {{-- translateZ(0) puts the changing text + the pulsing cursor on
+                                 their own GPU layer, so their constant repaints stay composited
+                                 and don't force the glass/gradient cards below to re-render
+                                 (which read as a flicker/blink). --}}
+                            <span x-text="display" style="transform: translateZ(0);"></span><span class="animate-pulse font-normal text-blue-600" style="transform: translateZ(0);" aria-hidden="true">|</span>
                             <svg class="h-5 w-5 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m-3.15 0 .075 5.925m3.075.75V4.575m0 0a1.575 1.575 0 0 1 3.15 0V15M6.9 7.575a1.575 1.575 0 1 0-3.15 0v8.175a6.75 6.75 0 0 0 6.75 6.75h2.018a5.25 5.25 0 0 0 3.712-1.538l1.732-1.732a5.25 5.25 0 0 0 1.538-3.712l.003-2.024a.668.668 0 0 1 .198-.471 1.575 1.575 0 1 0-2.228-2.228 3.818 3.818 0 0 0-1.12 2.687M6.9 7.575V12m6.27 4.318A4.49 4.49 0 0 1 16.35 15"/>
                             </svg>
@@ -467,14 +513,24 @@ new #[Lazy] class extends Component
                     <div
                         x-data="{
                             open: false,
-                            theme: localStorage.getItem('theme') || 'system',
+                            theme: window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'),
+                            extraDark: window.pureDarkOn ? window.pureDarkOn() : (localStorage.getItem('theme.pure_dark') === '1'),
                             choose(value) {
                                 this.theme = value;
                                 window.setTheme(value);
                                 this.open = false;
                             },
+                            toggleExtraDark() {
+                                this.extraDark = ! this.extraDark;
+                                window.setPureDark(this.extraDark);
+                                if (this.extraDark && ! window.themeIsDark()) {
+                                    this.theme = 'dark';
+                                    window.setTheme('dark');
+                                }
+                            },
                         }"
                         x-on:theme-changed.window="theme = localStorage.getItem('theme') || 'system'"
+                        x-on:pure-dark-changed.window="extraDark = window.pureDarkOn()"
                         @click.outside="open = false"
                         @keydown.escape="open = false"
                         class="relative self-start"
@@ -483,7 +539,7 @@ new #[Lazy] class extends Component
                             type="button"
                             @click="open = ! open"
                             :aria-expanded="open.toString()"
-                            class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                            class="inline-flex items-center gap-2 rounded-[10px] border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition-colors"
                         >
                             {{-- Theme indicator - swaps Light / Dark / Auto PNG icons
                                  (project-canonical, brightness-0 dark:invert so they
@@ -547,7 +603,7 @@ new #[Lazy] class extends Component
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-1"
-                            class="absolute right-0 top-full z-30 mt-1.5 w-64 overflow-hidden rounded-[10px] bg-white p-1 shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200"
+                            class="absolute right-0 top-full z-30 mt-1.5 w-64 overflow-hidden rounded-[10px] bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/15 border border-zinc-200 dark:border-zinc-700"
                             role="menu"
                         >
                             <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Appearance</p>
@@ -572,6 +628,33 @@ new #[Lazy] class extends Component
                                     </svg>
                                 </button>
                             @endforeach
+
+                            {{-- Extra dark (true black) - pure-black variant of dark mode.
+                                 Flipping it on switches to dark immediately and swaps the
+                                 navy palette for black (window.setPureDark). --}}
+                            <button
+                                type="button"
+                                @click="toggleExtraDark()"
+                                class="flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
+                                role="menuitemcheckbox"
+                                :aria-checked="extraDark.toString()"
+                            >
+                                <span class="inline-flex items-center gap-2.5">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                                    </svg>
+                                    Extra dark
+                                </span>
+                                <span
+                                    :class="extraDark ? 'bg-blue-600' : 'bg-zinc-200'"
+                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[10px] transition-colors"
+                                >
+                                    <span
+                                        :class="extraDark ? 'translate-x-4' : 'translate-x-0.5'"
+                                        class="inline-block h-4 w-4 transform rounded-[10px] bg-white shadow transition-transform"
+                                    ></span>
+                                </span>
+                            </button>
 
                             {{-- Divider --}}
                             <div class="my-1 h-px bg-zinc-100"></div>
@@ -660,17 +743,17 @@ new #[Lazy] class extends Component
                             wallets: @js($walletsPayload),
                             get current() { return this.wallets[this.$store.wallet.active] ?? { code: 'USD', symbol: '$', label: 'US Dollar', formatted: '$0.00', type: 'fiat', color: 'bg-blue-800', icon: null }; }
                         }"
-                        :class="current.color"
-                        class="flex flex-col justify-center gap-4 rounded-[10px] {{ $initialWalletColor }} p-5 text-left text-white shadow-sm shadow-black/10 transition-colors duration-300"
+                        class="wallet-glass flex flex-col justify-center gap-4 rounded-2xl p-5 text-left text-blue-950 dark:text-white"
+                        :class="walletOpen && 'relative z-40'"
                     >
                         <div class="flex items-start justify-between">
                             <div class="min-w-0">
-                                <p class="text-xs font-semibold uppercase tracking-wider text-blue-100">Total Wallet Balance</p>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-100">Total Wallet Balance</p>
                                 <div class="mt-1.5 flex items-center gap-2">
                                     {{-- Effective visibility = local eye toggle AND the global "Hide all
                                          balances" master from the Customize menu. Either one false → mask. --}}
                                     <p class="truncate text-3xl font-bold tracking-tight" x-text="(visible && ! $store.dashPrefs.hideBalance) ? current.formatted : (current.symbol + ' ••••')">{{ $walletSymbol }}{{ number_format($walletBalance, 2) }}</p>
-                                    <button type="button" @click="visible = !visible" class="shrink-0 rounded-[10px] p-1 text-blue-200 transition-colors hover:bg-white/10 hover:text-white" :aria-label="visible ? 'Hide balance' : 'Show balance'">
+                                    <button type="button" @click="visible = !visible" class="shrink-0 rounded-[10px] p-1 text-blue-700 transition-colors hover:bg-blue-900/10 hover:text-blue-900 dark:text-blue-200 dark:hover:bg-white/10 dark:hover:text-white" :aria-label="visible ? 'Hide balance' : 'Show balance'">
                                         <svg x-show="visible" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.244 7.244L19.5 19.5m-2.876-2.876L13.875 13.875M9.878 9.878a3 3 0 105.249 5.249"/>
                                         </svg>
@@ -680,23 +763,27 @@ new #[Lazy] class extends Component
                                         </svg>
                                     </button>
                                 </div>
-                                <p class="mt-0.5 text-xs text-blue-100"><span x-text="current.code">{{ $walletCurrencyCode }}</span> · <span x-text="current.label">{{ $walletCurrencyCase?->label() ?? 'Wallet' }}</span></p>
+                                <p class="mt-0.5 text-xs text-blue-700 dark:text-blue-100"><span x-text="current.code">{{ $walletCurrencyCode }}</span> · <span x-text="current.label">{{ $walletCurrencyCase?->label() ?? 'Wallet' }}</span></p>
                             </div>
 
-                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white/15">
+                            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-600/10 dark:bg-white/15">
                                 {{-- Show active wallet's specific icon when available, otherwise the generic wallet glyph --}}
                                 <template x-if="current.icon">
                                     <img :src="current.icon" alt="" class="h-7 w-7 object-contain" loading="lazy">
                                 </template>
                                 <template x-if="!current.icon">
-                                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6 brightness-0 invert" loading="lazy">
+                                    <img src="{{ asset('assets/' . rawurlencode('Wallet.svg')) }}" alt="" class="h-6 w-6 brightness-0 dark:invert" loading="lazy">
                                 </template>
                             </span>
                         </div>
 
-                        {{-- Fund Wallet - embedded Volt component: amount/currency modal that
-                             calls WalletFundingService and hands off to the payment gateway. --}}
-                        <livewire:dashboard.fund-wallet :currency="$walletCurrencyCode" wire:key="fund-desktop" />
+                        {{-- Top Up pill (right-aligned) with a tiny live-rate ticker below.
+                             Fund Wallet modal calls WalletFundingService → gateway. --}}
+                        <div>
+                            <div class="flex items-center justify-end">
+                                <livewire:dashboard.fund-wallet :currency="$walletCurrencyCode" wire:key="fund-desktop" />
+                            </div>
+                        </div>
 
                         {{-- Currency switcher - collapsed by default to keep the card clean.
                              Click to open a list of all wallets (with balances), pick one,
@@ -709,15 +796,15 @@ new #[Lazy] class extends Component
                                     type="button"
                                     @click="walletOpen = ! walletOpen"
                                     :aria-expanded="walletOpen.toString()"
-                                    class="flex w-full items-center justify-between gap-2 rounded-[10px] bg-white/10 px-3 py-2.5 text-left text-white transition-colors hover:bg-white/15"
+                                    class="flex w-full items-center justify-between gap-2 rounded-[10px] bg-blue-600/10 px-3 py-2.5 text-left text-blue-950 transition-colors hover:bg-blue-600/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
                                 >
                                     <span class="inline-flex min-w-0 items-center gap-2">
-                                        <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-100">Switch wallet</span>
-                                        <span class="text-zinc-200">&middot;</span>
+                                        <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-100">Switch wallet</span>
+                                        <span class="text-blue-400 dark:text-zinc-200">&middot;</span>
                                         <img :src="current.icon" alt="" class="h-4 w-4 shrink-0 object-contain" x-show="current.icon" loading="lazy">
                                         <span class="text-xs font-bold uppercase tracking-wider" x-text="current.code"></span>
                                     </span>
-                                    <svg class="h-4 w-4 shrink-0 text-blue-100 transition-transform duration-150" :class="walletOpen && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <svg class="h-4 w-4 shrink-0 text-blue-700 dark:text-blue-100 transition-transform duration-150" :class="walletOpen && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                                     </svg>
                                 </button>
@@ -734,7 +821,7 @@ new #[Lazy] class extends Component
                                     x-transition:leave="transition ease-in duration-100"
                                     x-transition:leave-start="opacity-100 translate-y-0"
                                     x-transition:leave-end="opacity-0 -translate-y-1"
-                                    class="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-[10px] bg-white p-1 shadow-xl shadow-zinc-900/25 ring-1 ring-zinc-200"
+                                    class="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-[10px] bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/25 border border-zinc-200 dark:border-zinc-700"
                                     role="listbox"
                                 >
                                     <template x-for="(w, i) in wallets" :key="w.code">
@@ -765,13 +852,14 @@ new #[Lazy] class extends Component
 
                     {{-- Recent Order card. Capped at 3 on desktop's right-rail
                          even though the query fetches 5 (mobile renders all 5). --}}
-                    <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                        <div class="flex items-center justify-between">
+                    <div class="relative overflow-hidden rounded-[10px] bg-green-100/50 p-5 border border-green-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-green-500/50 dark:bg-green-500/15 dark:shadow-none">
+                        <x-ui.floating-confetti />
+                        <div class="relative z-10 flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
                             <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
                         </div>
 
-                        <ul class="mt-4 space-y-3">
+                        <ul class="relative z-10 mt-4 space-y-3">
                             @forelse ($recentOrders->take(3) as $order)
                                 @php
                                     $groupedItems = $order->items->groupBy('product_variant_id');
@@ -784,6 +872,11 @@ new #[Lazy] class extends Component
                                     $extraVariants = max(0, $groupedItems->count() - 1);
                                     $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                                     [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
+                                    // The green Recent Orders card would swallow the emerald "Completed"
+                                    // pill, so back it with the neutral card surface (white / navy in dark).
+                                    if (($order->order_status?->value) === 'completed') {
+                                        $statusTone = 'bg-white text-emerald-700 ring-emerald-200 dark:text-emerald-300 dark:ring-emerald-500/30';
+                                    }
                                 @endphp
                                 <li>
                                     <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -821,9 +914,9 @@ new #[Lazy] class extends Component
                 {{-- Trust strip - serious glass pill. The frost + highlights
                      + dark/light variants live on .trust-glow in resources/css/app.css
                      so the Tailwind utilities here stay structural only. --}}
-                <div class="trust-glow flex items-center gap-4 rounded-[10px] py-3 pl-3 pr-6 ring-1 ring-white/40 dark:ring-white/10">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-blue-100">
-                        <img src="{{ asset('assets/secure payments.svg') }}" alt="" class="h-6 w-6" loading="lazy">
+                <div class="flex items-center gap-4 rounded-full bg-[#eff6ff] py-3 pl-3 pr-6 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center">
+                        <img src="{{ asset('assets/secure payments.svg') }}" alt="" class="h-9 w-9" loading="lazy">
                     </span>
                     <div class="min-w-0 flex-1">
                         <p class="text-sm font-semibold text-zinc-900">Secure. Fast. Reliable.</p>
@@ -832,7 +925,7 @@ new #[Lazy] class extends Component
                 </div>
 
                 {{-- Quick Actions + Recommended for you (combined card with divider) --}}
-                <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
 
                     {{-- Quick Actions section --}}
                     <div class="p-5 sm:p-6">
@@ -853,7 +946,7 @@ new #[Lazy] class extends Component
                                 ['More',       'More.svg',         'bg-blue-500',     'more two.svg',   route('dashboard.shop.gift-cards')],
                             ] as [$label, $icon, $bg, $hoverIcon, $href])
                                 <a href="{{ $href }}" wire:navigate class="group flex flex-col items-center gap-2 text-center">
-                                    <span class="flex h-14 w-14 items-center justify-center rounded-[10px] {{ $bg }} transition-transform group-hover:scale-105">
+                                    <span class="flex h-14 w-14 items-center justify-center rounded-full {{ $bg }} transition-transform group-hover:scale-105">
                                         @if ($hoverIcon)
                                             <img src="{{ asset('assets/' . rawurlencode($icon)) }}" alt="" class="h-6 w-6 brightness-0 invert group-hover:hidden" loading="lazy">
                                             <img src="{{ asset('assets/' . rawurlencode($hoverIcon)) }}" alt="" class="hidden h-6 w-6 brightness-0 invert group-hover:block" loading="lazy">
@@ -909,6 +1002,11 @@ new #[Lazy] class extends Component
                         @endif
                     </div>
                 </div>
+
+                {{-- Discover Global eSIM - tap a plan to Add to cart / Buy now inline --}}
+                <div class="mt-6 rounded-[10px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+                    <x-home.discover-global :contained="true" />
+                </div>
             </div>
 
             {{-- RIGHT RAIL: points, gift promo, recent transactions --}}
@@ -917,7 +1015,7 @@ new #[Lazy] class extends Component
                 {{-- RShop Rcoin card (desktop). Live balance + tier from the
                      wallet ledger (RewardEngine credits cashback + referral here,
                      CheckoutService debits redemptions, etc.). --}}
-                <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+                <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                     <div class="flex items-start gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-blue-100">
                             <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
@@ -941,7 +1039,7 @@ new #[Lazy] class extends Component
 
                 {{-- Give the Perfect Gift promo --}}
                 <div class="relative overflow-hidden rounded-[10px] bg-blue-950 p-5 text-white">
-                    <div class="relative z-10 max-w-[60%]">
+                    <div class="relative z-10 max-w-[54%]">
                         <h3 class="text-lg font-bold tracking-tight">Give the Perfect Gift</h3>
                         <p class="mt-1 text-sm text-blue-100/80">Gift cards for every occasion and everyone.</p>
                         {{-- Literal-hex bg + no-dark-invert icon so this light button stays
@@ -955,37 +1053,36 @@ new #[Lazy] class extends Component
                     <img
                         src="{{ asset('assets/' . rawurlencode('Pick a product first process.webp')) }}"
                         alt=""
-                        class="pointer-events-none absolute -right-4 bottom-2 h-48 w-auto select-none object-contain drop-shadow-2xl"
+                        class="pointer-events-none absolute -right-3 bottom-2 w-[46%] max-w-[230px] select-none object-contain object-bottom drop-shadow-2xl"
                         loading="lazy"
                     >
                 </div>
 
                 {{-- Recent Transactions (stretches to match left column height) --}}
-                <div class="flex flex-1 flex-col rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
-                    <div class="flex items-center justify-between">
+                <div class="relative flex flex-1 flex-col overflow-hidden rounded-[10px] bg-red-100/50 dash-shimmer p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+                    <x-ui.floating-confetti />
+                    <div class="relative z-10 flex items-center justify-between">
                         <h3 class="text-base font-semibold text-zinc-900">Recent Transactions</h3>
                         <a href="{{ route('dashboard.transactions') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
                     </div>
 
-                    <ul class="mt-4 flex-1 space-y-3">
+                    <ul class="relative z-10 mt-4 flex-1 space-y-3">
                         @forelse ($recentTransactions as $txn)
-                            @php
-                                $isCredit = $txn->type === \App\Domain\Shared\Enums\WalletTransactionType::Credit;
-                                $sym = $txn->currency?->symbol() ?? '';
-                            @endphp
                             <li class="flex items-center gap-3">
-                                @if ($isCredit)
-                                    <x-icons.txn-credit class="h-11 w-11" />
-                                @else
-                                    <x-icons.txn-debit class="h-11 w-11" />
-                                @endif
+                                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-sm shadow-zinc-900/5">
+                                    @if ($txn->is_credit)
+                                        <x-icons.txn-credit class="h-9 w-9" />
+                                    @else
+                                        <x-icons.txn-debit class="h-9 w-9" />
+                                    @endif
+                                </span>
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->description ?: ($txn->transaction_category?->label() ?? 'Wallet transaction') }}</p>
-                                    <p class="truncate text-[11px] text-zinc-600">{{ $txn->transaction_category?->label() ?? $txn->type->label() }}</p>
+                                    <p class="truncate text-sm font-semibold text-zinc-900">{{ $txn->title }}</p>
+                                    <p class="truncate text-[11px] text-zinc-600">{{ $txn->sub }}</p>
                                 </div>
                                 <div class="shrink-0 text-right">
-                                    <p class="text-sm font-bold {{ $isCredit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $isCredit ? '+' : '-' }}{{ $sym }}{{ number_format((float) $txn->amount, 2) }}</p>
-                                    <p class="text-[10px] text-zinc-600">{{ $txn->created_at->format('d M, H:i') }}</p>
+                                    <p class="text-sm font-bold {{ $txn->is_credit ? 'text-emerald-600' : 'text-zinc-900' }}">{{ $txn->is_credit ? '+' : '-' }}{{ $txn->symbol }}{{ number_format($txn->amount, 2) }}</p>
+                                    <p class="text-[10px] text-zinc-600">{{ $txn->date->format('d M, H:i') }}</p>
                                 </div>
                             </li>
                         @empty

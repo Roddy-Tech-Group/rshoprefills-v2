@@ -6,7 +6,7 @@
     // During SPA navigation the card row is held behind a matching skeleton.
     //
     // Content source: the `reviews` table + `site_settings` (CMS-managed).
-    $reviews = \App\Models\Review::published()->ordered()->get();
+    $reviews = \App\Models\Review::published()->with('user:id,kyc_status')->ordered()->get();
     $aggregateRating = (float) \App\Models\SiteSetting::get('reviews.aggregate.rating', 4.4);
     $aggregateCount = (int) \App\Models\SiteSetting::get('reviews.aggregate.count', 0);
     $aggregateSince = (int) \App\Models\SiteSetting::get('reviews.aggregate.since_year', date('Y'));
@@ -30,10 +30,10 @@
     aria-label="What our customers say"
     class="w-full"
     x-data="customerReviewsCarousel()"
-    x-init="$nextTick(() => setup())"
+    x-init="$nextTick(() => { setup(); })"
     @resize.window.debounce.200ms="setup()"
     x-on:livewire:navigate.window="navigating = true"
-    x-on:livewire:navigated.window="navigating = false; $nextTick(() => setup())"
+    x-on:livewire:navigated.window="navigating = false; $nextTick(() => { setup(); })"
 >
 
     {{-- Header aligns with the page content width. --}}
@@ -68,12 +68,7 @@
              clipped by the overflow-hidden viewport. --}}
         <div
             x-ref="track"
-            @pointerdown="onDragStart($event)"
-            @pointermove="onDragMove($event)"
-            @pointerup="onDragEnd($event)"
-            @pointercancel="onDragEnd($event)"
-            class="overflow-x-hidden overflow-y-visible py-6 touch-pan-y select-none"
-            style="cursor: grab;"
+            class="overflow-x-auto overflow-y-hidden py-6 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
         >
             <div x-ref="list" class="carousel-list flex w-max gap-4 sm:gap-5">
 
@@ -114,7 +109,7 @@
                     }"
                     @mouseenter="paused = true"
                     @mouseleave="paused = false"
-                    class="relative flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm"
+                    class="relative flex w-72 shrink-0 flex-col rounded-[10px] bg-[#eff6ff] p-5 ring-1 ring-zinc-200 dark:ring-[#24364f]"
                 >
                     @foreach ($aggSources as $i => $agg)
                         @php $isGoogle = $agg['key'] === 'Google'; @endphp

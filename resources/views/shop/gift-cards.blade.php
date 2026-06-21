@@ -199,7 +199,7 @@
                          the hidden desktop sidebar at < sm so customers can hop between
                          categories without leaving the page. --}}
                     <div class="mb-4 sm:hidden">
-                        <x-shop.category-picker active="gift-cards" />
+                        <x-shop.category-picker active="gift-cards" :sub-items="$sidebarSubItems" />
                     </div>
 
                     {{-- Heading + search row --}}
@@ -218,8 +218,9 @@
                             </div>
                         </div>
 
-                        {{-- Shop by country picker — sits in the centered middle column.
-                             Replaces a page-level brand search (the storefront nav carries search). --}}
+                        {{-- Global product search (all categories) - centered middle column. --}}
+                        <x-shop.product-search class="sm:max-w-sm sm:justify-self-center" />
+
                         {{-- Modern segmented sort selector. URL-driven so the choice survives reloads;
                              each pill is a real <a> that updates ?sort= while preserving other filters. --}}
                         <div class="inline-flex shrink-0 items-center rounded-[10px] bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort gift cards">
@@ -291,7 +292,7 @@
                                                  remap keeps it white — brand logos are drawn for a
                                                  light tile and vanish on a dark one. --}}
                                             <div
-                                                class="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[15px] bg-[#ffffff] shadow-sm ring-1 ring-zinc-200"
+                                                class="relative flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[14px] bg-[#ffffff] shadow-sm ring-1 ring-zinc-200"
                                             >
                                                 @if ($logoSrc)
                                                     <img src="{{ $logoSrc }}" alt="{{ Product::brandDisplayName($product->brand_key) }}" class="h-full w-full object-cover" loading="lazy">

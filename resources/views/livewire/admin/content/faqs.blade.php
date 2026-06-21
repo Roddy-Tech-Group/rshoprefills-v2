@@ -175,7 +175,7 @@ class extends Component {
             </div>
             <ul class="divide-inset">
                 @foreach ($items as $faq)
-                    <li class="group relative mx-3 flex items-start justify-between gap-4 px-5 py-4 transition-all hover:bg-blue-50 hover:rounded-[10px] hover:ring-1 hover:ring-inset hover:ring-blue-500 hover:after:hidden dark:hover:bg-blue-600/15 dark:hover:ring-blue-400">
+                    <li class="group relative mx-3 flex items-start justify-between gap-4 px-5 py-4 transition-all hover:bg-blue-50 hover:rounded-[10px] dark:hover:bg-blue-600/15 dark:hover:ring-blue-400">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-zinc-900">{{ $faq->question }}</p>
                             <p class="mt-1.5 text-sm leading-relaxed text-zinc-600">{{ $faq->answer }}</p>

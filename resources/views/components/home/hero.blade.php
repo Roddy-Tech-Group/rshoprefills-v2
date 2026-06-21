@@ -32,29 +32,11 @@
         .dark .roddy-dots-bg {
             background-image: radial-gradient(circle, rgba(161, 161, 170, 0.20) 5px, transparent 6px);
         }
-        /* Readability scrim: a soft wash of the page background, strongest
-           behind the headline and fading to transparent at the edges so the
-           dot texture still shows around the content. */
-        .roddy-dots-scrim {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            /* Light wash kept subtle so the dots stay visible behind the text. */
-            background: radial-gradient(ellipse 65% 60% at 50% 42%,
-                rgba(239, 246, 255, 0.45) 0%,
-                rgba(239, 246, 255, 0.2) 45%,
-                rgba(239, 246, 255, 0) 75%);
-        }
-        .dark .roddy-dots-scrim {
-            background: radial-gradient(ellipse 65% 60% at 50% 42%,
-                rgba(12, 26, 54, 0.92) 0%,
-                rgba(12, 26, 54, 0.55) 45%,
-                rgba(12, 26, 54, 0) 75%);
-        }
+        /* The readability scrim (radial gradient wash) was removed per request -
+           the hero now shows the dotted backdrop with no gradient over it. */
     </style>
 
     <div class="roddy-dots-bg" aria-hidden="true"></div>
-    <div class="roddy-dots-scrim" aria-hidden="true"></div>
 
     {{-- Content over the dots (constrained to 1200px, dots stay full-width) --}}
     <div class="relative z-10 mx-auto max-w-[1200px] px-3 pt-10 pb-14 text-center sm:px-10 sm:pt-20 sm:pb-24 lg:px-14 lg:pt-24 lg:pb-32">
@@ -91,7 +73,7 @@
                 class="pointer-events-none absolute inset-0"
                 :style="`mask-image: radial-gradient(circle 170px at ${x}px ${y}px, #000 0%, #000 80%, transparent 100%); -webkit-mask-image: radial-gradient(circle 170px at ${x}px ${y}px, #000 0%, #000 80%, transparent 100%);`"
             >
-                <div style="font-family: 'Urbanist', sans-serif; color: #0044FF;" class="{{ $headingClass }}">
+                <div style="font-family: 'Urbanist', sans-serif;" class="{{ $headingClass }} hero-glow-accent">
                     One Ecosystem<br>
                     All your Digital<br class="sm:hidden">
                     Solutions
@@ -219,7 +201,7 @@
         </style>
 
         {{-- Floating expandable chip bar (single row, one chip expanded at a time) --}}
-        <div data-anim="hero-banner" class="mx-auto mt-14 w-full max-w-5xl">
+        <div data-anim="hero-banner" class="mx-auto mt-14 w-full max-w-5xl min-h-[84px] sm:min-h-[100px]">
             <div
                 x-data="{
                     total: {{ count($heroChips) }},
@@ -254,6 +236,7 @@
                     }
                 }"
                 x-init="cycle()"
+                x-cloak
                 @mouseenter="paused = true"
                 @mouseleave="paused = false"
                 class="flex flex-nowrap items-center justify-center gap-5"
@@ -273,7 +256,7 @@
                             current === {{ $i }} && direction < 0 ? 'rshop-chip-from-left' : '',
                             current === {{ $i }} && direction > 0 ? 'rshop-chip-from-right' : ''
                         ]"
-                        class="group inline-flex h-[84px] shrink-0 items-center rounded-full bg-white shadow-lg shadow-zinc-900/5 ring-1 ring-zinc-200 lg:transition-all lg:duration-500 lg:ease-out sm:h-[100px]"
+                        class="group inline-flex h-[84px] shrink-0 items-center rounded-full bg-transparent backdrop-blur-md ring-1 ring-zinc-400 transition-colors hover:bg-zinc-900/5 hover:ring-zinc-500 dark:ring-white/30 dark:hover:bg-white/10 dark:hover:ring-white/50 lg:transition-all lg:duration-500 lg:ease-out sm:h-[100px]"
                         aria-label="{{ $chip['title'] }}"
                     >
                         {{-- Icon (always visible) — inline animated SVG when available

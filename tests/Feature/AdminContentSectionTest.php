@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Admin;
+use App\Models\Review;
 use Database\Seeders\AdminSeeder;
 use Database\Seeders\BlogPostSeeder;
 use Database\Seeders\FaqSeeder;
 use Database\Seeders\PressArticleSeeder;
 use Database\Seeders\ReviewSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Volt\Volt;
 use Tests\TestCase;
 
 class AdminContentSectionTest extends TestCase
@@ -56,6 +58,28 @@ class AdminContentSectionTest extends TestCase
             ->assertSee('Reviews')
             ->assertSee('Adaeze O.')
             ->assertSeeText('4.5 / 5');
+    }
+
+    public function test_admin_reviews_search_filters_by_customer_name(): void
+    {
+        $this->withoutVite()->adminLogin();
+
+        $base = [
+            'body' => 'Great experience using the service.',
+            'rating' => 5.0,
+            'reviewed_at' => now()->toDateString(),
+            'is_published' => true,
+            'is_customer_submitted' => false,
+        ];
+        Review::create($base + ['author_name' => 'Alice Traveller', 'initials' => 'AT', 'source' => 'Trustpilot']);
+        Review::create($base + ['author_name' => 'Bob Shopper', 'initials' => 'BS', 'source' => 'Google']);
+
+        Volt::test('admin.content.reviews')
+            ->assertSee('Alice Traveller')
+            ->assertSee('Bob Shopper')
+            ->set('search', 'Alice')
+            ->assertSee('Alice Traveller')
+            ->assertDontSee('Bob Shopper');
     }
 
     public function test_faq_admin_page_lists_seeded_questions_grouped_by_topic(): void

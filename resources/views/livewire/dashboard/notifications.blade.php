@@ -78,11 +78,11 @@ class extends Component {
     </div>
 
     @if ($notifications->isNotEmpty())
-        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+        <div class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 dark:border-zinc-700">
             @foreach ($notifications as $note)
                 <div
                     wire:key="note-{{ $note->id }}"
-                    class="group relative flex items-stretch transition-colors hover:bg-zinc-50 {{ $note->read_at ? '' : 'bg-blue-50/50' }}"
+                    class="group relative flex items-stretch transition-colors hover:bg-zinc-50 dark:hover:bg-white/5 {{ $note->read_at ? '' : 'bg-blue-50/50 dark:bg-blue-500/10' }}"
                 >
                     {{-- Clickable area — opens the detail sheet. --}}
                     <button
@@ -115,12 +115,12 @@ class extends Component {
                         data-confirm-title="Delete notification"
                         data-confirm-text="Delete"
                         data-confirm-tone="danger"
-                        class="m-2 flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-[5px] text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        class="m-2 flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-full text-zinc-400 ring-1 ring-zinc-200 transition-colors hover:bg-red-50 hover:text-red-600 hover:ring-red-200 dark:ring-zinc-700 dark:hover:bg-red-500/15 dark:hover:ring-red-500/30"
                         aria-label="Delete notification"
                         title="Delete"
                     >
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-7 0v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7"/>
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>

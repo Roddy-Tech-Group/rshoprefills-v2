@@ -1,0 +1,134 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Domain\Cart\Services\CartManager;
+use App\Models\Category;
+use App\Models\Coupon;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Subcategory;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * The checkout coupon live-preview endpoint must return the same USD discount
+ * CheckoutService applies at order time, so the total the customer sees before
+ * paying matches what they're charged.
+ */
+class CouponPreviewTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function cartWithVariant(User $user, float $unitUsd, int $qty = 1): ProductVariant
+    {
+        $category = Category::factory()->create(['slug' => 'gift-cards']);
+        $subcategory = Subcategory::factory()->create(['category_id' => $category->id]);
+        $product = Product::factory()->create(['category_id' => $category->id]);
+        $variant = ProductVariant::factory()->create([
+            'product_id' => $product->id,
+            'currency' => 'USD',
+            'face_value' => $unitUsd,
+            'cost_price' => $unitUsd * 0.9,
+            'retail_price' => $unitUsd,
+        ]);
+
+        $cart = app(CartManager::class)->resolveCart($user->id, null);
+        $cart->items()->create([
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'quantity' => $qty,
+            'unit_price_snapshot' => $unitUsd,
+            'subtotal_snapshot' => $unitUsd * $qty,
+            'provider_cost_usd' => $unitUsd * 0.9,
+            'markup_amount' => $unitUsd * 0.1,
+            'display_currency' => 'USD',
+            'display_amount' => $unitUsd * $qty,
+            'metadata_snapshot' => [],
+        ]);
+
+        return $variant;
+    }
+
+    public function test_fixed_coupon_returns_its_usd_discount(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->cartWithVariant($user, 89.00);
+
+        Coupon::create([
+            'product_variant_id' => $variant->id,
+            'code' => 'LAUNCHV2',
+            'discount_type' => 'fixed',
+            'discount_value' => 9.00,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/coupon/preview', ['code' => 'launchv2', 'currency' => 'USD'])
+            ->assertOk()
+            ->assertJson(['valid' => true, 'code' => 'LAUNCHV2', 'discount_usd' => 9.0]);
+    }
+
+    public function test_percent_coupon_scales_by_quantity(): void
+    {
+        $user = User::factory()->create();
+        $variant = $this->cartWithVariant($user, 50.00, 2); // line = 100
+
+        Coupon::create([
+            'product_variant_id' => $variant->id,
+            'code' => 'TEN',
+            'discount_type' => 'percent',
+            'discount_value' => 10,
+            'is_active' => true,
+        ]);
+
+        // 10% of $50 unit = $5, x2 qty = $10.
+        $this->actingAs($user)
+            ->postJson('/coupon/preview', ['code' => 'TEN', 'currency' => 'USD'])
+            ->assertOk()
+            ->assertJson(['valid' => true, 'discount_usd' => 10.0]);
+    }
+
+    public function test_unknown_coupon_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $this->cartWithVariant($user, 20.00);
+
+        $this->actingAs($user)
+            ->postJson('/coupon/preview', ['code' => 'NOPE', 'currency' => 'USD'])
+            ->assertOk()
+            ->assertJson(['valid' => false]);
+    }
+
+    public function test_coupon_for_a_variant_not_in_cart_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $this->cartWithVariant($user, 20.00);
+
+        $otherProduct = Product::factory()->create(['category_id' => Category::factory()->create()->id]);
+        $other = ProductVariant::factory()->create(['product_id' => $otherProduct->id, 'currency' => 'USD', 'face_value' => 5, 'cost_price' => 4, 'retail_price' => 5]);
+        Coupon::create([
+            'product_variant_id' => $other->id,
+            'code' => 'OTHER',
+            'discount_type' => 'fixed',
+            'discount_value' => 5,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/coupon/preview', ['code' => 'OTHER', 'currency' => 'USD'])
+            ->assertOk()
+            ->assertJson(['valid' => false]);
+    }
+
+    public function test_empty_cart_returns_invalid(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/coupon/preview', ['code' => 'ANY', 'currency' => 'USD'])
+            ->assertOk()
+            ->assertJson(['valid' => false]);
+    }
+}

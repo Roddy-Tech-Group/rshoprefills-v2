@@ -190,7 +190,7 @@ class extends Component {
         @else
             <ul class="divide-inset">
                 @foreach ($this->topReferrers as $i => $row)
-                    <li class="group relative mx-3 flex items-center gap-4 px-5 py-3 transition-all hover:bg-blue-50 hover:rounded-[10px] hover:ring-1 hover:ring-inset hover:ring-blue-500 hover:after:hidden dark:hover:bg-blue-600/15 dark:hover:ring-blue-400" wire:key="ref-{{ $row->referrer_id }}">
+                    <li class="group relative mx-3 flex items-center gap-4 px-5 py-3 transition-all hover:bg-blue-50 hover:rounded-[10px] dark:hover:bg-blue-600/15 dark:hover:ring-blue-400" wire:key="ref-{{ $row->referrer_id }}">
                         <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-xs font-black text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
                             {{ $i + 1 }}
                         </span>

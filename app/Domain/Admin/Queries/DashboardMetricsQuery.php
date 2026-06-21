@@ -194,7 +194,7 @@ class DashboardMetricsQuery
             ->where('is_active', true)
             ->pluck('rate_per_usd', 'code');
 
-        $rcoinUsdRate = (float) Setting::get('rcoin_usd_rate', 0.01);
+        $rcoinUsdRate = (float) Setting::rcoinUsdRate();
 
         $total = 0.0;
         foreach ($balancesByCurrency as $code => $balance) {

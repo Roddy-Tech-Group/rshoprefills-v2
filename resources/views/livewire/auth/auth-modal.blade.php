@@ -93,15 +93,24 @@ new class extends Component {
             throw ValidationException::withMessages(['regEmail' => 'New registrations are temporarily closed.']);
         }
 
-        $this->validateTurnstile();
+        // Validate up-front; on failure tell the wizard which step holds the
+        // first error so it can slide back to it (the user submits from step 3
+        // but an email / password error lives on an earlier step).
+        try {
+            $this->validateTurnstile();
 
-        $validated = $this->validate([
-            'regName' => ['required', 'string', 'max:255'],
-            'regEmail' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class.',email'],
-            'regPassword' => ['required', 'string', 'confirmed:regPasswordConfirmation', Rules\Password::defaults()],
-            'regGender' => ['required', 'in:male,female,other'],
-            'regAcceptedTerms' => ['accepted'],
-        ]);
+            $validated = $this->validate([
+                'regName' => ['required', 'string', 'max:255'],
+                'regEmail' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class.',email'],
+                'regPassword' => ['required', 'string', 'confirmed:regPasswordConfirmation', Rules\Password::defaults()],
+                'regGender' => ['required', 'in:male,female,other'],
+                'regAcceptedTerms' => ['accepted'],
+            ]);
+        } catch (ValidationException $e) {
+            $this->dispatch('registration-error', step: $this->firstErrorStep(array_keys($e->errors())));
+
+            throw $e;
+        }
 
         // Gender drives the default avatar (resources/views/livewire/settings/profile.blade.php
         // matches on this field to pick male/female PNG). Collecting it at
@@ -152,6 +161,27 @@ new class extends Component {
 
         Auth::login($user);
         $this->redirect(route('dashboard', absolute: false), navigate: true);
+    }
+
+    /**
+     * Map the first failing field to its wizard step (1-3) so the modal can
+     * slide back to where the user needs to fix something.
+     *
+     * @param  array<int, string>  $fields
+     */
+    private function firstErrorStep(array $fields): int
+    {
+        $step = 3;
+
+        foreach ($fields as $field) {
+            if (in_array($field, ['regName', 'regEmail'], true)) {
+                $step = min($step, 1);
+            } elseif (in_array($field, ['regPassword', 'regPasswordConfirmation', 'regGender'], true)) {
+                $step = min($step, 2);
+            }
+        }
+
+        return $step;
     }
 
     protected function ensureIsNotRateLimited(): void
@@ -206,9 +236,11 @@ new class extends Component {
     x-data="{
         open: false,
         mode: 'login',
+        step: 1,
         turnstileWidgets: { login: null, register: null },
         showOpen(mode) {
             this.mode = (mode === 'register') ? 'register' : 'login';
+            this.step = 1;
             this.open = true;
             window.rshopScrollLock?.lock();
             this.$nextTick(() => this.renderTurnstile(this.mode));
@@ -226,7 +258,19 @@ new class extends Component {
         },
         switchTo(mode) {
             this.mode = mode;
+            this.step = 1;
             this.$nextTick(() => this.renderTurnstile(mode));
+        },
+        nextStep() {
+            // Gate each step on the browser's native validation for its inputs
+            // (required + email format) before sliding forward.
+            const panel = this.$refs['step' + this.step];
+            if (panel) {
+                for (const input of panel.querySelectorAll('input[required]')) {
+                    if (! input.reportValidity()) { return; }
+                }
+            }
+            if (this.step < 3) { this.step++; }
         },
         renderTurnstile(mode, attempt = 0) {
             // Explicit render so the widget shows up even though the form was
@@ -281,6 +325,7 @@ new class extends Component {
     }"
     @open-auth-modal.window="showOpen($event.detail?.mode)"
     @close-auth-modal.window="close()"
+    @registration-error.window="step = $event.detail.step"
     @keydown.escape.window="open && close()"
     x-cloak
 >
@@ -445,7 +490,25 @@ new class extends Component {
             {{-- ── REGISTER VIEW ────────────────────────────────────────── --}}
             <div x-show="mode === 'register'" x-cloak>
 
-                <form wire:submit="register" class="mt-7 flex flex-col gap-5">
+                {{-- Progress: animated step counter + bar. --}}
+                <div class="mt-6">
+                    <div class="flex items-center justify-between text-xs font-semibold">
+                        <span class="text-white/55" x-text="`Step ${step} of 3`"></span>
+                        <span class="text-white/80" x-text="['Your details', 'Security', 'Finish'][step - 1]"></span>
+                    </div>
+                    <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                        <div class="h-full rounded-full bg-blue-500 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" :style="`width: ${(step / 3) * 100}%`"></div>
+                    </div>
+                </div>
+
+                {{-- Sliding 3-step wizard. Every input stays in the DOM (steps are
+                     just translated off-screen) so a single wire:submit posts the
+                     whole form. Enter advances instead of submitting until step 3. --}}
+                <form wire:submit="register" @keydown.enter="if (step < 3) { $event.preventDefault(); nextStep(); }" class="mt-6">
+                    <div class="overflow-hidden">
+                        <div class="flex items-start transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)]" :style="`transform: translateX(-${(step - 1) * 100}%)`">
+                            {{-- STEP 1 — Your details --}}
+                            <div x-ref="step1" class="flex w-full shrink-0 flex-col gap-5 px-0.5">
                     <div>
                         <label for="regName" class="mb-1.5 block text-sm font-medium text-white/85">Full name</label>
                         <input
@@ -473,6 +536,10 @@ new class extends Component {
                         >
                         @error('regEmail') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
                     </div>
+                            </div>
+
+                            {{-- STEP 2 — Security --}}
+                            <div x-ref="step2" class="flex w-full shrink-0 flex-col gap-5 px-0.5">
 
                     <div x-data="{ show: false }">
                         <label for="regPassword" class="mb-1.5 block text-sm font-medium text-white/85">Password</label>
@@ -532,6 +599,10 @@ new class extends Component {
                         </div>
                         @error('regGender') <p class="mt-1.5 text-sm text-red-400">{{ $message }}</p> @enderror
                     </div>
+                            </div>
+
+                            {{-- STEP 3 — Finish --}}
+                            <div x-ref="step3" class="flex w-full shrink-0 flex-col gap-5 px-0.5">
 
                     {{-- Referral code (optional). Prefilled from the ?ref invite
                          cookie when present, but always editable so a friend's
@@ -572,13 +643,19 @@ new class extends Component {
                         @error('turnstileToken') <p class="text-center text-sm text-red-400">{{ $message }}</p> @enderror
                     @endif
 
-                    <button
-                        type="submit"
-                        class="mt-3 w-full rounded-[10px] bg-white px-4 py-3 text-sm font-bold text-blue-700 shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-50"
-                    >
-                        <span wire:loading.remove wire:target="register">Create account</span>
-                        <span wire:loading wire:target="register">Creating account...</span>
-                    </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Wizard nav: Back / Continue, with the real submit only on step 3. --}}
+                    <div class="mt-7 flex items-center gap-3">
+                        <button type="button" x-show="step > 1" @click="step--" class="rounded-[10px] border border-white/20 px-5 py-3 text-sm font-bold text-white/85 transition-colors hover:bg-white/10">Back</button>
+                        <button type="button" x-show="step < 3" @click="nextStep()" class="flex-1 rounded-[10px] bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-700">Continue</button>
+                        <button type="submit" x-show="step === 3" x-cloak class="flex-1 rounded-[10px] bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/40 transition-colors hover:bg-blue-700">
+                            <span wire:loading.remove wire:target="register">Create account</span>
+                            <span wire:loading wire:target="register">Creating account...</span>
+                        </button>
+                    </div>
                 </form>
 
                 <p class="mt-5 border-t border-white pt-5 text-center text-sm text-white/65">

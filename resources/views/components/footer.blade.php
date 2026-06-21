@@ -1,5 +1,5 @@
 {{-- Storefront footer. Used inside the <x-layouts.app.header> shell. --}}
-<footer class="border-t border-zinc-200 bg-white text-zinc-900">
+<footer class="border-t border-zinc-200 bg-[#eff6ff] dash-shimmer text-zinc-900">
     <div class="mx-auto max-w-[1550px] px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
 
         {{-- Top: brand + link columns --}}
@@ -19,7 +19,7 @@
                 </a>
 
                 <p class="mt-6 max-w-sm text-base leading-relaxed text-zinc-600">
-                    Your digital world, all in one place. Gift cards, eSIMs, top-ups, flights and more. Instant, secure, worldwide.
+                    Making global digital services accessible to everyone, and direct brand shopping with zero payment failure while keeping your connected with family and friends world wide
                 </p>
 
                 {{-- Social links --}}
@@ -103,7 +103,6 @@
                     <li><a href="{{ route('shop.about') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">About us</a></li>
                     <li><a href="{{ route('shop.blog') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Blog</a></li>
                     <li><a href="{{ route('shop.reviews') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Reviews</a></li>
-                    <li><a href="#" class="text-zinc-600 transition-colors hover:text-zinc-900">Careers</a></li>
                     <li><a href="{{ route('shop.press') }}" wire:navigate class="text-zinc-600 transition-colors hover:text-zinc-900">Press &amp; Media</a></li>
                     <li>
                         <a href="{{ route('dashboard') }}" wire:navigate class="inline-flex items-center gap-2 text-zinc-600 transition-colors hover:text-zinc-900">
@@ -147,7 +146,7 @@
 
         {{-- Bottom bar --}}
         <div class="flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <p class="max-w-xl">&copy; 2026 RshopRefill.com. All rights reserved. RshopRefill is a wholly-owned product of Roddy Technologies LTD, Registered.</p>
+            <p class="max-w-xl">&copy; 2026 RshopRefill All rights reserved. RshopRefill is a wholly-owned product of Roddy Technologies LTD, RC - 9385422 <a href="https://icrp.cac.gov.ng/public-search" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline dark:text-blue-400">Verify</a>.</p>
 
             <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
                 {{-- Locale chip: opens the same modal the nav uses. `.stop` is

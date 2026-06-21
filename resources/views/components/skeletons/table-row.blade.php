@@ -1,14 +1,14 @@
 {{--
     Skeleton row for a list / ledger (the wallet transactions page, order lists).
     Zero-CLS: matches a real transaction row exactly — flex items-center gap-3
-    px-4 py-3.5, a h-10 w-10 rounded-[8px] leading icon, two stacked text lines,
+    px-4 py-3.5, a h-10 w-10 circular leading icon, two stacked text lines,
     and a trailing amount + balance. See livewire/dashboard/transactions.blade.php.
 
     Varying bar widths mimic real content density so the eye reads it as "loading".
 --}}
 <div {{ $attributes->class('flex items-center gap-3 px-4 py-3.5') }} aria-hidden="true">
     {{-- Leading icon tile. --}}
-    <x-skeleton class="h-10 w-10 shrink-0" rounded-[10px]="rounded-[8px]" />
+    <x-skeleton class="h-10 w-10 shrink-0" rounded="rounded-full" />
 
     {{-- Description + meta. --}}
     <div class="min-w-0 flex-1">

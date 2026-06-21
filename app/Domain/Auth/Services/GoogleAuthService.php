@@ -91,6 +91,9 @@ class GoogleAuthService
         $user->update([
             'google_id' => $googleUser->getId(),
             'avatar_url' => $googleUser->getAvatar() ?? $user->avatar_url,
+            // Google has already verified this email, so a credentials user who
+            // links Google should not be asked to verify again.
+            'email_verified_at' => $user->email_verified_at ?? now(),
         ]);
 
         Log::info('Google account linked to existing user', [

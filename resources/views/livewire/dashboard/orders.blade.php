@@ -77,7 +77,13 @@ class extends Component {
                 return (string) $payload[$key];
             }
         }
-        foreach ($payload as $value) {
+        foreach ($payload as $key => $value) {
+            // eSIM/topup payload fields are never redemption codes - without
+            // this skip, an eSIM payload leaks its SM-DP+ address as "CODE".
+            if (str_starts_with((string) $key, 'esim') || str_starts_with((string) $key, 'topup')
+                || in_array($key, ['lpa', 'iccid', 'qrcode_url', 'qr_manual_code', 'network', 'provider_reference'], true)) {
+                continue;
+            }
             if (is_scalar($value) && $value !== '') {
                 return (string) $value;
             }
@@ -97,12 +103,15 @@ class extends Component {
         <label for="order-search" class="block text-sm font-bold text-zinc-900">Enter your order id</label>
         <div class="mt-2 flex items-center gap-3">
             <div class="relative flex-1">
+                <svg class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-900 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
                 <input
                     id="order-search"
                     type="text"
                     wire:model.live.debounce.300ms="search"
                     placeholder="019e34c4-9b70-726f-96cc-cf42b222d88a"
-                    class="w-full rounded-[10px] border-2 border-zinc-100 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                    class="w-full rounded-full py-2 sm:rounded-[15px] sm:py-3 border-2 border-zinc-400 bg-transparent pl-12 pr-4 text-sm text-zinc-900 placeholder:text-zinc-500 outline-none transition-colors hover:border-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                 >
                 <div wire:loading wire:target="search" class="absolute right-3 top-1/2 -translate-y-1/2">
                     <svg class="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -122,11 +131,14 @@ class extends Component {
         {{-- All orders live in ONE card; each order is a drop-down row.
              State lifted to the parent so opening an order auto-closes the
              previously-opened one (single-expanded accordion behaviour). --}}
-        <div x-data="{ openId: null }" class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border-2 border-zinc-100 bg-white">
+        <div x-data="{ openId: null }" class="divide-y divide-zinc-200 overflow-hidden rounded-[10px] border border-zinc-200 bg-[#eff6ff] shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             @foreach ($orders as $order)
                 @php
                     [$statusLabel, $statusPillClass] = $statusUi[$order->order_status->value] ?? ['Placed', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
-                    $points = app(\App\Domain\Rewards\Services\RewardEngine::class)->usdToRcoin((float) $order->total_amount * ((float) \App\Models\Setting::get('cashback_percentage', 1.0) / 100));
+                    // Rcoin is earned on the USD settlement total, never the
+                    // display-currency figure (a XAF 1,561 order is ~$2.75,
+                    // which earns ~3 Rcoin - not 1,561).
+                    $points = app(\App\Domain\Rewards\Services\RewardEngine::class)->cashbackPreviewFor($order);
                 @endphp
                 <div wire:key="order-{{ $order->id }}">
                     {{-- Header (always visible). Toggling sets openId to this order or null. --}}
@@ -524,7 +536,7 @@ class extends Component {
              orders ever" variant is much warmer and offers four storefront
              surfaces to start from so the page doesn't feel like a dead end. --}}
         @if (trim($search) !== '' || $expired)
-            <div class="rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+            <div class="rounded-[10px] bg-[#eff6ff] px-6 py-16 text-center ring-1 ring-zinc-200 dark:ring-zinc-700/60">
                 <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
                     <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -572,8 +584,8 @@ class extends Component {
                 ];
             @endphp
 
-            <div class="overflow-hidden rounded-[10px] bg-white px-6 py-12 text-center ring-1 ring-zinc-200 dark:bg-[#1d3252] dark:ring-zinc-700/60 sm:px-10">
-                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/20">
+            <div class="overflow-hidden rounded-[10px] bg-[#eff6ff] px-6 py-12 text-center ring-1 ring-zinc-200 dark:ring-zinc-700/60 sm:px-10">
+                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-blue-600 ring-1 ring-blue-100 dark:text-blue-300 dark:ring-blue-500/20">
                     <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/>
                     </svg>
@@ -590,9 +602,9 @@ class extends Component {
                         <a
                             href="{{ $link['href'] }}"
                             wire:navigate
-                            class="group flex flex-col items-center gap-3 rounded-[10px] border-2 border-zinc-100 bg-white px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-sm dark:border-zinc-700/60 dark:bg-[#0c1a36] dark:hover:border-blue-400/50"
+                            class="group flex flex-col items-center gap-3 rounded-[10px] border-2 border-zinc-200 bg-[#eff6ff] px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-sm dark:border-zinc-700/60 dark:hover:border-blue-400/50"
                         >
-                            <span class="flex h-11 w-11 items-center justify-center rounded-[10px] bg-blue-50 ring-1 ring-blue-100 transition-colors group-hover:bg-blue-100 dark:bg-blue-500/15 dark:ring-blue-500/20">
+                            <span class="flex h-11 w-11 items-center justify-center rounded-full bg-blue-50 ring-1 ring-blue-100 transition-colors group-hover:bg-blue-100 dark:bg-blue-500/15 dark:ring-blue-500/20">
                                 <img src="{{ asset('assets/' . rawurlencode($link['icon'])) }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
                             </span>
                             <span class="leading-tight">
@@ -606,12 +618,9 @@ class extends Component {
                 <a
                     href="{{ route('dashboard.shop.gift-cards') }}"
                     wire:navigate
-                    class="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+                    class="mt-7 inline-flex items-center text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
                 >
                     Explore everything
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
-                    </svg>
                 </a>
             </div>
         @endif
@@ -619,7 +628,7 @@ class extends Component {
 
     @if ($orders->hasPages())
         {{-- Matches the admin products page paginator (vendor/pagination/circles). --}}
-        <div class="mt-2 rounded-[10px] border-2 border-zinc-100 bg-white px-5 py-3 dark:bg-[#1d3252] dark:ring-zinc-700/60">
+        <div class="mt-2 rounded-[10px] border-2 border-zinc-100 bg-[#eff6ff] px-5 py-3 dark:ring-zinc-700/60">
             {{ $orders->onEachSide(1)->links('vendor.pagination.circles-livewire') }}
         </div>
     @endif

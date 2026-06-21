@@ -246,7 +246,6 @@
                     name="q"
                     x-model.debounce.250ms="query"
                     @input="suggest()"
-                    @focus="suggest()"
                     value="{{ $search }}"
                     placeholder="Search products by name, SKU or country (e.g. Cameroon, US, ESIM-AD)"
                     class="w-full rounded-[10px] border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-white"
@@ -280,7 +279,7 @@
                                 <a
                                     :href="'{{ route('admin.products') }}?q=' + encodeURIComponent(row.name || row.sku)"
                                     wire:navigate
-                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 hover:ring-1 hover:ring-blue-500 dark:hover:bg-blue-500/10"
+                                    class="flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-blue-50 dark:hover:bg-blue-500/10"
                                 >
                                     <template x-if="row.logo">
                                         <img :src="row.logo" alt="" class="h-9 w-9 shrink-0 rounded-[10px] object-contain bg-white ring-1 ring-zinc-100 dark:ring-white/10" loading="lazy">
@@ -859,7 +858,11 @@
                     // base on the supplier's USD cost. What this column shows
                     // is what checkout actually charges.
                     $retailBase = ($valueCurrency === 'USD' || $valueCurrency === '') && $valueNative > 0 ? $valueNative : $costUsd;
-                    $retailUsd = $product ? $pricing->resolveRetailPrice($product, $retailBase) : $retailBase;
+                    // resolveVariantRetailPrice honours the per-variant
+                    // manual_retail_price_usd override set in the drawer; the
+                    // product-level resolveRetailPrice would ignore it, so the
+                    // column kept showing the rule price after an admin override.
+                    $retailUsd = $pricing->resolveVariantRetailPrice($variant, $retailBase);
 
                     // Discount % — the supplier's wholesale discount: the gap
                     // between the face Value (what the customer receives) and
@@ -928,7 +931,7 @@
                 @endphp
                 <article
                     @click="$dispatch('variant-show', @js($drawerPayload))"
-                    class="variant-row variant-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 hover:ring-1 hover:ring-inset hover:ring-blue-500 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
+                    class="variant-row variant-body group relative mx-3 cursor-pointer bg-white px-6 py-3 transition-all hover:bg-blue-50 dark:bg-[#1d3252] dark:hover:bg-blue-600/10 dark:hover:ring-blue-400"
                 >
                     {{-- Brand (text only, no logo) --}}
                     <span class="col-brand min-w-0 truncate text-[13px] font-semibold text-zinc-900 dark:text-white">{{ $brandLabel }}</span>
@@ -1556,17 +1559,25 @@
                             this.markupValue = '';
                         }
                         this.isOpen = true;
-                        // Lock page scroll while the drawer is open. The admin page scrolls
-                        // on the root <html> (body is min-h-screen), so body-only overflow
-                        // isn't enough — lock both the documentElement and body.
-                        document.documentElement.style.overflow = 'hidden';
-                        document.body.style.overflow = 'hidden';
+                        // Lock background scroll the sidebar-safe way: DON'T use the
+                        // shared rshopScrollLock here. It sets body{position:fixed},
+                        // which jumps the Flux *sticky* sidebar, and its ref-counter
+                        // desyncs when you click another row while the drawer is open
+                        // (re-lock without a matching unlock) - leaving the page stuck
+                        // and unable to scroll. Instead just hide the document's
+                        // overflow and reserve the scrollbar width on <body> so the
+                        // layout never shifts. This is idempotent (safe to re-run).
+                        if (document.documentElement.style.overflow !== 'hidden') {
+                            const sbw = window.innerWidth - document.documentElement.clientWidth;
+                            document.documentElement.style.overflow = 'hidden';
+                            document.body.style.paddingRight = sbw > 0 ? sbw + 'px' : '';
+                        }
                         this.loadCoupons();
                     },
                     close() {
                         this.isOpen = false;
                         document.documentElement.style.overflow = '';
-                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
                     },
 
                     _csrf() {
@@ -1613,6 +1624,9 @@
                                 `/admin/api/catalog/variants/${this.data.variantId}/price`,
                                 { manual_retail_price_usd: value });
                             this.data.manualPriceUsd = json.manual_retail_price_usd;
+                            // The Sales Price column is server-rendered, so reload
+                            // to show the new override (the data is already saved).
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1628,6 +1642,7 @@
                                 `/admin/api/catalog/variants/${this.data.variantId}/price`);
                             this.data.manualPriceUsd = null;
                             this.priceInput = '';
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1645,6 +1660,7 @@
                                 `/admin/api/catalog/products/${this.data.productId}/markup`,
                                 { markup_type: this.markupType, markup_value: value });
                             this.data.productMarkup = { type: json.markup_type, value: json.markup_value };
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {
@@ -1662,6 +1678,7 @@
                             this.data.productMarkup = null;
                             this.markupType = 'percentage';
                             this.markupValue = '';
+                            window.location.reload();
                         } catch (e) {
                             alert(e.message);
                         } finally {

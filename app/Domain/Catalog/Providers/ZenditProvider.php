@@ -106,11 +106,18 @@ class ZenditProvider implements ProviderInterface
      *
      * Reference: GET /v1/brands/{brand}/redemptionInstructions
      */
-    public function fetchRedemptionInstructions(string $brandKey, ?string $countryCode = null): array
+    public function fetchRedemptionInstructions(string $brandKey, ?string $countryCode = null, ?string $deliveryType = null, string $language = 'en'): array
     {
-        $query = [];
+        // Zendit's redemption endpoint returns [] unless it gets the exact combo
+        // the brand's redemptionInstructions index advertises: a LOWERCASE
+        // country plus the matching deliveryType + language. (An uppercase
+        // country with no deliveryType/language - the old call - always 200s [].)
+        $query = ['language' => $language];
         if ($countryCode) {
-            $query['country'] = strtoupper($countryCode);
+            $query['country'] = strtolower($countryCode);
+        }
+        if ($deliveryType) {
+            $query['deliveryType'] = $deliveryType;
         }
 
         $response = Http::withToken($this->apiKey)

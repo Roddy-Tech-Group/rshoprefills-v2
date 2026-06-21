@@ -40,6 +40,12 @@
     .dark .app-loader {
         background: #0c1a36;
     }
+    /* Extra Dark (pure black): match the true-black page so the loader follows
+       the theme. .pure-dark is applied to <html> before first paint by the
+       theme engine, so this resolves with no flash. */
+    .dark.pure-dark .app-loader {
+        background: #000000;
+    }
     /* Hidden state: fade out, then drop out of the layout so it can't trap
        clicks once the page is usable. */
     .app-loader.app-loader--hidden {
@@ -165,10 +171,11 @@
         }
         window.setTimeout(hide, 8000); // safety: never stay stuck
 
-        // SPA navigation: show on every page change, hide once the new page lands.
-        document.addEventListener('livewire:navigate', function () {
-            show();
-        });
+        // Intentionally NOT shown on SPA navigation (wire:navigate). The branded
+        // R loader only appears on a full/hard page load and on pull-to-refresh
+        // (which itself triggers a full reload). Normal in-app page changes are
+        // instant and shouldn't flash the loader. We still hide it after an SPA
+        // nav as a safety net in case it was mid-fade when navigation started.
         document.addEventListener('livewire:navigated', function () {
             hide();
         });

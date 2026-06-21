@@ -2,6 +2,8 @@
 
 namespace App\Domain\Admin\Enums;
 
+use App\Models\Admin;
+
 /**
  * Admin role definitions.
  *
@@ -33,5 +35,26 @@ enum AdminRole: string
     public function isSuperAdmin(): bool
     {
         return $this === self::SuperAdmin;
+    }
+
+    /**
+     * Default section permissions pre-filled when this role is chosen on the
+     * admin form. A Super Admin can then tick/untick individual sections per
+     * admin; the saved set is authoritative (see {@see Admin::canAccessSection}).
+     * Super Admin is intentionally not listed - it always has unrestricted
+     * access and cannot be scoped down.
+     *
+     * @return array<int, string>
+     */
+    public function defaultPermissions(): array
+    {
+        $all = array_keys(Admin::SECTIONS);
+
+        return match ($this) {
+            self::SuperAdmin => $all,
+            // Everything except managing admins + integration keys.
+            self::Admin => array_values(array_diff($all, ['admins', 'api-settings'])),
+            self::Moderator => ['content', 'support-tickets', 'newsletter'],
+        };
     }
 }

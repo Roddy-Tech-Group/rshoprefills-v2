@@ -49,14 +49,7 @@
 <x-layouts.dashboard>
     <div class="flex w-full flex-col gap-8">
 
-        @if (session('status'))
-            <div class="flex items-center gap-2 rounded-[10px] bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-200">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                </svg>
-                {{ session('status') }}
-            </div>
-        @endif
+        {{-- Status flash now pops as the global flash-toast pill (dashboard layout). --}}
 
         {{-- ─── Header (desktop only — mobile uses the layout's slim top bar) ─── --}}
         <section class="hidden lg:block">
@@ -66,7 +59,7 @@
 
         {{-- ─── Current status ─── --}}
         <section>
-            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6">
+            <div class="rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none sm:p-6">
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
                         <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-blue-50">
@@ -88,7 +81,7 @@
                     @elseif ($emailVerified)
                         <span class="inline-flex items-center rounded-[5px] bg-emerald-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">Email Verified</span>
                     @else
-                        <span class="inline-flex items-center rounded-[5px] bg-zinc-400 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">Basic</span>
+                        <span class="inline-flex items-center rounded-[5px] bg-zinc-500 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white dark:bg-zinc-700 dark:text-zinc-200">Basic</span>
                     @endif
                 </div>
 
@@ -112,7 +105,7 @@
 
         {{-- Email verification --}}
         <section>
-            <div class="flex items-center justify-between gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+            <div class="flex items-center justify-between gap-4 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                 <div class="flex items-center gap-4">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] {{ $emailVerified ? 'bg-emerald-50' : 'bg-amber-50' }}">
                         <svg class="h-5 w-5 {{ $emailVerified ? 'text-emerald-600' : 'text-amber-600' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -138,7 +131,7 @@
         {{-- ID verification (KYC) --}}
         <section>
             @if ($kycStatus === 'verified')
-                <div class="flex items-center gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                <div class="flex items-center gap-4 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50">
                         <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
@@ -151,7 +144,7 @@
                 </div>
 
             @elseif ($kycStatus === 'pending')
-                <div class="mt-3 flex items-center gap-4 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100">
+                <div class="mt-3 flex items-center gap-4 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-amber-50">
                         <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -178,7 +171,7 @@
                     method="POST"
                     action="{{ route('kyc.submit') }}"
                     enctype="multipart/form-data"
-                    class="mt-3 rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/[0.04] ring-1 ring-zinc-100 sm:p-6"
+                    class="mt-3 rounded-[10px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none sm:p-6"
                 >
                     @csrf
 
@@ -235,7 +228,7 @@
                                     x-transition:enter="transition ease-out duration-150"
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
-                                    class="absolute left-0 z-30 mt-1 w-[300px] rounded-[10px] bg-white p-3 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    class="absolute left-0 z-30 mt-1 w-[300px] rounded-[10px] bg-[#eff6ff] p-3 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
                                 >
                                     {{-- Month / year stepper --}}
                                     <div class="flex items-center justify-between">
@@ -313,7 +306,7 @@
                                     x-transition:enter="transition ease-out duration-150"
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
-                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-white shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-[#eff6ff] shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
                                 >
                                     <div class="border-b border-zinc-100 p-2">
                                         <input
@@ -374,7 +367,7 @@
                                     x-transition:enter="transition ease-out duration-150"
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
-                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-white p-1 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
+                                    class="absolute left-0 z-30 mt-1 w-full overflow-hidden rounded-[10px] bg-[#eff6ff] p-1 shadow-lg shadow-zinc-900/10 ring-1 ring-zinc-200"
                                 >
                                     <template x-for="opt in options" :key="opt.value">
                                         <button

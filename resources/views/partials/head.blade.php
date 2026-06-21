@@ -2,6 +2,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 
+{{-- Analytics / marketing tags (GA, GTM, Meta pixel) - driven by the admin
+     SEO settings, loaded on customer pages only. --}}
+<x-tracking-tags />
+
+
 @php
     /*
      * Resolve the user's effective theme (dark | light) on the server so
@@ -94,15 +99,44 @@
 @php
     $siteName = 'RshopRefills';
 
-    $defaultDescription = 'Buy gift cards, eSIMs, mobile top-ups and bill payments worldwide - instantly. RshopRefills removes the friction of regional restrictions, slow delivery and limited payment options, with instant digital delivery, great prices, crypto and mobile-money checkout, and 24/7 support.';
-    $defaultKeywords = 'RshopRefills, gift cards, buy gift cards online, eSIM, travel eSIM, mobile top up, airtime recharge, bill payments, crypto gift cards, Amazon gift card, Apple gift card, Google Play, Steam, Netflix, PlayStation, Xbox, Cameroon, Africa fintech, Divine Ofeh, Johnpaul';
+    // Admin-controlled SEO defaults (System Settings -> SEO). Each falls back to
+    // the built-in default when the admin field is blank, so the panel is the
+    // live source of truth without ever rendering an empty tag. Per-page props
+    // ($title / $description / ...) still win over both.
+    $defaultDescription = \App\Models\SiteSetting::get('seo.default_description')
+        ?: 'Buy gift cards, eSIMs, mobile top-ups and bill payments worldwide - instantly. RshopRefills removes the friction of regional restrictions, slow delivery and limited payment options, with instant digital delivery, great prices, crypto and mobile-money checkout, and 24/7 support.';
+    $defaultKeywords = \App\Models\SiteSetting::get('seo.default_keywords')
+        ?: 'RshopRefills, gift cards, buy gift cards online, eSIM, travel eSIM, mobile top up, airtime recharge, bill payments, crypto gift cards, Amazon gift card, Apple gift card, Google Play, Steam, Netflix, PlayStation, Xbox, Cameroon, Africa fintech, Divine Ofeh, Johnpaul';
+    $defaultTitle = \App\Models\SiteSetting::get('seo.default_title')
+        ?: $siteName.' - Gift Cards, eSIMs, Top-ups & Bill Payments';
 
-    $seoTitle       = ! empty($title) ? $title : $siteName.' - Gift Cards, eSIMs, Top-ups & Bill Payments';
+    $seoTitle       = ! empty($title) ? $title : $defaultTitle;
     $seoDescription = ! empty($description) ? $description : $defaultDescription;
     $seoKeywords    = ! empty($keywords) ? $keywords : $defaultKeywords;
     $seoType        = ! empty($ogType) ? $ogType : 'website';
+    // OG image stays on the known-good asset; the seeded seo.og_image_url points
+    // at a .jpg that does not exist, so reading it would break link previews.
+    // A per-page $ogImage still wins (product pages set their brand art).
     $seoImage       = ! empty($ogImage) ? $ogImage : asset('assets/og-image.png');
-    $seoUrl         = url()->current();
+
+    // Default robots directive, admin-overridable (set "noindex, nofollow" to
+    // delist the whole site in one switch). A per-page $robots prop wins.
+    $defaultRobots = \App\Models\SiteSetting::get('seo.robots_default')
+        ?: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+    $googleSiteVerification = \App\Models\SiteSetting::get('seo.google_verification');
+
+    // Canonical URL, anchored to the configured production host rather than the
+    // request host. www vs non-www, and any http-behind-proxy scheme, all
+    // collapse to ONE absolute https URL per page - the single signal Google
+    // needs so it never splits ranking across duplicate hosts. Query strings
+    // are dropped on purpose: locale filters (?country=&currency=) are the same
+    // page for ranking. A per-page $canonical prop wins when a page needs to
+    // point elsewhere (e.g. a filtered view canonicalising to its base page).
+    $canonicalRoot = rtrim(config('app.url') ?: url('/'), '/');
+    $canonicalPath = trim(request()->getPathInfo(), '/');
+    $seoUrl = ! empty($canonical)
+        ? $canonical
+        : $canonicalRoot.($canonicalPath === '' ? '' : '/'.$canonicalPath);
 
     // Organization schema: the brand, the founders, and the mission - written so
     // search engines and AI crawlers can pick up who built RshopRefills and why.
@@ -141,8 +175,15 @@
 <meta name="description" content="{{ $seoDescription }}">
 <meta name="keywords" content="{{ $seoKeywords }}">
 <meta name="author" content="Divine Ofeh (CEO) and Johnpaul (CTO) - RshopRefills">
-<meta name="robots" content="index, follow">
+{{-- index,follow is the default; the max-* directives explicitly let Google
+     show large image previews and full text snippets, which lifts click-through
+     on results. Admin can override the default (System Settings -> SEO); a
+     per-page $robots prop wins over both. --}}
+<meta name="robots" content="{{ $robots ?? $defaultRobots }}">
 <link rel="canonical" href="{{ $seoUrl }}">
+@if ($googleSiteVerification)
+    <meta name="google-site-verification" content="{{ $googleSiteVerification }}">
+@endif
 
 {{-- Open Graph: link previews on Facebook, WhatsApp, LinkedIn, iMessage, etc. --}}
 <meta property="og:site_name" content="{{ $siteName }}">
@@ -209,8 +250,13 @@
     }
 </script>
 
-<link rel="preconnect" href="https://fonts.bunny.net">
-<link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+{{-- Satoshi is the only web font we load (the primary --font-sans). It is
+     @imported inside app.css, so its connection only opens after the CSS
+     parses. Pre-opening api.fontshare.com here lets the font fetch start in
+     parallel with the CSS, cutting first-text delay. We deliberately do NOT
+     load Instrument Sans any more: it was only ever a fallback behind Satoshi,
+     so system-ui covers the brief pre-Satoshi window without a second origin. --}}
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
 
 {{-- Flag CDN used by the locale modal, top-bar country chip, and admin
      country pickers. Pre-resolving the DNS shaves ~50-100ms off the first
@@ -218,10 +264,29 @@
 <link rel="dns-prefetch" href="https://flagcdn.com">
 <link rel="preconnect" href="https://flagcdn.com" crossorigin>
 
+{{-- Async third-party origins (chat, analytics, captcha). These load async/defer
+     and sit OFF the critical render path, so dns-prefetch (resolve DNS early) is
+     the right hint - not preconnect, which would spend a full TCP+TLS connection
+     the fonts/flags need first. Each is gated on its own config so we never hint
+     an origin this install doesn't actually use. --}}
+@if (config('services.chatway.widget_id'))
+    <link rel="dns-prefetch" href="https://cdn.chatway.app">
+@endif
+@if (config('services.turnstile.enabled'))
+    <link rel="dns-prefetch" href="https://challenges.cloudflare.com">
+@endif
+@if (! request()->is('admin*') && (\App\Models\SiteSetting::get('seo.google_analytics_id') ?: config('services.google.analytics_id') ?: \App\Models\SiteSetting::get('seo.google_tag_manager_id')))
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+@endif
+
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
 
 @include('partials.scroll-lock')
+
+{{-- Global keyboard shortcuts (Ctrl+J chat, Ctrl+F ticket, Ctrl+M theme,
+     Ctrl+P profile). Site-wide, customer side only. --}}
+@include('partials.shortcuts')
 
 {{-- Page transition - the incoming page slides up from the bottom on every
      navigation (full page load + wire:navigate SPA swap). Driven entirely

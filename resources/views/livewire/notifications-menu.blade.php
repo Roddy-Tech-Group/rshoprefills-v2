@@ -73,9 +73,9 @@ new class extends Component {
         :aria-expanded="open.toString()"
         aria-label="Notifications"
         @class([
-            'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] transition-colors active:scale-95',
-            'text-white hover:bg-white/10' => $tone === 'light',
-            'text-zinc-700 hover:bg-zinc-100' => $tone === 'dark',
+            'relative flex h-10 w-10 shrink-0 items-center justify-center transition-colors active:scale-95',
+            'rounded-full bg-blue-100 ring-2 ring-blue-200 text-blue-700 hover:bg-blue-200 dark:bg-white/15 dark:ring-white/30 dark:text-white dark:hover:bg-white/25' => $tone === 'light',
+            'rounded-full text-zinc-700 hover:bg-zinc-100' => $tone === 'dark',
         ])
     >
         <img
@@ -83,12 +83,12 @@ new class extends Component {
             alt=""
             @class([
                 'h-5 w-5 shrink-0',
-                'brightness-0 invert' => $tone === 'light',
+                'brightness-0 dark:invert' => $tone === 'light',
                 'brightness-0' => $tone === 'dark',
             ])
         >
         @if ($this->unreadCount > 0)
-            <span class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-[10px] bg-red-500 px-1 text-[10px] font-bold text-white ring-2 {{ $tone === 'light' ? 'ring-blue-600' : 'ring-white' }}">
+            <span class="absolute -top-0.5 -right-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-[10px] bg-red-500 px-1 text-[10px] font-bold text-white ring-2 {{ $tone === 'light' ? 'ring-[#eff6ff] dark:ring-[#0c1a36]' : 'ring-white' }}">
                 {{ $this->unreadCount > 99 ? '99+' : $this->unreadCount }}
             </span>
         @endif
@@ -103,7 +103,7 @@ new class extends Component {
         x-transition:enter-end="opacity-100 translate-y-0"
         x-transition:leave="transition ease-in duration-100"
         x-transition:leave-end="opacity-0 -translate-y-1"
-        class="absolute right-0 top-full z-50 mt-2 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[10px] bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200"
+        class="absolute right-0 top-full z-50 mt-2 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[10px] bg-[#eff6ff] shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 dark:ring-[#24364f]"
         role="menu"
     >
         {{-- Header --}}
@@ -114,11 +114,6 @@ new class extends Component {
                     <span class="inline-flex items-center rounded-[5px] bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{{ $this->unreadCount }} new</span>
                 @endif
             </div>
-            @if ($this->unreadCount > 0)
-                <button type="button" wire:click="markAllRead" class="text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700">
-                    Mark all read
-                </button>
-            @endif
         </div>
 
         {{-- List --}}
@@ -158,5 +153,14 @@ new class extends Component {
                 </div>
             @endforelse
         </div>
+
+        {{-- Mark all read - blue pill at the bottom of the dropdown. --}}
+        @if ($this->unreadCount > 0)
+            <div class="border-t border-zinc-100 p-2 dark:border-zinc-700/60">
+                <button type="button" wire:click="markAllRead" class="w-full rounded-full bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700">
+                    Mark all read
+                </button>
+            </div>
+        @endif
     </div>
 </div>

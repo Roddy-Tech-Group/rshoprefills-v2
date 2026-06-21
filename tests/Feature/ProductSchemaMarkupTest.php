@@ -2,10 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Fulfillment\Enums\FulfillmentStatus;
+use App\Domain\Order\Enums\OrderStatus;
+use App\Domain\Payment\Enums\PaymentStatus;
 use App\Models\Category;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Review;
+use App\Models\Subcategory;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class ProductSchemaMarkupTest extends TestCase
@@ -61,6 +70,101 @@ class ProductSchemaMarkupTest extends TestCase
         $response->assertSee('"highPrice":"50"', false);
         $response->assertSee('"priceCurrency":"USD"', false);
         $response->assertSee('https://schema.org/InStock', false);
+    }
+
+    public function test_gift_card_page_emits_aggregate_rating_and_reviews_from_published_reviews(): void
+    {
+        $this->withoutVite();
+        $this->giftCardBrand();
+
+        Review::create([
+            'initials' => 'JD',
+            'author_name' => 'Jane Doe',
+            'body' => 'Fast delivery and great prices, very happy.',
+            'rating' => 5,
+            'source' => 'RshopRefills',
+            'reviewed_at' => now(),
+            'is_published' => true,
+        ]);
+
+        // The schema review aggregate is cached; clear it so the new review counts.
+        Cache::flush();
+
+        $response = $this->get(route('shop.brand', ['brandSlug' => 'acme']))->assertOk();
+
+        $response->assertSee('"@type":"AggregateRating"', false);
+        $response->assertSee('"ratingValue":"5"', false);
+        $response->assertSee('"reviewCount":"1"', false);
+        $response->assertSee('"@type":"Review"', false);
+        $response->assertSee('Jane Doe', false);
+    }
+
+    public function test_gift_card_page_prefers_this_brands_own_reviews_over_the_site_aggregate(): void
+    {
+        $this->withoutVite();
+        $product = $this->giftCardBrand();
+        $user = User::factory()->create();
+
+        // A site-wide review (no order) that would otherwise feed the aggregate.
+        Review::create([
+            'initials' => 'GG', 'author_name' => 'Global Gary', 'body' => 'Generally a great store to use.',
+            'rating' => 5, 'source' => 'RshopRefills', 'reviewed_at' => now(), 'is_published' => true,
+        ]);
+
+        // A review tied to an Acme order - this is the brand's own review.
+        $order = Order::create([
+            'user_id' => $user->id, 'order_number' => 'ORD-ACME-1',
+            'settlement_currency' => 'USD', 'display_currency' => 'USD',
+            'subtotal_amount' => 10, 'markup_amount' => 0, 'total_amount' => 10,
+            'payment_method' => 'wallet', 'payment_status' => PaymentStatus::Paid,
+            'fulfillment_status' => FulfillmentStatus::Fulfilled, 'order_status' => OrderStatus::Completed,
+        ]);
+        $subcategory = Subcategory::factory()->create(['category_id' => $product->category_id]);
+        $variant = ProductVariant::factory()->for($product)->create();
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_variant_id' => $variant->id,
+            'category_id' => $product->category_id,
+            'subcategory_id' => $subcategory->id,
+            'provider_name' => 'test_provider',
+            'quantity' => 1,
+            'display_currency' => 'USD',
+            'display_amount' => 10,
+            'provider_cost_usd' => 8,
+            'markup_amount' => 2,
+            'subtotal_amount' => 10,
+            'fulfillment_status' => FulfillmentStatus::Fulfilled,
+        ]);
+
+        Review::create([
+            'user_id' => $user->id, 'order_id' => $order->id,
+            'initials' => 'AB', 'author_name' => 'Acme Buyer', 'body' => 'This Acme card delivered instantly.',
+            'rating' => 4, 'source' => 'RshopRefills', 'reviewed_at' => now(),
+            'is_published' => true, 'is_customer_submitted' => true,
+        ]);
+
+        Cache::flush();
+
+        $response = $this->get(route('shop.brand', ['brandSlug' => 'acme']))->assertOk();
+
+        // Brand-specific rating (4 from the Acme review), not the blended 4.5.
+        $response->assertSee('"ratingValue":"4"', false);
+        $response->assertSee('"reviewCount":"1"', false);
+        $response->assertSee('Acme Buyer', false);
+        $response->assertDontSee('Global Gary', false);
+    }
+
+    public function test_gift_card_page_omits_review_schema_when_no_published_reviews(): void
+    {
+        $this->withoutVite();
+        $this->giftCardBrand();
+
+        Cache::flush();
+
+        $response = $this->get(route('shop.brand', ['brandSlug' => 'acme']))->assertOk();
+
+        $response->assertDontSee('"@type":"AggregateRating"', false);
     }
 
     public function test_gift_card_page_emits_breadcrumb_schema(): void

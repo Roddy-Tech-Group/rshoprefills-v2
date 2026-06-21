@@ -165,7 +165,7 @@ class extends Component {
             </header>
             <div class="divide-inset">
                 @foreach ($rows as $row)
-                    <div class="group relative mx-3 flex flex-col gap-3 px-5 py-4 transition-all hover:bg-blue-50 hover:rounded-[10px] hover:ring-1 hover:ring-inset hover:ring-blue-500 hover:after:hidden sm:flex-row sm:items-center sm:justify-between dark:hover:bg-blue-600/15 dark:hover:ring-blue-400" wire:key="setting-{{ $row['key'] }}">
+                    <div class="group relative mx-3 flex flex-col gap-3 px-5 py-4 transition-all hover:bg-blue-50 hover:rounded-[10px] sm:flex-row sm:items-center sm:justify-between dark:hover:bg-blue-600/15 dark:hover:ring-blue-400" wire:key="setting-{{ $row['key'] }}">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2">
                                 <label for="set-{{ $row['key'] }}" class="text-sm font-semibold text-zinc-900 dark:text-white">{{ $row['label'] }}</label>

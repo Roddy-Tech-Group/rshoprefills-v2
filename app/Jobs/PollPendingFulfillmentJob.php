@@ -7,6 +7,7 @@ use App\Domain\Fulfillment\Services\FulfillmentProviderFactory;
 use App\Domain\Order\Enums\OrderStatus;
 use App\Domain\Order\Events\FulfillmentFailed;
 use App\Domain\Order\Events\FulfillmentSucceeded;
+use App\Domain\Order\Services\GatewayRefundService;
 use App\Domain\Order\Services\OrderService;
 use App\Domain\Payment\Enums\PaymentStatus;
 use App\Domain\Payment\Providers\WalletPaymentProvider;
@@ -64,6 +65,8 @@ class PollPendingFulfillmentJob implements ShouldQueue
                     $item->fulfillment_status = FulfillmentStatus::Fulfilled;
                     $item->fulfillment_payload = $provider->normalizeResponse($result['payload'] ?? []);
                     $item->delivered_at = now();
+                    // A recovered retry must not keep advertising its old failure
+                    $item->failed_at = null;
                     $item->save();
 
                     FulfillmentSucceeded::dispatch($item);
@@ -157,7 +160,13 @@ class PollPendingFulfillmentJob implements ShouldQueue
                     $walletProvider->refundPayment($walletPayment, $refundAmount);
                 }
             }
+
+            return;
         }
+
+        // Non-wallet (card / mobile money / crypto) paid order: refund the
+        // failed item to the customer's wallet per the wallet-first policy.
+        app(GatewayRefundService::class)->refundFailedItemToWallet($item);
     }
 
     private function checkOrderCompletion(string $orderId, OrderService $orderService): void

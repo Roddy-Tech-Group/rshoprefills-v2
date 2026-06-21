@@ -21,7 +21,7 @@ class HelpPageTest extends TestCase
             ->assertOk()
             ->assertSee('How can we help?')
             ->assertSee('Frequently asked questions')
-            ->assertSee('info@rshoprefill.com');
+            ->assertSee('support@rshoprefill.com');
     }
 
     public function test_account_dropdown_links_are_wired_for_authenticated_users(): void
