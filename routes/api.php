@@ -108,10 +108,6 @@ Route::middleware('auth')->group(function () {
         Route::put('/', [NotificationApiController::class, 'updatePreferences'])->name('update');
     });
 
-    Route::prefix('push')->name('api.push.')->group(function () {
-        Route::post('subscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'subscribe'])->name('subscribe');
-        Route::post('unsubscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'unsubscribe'])->name('unsubscribe');
-    });
 
     // Public interaction tracking (e.g. from service worker click)
     Route::post('push/track', [\App\Http\Controllers\Api\InteractionTrackingController::class, 'record'])->name('api.push.track');

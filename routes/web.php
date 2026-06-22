@@ -716,6 +716,12 @@ Route::middleware(['auth'])->group(function () {
     // shared admin notification feed.
     Route::post('dashboard/suspension/request-review', [SuspensionController::class, 'requestReview'])
         ->name('suspension.request-review');
+
+    // Web Push subscriptions for web users
+    Route::prefix('push')->name('push.')->group(function () {
+        Route::post('subscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'subscribe'])->name('subscribe');
+        Route::post('unsubscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'unsubscribe'])->name('unsubscribe');
+    });
 });
 
 // Dashboard shop chrome - mirrors the public storefront URLs under /dashboard/shop/*

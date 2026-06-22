@@ -24,8 +24,8 @@
         enable() {
             this.show = false;
             // The push-manager.js handles the actual VAPID key fetching and subscription
-            if (window.PushManagerApp) {
-                window.PushManagerApp.subscribe();
+            if (window.RshopPush) {
+                window.RshopPush.subscribe();
             }
         },
         dismiss() {
