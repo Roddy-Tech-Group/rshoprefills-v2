@@ -65,6 +65,7 @@ class NotificationSystemTest extends TestCase
             'order_notifications' => true,
             'wallet_notifications' => true,
             'security_notifications' => true,
+            'push_enabled' => false,
         ]);
 
         $dispatcher = app(NotificationDispatcher::class);
@@ -106,7 +107,8 @@ class NotificationSystemTest extends TestCase
 
         $job->handle(
             app(EmailChannel::class),
-            app(DatabaseChannel::class)
+            app(DatabaseChannel::class),
+            app(\App\Domain\Notification\Channels\WebPushChannel::class)
         );
 
         // Verify notification saved in database
@@ -149,7 +151,8 @@ class NotificationSystemTest extends TestCase
         );
         $job1->handle(
             app(EmailChannel::class),
-            app(DatabaseChannel::class)
+            app(DatabaseChannel::class),
+            app(\App\Domain\Notification\Channels\WebPushChannel::class)
         );
 
         $initialDeliveryCount = NotificationDelivery::count();
@@ -165,7 +168,8 @@ class NotificationSystemTest extends TestCase
         );
         $job2->handle(
             app(EmailChannel::class),
-            app(DatabaseChannel::class)
+            app(DatabaseChannel::class),
+            app(\App\Domain\Notification\Channels\WebPushChannel::class)
         );
 
         // Verify no extra deliveries recorded

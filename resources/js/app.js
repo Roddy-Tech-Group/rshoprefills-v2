@@ -5,6 +5,10 @@ import 'flatpickr/dist/flatpickr.css';
 
 window.flatpickr = flatpickr;
 
+// Web Push notification manager — registers window.RshopPush for
+// subscribe/unsubscribe from the Settings page and admin bell.
+import './push-manager';
+
 /**
  * Build a custom dropdown (trigger button + styled options panel) to replace one
  * of Flatpickr's native month/year selectors so they match the admin's other

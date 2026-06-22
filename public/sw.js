@@ -85,3 +85,52 @@ self.addEventListener('fetch', (event) => {
         );
     }
 });
+
+self.addEventListener('push', function(event) {
+    if (event.data) {
+        const payload = event.data.json();
+        event.waitUntil(
+            self.registration.showNotification(payload.title, {
+                body: payload.body,
+                icon: payload.icon || '/icon-192x192.png',
+                badge: payload.badge || '/badge-72x72.png',
+                data: payload
+            })
+        );
+    }
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    const url = event.notification.data?.url || '/';
+    
+    // Fire and forget click tracking
+    fetch('/api/push/track', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            notification_id: event.notification.data?.id,
+            campaign_id: event.notification.data?.campaign_id,
+            type: 'clicked',
+            channel: 'push',
+            metadata: event.notification.data
+        })
+    }).catch(() => {});
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then(function(windowClients) {
+            for (var i = 0; i < windowClients.length; i++) {
+                var client = windowClients[i];
+                if (client.url === url && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(url);
+            }
+        })
+    );
+});

@@ -226,6 +226,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Volt::route('admins', 'admin.admins')->name('admins');
         Volt::route('pricing-rules', 'admin.pricing-rules')->name('pricing-rules');
         Volt::route('newsletter', 'admin.newsletter')->name('newsletter');
+        Volt::route('campaigns', 'admin.campaigns')->name('campaigns');
+        Volt::route('campaigns/create', 'admin.campaign-editor')->name('campaign-editor');
+        Volt::route('campaigns/{id}/edit', 'admin.campaign-editor')->name('campaign-editor.edit');
         Volt::route('settings', 'admin.system-settings')->name('settings');
         Volt::route('api-settings', 'admin.api-settings')->name('api-settings');
         Volt::route('account-activity', 'admin.account-activity')->name('account-activity');

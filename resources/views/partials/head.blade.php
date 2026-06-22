@@ -1,6 +1,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
+<meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
 
 {{-- Analytics / marketing tags (GA, GTM, Meta pixel) - driven by the admin
      SEO settings, loaded on customer pages only. --}}

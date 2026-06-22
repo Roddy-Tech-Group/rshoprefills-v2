@@ -108,6 +108,14 @@ Route::middleware('auth')->group(function () {
         Route::put('/', [NotificationApiController::class, 'updatePreferences'])->name('update');
     });
 
+    Route::prefix('push')->name('api.push.')->group(function () {
+        Route::post('subscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'subscribe'])->name('subscribe');
+        Route::post('unsubscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'unsubscribe'])->name('unsubscribe');
+    });
+
+    // Public interaction tracking (e.g. from service worker click)
+    Route::post('push/track', [\App\Http\Controllers\Api\InteractionTrackingController::class, 'record'])->name('api.push.track');
+
     Route::prefix('payment-sessions')->name('api.payment-sessions.')->group(function () {
         // status is polled by the checkout UI while awaiting confirmation, so it
         // gets a generous ceiling; the state-changing actions (cancel/verify/pay)

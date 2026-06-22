@@ -47,6 +47,10 @@ class NotificationPreferenceService
             return false;
         }
 
+        if ($channel === 'push' && ! $prefs->push_enabled) {
+            return false;
+        }
+
         return match ($category) {
             'marketing' => (bool) $prefs->marketing_enabled,
             'order' => (bool) $prefs->order_notifications,

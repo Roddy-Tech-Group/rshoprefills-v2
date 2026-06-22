@@ -21,6 +21,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
 
     // Notification preferences (NotificationPreference model). Saved instantly on toggle.
     public bool $notifyEmail = true;
+    public bool $notifyPush = true;
     public bool $notifyMarketing = true;
     public bool $notifyOrders = true;
     public bool $notifyWallet = true;
@@ -39,11 +40,12 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         $this->gender  = $user->gender;
 
         $prefs = app(\App\Domain\Notification\Services\NotificationPreferenceService::class)->getPreferences($user);
-        $this->notifyEmail     = $prefs->email_enabled;
-        $this->notifyMarketing = $prefs->marketing_enabled;
-        $this->notifyOrders    = $prefs->order_notifications;
-        $this->notifyWallet    = $prefs->wallet_notifications;
-        $this->notifySecurity  = $prefs->security_notifications;
+        $this->notifyEmail     = (bool) $prefs->email_enabled;
+        $this->notifyPush      = (bool) $prefs->push_enabled;
+        $this->notifyMarketing = (bool) $prefs->marketing_enabled;
+        $this->notifyOrders    = (bool) $prefs->order_notifications;
+        $this->notifyWallet    = (bool) $prefs->wallet_notifications;
+        $this->notifySecurity  = (bool) $prefs->security_notifications;
     }
 
     /**
@@ -156,6 +158,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     {
         $map = [
             'email'     => 'notifyEmail',
+            'push'      => 'notifyPush',
             'marketing' => 'notifyMarketing',
             'orders'    => 'notifyOrders',
             'wallet'    => 'notifyWallet',
@@ -172,6 +175,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         app(\App\Domain\Notification\Services\NotificationPreferenceService::class)
             ->updatePreferences(Auth::user(), [
                 'email_enabled'          => $this->notifyEmail,
+                'push_enabled'           => $this->notifyPush,
                 'marketing_enabled'      => $this->notifyMarketing,
                 'order_notifications'    => $this->notifyOrders,
                 'wallet_notifications'   => $this->notifyWallet,
@@ -707,13 +711,14 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
          (dashboard/appearance) - not duplicated here. --}}
 
     {{-- ─── Section 4: Notifications ─── --}}
-    <section>
+    <section x-data x-init="$watch('$wire.notifyPush', val => { if(val) window.RshopPush?.subscribe(); else window.RshopPush?.unsubscribe(); })">
         <h2 class="mb-2.5 text-base font-bold text-zinc-900">Notifications</h2>
 
         <div class="divide-inset overflow-hidden rounded-[10px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
             @php
                 // [key, current value, label, description, heroicon path]
                 $notifyRows = [
+                    ['push',      $notifyPush,      'Web Push',            'Real-time push notifications',       'M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0'],
                     ['orders',    $notifyOrders,    'Order updates',       'Delivery, fulfillment and refunds',  'M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z'],
                     ['wallet',    $notifyWallet,    'Wallet activity',     'Funding, credits and debits',        'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z'],
                     ['security',  $notifySecurity,  'Security alerts',     'Login attempts and account changes', 'M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z'],

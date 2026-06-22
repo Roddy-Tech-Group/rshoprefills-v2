@@ -6,8 +6,10 @@ use App\Domain\Shared\Enums\Currency;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -341,6 +343,19 @@ class User extends Authenticatable implements MustVerifyEmail
     public function kycSubmissions(): HasMany
     {
         return $this->hasMany(KycSubmission::class)->latest();
+    }
+
+    /**
+     * Get all orders placed by this user.
+     */
+    public function kycTier(): BelongsTo
+    {
+        return $this->belongsTo(KycTier::class);
+    }
+
+    public function pushSubscriptions(): MorphMany
+    {
+        return $this->morphMany(PushSubscription::class, 'subscribable');
     }
 
     /**

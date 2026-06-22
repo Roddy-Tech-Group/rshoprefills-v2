@@ -41,6 +41,10 @@ class AppServiceProvider extends ServiceProvider
             MailProviderInterface::class,
             ResendProvider::class
         );
+
+        $this->app->singleton(
+            \App\Domain\Notification\Providers\WebPushProvider::class
+        );
     }
 
     /**

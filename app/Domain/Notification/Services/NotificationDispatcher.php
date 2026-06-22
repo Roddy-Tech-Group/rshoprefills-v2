@@ -41,6 +41,11 @@ class NotificationDispatcher
             ]);
         }
 
+        // Push check based on user preferences
+        if ($this->preferenceService->isAllowed($user, $category, 'push')) {
+            $channels[] = NotificationChannel::Push;
+        }
+
         // Generate a safety fallback idempotency key if not supplied
         $key = $idempotencyKey ?? md5($user->id.'_'.$category.'_'.get_class($mailable ?? $this).'_'.substr($message, 0, 100));
 

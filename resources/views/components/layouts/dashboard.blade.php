@@ -1719,6 +1719,9 @@
             })();
         </script>
 
+        {{-- Global Web Push Notification Prompt --}}
+        <x-push-prompt />
+
         @fluxScripts
     </body>
 </html>

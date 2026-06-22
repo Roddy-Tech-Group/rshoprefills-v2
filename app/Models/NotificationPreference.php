@@ -29,6 +29,8 @@ class NotificationPreference extends Model
         'order_notifications',
         'wallet_notifications',
         'security_notifications',
+        'push_enabled',
+        'engagement_enabled',
     ];
 
     protected function casts(): array
@@ -40,6 +42,8 @@ class NotificationPreference extends Model
             'order_notifications' => 'boolean',
             'wallet_notifications' => 'boolean',
             'security_notifications' => 'boolean',
+            'push_enabled' => 'boolean',
+            'engagement_enabled' => 'boolean',
         ];
     }
 

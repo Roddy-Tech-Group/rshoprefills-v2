@@ -4,6 +4,7 @@ namespace App\Domain\Notification\Jobs;
 
 use App\Domain\Notification\Channels\DatabaseChannel;
 use App\Domain\Notification\Channels\EmailChannel;
+use App\Domain\Notification\Channels\WebPushChannel;
 use App\Domain\Notification\DTOs\NotificationPayload;
 use App\Domain\Notification\Enums\DeliveryStatus;
 use App\Domain\Notification\Enums\NotificationChannel;
@@ -58,7 +59,7 @@ class SendAsynchronousNotificationJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(EmailChannel $emailChannel, DatabaseChannel $databaseChannel): void
+    public function handle(EmailChannel $emailChannel, DatabaseChannel $databaseChannel, WebPushChannel $webPushChannel): void
     {
         // 1. Idempotency Check
         if ($this->idempotencyKey) {
@@ -93,6 +94,8 @@ class SendAsynchronousNotificationJob implements ShouldQueue
                     $databaseChannel->send($payload);
                 } elseif ($channel === NotificationChannel::Email) {
                     $emailChannel->send($payload);
+                } elseif ($channel === NotificationChannel::Push) {
+                    $webPushChannel->send($payload);
                 }
             } catch (\Throwable $e) {
                 Log::error("Failed to send notification via channel: {$channel->value}", [

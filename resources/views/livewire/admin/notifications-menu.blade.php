@@ -82,7 +82,20 @@ new class extends Component {
         role="menu"
     >
         <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
-            <p class="text-sm font-bold text-zinc-900">Notifications</p>
+            <div class="flex items-center gap-3">
+                <p class="text-sm font-bold text-zinc-900">Notifications</p>
+                <button
+                    x-data="{ pushEnabled: false }"
+                    x-init="navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => pushEnabled = !!sub);"
+                    @click="pushEnabled ? window.RshopPush?.unsubscribe().then(() => pushEnabled = false) : window.RshopPush?.subscribe().then(res => pushEnabled = res)"
+                    type="button"
+                    class="relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none"
+                    :class="pushEnabled ? 'bg-blue-600' : 'bg-zinc-200'"
+                    title="Toggle Web Push"
+                >
+                    <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="pushEnabled ? 'translate-x-3' : 'translate-x-0'"></span>
+                </button>
+            </div>
             @if ($this->unreadCount > 0)
                 <button type="button" wire:click="markAllRead" class="text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700">Mark all read</button>
             @endif
