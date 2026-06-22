@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('subscribable_type', 50);
             $table->unsignedBigInteger('subscribable_id');
-            $table->text('endpoint')->unique();
+            $table->string('endpoint', 500)->unique();
             $table->string('p256dh_key', 255);
             $table->string('auth_token', 255);
             $table->string('user_agent', 500)->nullable();
