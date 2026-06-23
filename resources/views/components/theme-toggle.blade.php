@@ -65,7 +65,7 @@
         }"
         x-on:theme-changed.window="choice = (window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'))"
         x-on:pure-dark-changed.window="extraDark = (window.pureDarkOn ? window.pureDarkOn() : false)"
-        {{ $attributes->class('inline-flex w-fit items-center gap-0.5 rounded-[10px] border border-blue-400 p-0.5 dark:border-blue-500/60') }}
+        {{ $attributes->class('inline-flex w-fit items-center gap-0.5 rounded-[12px] border border-blue-400 p-0.5 dark:border-blue-500/60') }}
         role="radiogroup"
         aria-label="Theme"
     >

@@ -66,7 +66,7 @@
                  can scope the file to whatever they were just looking at. --}}
             <a
                 href="{{ route('admin.transactions.export', request()->query()) }}"
-                class="inline-flex items-center gap-1.5 rounded-[10px] border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-zinc-300 dark:hover:bg-[#26416b]"
+                class="inline-flex items-center gap-1.5 rounded-[12px] border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700/60 dark:bg-[#1d3252] dark:text-zinc-300 dark:hover:bg-[#26416b]"
             >
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
@@ -85,7 +85,7 @@
             ['label' => 'Cancelled', 'value' => (int) $kpis->cancelled, 'dot' => 'bg-zinc-500'],
             ['label' => 'Failed',    'value' => (int) $kpis->failed,    'dot' => 'bg-red-500'],
         ] as $stat)
-            <div class="rounded-[10px] border-[1.5px] border-white bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+            <div class="rounded-[12px] border-[1.5px] border-white bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
                 <p class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
                     <span class="inline-block h-1.5 w-1.5 rounded-full {{ $stat['dot'] }}"></span>
                     {{ $stat['label'] }}
@@ -107,7 +107,7 @@
                 href="{{ $filterUrl($value) }}"
                 wire:navigate
                 @class([
-                    'rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors',
+                    'rounded-[12px] px-3 py-1.5 text-xs font-semibold transition-colors',
                     'bg-blue-600 text-white' => $statusFilter === $value,
                     'bg-white text-zinc-700 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-[#1d3252] dark:text-zinc-300 dark:ring-zinc-700/60 dark:hover:bg-[#26416b]' => $statusFilter !== $value,
                 ])
@@ -148,11 +148,11 @@
         .txn-body:hover { border-radius: 10px; }
     </style>
 
-    <div class="overflow-hidden rounded-[10px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
+    <div class="overflow-hidden rounded-[12px] border-[1.5px] border-white bg-white shadow-sm shadow-zinc-900/[0.04] dark:border-white dark:bg-[#1d3252]">
         <div class="overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
 
         {{-- Header pill --}}
-        <div class="txn-row grid mx-3 my-3 rounded-[10px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400">
+        <div class="txn-row grid mx-3 my-3 rounded-[12px] bg-blue-50 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-2 ring-blue-500 dark:bg-blue-600/15 dark:text-blue-300 dark:ring-blue-400">
             <span class="col-customer">Customer</span>
             <span>Gateway</span>
             <span>Amount</span>
@@ -186,7 +186,7 @@
                                 x-data="{ copied: false }"
                                 @click.stop="navigator.clipboard.writeText(@js('#'.$payment->order->order_number)); copied = true; setTimeout(() => copied = false, 1500)"
                                 :aria-label="copied ? 'Copied' : 'Copy order id'"
-                                class="group/copy inline-flex max-w-full items-center gap-1 rounded-[10px] px-1.5 py-0.5 font-mono text-[11px] text-zinc-500 transition-colors hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-500/15 dark:hover:text-blue-300"
+                                class="group/copy inline-flex max-w-full items-center gap-1 rounded-[12px] px-1.5 py-0.5 font-mono text-[11px] text-zinc-500 transition-colors hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-400 dark:hover:bg-blue-500/15 dark:hover:text-blue-300"
                             >
                                 <span class="truncate">#{{ $payment->order->order_number }}</span>
                                 <svg x-show="! copied" class="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover/copy:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -203,7 +203,7 @@
                         x-data="{ copied: false }"
                         @click.stop="navigator.clipboard.writeText(@js($reference)); copied = true; setTimeout(() => copied = false, 1500)"
                         :aria-label="copied ? 'Copied' : 'Copy transaction id'"
-                        class="mt-0.5 group/copy inline-flex max-w-full items-center gap-1 rounded-[10px] px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 transition-colors hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300"
+                        class="mt-0.5 group/copy inline-flex max-w-full items-center gap-1 rounded-[12px] px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 transition-colors hover:bg-blue-100 hover:text-blue-700 dark:text-zinc-500 dark:hover:bg-blue-500/15 dark:hover:text-blue-300"
                     >
                         <span class="truncate">{{ $reference }}</span>
                         {{-- Copy / check icon swap on copy. --}}

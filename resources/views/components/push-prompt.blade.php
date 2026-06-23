@@ -56,10 +56,10 @@
                     Get instant updates on your orders, exclusive rewards, and flash sales!
                 </p>
                 <div class="mt-4 flex gap-3">
-                    <button @click="enable" type="button" class="inline-flex items-center justify-center rounded-[10px] bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                    <button @click="enable" type="button" class="inline-flex items-center justify-center rounded-[12px] bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
                         Allow
                     </button>
-                    <button @click="dismiss" type="button" class="inline-flex items-center justify-center rounded-[10px] bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-500/40 dark:bg-[#0c1a36] dark:text-zinc-300 dark:hover:bg-[#070f1c]">
+                    <button @click="dismiss" type="button" class="inline-flex items-center justify-center rounded-[12px] bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-500/40 dark:bg-[#0c1a36] dark:text-zinc-300 dark:hover:bg-[#070f1c]">
                         Not Now
                     </button>
                 </div>

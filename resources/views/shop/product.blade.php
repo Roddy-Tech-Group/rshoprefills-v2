@@ -489,7 +489,7 @@
                 <div class="flex items-center gap-x-6 gap-y-3 overflow-x-auto text-sm font-medium text-zinc-700 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible dark:text-zinc-200">
                     @foreach ($badges as $badge)
                         <span class="flex shrink-0 items-center gap-2">
-                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-500/15 dark:ring-emerald-500/30">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[12px] bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 dark:bg-emerald-500/15 dark:ring-emerald-500/30">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="{{ $badge['d'] }}"/>
                                 </svg>
@@ -529,7 +529,7 @@
                                     type="button"
                                     @click="open = ! open; locked = open"
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-blue-300 dark:border-zinc-700 dark:hover:border-blue-400/40'"
-                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
+                                    class="flex h-[50px] w-full items-center gap-2 rounded-[12px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <span class="font-semibold text-zinc-600">{{ $variable ? $customSymbol : $displaySymbol }}</span>
                                     <span
@@ -547,7 +547,7 @@
                                         role="button"
                                         tabindex="0"
                                         aria-label="Clear selected amount"
-                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] bg-zinc-200 transition-colors hover:bg-zinc-300"
+                                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-[12px] bg-zinc-200 transition-colors hover:bg-zinc-300"
                                     >
                                         <img src="{{ asset('assets/' . rawurlencode('x button.webp')) }}" alt="" class="h-3.5 w-3.5 object-contain" loading="lazy">
                                     </span>
@@ -562,7 +562,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute left-0 right-0 top-full z-20 max-h-[27rem] overflow-y-auto rounded-[10px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute left-0 right-0 top-full z-20 max-h-[27rem] overflow-y-auto rounded-[12px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     @foreach ($fixedDenoms as $i => $v)
@@ -574,11 +574,11 @@
                                             type="button"
                                             @click="amount = {{ $disp }}; selectedVariantId = {{ $v->id }}; customMode = false; open = false"
                                             :class="(! customMode && Number(amount) === {{ $disp }}) ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
-                                            class="flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-left text-base font-medium tabular-nums transition-colors"
+                                            class="flex w-full items-center justify-between rounded-[12px] px-3 py-2.5 text-left text-base font-medium tabular-nums transition-colors"
                                         >
                                             <span class="font-bold">{{ $conv($val) }}</span>
                                             @if ($i === $fixedDenoms->count() - 1 && $fixedDenoms->count() > 1)
-                                                <span class="inline-flex items-center rounded-[10px] bg-white/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-300/50 shadow-[0_0_10px_rgba(37,99,235,0.45)] backdrop-blur-md dark:bg-blue-950 dark:ring-blue-400/50">Popular</span>
+                                                <span class="inline-flex items-center rounded-[12px] bg-white/60 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 ring-1 ring-blue-300/50 shadow-[0_0_10px_rgba(37,99,235,0.45)] backdrop-blur-md dark:bg-blue-950 dark:ring-blue-400/50">Popular</span>
                                             @endif
                                         </button>
                                     @endforeach
@@ -587,7 +587,7 @@
                                             type="button"
                                             @click="customMode = true; selectedVariantId = {{ $variable->id }}; amount = ''; open = false"
                                             :class="customMode ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
-                                            class="flex w-full items-center justify-between rounded-[10px] {{ $fixedDenoms->isNotEmpty() ? 'border-t border-zinc-100' : '' }} px-3 py-2.5 text-left text-base font-medium transition-colors"
+                                            class="flex w-full items-center justify-between rounded-[12px] {{ $fixedDenoms->isNotEmpty() ? 'border-t border-zinc-100' : '' }} px-3 py-2.5 text-left text-base font-medium transition-colors"
                                         >
                                             <span class="font-bold">Custom amount</span>
                                             <span class="text-xs text-zinc-500">{{ $customMoney($variable->min_amount) }} - {{ $customMoney($variable->max_amount) }}</span>
@@ -612,7 +612,7 @@
                                             max="{{ (float) $variable->max_amount }}"
                                             step="any"
                                             placeholder="{{ rtrim(rtrim(number_format((float) $variable->min_amount, 2), '0'), '.') }} - {{ rtrim(rtrim(number_format((float) $variable->max_amount, 2), '0'), '.') }}"
-                                            class="w-full rounded-[10px] border bg-[#eff6ff] py-2.5 pl-10 pr-3 text-base font-bold tabular-nums text-zinc-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500/15"
+                                            class="w-full rounded-[12px] border bg-[#eff6ff] py-2.5 pl-10 pr-3 text-base font-bold tabular-nums text-zinc-900 outline-none transition-colors focus:ring-2 focus:ring-blue-500/15"
                                             :class="(amount !== '' && (Number(amount) < customMin || Number(amount) > customMax)) ? 'border-red-400 focus:border-red-500' : 'border-zinc-200 focus:border-[color:var(--brand)]'"
                                         />
                                     </div>
@@ -647,7 +647,7 @@
                                     type="button"
                                     @click="open = ! open; locked = open"
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-blue-300 dark:border-zinc-700 dark:hover:border-blue-400/40'"
-                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
+                                    class="flex h-[50px] w-full items-center gap-2 rounded-[12px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <span x-data="valueFlip()" x-effect="quantity; flash()" class="flex-1 text-left tabular-nums" x-text="quantity">1</span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -661,7 +661,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute left-0 right-0 top-full z-20 max-h-60 overflow-y-auto rounded-[10px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute left-0 right-0 top-full z-20 max-h-60 overflow-y-auto rounded-[12px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     @for ($n = 1; $n <= 10; $n++)
@@ -669,7 +669,7 @@
                                             type="button"
                                             @click="quantity = {{ $n }}; open = false"
                                             :class="quantity === {{ $n }} ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
-                                            class="flex w-full items-center justify-center rounded-[10px] px-2 py-2 text-center text-base font-medium tabular-nums transition-colors"
+                                            class="flex w-full items-center justify-center rounded-[12px] px-2 py-2 text-center text-base font-medium tabular-nums transition-colors"
                                         >
                                             {{ $n }}
                                         </button>
@@ -693,16 +693,16 @@
                                     type="button"
                                     @click="open = ! open; locked = open"
                                     :class="open ? 'border-[color:var(--brand)] ring-2 ring-blue-500/15' : 'border-zinc-200 hover:border-blue-300 dark:border-zinc-700 dark:hover:border-blue-400/40'"
-                                    class="flex h-[50px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
+                                    class="flex h-[50px] w-full items-center gap-2 rounded-[12px] border bg-[#eff6ff] px-3 text-base font-bold text-zinc-900 transition-colors"
                                 >
                                     <template x-if="cryptos[selectedCrypto]?.icon">
-                                        <img :src="cryptos[selectedCrypto].icon" :alt="selectedCrypto" class="h-5 w-5 shrink-0 rounded-[10px]">
+                                        <img :src="cryptos[selectedCrypto].icon" :alt="selectedCrypto" class="h-5 w-5 shrink-0 rounded-[12px]">
                                     </template>
                                     <template x-if="!cryptos[selectedCrypto]?.icon && cryptos[selectedCrypto]?.flag">
-                                        <img :src="cryptos[selectedCrypto].flag" :alt="selectedCrypto" class="h-5 w-5 shrink-0 rounded-[10px] object-cover ring-1 ring-zinc-200">
+                                        <img :src="cryptos[selectedCrypto].flag" :alt="selectedCrypto" class="h-5 w-5 shrink-0 rounded-[12px] object-cover ring-1 ring-zinc-200">
                                     </template>
                                     <template x-if="!cryptos[selectedCrypto]?.icon && !cryptos[selectedCrypto]?.flag">
-                                        <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-black text-white" :class="cryptos[selectedCrypto]?.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="selectedCrypto.charAt(0)"></span>
+                                        <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[12px] text-[10px] font-black text-white" :class="cryptos[selectedCrypto]?.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="selectedCrypto.charAt(0)"></span>
                                     </template>
                                     <span x-data="valueFlip()" x-effect="selectedVariantId; quantity; selectedCrypto; flash()" class="flex-1 truncate text-left tabular-nums" x-text="formatCrypto()">0.00 USDT</span>
                                     <svg class="h-4 w-4 shrink-0 text-zinc-600 transition-transform duration-150" :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -716,7 +716,7 @@
                                     x-transition:enter-start="opacity-0 -translate-y-1"
                                     x-transition:enter-end="opacity-100 translate-y-0"
                                     style="display:none;"
-                                    class="absolute right-0 top-full z-20 max-h-80 w-56 overflow-y-auto rounded-[10px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    class="absolute right-0 top-full z-20 max-h-80 w-56 overflow-y-auto rounded-[12px] border border-zinc-200 bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                                     role="listbox"
                                 >
                                     <template x-for="(meta, code) in cryptos" :key="code">
@@ -724,16 +724,16 @@
                                             type="button"
                                             @click="selectedCrypto = code; open = false"
                                             :class="selectedCrypto === code ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
-                                            class="flex w-full items-center gap-2 rounded-[10px] px-3 py-2.5 text-left text-sm font-medium transition-colors"
+                                            class="flex w-full items-center gap-2 rounded-[12px] px-3 py-2.5 text-left text-sm font-medium transition-colors"
                                         >
                                             <template x-if="meta.icon">
-                                                <img :src="meta.icon" :alt="code" class="h-5 w-5 shrink-0 rounded-[10px]">
+                                                <img :src="meta.icon" :alt="code" class="h-5 w-5 shrink-0 rounded-[12px]">
                                             </template>
                                             <template x-if="!meta.icon && meta.flag">
-                                                <img :src="meta.flag" :alt="code" class="h-5 w-5 shrink-0 rounded-[10px] object-cover ring-1 ring-zinc-200">
+                                                <img :src="meta.flag" :alt="code" class="h-5 w-5 shrink-0 rounded-[12px] object-cover ring-1 ring-zinc-200">
                                             </template>
                                             <template x-if="!meta.icon && !meta.flag">
-                                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-black text-white" :class="meta.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="code.charAt(0)"></span>
+                                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[12px] text-[10px] font-black text-white" :class="meta.type === 'crypto' ? 'bg-amber-500' : 'bg-emerald-500'" x-text="code.charAt(0)"></span>
                                             </template>
                                             <span class="flex-1 truncate text-left tabular-nums" x-text="formatCryptoFor(code)"></span>
                                             <svg x-show="selectedCrypto === code" class="h-4 w-4 shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
@@ -760,7 +760,7 @@
                                 :class="accountIdValid()
                                     ? 'border-emerald-500 ring-2 ring-emerald-500/15'
                                     : (accountId.length > 0 ? 'border-red-300' : 'border-zinc-200')"
-                                class="flex h-[52px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
+                                class="flex h-[52px] w-full items-center gap-2 rounded-[12px] border bg-[#eff6ff] px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
                             >
                                 <input
                                     type="text"
@@ -804,7 +804,7 @@
                                 :class="recipientPhoneValid()
                                     ? 'border-emerald-500 ring-2 ring-emerald-500/15'
                                     : (recipientPhone.length > 0 ? 'border-red-300' : 'border-zinc-200')"
-                                class="flex h-[52px] w-full items-center gap-2 rounded-[10px] border bg-[#eff6ff] px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
+                                class="flex h-[52px] w-full items-center gap-2 rounded-[12px] border bg-[#eff6ff] px-3 transition-colors focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/15 dark:bg-[#26416b]"
                             >
                                 <span class="shrink-0 text-sm font-semibold text-zinc-600 dark:text-zinc-200" x-text="recipientDialCode">{{ $dialCode }}</span>
                                 <input
@@ -853,7 +853,7 @@
                             :class="cartState === 'success'
                                 ? 'border-emerald-500 bg-emerald-500 text-white animate-cart-pop'
                                 : 'border-blue-600 bg-white text-blue-600 hover:bg-blue-600 hover:text-white'"
-                            class="relative flex h-[52px] items-center justify-center rounded-[10px] border-2 px-4 text-base font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="relative flex h-[52px] items-center justify-center rounded-[12px] border-2 px-4 text-base font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <span
                                 x-show="cartState === 'idle'"
@@ -897,7 +897,7 @@
                             type="button"
                             @click="buyNow()"
                             :disabled="! canAddToCart() || $store.cart.loading"
-                            class="flex h-[52px] items-center justify-center rounded-[10px] bg-blue-600 px-4 text-base font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600"
+                            class="flex h-[52px] items-center justify-center rounded-[12px] bg-blue-600 px-4 text-base font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600"
                         >
                             Buy now
                         </button>
@@ -920,7 +920,7 @@
                         </p>
                     </div>
                 @else
-                    <div class="dash-shimmer rounded-[10px] bg-[#eff6ff] px-4 py-8 text-center border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+                    <div class="dash-shimmer rounded-[12px] bg-[#eff6ff] px-4 py-8 text-center border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
                         <p class="text-base font-semibold text-zinc-900">Out of stock</p>
                         <p class="mt-1 text-sm text-zinc-600">{{ $isTopup ? 'This network has no top-up amounts available right now.' : ($isBill ? 'This biller has no payment amounts available right now.' : 'This card has no denominations available right now.') }} Check back later.</p>
                     </div>
@@ -935,7 +935,7 @@
                     href="{{ $redeemUrl }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="mb-2 inline-flex items-center gap-2 rounded-[10px] bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                    class="mb-2 inline-flex items-center gap-2 rounded-[12px] bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                 >
                     Redeem at {{ $brandName }}
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -981,7 +981,7 @@
                         </svg>
                     </summary>
                     <div class="pb-5">
-                        <div class="overflow-hidden rounded-[10px] bg-zinc-900 ring-1 ring-zinc-100">
+                        <div class="overflow-hidden rounded-[12px] bg-zinc-900 ring-1 ring-zinc-100">
                             <video controls class="aspect-video w-full">
                                 <source src="{{ $redemptionVideo }}">
                                 Your browser doesn't support embedded video.

@@ -164,7 +164,7 @@
             class="fixed inset-x-0 top-3 z-[60] px-3 sm:px-5"
         >
             <div class="relative mx-auto flex w-full max-w-[640px] flex-wrap items-center gap-3 rounded-[20px] border border-white/40 bg-white/70 px-4 py-3 shadow-[0_14px_44px_-12px_rgba(15,23,42,0.4)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#1d3252]/80">
-                <button type="button" @click="selectedId = null" aria-label="Deselect plan" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-50 dark:bg-[#0c1a36] dark:text-white dark:ring-[#24364f] dark:hover:bg-[#34507a]">
+                <button type="button" @click="selectedId = null" aria-label="Deselect plan" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-white text-zinc-700 ring-1 ring-zinc-200 transition-colors hover:bg-zinc-50 dark:bg-[#0c1a36] dark:text-white dark:ring-[#24364f] dark:hover:bg-[#34507a]">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
                 <div class="min-w-0">
@@ -178,7 +178,7 @@
                         @click="addToCart()"
                         :disabled="cartState !== 'idle'"
                         :class="cartState === 'success' ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white dark:text-blue-300 dark:hover:text-white'"
-                        class="hidden h-11 items-center rounded-[10px] border-2 px-4 text-sm font-semibold transition-colors disabled:opacity-60 sm:inline-flex"
+                        class="hidden h-11 items-center rounded-[12px] border-2 px-4 text-sm font-semibold transition-colors disabled:opacity-60 sm:inline-flex"
                     >
                         <span x-show="cartState !== 'success'">Add to cart</span>
                         <span x-show="cartState === 'success'" style="display:none;">Added</span>
@@ -187,7 +187,7 @@
                         type="button"
                         @click="buyNow()"
                         :disabled="$store.cart.loading"
-                        class="inline-flex h-11 items-center rounded-[10px] bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-60"
+                        class="inline-flex h-11 items-center rounded-[12px] bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:opacity-60"
                     >Buy now</button>
                 </div>
             </div>
@@ -203,29 +203,29 @@
                         </span>
                         Discover Global
                     </h2>
-                    <button type="button" @click="showDetails = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#0c1a36] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                    <button type="button" @click="showDetails = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#0c1a36] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
                 </div>
 
                 <div class="mt-5">
                     <p class="text-sm font-bold text-zinc-900 dark:text-white">Package</p>
                     <div class="mt-3 flex flex-wrap gap-2">
-                        <span class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                        <span class="inline-flex flex-col rounded-[12px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Coverage</span>
                             <span class="text-sm font-semibold text-zinc-900 dark:text-white">Worldwide</span>
                         </span>
-                        <span class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                        <span class="inline-flex flex-col rounded-[12px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Data</span>
                             <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="detailsPlan()?.data || '-'"></span>
                         </span>
-                        <span x-show="detailsPlan()?.is_voice" x-cloak class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                        <span x-show="detailsPlan()?.is_voice" x-cloak class="inline-flex flex-col rounded-[12px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Calls</span>
                             <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="detailsPlan()?.voice || '-'"></span>
                         </span>
-                        <span x-show="detailsPlan()?.is_voice" x-cloak class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                        <span x-show="detailsPlan()?.is_voice" x-cloak class="inline-flex flex-col rounded-[12px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Texts</span>
                             <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="detailsPlan()?.sms || '-'"></span>
                         </span>
-                        <span class="inline-flex flex-col rounded-[10px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                        <span class="inline-flex flex-col rounded-[12px] bg-zinc-50 px-3 py-2 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                             <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Validity</span>
                             <span class="text-sm font-semibold text-zinc-900 dark:text-white" x-text="(detailsPlan()?.days > 0 ? detailsPlan().days + ' days' : 'Flexible')"></span>
                         </span>
@@ -241,8 +241,8 @@
                                 ['t' => 'iMessage text', 'd' => 'Send and receive texts over iMessage.', 'icon' => 'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z'],
                                 ['t' => 'FaceTime', 'd' => 'Video and audio FaceTime over data.', 'icon' => 'M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z'],
                             ] as $svc)
-                                <div class="flex items-start gap-2.5 rounded-[10px] bg-zinc-50 p-3 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
-                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+                                <div class="flex items-start gap-2.5 rounded-[12px] bg-zinc-50 p-3 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $svc['icon'] }}"/></svg>
                                     </span>
                                     <div class="min-w-0">
@@ -255,14 +255,14 @@
                     </div>
 
                     {{-- Top-up + iMessage note (voice) / data-only note. --}}
-                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[10px] bg-blue-50 p-4 ring-1 ring-blue-100 dark:bg-[#0c1a36] dark:ring-blue-500/20">
+                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[12px] bg-blue-50 p-4 ring-1 ring-blue-100 dark:bg-[#0c1a36] dark:ring-blue-500/20">
                         <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
                             <svg class="h-4 w-4 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
                             Top-ups &amp; iMessage
                         </p>
                         <p class="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-white">You can top up this plan any time for local calls, texts and regular data browsing. Using iMessage is always free and unlimited - it never counts against your allowance.</p>
                     </div>
-                    <div x-show="detailsPlan() && ! detailsPlan().is_voice" x-cloak class="mt-4 rounded-[10px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                    <div x-show="detailsPlan() && ! detailsPlan().is_voice" x-cloak class="mt-4 rounded-[12px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                         <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
                             <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
                             Data only
@@ -272,14 +272,14 @@
 
                     {{-- What happens when the allowance runs out - voice plans only
                          (it talks about calls/SMS/iMessage, which data-only plans lack). --}}
-                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[10px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
+                    <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[12px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#0c1a36] dark:ring-[#24364f]">
                         <p class="text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">After your data, SMS and calls finish, you can still call, text and FaceTime over iMessage, WhatsApp and your WiFi. To keep using normal texts, calls and data, top up before you let your eSIM expire. If you plan to keep using it, a top-up auto-renews your eSIM to the top-up plan you choose. On your Web App orders page you can manage your eSIM, see remaining data, credit and SMS, top up your eSIM (only from there) and install your eSIM from there too. Have fun 😊</p>
                     </div>
 
                     {{-- Add to cart straight from the details modal. --}}
                     <div class="mt-6 flex items-center justify-between gap-3 border-t border-zinc-100 pt-5 dark:border-zinc-700/60">
                         <p class="text-xl font-extrabold tabular-nums text-zinc-900 dark:text-white" x-text="detailsPlan()?.price_label"></p>
-                        <button type="button" @click="selectedId = detailsId; showDetails = false; addToCart()" class="inline-flex h-11 items-center rounded-[10px] bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 disabled:opacity-60" :disabled="$store.cart.loading">Add to cart</button>
+                        <button type="button" @click="selectedId = detailsId; showDetails = false; addToCart()" class="inline-flex h-11 items-center rounded-[12px] bg-blue-600 px-5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 disabled:opacity-60" :disabled="$store.cart.loading">Add to cart</button>
                     </div>
 
                     <p class="mt-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">To complete your order, confirm your device is eSIM-compatible and network-unlocked.</p>

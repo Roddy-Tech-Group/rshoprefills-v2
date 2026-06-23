@@ -80,7 +80,7 @@
                         x-model="q"
                         type="search"
                         placeholder="Search for answers (e.g. wallet, eSIM, refund)"
-                        class="w-full rounded-[10px] border border-zinc-200 bg-white py-3.5 pl-12 pr-4 text-sm text-zinc-900 shadow-sm shadow-zinc-900/5 outline-none transition-colors placeholder:text-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                        class="w-full rounded-[12px] border border-zinc-200 bg-white py-3.5 pl-12 pr-4 text-sm text-zinc-900 shadow-sm shadow-zinc-900/5 outline-none transition-colors placeholder:text-zinc-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                     >
                 </div>
             </div>
@@ -94,9 +94,9 @@
                     <button
                         type="button"
                         @click="pick(@js($topic['cat']))"
-                        class="group flex items-start gap-4 rounded-[10px] border border-zinc-200 bg-white p-5 text-left transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-600/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                        class="group flex items-start gap-4 rounded-[12px] border border-zinc-200 bg-white p-5 text-left transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-600/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                     >
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $topic['path'] }}"/>
                             </svg>
@@ -120,8 +120,8 @@
                         ['2', 'Pay your way', 'Settle with your wallet, card, bank transfer, mobile money or crypto.'],
                         ['3', 'Instant delivery', 'Your codes land in your dashboard and email the moment payment clears.'],
                     ] as [$step, $title, $desc])
-                        <div class="rounded-[10px] bg-white p-5 ring-1 ring-zinc-100">
-                            <span class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-600 text-sm font-bold text-white">{{ $step }}</span>
+                        <div class="rounded-[12px] bg-white p-5 ring-1 ring-zinc-100">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-blue-600 text-sm font-bold text-white">{{ $step }}</span>
                             <p class="mt-3 text-sm font-bold text-zinc-900">{{ $title }}</p>
                             <p class="mt-1 text-xs leading-relaxed text-zinc-600">{{ $desc }}</p>
                         </div>
@@ -139,7 +139,7 @@
 
             <div class="mt-5 space-y-3">
                 <template x-for="f in filtered" :key="f.q">
-                    <div class="overflow-hidden rounded-[10px] border border-zinc-200 bg-white">
+                    <div class="overflow-hidden rounded-[12px] border border-zinc-200 bg-white">
                         <button
                             type="button"
                             @click="open === f.q ? open = null : open = f.q"
@@ -156,7 +156,7 @@
                     </div>
                 </template>
 
-                <div x-show="filtered.length === 0" x-cloak class="rounded-[10px] border border-dashed border-zinc-300 bg-white px-5 py-10 text-center">
+                <div x-show="filtered.length === 0" x-cloak class="rounded-[12px] border border-dashed border-zinc-300 bg-white px-5 py-10 text-center">
                     <p class="text-sm font-semibold text-zinc-900">No answers matched your search.</p>
                     <p class="mt-1 text-xs text-zinc-600">Try a different term, or reach out to our team below.</p>
                 </div>
@@ -185,7 +185,7 @@
                         </div>
                     </div>
 
-                    <div class="rounded-[10px] bg-white/10 p-6 ring-1 ring-white/20 backdrop-blur-sm">
+                    <div class="rounded-[12px] bg-white/10 p-6 ring-1 ring-white/20 backdrop-blur-sm">
                         <dl class="space-y-4 text-sm">
                             <div class="flex items-center justify-between gap-4">
                                 <dt class="text-blue-100">Support email</dt>
@@ -201,13 +201,13 @@
                             </div>
                         </dl>
                         <div class="mt-5 flex items-center gap-2 border-t border-white/15 pt-5">
-                            <a href="{{ \App\Models\SiteSetting::get('social.facebook', 'https://facebook.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
+                            <a href="{{ \App\Models\SiteSetting::get('social.facebook', 'https://facebook.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-white/10 text-white transition-colors hover:bg-white/20">
                                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                             </a>
-                            <a href="{{ \App\Models\SiteSetting::get('social.x', 'https://x.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="X" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
+                            <a href="{{ \App\Models\SiteSetting::get('social.x', 'https://x.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="X" class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-white/10 text-white transition-colors hover:bg-white/20">
                                 <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
                             </a>
-                            <a href="{{ \App\Models\SiteSetting::get('social.instagram', 'https://instagram.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10 text-white transition-colors hover:bg-white/20">
+                            <a href="{{ \App\Models\SiteSetting::get('social.instagram', 'https://instagram.com/rshoprefills') }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-white/10 text-white transition-colors hover:bg-white/20">
                                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.849.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.07 1.644.07 4.849 0 3.205-.012 3.584-.07 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.849.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                             </a>
                         </div>

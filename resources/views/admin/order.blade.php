@@ -22,7 +22,7 @@
     <x-slot:subheading>
         Placed {{ $fmtDate($order->placed_at ?? $order->created_at) }}
         @if ($order->hasSuspectPricing())
-            · <span class="inline-flex items-center gap-1 rounded-[10px] bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-200">
+            · <span class="inline-flex items-center gap-1 rounded-[12px] bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-200">
                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
                 </svg>
@@ -51,7 +51,7 @@
             ] as [$label, $value, $text])
                 <div class="rounded-[16px] bg-white p-4 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                     <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">{{ $label }}</p>
-                    <span class="mt-2 inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-xs font-semibold ring-1 {{ $toneFor($value) }}">
+                    <span class="mt-2 inline-flex items-center rounded-[12px] px-2.5 py-0.5 text-xs font-semibold ring-1 {{ $toneFor($value) }}">
                         {{ $text ?? 'Pending' }}
                     </span>
                 </div>
@@ -62,7 +62,7 @@
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
             {{-- Customer --}}
-            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="rounded-[12px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <h3 class="text-sm font-bold text-zinc-900">Customer</h3>
                 <dl class="mt-3 space-y-2.5 text-xs">
                     <div class="flex justify-between gap-4">
@@ -81,7 +81,7 @@
             </div>
 
             {{-- Order info --}}
-            <div class="rounded-[10px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+            <div class="rounded-[12px] bg-white p-5 shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
                 <h3 class="text-sm font-bold text-zinc-900">Order</h3>
                 <dl class="mt-3 space-y-2.5 text-xs">
                     <div class="flex justify-between gap-4">
@@ -129,7 +129,7 @@
         </div>
 
         {{-- Items --}}
-        <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[12px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="border-b border-zinc-100 px-5 py-4">
                 <h3 class="text-sm font-bold text-zinc-900">Items ({{ $order->items->count() }})</h3>
             </div>
@@ -157,7 +157,7 @@
                                 </p>
                             </div>
                             <div class="flex flex-col items-end gap-1">
-                                <span class="inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[11px] font-semibold ring-1 {{ $toneFor($item->fulfillment_status?->value) }}">
+                                <span class="inline-flex items-center rounded-[12px] px-2.5 py-0.5 text-[11px] font-semibold ring-1 {{ $toneFor($item->fulfillment_status?->value) }}">
                                     {{ $item->fulfillment_status?->label() ?? 'Not Started' }}
                                 </span>
                                 {{-- Item subtotal — primary USD figure (truth), customer's
@@ -206,7 +206,7 @@
 
                         {{-- Delivered payload (redemption codes / pins / links) --}}
                         @if ($payload->isNotEmpty())
-                            <div class="mt-3 rounded-[10px] bg-zinc-50 p-3 ring-1 ring-zinc-100">
+                            <div class="mt-3 rounded-[12px] bg-zinc-50 p-3 ring-1 ring-zinc-100">
                                 <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800">Delivered details</p>
                                 <dl class="mt-1.5 space-y-1 text-[11px]">
                                     @foreach ($payload as $key => $value)
@@ -253,7 +253,7 @@
         </div>
 
         {{-- Payment attempts --}}
-        <div class="rounded-[10px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
+        <div class="rounded-[12px] bg-white shadow-sm shadow-zinc-900/5 ring-1 ring-zinc-100">
             <div class="border-b border-zinc-100 px-5 py-4">
                 <h3 class="text-sm font-bold text-zinc-900">Payment attempts ({{ $order->paymentAttempts->count() }})</h3>
             </div>
@@ -275,7 +275,7 @@
                                 <td class="px-5 py-3 capitalize text-zinc-600">{{ $attempt->gateway }}</td>
                                 <td class="px-5 py-3 font-semibold text-zinc-900">{{ $attempt->currency }} {{ number_format((float) $attempt->amount, 2) }}</td>
                                 <td class="px-5 py-3">
-                                    <span class="inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[11px] font-semibold ring-1 {{ $toneFor($attempt->payment_status?->value) }}">
+                                    <span class="inline-flex items-center rounded-[12px] px-2.5 py-0.5 text-[11px] font-semibold ring-1 {{ $toneFor($attempt->payment_status?->value) }}">
                                         {{ $attempt->payment_status?->label() ?? 'Pending' }}
                                     </span>
                                 </td>

@@ -42,7 +42,7 @@
         @click="open = true"
         aria-haspopup="dialog"
         :aria-expanded="open.toString()"
-        class="flex w-full items-center justify-between gap-2 rounded-[10px] bg-[#0c1a36] px-4 py-3 text-left text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-[#1d3252]"
+        class="flex w-full items-center justify-between gap-2 rounded-[12px] bg-[#0c1a36] px-4 py-3 text-left text-sm font-semibold text-white ring-1 ring-white/15 transition-colors hover:bg-[#1d3252]"
     >
         <span class="flex min-w-0 items-center gap-2.5">
             <img src="{{ asset('assets/' . rawurlencode($current['icon'])) }}" alt="" class="h-5 w-5 shrink-0 object-contain brightness-0 invert" loading="lazy">
@@ -105,7 +105,7 @@
                         ])
                         @if ($isActive) aria-current="page" @endif
                     >
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-zinc-100 dark:bg-white/10">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-zinc-100 dark:bg-white/10">
                             <img src="{{ asset('assets/' . rawurlencode($cat['icon'])) }}" alt="" class="h-5 w-5 object-contain dark:brightness-0 dark:invert" loading="lazy">
                         </span>
                         <span class="flex-1">{{ $cat['label'] }}</span>

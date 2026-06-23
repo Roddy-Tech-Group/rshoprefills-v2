@@ -86,8 +86,8 @@
         role="dialog"
         aria-label="Install the app"
     >
-        <div class="flex w-full max-w-sm items-center gap-3 rounded-[10px] border border-zinc-200 bg-white p-3 shadow-2xl shadow-zinc-900/15 dark:border-white/10 dark:bg-[#13294d] dark:shadow-black/40">
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-200 dark:ring-white/10">
+        <div class="flex w-full max-w-sm items-center gap-3 rounded-[12px] border border-zinc-200 bg-white p-3 shadow-2xl shadow-zinc-900/15 dark:border-white/10 dark:bg-[#13294d] dark:shadow-black/40">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-white ring-1 ring-zinc-200 dark:ring-white/10">
                 <img src="{{ asset('assets/icon-192.png') }}" alt="" class="h-full w-full object-contain no-dark-invert" width="44" height="44">
             </span>
 
@@ -99,7 +99,7 @@
             <button
                 type="button"
                 @click="install()"
-                class="shrink-0 rounded-[10px] bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                class="shrink-0 rounded-[12px] bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
                 Install
             </button>
@@ -143,10 +143,10 @@
         aria-modal="true"
         aria-label="Add to Home Screen"
     >
-        <div class="mx-auto mb-4 h-1.5 w-10 rounded-[10px] bg-zinc-200 dark:bg-white/15"></div>
+        <div class="mx-auto mb-4 h-1.5 w-10 rounded-[12px] bg-zinc-200 dark:bg-white/15"></div>
 
         <div class="flex items-center gap-3">
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white ring-1 ring-zinc-200 dark:ring-white/10">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-white ring-1 ring-zinc-200 dark:ring-white/10">
                 <img src="{{ asset('assets/icon-192.png') }}" alt="" class="h-full w-full object-contain no-dark-invert" width="44" height="44">
             </span>
             <div>
@@ -157,7 +157,7 @@
 
         <ol class="mt-5 space-y-3 text-sm text-zinc-700 dark:text-zinc-200">
             <li class="flex items-center gap-3">
-                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-blue-600 text-xs font-bold text-white">1</span>
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[12px] bg-blue-600 text-xs font-bold text-white">1</span>
                 <span class="flex flex-1 items-center gap-1.5">
                     Tap the
                     <svg class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -168,11 +168,11 @@
                 </span>
             </li>
             <li class="flex items-center gap-3">
-                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-blue-600 text-xs font-bold text-white">2</span>
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[12px] bg-blue-600 text-xs font-bold text-white">2</span>
                 <span class="flex-1">Choose <span class="font-semibold text-zinc-900 dark:text-white">Add to Home Screen</span></span>
             </li>
             <li class="flex items-center gap-3">
-                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] bg-blue-600 text-xs font-bold text-white">3</span>
+                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[12px] bg-blue-600 text-xs font-bold text-white">3</span>
                 <span class="flex-1">Tap <span class="font-semibold text-zinc-900 dark:text-white">Add</span> - done.</span>
             </li>
         </ol>
@@ -180,7 +180,7 @@
         <button
             type="button"
             @click="dismiss()"
-            class="mt-6 w-full rounded-[10px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            class="mt-6 w-full rounded-[12px] bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
         >
             Got it
         </button>

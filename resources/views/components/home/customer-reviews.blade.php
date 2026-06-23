@@ -47,7 +47,7 @@
                 type="button"
                 @click="next()"
                 aria-label="Show more reviews"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-sm transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white text-zinc-700 ring-1 ring-zinc-200 shadow-sm transition-colors duration-150 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M9 6l6 6-6 6"/>
@@ -109,7 +109,7 @@
                     }"
                     @mouseenter="paused = true"
                     @mouseleave="paused = false"
-                    class="relative flex w-72 shrink-0 flex-col rounded-[10px] bg-[#eff6ff] p-5 ring-1 ring-zinc-200 dark:ring-[#24364f]"
+                    class="relative flex w-72 shrink-0 flex-col rounded-[12px] bg-[#eff6ff] p-5 ring-1 ring-zinc-200 dark:ring-[#24364f]"
                 >
                     @foreach ($aggSources as $i => $agg)
                         @php $isGoogle = $agg['key'] === 'Google'; @endphp
@@ -221,9 +221,9 @@
             class="skeleton-stagger-fast pointer-events-none absolute inset-0 z-10 flex gap-4 overflow-hidden bg-zinc-100 px-4 py-6 sm:gap-5 sm:px-6 lg:px-8"
         >
             @for ($i = 0; $i < 6; $i++)
-                <div class="flex w-72 shrink-0 flex-col rounded-[10px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm" style="--i: {{ $i }}">
+                <div class="flex w-72 shrink-0 flex-col rounded-[12px] bg-white p-5 ring-1 ring-zinc-200 shadow-sm" style="--i: {{ $i }}">
                     <div class="flex items-center gap-3">
-                        <x-skeleton class="h-11 w-11 rounded-[10px]" />
+                        <x-skeleton class="h-11 w-11 rounded-[12px]" />
                         <div class="min-w-0 flex-1 space-y-2">
                             <x-skeleton class="h-4 w-2/3" />
                             <x-skeleton class="h-3 w-1/3" />

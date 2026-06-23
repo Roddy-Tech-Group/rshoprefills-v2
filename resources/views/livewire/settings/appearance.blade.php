@@ -25,7 +25,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
             $watch('theme', v => window.setTheme(v));
             $watch('extraDark', v => { window.setPureDark(v); if (v && ! window.themeIsDark()) theme = 'dark'; });
         "
-        class="rounded-[10px] bg-[#eff6ff] p-6 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none"
+        class="rounded-[12px] bg-[#eff6ff] p-6 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none"
     >
         <div class="mb-5">
             <h2 class="text-base font-semibold text-black">Theme</h2>
@@ -35,7 +35,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
         <div
             role="radiogroup"
             aria-label="Theme"
-            class="grid grid-cols-3 gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-[#0c1a36]"
+            class="grid grid-cols-3 gap-1 rounded-[12px] bg-zinc-100 p-1 dark:bg-[#0c1a36]"
         >
             @foreach ([
                 ['value' => 'light',  'label' => 'Light', 'icon' => 'icons.theme-light'],
@@ -50,7 +50,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                     :class="theme === '{{ $opt['value'] }}'
                         ? 'text-black ring-1 ring-blue-400 dark:text-white dark:ring-blue-500/60'
                         : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'"
-                    class="inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2.5 text-sm font-semibold transition-colors"
+                    class="inline-flex items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-sm font-semibold transition-colors"
                 >
                     {{-- Inline animated SVG inherits currentColor, so it follows
                          the button's own text colour in every state. --}}

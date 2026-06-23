@@ -158,7 +158,7 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="mt-6 rounded-[10px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
+                    <div class="mt-6 rounded-[12px] bg-white px-6 py-16 text-center ring-1 ring-zinc-200">
                         <p class="text-base font-semibold text-zinc-900">No eSIMs available yet</p>
                         <p class="mt-1 text-sm text-zinc-600">We're adding coverage. Check back shortly.</p>
                     </div>
