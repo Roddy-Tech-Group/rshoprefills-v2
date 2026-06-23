@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Shared\Enums\Currency;
+use App\Domain\Wallet\Services\CurrencyRateService;
 use App\Domain\Wallet\Services\WalletFundingService;
 use App\Domain\Wallet\Services\WalletService;
 use App\Models\CurrencyRate;
@@ -73,6 +74,44 @@ new class extends Component
     public function symbol(): string
     {
         return $this->currencyEnum()->symbol();
+    }
+
+    /**
+     * Crypto payments settle to USDT at the gateway, whose minimum sits around
+     * $12-13 regardless of the coin the customer pays with. We hold a flat $13
+     * USD floor (with a little headroom) so crypto top-ups always clear it.
+     */
+    private const CRYPTO_MINIMUM_USD = 13.0;
+
+    /**
+     * The $13 USD crypto floor translated into the selected funding currency.
+     * Uses the display rate (never throws on a stale rate) and rounds up so the
+     * translated figure always covers the USD floor.
+     */
+    public function cryptoMinimum(): float
+    {
+        if ($this->currency === 'USD') {
+            return self::CRYPTO_MINIMUM_USD;
+        }
+
+        $converted = app(CurrencyRateService::class)
+            ->convertForDisplay(self::CRYPTO_MINIMUM_USD, 'USD', $this->currency);
+
+        return (float) ceil($converted);
+    }
+
+    /** The crypto floor formatted for display, e.g. "$13.00" or "₦20,150". */
+    public function cryptoMinimumLabel(): string
+    {
+        $decimals = in_array($this->currency, ['NGN', 'XAF'], true) ? 0 : 2;
+
+        return $this->symbol().number_format($this->cryptoMinimum(), $decimals);
+    }
+
+    /** Whether the entered amount clears the crypto floor. */
+    public function meetsCryptoMinimum(): bool
+    {
+        return (float) $this->amount >= $this->cryptoMinimum();
     }
 
     /**
@@ -919,8 +958,15 @@ new class extends Component
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg> Back
                         </button>
                     </div>
-                    <h3 class="text-sm font-bold text-zinc-900 mb-4">Select Cryptocurrency</h3>
-                    
+                    <h3 class="text-sm font-bold text-zinc-900 mb-2">Select Cryptocurrency</h3>
+
+                    {{-- Crypto settles to USDT at the gateway, so it carries its own
+                         floor (~$13) shown here in the funding currency. --}}
+                    <p class="mb-4 text-xs text-zinc-600">
+                        Add money to pay instantly from {{ $this->cryptoMinimumLabel() }} and above.
+                    </p>
+
+                    @if ($this->meetsCryptoMinimum())
                     <div class="mt-1.5 grid grid-cols-4 gap-2 mb-4">
                         @forelse ($cryptoCoins as $coin)
                             <button type="button" @click="cryptoDetails.pay_currency = '{{ strtolower($coin->code) }}'; paySession('crypto', { pay_currency: '{{ strtolower($coin->code) }}' })"
@@ -937,8 +983,19 @@ new class extends Component
                         @endforelse
                     </div>
                     <p class="mt-3 text-xs text-zinc-600">
-                        Pick a coin and continue — the next step shows the exact wallet address and amount to send.
+                        Pick a coin and continue. The next step shows the exact wallet address and amount to send.
                     </p>
+                    @else
+                        <div class="rounded-[10px] border border-amber-200 bg-amber-50 p-4">
+                            <p class="text-xs font-semibold text-amber-900">
+                                Crypto top-ups start at {{ $this->cryptoMinimumLabel() }}. You entered {{ $this->symbol() }}{{ number_format((float) $this->amount, 2) }}.
+                            </p>
+                            <button type="button" @click="session = null; paymentState = 'idle'"
+                                class="mt-3 w-full rounded-[10px] bg-blue-600 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700">
+                                Change amount
+                            </button>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Bank Transfer virtual accounts display or Crypto invoice -->
