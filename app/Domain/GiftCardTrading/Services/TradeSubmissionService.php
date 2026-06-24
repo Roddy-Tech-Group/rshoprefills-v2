@@ -26,9 +26,10 @@ class TradeSubmissionService
         string $payoutMethod,
         ?int $bankAccountId,
         ?string $codePin,
+        ?string $whatsappNumber,
         array $images // array of ['file' => UploadedFile, 'type' => 'front'|'back'|'receipt']
     ): GiftCardTrade {
-        return DB::transaction(function () use ($userId, $rate, $declaredValue, $payoutMethod, $bankAccountId, $codePin, $images) {
+        return DB::transaction(function () use ($userId, $rate, $declaredValue, $payoutMethod, $bankAccountId, $codePin, $whatsappNumber, $images) {
             
             $calculatedPayout = $this->rateEngine->calculatePayout($rate, $declaredValue);
 
@@ -41,6 +42,7 @@ class TradeSubmissionService
                 'calculated_payout' => $calculatedPayout,
                 'payout_currency' => $rate->currency,
                 'code_pin' => $codePin,
+                'whatsapp_number' => $whatsappNumber,
                 'status' => TradeStatus::PendingReview,
             ]);
 

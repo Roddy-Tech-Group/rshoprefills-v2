@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use App\Models\GiftCardTrade;
@@ -10,8 +11,11 @@ new
 #[Layout('components.layouts.dashboard')]
 #[Title('Trade Details')]
 class extends Component {
+    use WithFileUploads;
+    
     public GiftCardTrade $trade;
     public string $new_message = '';
+    public $chat_image;
 
     public function mount(GiftCardTrade $trade)
     {
@@ -25,18 +29,31 @@ class extends Component {
     public function sendMessage()
     {
         $this->validate([
-            'new_message' => 'required|string|max:1000',
+            'new_message' => 'required_without:chat_image|string|max:1000',
+            'chat_image' => 'nullable|image|max:5120',
         ]);
+
+        $imagePath = null;
+        if ($this->chat_image) {
+            $imagePath = $this->chat_image->store('trade-messages/' . date('Y/m'), 'public');
+        }
 
         $this->trade->messages()->create([
             'sender_type' => \App\Models\User::class,
             'sender_id' => auth()->id(),
-            'message' => $this->new_message,
+            'message' => $this->new_message ?: '',
+            'image_path' => $imagePath,
         ]);
 
         $this->new_message = '';
+        $this->chat_image = null;
         $this->trade->refresh();
         $this->trade->load(['messages.sender']);
+    }
+
+    public function notifyTyping()
+    {
+        \Illuminate\Support\Facades\Cache::put("trade_{$this->trade->id}_typing_user", true, now()->addSeconds(4));
     }
 
     public function refreshData()
@@ -87,31 +104,6 @@ class extends Component {
         {{-- Left Column: Details --}}
         <div class="lg:col-span-2 space-y-6">
             
-            {{-- Card Details --}}
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
-                <h2 class="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Gift Card Details</h2>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
-                    <div>
-                        <div class="text-sm font-medium text-zinc-500">Brand & Region</div>
-                        <div class="mt-1 text-base text-zinc-900 dark:text-white font-medium">
-                            {{ $trade->rate->brand->name ?? 'Unknown' }} ({{ $trade->rate->country_code }})
-                        </div>
-                    </div>
-                    <div>
-                        <div class="text-sm font-medium text-zinc-500">Declared Value</div>
-                        <div class="mt-1 text-base text-zinc-900 dark:text-white font-medium">
-                            ${{ number_format($trade->declared_value, 2) }}
-                        </div>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <div class="text-sm font-medium text-zinc-500">Claim Code / PIN</div>
-                        <div class="mt-1 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg font-mono text-lg text-zinc-900 dark:text-white tracking-widest break-all">
-                            {{ $trade->code_pin }}
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {{-- Payout Details --}}
             <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
@@ -157,25 +149,6 @@ class extends Component {
                 </div>
             </div>
             
-            {{-- Uploaded Images --}}
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
-                <h2 class="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Uploaded Images</h2>
-                
-                @if($trade->media->count() > 0)
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        @foreach($trade->media as $media)
-                            <a href="{{ Storage::url($media->file_path) }}" target="_blank" class="block group relative aspect-[4/3] rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800">
-                                <img src="{{ Storage::url($media->file_path) }}" alt="Card Image" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition duration-300 flex items-center justify-center">
-                                    <flux:icon.magnifying-glass-plus class="text-white opacity-0 group-hover:opacity-100 size-6" />
-                                </div>
-                            </a>
-                        @endforeach
-                    </div>
-                @else
-                    <p class="text-sm text-zinc-500 italic">No images were uploaded for this trade.</p>
-                @endif
-            </div>
 
         </div>
 
@@ -190,7 +163,7 @@ class extends Component {
                     </h2>
                 </div>
                 
-                <div class="flex-1 p-4 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/50 flex flex-col gap-4">
+                <div wire:poll.2s="refreshData" class="flex-1 p-4 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/50 flex flex-col gap-4">
                     @forelse($trade->messages as $msg)
                         @php
                             $isUser = $msg->sender_type === \App\Models\User::class;
@@ -200,6 +173,11 @@ class extends Component {
                                 {{ $isUser ? 'You' : 'Admin Support' }} • {{ $msg->created_at->format('g:i A') }}
                             </div>
                             <div class="px-4 py-2 rounded-2xl max-w-[85%] text-sm {{ $isUser ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-bl-none shadow-sm' }}">
+                                @if($msg->image_path)
+                                    <a href="{{ Storage::url($msg->image_path) }}" target="_blank" class="block mb-2">
+                                        <img src="{{ Storage::url($msg->image_path) }}" class="rounded-lg max-w-full h-auto object-cover max-h-48 border border-white/20" alt="Attachment">
+                                    </a>
+                                @endif
                                 {{ $msg->message }}
                             </div>
                         </div>
@@ -210,12 +188,37 @@ class extends Component {
                             <p class="text-xs text-zinc-400 mt-1">If there is an issue, an admin will contact you here.</p>
                         </div>
                     @endforelse
+
+                    @if(\Illuminate\Support\Facades\Cache::get("trade_{$trade->id}_typing_admin"))
+                        <div class="flex items-start">
+                            <div class="text-[10px] text-zinc-400 mb-1 px-1 w-full">Admin Support is typing...</div>
+                        </div>
+                        <div class="flex items-start -mt-3">
+                            <div class="px-4 py-2 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm rounded-bl-none flex gap-1.5 items-center h-9">
+                                <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                                <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                <div class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
                 
                 <form wire:submit="sendMessage" class="p-4 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
-                    <div class="flex gap-2">
-                        <flux:input wire:model="new_message" class="flex-1" placeholder="Type a message..." required />
-                        <flux:button type="submit" variant="primary">Send</flux:button>
+                    @if($chat_image)
+                        <div class="mb-3 relative inline-block">
+                            <img src="{{ $chat_image->temporaryUrl() }}" class="h-20 w-20 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700">
+                            <button type="button" wire:click="$set('chat_image', null)" class="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow">
+                                <flux:icon.x-mark class="size-3" />
+                            </button>
+                        </div>
+                    @endif
+                    <div class="flex gap-2 items-center">
+                        <label class="cursor-pointer text-zinc-400 hover:text-blue-500 transition p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                            <flux:icon.photo class="size-5" />
+                            <input type="file" wire:model="chat_image" accept="image/*" class="hidden">
+                        </label>
+                        <flux:input wire:model="new_message" wire:keydown.throttle.2000ms="notifyTyping" class="flex-1" placeholder="Type a message..." />
+                        <flux:button type="submit" variant="primary" :disabled="empty($new_message) && empty($chat_image)">Send</flux:button>
                     </div>
                 </form>
             </div>
