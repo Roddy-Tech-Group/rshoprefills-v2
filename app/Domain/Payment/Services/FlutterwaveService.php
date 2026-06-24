@@ -79,4 +79,43 @@ class FlutterwaveService
 
         return null;
     }
+
+    /**
+     * Fetch the list of banks for a given country.
+     */
+    public function getBanks(string $country = 'NG'): array
+    {
+        $response = Http::withToken($this->secretKey)
+            ->get("{$this->baseUrl}/banks/{$country}");
+
+        if ($response->successful()) {
+            return $response->json('data') ?? [];
+        }
+
+        Log::error('Flutterwave get banks failed.', [
+            'country' => $country,
+            'status' => $response->status(),
+            'response' => $response->json(),
+        ]);
+
+        return [];
+    }
+
+    /**
+     * Resolve a bank account number to get the account name.
+     */
+    public function resolveBankAccount(string $accountNumber, string $bankCode): ?array
+    {
+        $response = Http::withToken($this->secretKey)
+            ->post("{$this->baseUrl}/accounts/resolve", [
+                'account_number' => $accountNumber,
+                'account_bank' => $bankCode,
+            ]);
+
+        if ($response->successful()) {
+            return $response->json('data');
+        }
+
+        return null;
+    }
 }

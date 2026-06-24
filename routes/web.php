@@ -694,6 +694,12 @@ Route::middleware(['auth'])->group(function () {
 
     Volt::route('dashboard/notifications', 'dashboard.notifications')->name('dashboard.notifications');
 
+    // Gift Card Trading Routes
+    Volt::route('dashboard/gift-cards/submit', 'user.gift-cards.submit')->name('dashboard.gift-cards.submit');
+    Volt::route('dashboard/gift-cards/history', 'user.gift-cards.history')->name('dashboard.gift-cards.history');
+    Volt::route('dashboard/gift-cards/trades/{trade}', 'user.gift-cards.trades.show')->name('dashboard.gift-cards.trades.show');
+    Volt::route('dashboard/gift-cards/trades/{trade}/receipt', 'user.gift-cards.trades.receipt')->name('dashboard.gift-cards.trades.receipt');
+
     // Saved Cards hidden until the card-vault / gateway tokenisation backend ships.
     // The view is only an empty-state shell today; the nav links are also commented
     // out in components/layouts/dashboard.blade.php. Uncomment both to re-enable.
@@ -775,6 +781,12 @@ Route::middleware(['auth'])->group(function () {
 if (app()->environment('local')) {
     Route::get('dev/emails', [EmailPreviewController::class, 'index'])->name('dev.emails.index');
     Route::get('dev/emails/{key}', [EmailPreviewController::class, 'show'])->name('dev.emails.show');
+}
+
+require __DIR__.'/admin.php';
+
+if (file_exists(__DIR__.'/debug_browser.php')) {
+    require __DIR__.'/debug_browser.php';
 }
 
 require __DIR__.'/auth.php';

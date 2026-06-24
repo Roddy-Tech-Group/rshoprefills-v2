@@ -401,6 +401,48 @@
                 </a>
                 @endif
 
+                {{-- Gift Card Trading --}}
+                @if ($can('admin.orders'))
+                @php
+                    $gcActive = $isCurrent('admin.gift-cards.trades*', 'admin.gift-cards.brands*', 'admin.gift-cards.rates*');
+                @endphp
+                <div
+                    x-data="{ expanded: {{ $gcActive ? 'true' : 'false' }} }"
+                    x-effect="expanded = $store.adminSidebar?.collapsed ? true : {{ $gcActive ? 'true' : 'false' }}"
+                    @click.outside="if (! $store.adminSidebar?.collapsed) { expanded = false }"
+                    class="nav-group flex flex-col gap-1"
+                >
+                    <button
+                        type="button"
+                        @click.stop="expanded = ! expanded"
+                        :aria-expanded="expanded.toString()"
+                        class="{{ $navItemClass($gcActive) }} w-full justify-between"
+                    >
+                        <span class="flex items-center gap-3">
+                            <svg class="{{ $iconClass($gcActive) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="2" y="5" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="2" y1="10" x2="22" y2="10"/>
+                            </svg>
+                            Gift Card Trading
+                        </span>
+                        <svg :class="expanded && 'rotate-180'" class="h-4 w-4 shrink-0 transition-transform {{ $gcActive ? 'text-blue-700 dark:text-blue-300' : 'text-zinc-600 dark:text-zinc-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    @php
+                        $subItemClass = fn (bool $active) => $active
+                            ? 'flex items-center rounded-[10px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
+                            : 'flex items-center rounded-[10px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
+                    @endphp
+                    <div x-show="expanded" x-collapse class="nav-submenu ml-5 flex flex-col gap-1 border-l border-zinc-200 pl-4">
+                        <a href="{{ route('admin.gift-cards.trades.index') }}" wire:navigate class="{{ $subItemClass($isCurrent('admin.gift-cards.trades*')) }}">Trades Queue</a>
+                        <a href="{{ route('admin.gift-cards.brands') }}" wire:navigate class="{{ $subItemClass($isCurrent('admin.gift-cards.brands*')) }}">Brands</a>
+                        <a href="{{ route('admin.gift-cards.rates') }}" wire:navigate class="{{ $subItemClass($isCurrent('admin.gift-cards.rates*')) }}">Rates</a>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Wallets --}}
                 @if ($can('admin.wallets'))
                 @php $active = $isCurrent('admin.wallets*'); @endphp
@@ -974,6 +1016,25 @@
 
         {{-- Floating action toasts (session flashes) - auto-dismiss top-right. --}}
         <x-flash-toast />
+
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            document.addEventListener('livewire:init', () => {
+                Livewire.on('swal', (event) => {
+                    const data = event[0];
+                    Swal.fire({
+                        title: data.title,
+                        text: data.text,
+                        icon: data.icon,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#3b82f6', // Tailwind blue-500
+                        customClass: {
+                            popup: 'rounded-2xl',
+                        }
+                    });
+                });
+            });
+        </script>
 
         @fluxScripts
     </body>
