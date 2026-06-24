@@ -17,8 +17,14 @@ return new class extends Migration
             $table->timestamps();
             
             if (Schema::hasColumn('notification_interactions', 'interacted_at')) {
-                if (Schema::hasIndex('notification_interactions', ['interacted_at'])) {
-                    $table->dropIndex(['interacted_at']);
+                try {
+                    $table->dropIndex('notification_interactions_interacted_at_index');
+                } catch (\Exception $e) {
+                    try {
+                        $table->dropIndex(['interacted_at']);
+                    } catch (\Exception $inner) {
+                        // ignore if index not present
+                    }
                 }
                 $table->dropColumn('interacted_at');
             }

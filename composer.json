@@ -24,6 +24,7 @@
         "sentry/sentry-laravel": "^4.25"
     },
     "require-dev": {
+        "doctrine/dbal": "*",
         "fakerphp/faker": "^1.23",
         "laravel/boost": "^2.4",
         "laravel/pail": "^1.2.2",
