@@ -159,6 +159,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             return response()->json($customers->concat($products)->values());
         })->name('search-suggest');
 
+        // Gift Card Trading Routes
+        Volt::route('gift-cards/trades', 'admin.gift-cards.trades.index')->name('gift-cards.trades.index');
+        Volt::route('gift-cards/trades/{trade}', 'admin.gift-cards.trades.show')->name('gift-cards.trades.show');
+        Volt::route('gift-cards/trades/{trade}/receipt', 'admin.gift-cards.trades.receipt')->name('gift-cards.trades.receipt');
+        Volt::route('gift-cards/brands', 'admin.gift-cards.brands')->name('gift-cards.brands');
+        Volt::route('gift-cards/rates', 'admin.gift-cards.rates')->name('gift-cards.rates');
+
         Route::view('orders', 'admin.orders')->name('orders');
         Route::get('orders/{order}', function (Order $order) {
             return view('admin.order', [
