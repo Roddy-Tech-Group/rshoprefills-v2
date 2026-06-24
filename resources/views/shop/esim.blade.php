@@ -334,7 +334,7 @@
         {{-- z-20: backdrop-blur creates a stacking context — without lifting it
              above the plan selector (also a blur context, later in DOM), the
              region picker dropdown gets clipped behind the plans card. --}}
-        <div class="relative z-20 mx-auto mt-4 w-full max-w-[800px] rounded-[12px] bg-transparent p-6 ring-1 ring-zinc-200 sm:p-8 dark:ring-zinc-700/60">
+        <div class="esim-tile relative z-20 mx-auto mt-4 w-full max-w-[800px] rounded-[12px] bg-transparent p-6 ring-1 ring-zinc-200 sm:p-8 dark:ring-zinc-700/60">
             <div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div class="min-w-0">
                     <div class="flex items-center gap-3">
@@ -521,29 +521,23 @@
                 </div>
             </div>
 
-            {{-- ── Plan section. Full-bleed wrapper lets the grid exceed the page's
-                 1140px column; the inner column caps at 1500px and re-centers. ──── --}}
-            <div class="mt-6 [margin-left:calc(50%-50vw)] [margin-right:calc(50%-50vw)]">
-                <div class="mx-auto w-full max-w-[1500px] px-4 sm:px-6">
-                <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Choose your package</h2>
-
-                    {{-- Plan cards. Flat (no duration grouping) - each card carries its
-                         own validity. Same responsive grid as the gift-card catalog:
-                         2 per row on mobile, scaling up to 5 per row on large screens. --}}
-                    {{-- Re-keyed per tab/mode so the whole grid fades + slides in on switch. --}}
-                    <template x-for="frame in [activeTab + '-' + dataMode]" :key="frame">
+            {{-- Plan section. Uses the same carousel component, alignment + scroll as the
+                 storefront brand rows. Re-keyed per tab/mode so the whole row rebuilds,
+                 re-aligns and resets its scroll when the buyer switches Voice / Data. --}}
+            <div class="mt-6">
+                <template x-for="frame in [activeTab + '-' + dataMode]" :key="frame">
                     <div
                         x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-y-2"
                         x-transition:enter-end="opacity-100 translate-y-0"
-                        class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
                     >
-                        <template x-for="(p, idx) in sortedPlans()" :key="p.id">
+                        <x-home.brand-row title="Choose your package" :carousel="true" view-all-variant="none">
+                            <template x-for="(p, idx) in sortedPlans()" :key="p.id">
                             <button
                                 type="button"
                                 @click="selectedId = p.id"
                                 :class="selectedId === p.id ? 'border-2 border-blue-600 dark:border-blue-500' : 'border border-white hover:border-green-200 dark:border-[#24364f] dark:hover:border-white'"
-                                class="flex flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none"
+                                class="esim-tile flex h-full w-[70vw]! min-w-[70vw]! flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none sm:w-60! sm:min-w-60!"
                             >
                                 {{-- Badges: tier (TRIP/EXPLORER/ADVENTURER/NOMAD, cycles by
                                      position) + a Data only / Voice type badge. --}}
@@ -604,13 +598,14 @@
                                 </template>
 
                                 {{-- See more: selects this plan and opens its full package details. --}}
-                                <span @click.stop="detailsId = p.id; showDetails = true" @keydown.enter.stop="detailsId = p.id; showDetails = true" role="button" tabindex="0" class="mt-3 self-start cursor-pointer text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">See more</span>
+                                <span @click.stop="detailsId = p.id; showDetails = true" @keydown.enter.stop="detailsId = p.id; showDetails = true" role="button" tabindex="0" class="mt-auto self-start cursor-pointer pt-3 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">See more</span>
 
                                 <p class="mt-2 text-right text-lg font-bold tabular-nums text-zinc-900 dark:text-white" x-text="rowPrice(p)"></p>
                             </button>
                         </template>
+                        </x-home.brand-row>
                     </div>
-                    </template>
+                </template>
                     <p x-show="sortedPlans().length === 0" class="mt-4 rounded-[12px] bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-400 dark:ring-zinc-700">No packages in this category right now.</p>
 
                     {{-- Voice-plan inclusions - only on the Voice tab.
@@ -637,12 +632,15 @@
                     {{-- Need broader coverage - sits beneath the plans. --}}
                     @if ($broaderCoverage->isNotEmpty())
                         <div class="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-700/60">
-                            <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Need broader coverage?</h2>
-                            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Explore our regional and global eSIMs. Packages start from the shown price and include coverage for the selected location.</p>
-                            {{-- Same card style + responsive grid as the plan cards. --}}
-                            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                            {{-- Broader coverage as a full-bleed carousel, same as the storefront brand rows. --}}
+                            <x-home.brand-row
+                                title="Need broader coverage?"
+                                subtitle="Explore our regional and global eSIMs. Packages start from the shown price and include coverage for the selected location."
+                                :carousel="true"
+                                view-all-variant="none"
+                            >
                                 @foreach ($broaderCoverage as $b)
-                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="group flex flex-col rounded-[14px] border border-white bg-transparent px-4 py-4 transition-colors hover:border-blue-600 dark:border-[#24364f] dark:hover:border-white">
+                                    <a href="{{ $shopRoute('esim', $b['slug']) }}" wire:navigate class="esim-tile group flex flex-col rounded-[14px] border border-white bg-transparent px-4 py-4 transition-colors hover:border-blue-600 dark:border-[#24364f] dark:hover:border-white">
                                         <span class="flex h-10 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-blue-50 ring-1 ring-zinc-200 dark:bg-blue-950/40 dark:ring-zinc-700">
                                             @if ($b['flag'])
                                                 <img src="{{ $b['flag'] }}" alt="" class="h-full w-full object-cover" loading="lazy">
@@ -655,11 +653,10 @@
                                         <p class="text-lg font-bold tabular-nums text-zinc-900 dark:text-white">${{ number_format($b['from'], 2) }}</p>
                                     </a>
                                 @endforeach
-                            </div>
+                            </x-home.brand-row>
                         </div>
                     @endif
                 </div>
-            </div>
 
             {{-- ── Why choose us (1000px centered) ───────────────────────────── --}}
             <section class="mx-auto mt-8 w-full max-w-[1000px] rounded-[40px] bg-blue-100 p-6 sm:p-10 dark:bg-[#1d3252]">
@@ -739,7 +736,7 @@
             {{-- Full-bleed bg: the negative-margin calc extends the section past the
                  parent's max-w-[1320px] + horizontal padding so the surface fills the
                  viewport, while the inner column stays constrained to 1450px. --}}
-            <section class="mt-8 bg-gradient-to-r from-[#dfe5f1] via-[#dfe5f1] to-white py-10 sm:py-14 dark:from-[#1d3252] dark:via-[#1d3252] dark:to-[#34507a] [margin-left:calc(50%-50vw)] [margin-right:calc(50%-50vw)]">
+            <section class="esim-tile mt-8 bg-gradient-to-r from-[#dfe5f1] via-[#dfe5f1] to-white py-10 sm:py-14 dark:from-[#1d3252] dark:via-[#1d3252] dark:to-[#34507a] [margin-left:calc(50%-50vw)] [margin-right:calc(50%-50vw)]">
                 <div class="mx-auto w-full max-w-[1450px] px-4 sm:px-6">
                 <div>
                     <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">How to add your eSIM</h2>
@@ -757,7 +754,8 @@
                                 width="785"
                                 height="900"
                                 decoding="async"
-                                loading="lazy"
+                                loading="eager"
+                                fetchpriority="high"
                                 class="aspect-[3/4] w-full object-contain [image-rendering:high-quality] [image-rendering:-webkit-optimize-contrast]"
                             >
                             <div class="mt-4 flex items-center gap-3">
@@ -1021,7 +1019,7 @@
         {{-- Check compatibility modal --}}
         <div x-show="showCompat" style="display:none;" class="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="compat-title">
             <div x-show="showCompat" @click="showCompat = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showCompat" x-transition class="relative flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-[14px] bg-white/65 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70 dark:ring-1 dark:ring-white/10">
+            <div x-show="showCompat" x-transition class="esim-tile relative flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-[14px] bg-white/65 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 dark:bg-[#0c1a36]/70 dark:ring-1 dark:ring-white/10">
                 <div class="flex items-start justify-between gap-4 p-5 pb-3">
                     <h2 id="compat-title" class="text-lg font-bold text-zinc-900 dark:text-white">Check compatibility</h2>
                     <button type="button" @click="showCompat = false" aria-label="Close" class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 dark:bg-[#26416b] dark:text-zinc-200 dark:hover:bg-[#34507a]"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
@@ -1079,7 +1077,7 @@
         {{-- Package details modal --}}
         <div x-show="showDetails" style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center px-3 pb-3 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="details-title">
             <div x-show="showDetails" @click="showDetails = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showDetails" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white/65 p-6 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:rounded-[14px] dark:bg-[#0c1a36]/70 dark:ring-1 dark:ring-white/10">
+            <div x-show="showDetails" x-transition class="esim-tile relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white/65 p-6 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 sm:rounded-[14px] dark:bg-[#0c1a36]/70 dark:ring-1 dark:ring-white/10">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="details-title" class="flex items-center gap-2.5 text-lg font-bold text-zinc-900 dark:text-white">
                         @if ($flag)
@@ -1185,7 +1183,9 @@
                         @endif
 
                         @if ($planPolicy['bullets']->isNotEmpty() || $planPolicy['other'])
-                            <div>
+                            {{-- Supplier info is product-level and mentions voice / SMS / a US number,
+                                 so only show it on voice plans - data-only plans have none of that. --}}
+                            <div x-show="detailsPlan()?.is_voice" x-cloak>
                                 <p class="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-white">
                                     <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
                                     Other info
@@ -1205,14 +1205,10 @@
                     </div>
 
                     {{-- What happens when the allowance runs out + how to manage the
-                         eSIM. Two variants: the voice copy talks about SMS / calls /
-                         credit, the data-only copy must NOT (a data-only plan has no
-                         number, SMS or calls) - it only covers data + app messaging. --}}
+                         eSIM. Shown for voice plans only; data-only plans intentionally
+                         show no message here. --}}
                     <div x-show="detailsPlan()?.is_voice" x-cloak class="mt-4 rounded-[12px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-[#24364f]">
                         <p class="text-sm leading-relaxed text-zinc-700 dark:text-white">After your data, SMS and calls finish, you can still call, text and FaceTime over iMessage, WhatsApp and your WiFi. To keep using normal texts, calls and data, top up before you let your eSIM expire. If you plan to keep using it, a top-up auto-renews your eSIM to the top-up plan you choose. On your Web App orders page you can manage your eSIM, see remaining data, credit and SMS, top up your eSIM (only from there) and install your eSIM from there too. Have fun 😊</p>
-                    </div>
-                    <div x-show="detailsPlan() && ! detailsPlan().is_voice" x-cloak class="mt-4 rounded-[12px] bg-zinc-50 p-4 ring-1 ring-zinc-100 dark:bg-[#26416b] dark:ring-[#24364f]">
-                        <p class="text-sm leading-relaxed text-zinc-700 dark:text-white">After your data runs out you can still chat and FaceTime over iMessage, WhatsApp and WiFi. To keep browsing, top up before your eSIM expires - a top-up auto-renews it to the plan you choose. On your Web App orders page you can manage your eSIM, check your remaining data, top up (only from there) and install it. Have fun 😊</p>
                     </div>
 
                     <p class="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">To complete your order, confirm your device is eSIM-compatible and network-unlocked.</p>
@@ -1233,7 +1229,7 @@
                 cryptos: cryptoMap,
                 selectedCrypto: cryptoMap[defaultCrypto] ? defaultCrypto : (cryptos[0]?.code ?? 'USD'),
 
-                activeTab: 'data',     // 'data' | 'voice'
+                activeTab: 'voice',    // 'voice' | 'data' - voice leads; buyers switch to data only
                 dataMode: 'standard',  // 'standard' | 'unlimited'
                 selectedId: null,
                 detailsId: null,       // plan previewed in the details modal (independent of selection)
@@ -1256,11 +1252,12 @@
                 locSearch: '',
 
                 init() {
-                    if (! this.tabHasPlans('data') && this.tabHasPlans('voice')) {
-                        this.activeTab = 'voice';
+                    // Voice leads; fall back to data only when this region carries no voice plans.
+                    if (! this.tabHasPlans('voice') && this.tabHasPlans('data')) {
+                        this.activeTab = 'data';
                     }
                     this.normalizeMode();
-                    // No auto-selection — the buyer chooses a package by tapping it.
+                    // No auto-selection - the buyer chooses a package by tapping it.
                 },
 
                 // ---- filtering ----
@@ -1270,9 +1267,9 @@
                 // the segmented control + its sliding bubble width/offset.
                 tabList() {
                     const t = [];
-                    if (this.tabHasPlans('data')) { t.push('data'); }
                     if (this.tabHasPlans('voice')) { t.push('voice'); }
-                    return t.length ? t : ['data'];
+                    if (this.tabHasPlans('data')) { t.push('data'); }
+                    return t.length ? t : ['voice'];
                 },
                 tabIndex() { return Math.max(0, this.tabList().indexOf(this.activeTab)); },
                 currentTabPlans() { return this.plans.filter((p) => this.inTab(p)); },
@@ -1336,7 +1333,7 @@
                 },
                 async buyNow() {
                     if (! this.selectedId) { return; }
-                    const ok = await this.$store.cart.add(this.selectedId, 1);
+                    const ok = await this.$store.cart.add(this.selectedId, 1, null, null, true);
                     if (ok) { window.location.href = this.checkoutUrl; }
                 },
             };

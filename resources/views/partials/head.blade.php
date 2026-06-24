@@ -36,6 +36,17 @@
         // 'system' or null falls through to the cookie hint.
         default => $themeCookieHead === '1',
     };
+
+    // Extra Dark (pure black) is the DEFAULT dark palette on the customer side -
+    // navy is the opt-in "Soft dark" appearance. The choice lives in a cookie
+    // mirrored from the theme engine so the first paint already carries the right
+    // ramp. Absent cookie: customer defaults ON (black), admin stays OFF (navy).
+    $themePureDarkCookieHead = $themeIsAdminAreaHead
+        ? request()->cookie('theme_admin_puredark')
+        : request()->cookie('theme_web_puredark');
+    $themeIsPureDarkInitial = $themeIsDarkInitial && ($themeIsAdminAreaHead
+        ? $themePureDarkCookieHead === '1'
+        : $themePureDarkCookieHead !== '0');
 @endphp
 
 {{-- Tell the browser the resolved scheme so the OS-default blank-page bg
@@ -56,6 +67,9 @@
     (function () {
         @if ($themeIsDarkInitial)
             document.documentElement.classList.add('dark');
+        @endif
+        @if ($themeIsPureDarkInitial)
+            document.documentElement.classList.add('pure-dark');
         @endif
         try {
             localStorage.setItem(
@@ -85,6 +99,9 @@
 <style>
     html { background-color: #ffffff; }
     html.dark { background-color: #0c1a36; }
+    /* Extra Dark is the default dark palette (customer side); paint the pre-CSS
+       frame true black so the default never flashes navy first. */
+    html.dark.pure-dark { background-color: #000000; }
     /* Kill the ~15px horizontal scrollbar from full-bleed sections
        (mx-[calc(50%-50vw)]) at the viewport root. `clip` keeps vertical scroll
        and, unlike doing this on an inner wrapper, never becomes a containing

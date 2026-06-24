@@ -36,11 +36,13 @@
         'Transaction PIN & Security'  => 'Set, change and protect your PIN.',
         'Refunds & Disputes'          => 'Failed orders and reversals.',
     ];
-    $topics = collect($faqs)->pluck('cat')->unique()->values()->map(fn ($cat) => [
+    $faqsByTopic = collect($faqs)->groupBy('cat');
+    $topics = $faqsByTopic->keys()->map(fn ($cat) => [
         'cat' => $cat,
         'desc' => $topicDescriptions[$cat] ?? '',
         'path' => $topicIconPaths[$cat] ?? $defaultIconPath,
-    ])->all();
+        'count' => $faqsByTopic->get($cat)->count(),
+    ])->values()->all();
 @endphp
 
 <x-layouts.app.header :title="'Help Center | RshopRefills'">
@@ -49,15 +51,16 @@
         x-data="{
             q: '',
             open: null,
-            faqs: @js($faqs),
-            get filtered() {
-                const t = this.q.trim().toLowerCase();
-                if (! t) { return this.faqs; }
-                return this.faqs.filter(f => (f.q + ' ' + f.a + ' ' + f.cat).toLowerCase().includes(t));
-            },
             pick(cat) {
                 this.q = cat;
                 this.$nextTick(() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+            },
+            // True while at least one FAQ row's data-faq haystack matches the query
+            // (server-rendered rows filter themselves via x-show, same as the eSIM list).
+            hasResults() {
+                const t = this.q.trim().toLowerCase();
+                if (! t) { return true; }
+                return [...this.$root.querySelectorAll('[data-faq]')].some((el) => el.dataset.faq.includes(t));
             },
         }"
     >
@@ -86,27 +89,34 @@
             </div>
         </section>
 
-        {{-- ── Topic cards ───────────────────────────────────────── --}}
+        {{-- ── Topic cards. Sticky heading on the left, square topic cards on
+             the right (stacks on mobile). ──────────────────────────── --}}
         <section class="mx-auto w-full max-w-[1140px] px-4 py-12 sm:px-6 sm:py-14">
-            <h2 class="text-lg font-bold text-zinc-900">Browse by topic</h2>
-            <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($topics as $topic)
-                    <button
-                        type="button"
-                        @click="pick(@js($topic['cat']))"
-                        class="group flex items-start gap-4 rounded-[12px] border border-zinc-200 bg-white p-5 text-left transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-600/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                    >
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $topic['path'] }}"/>
-                            </svg>
-                        </span>
-                        <div>
-                            <p class="text-sm font-bold text-zinc-900">{{ $topic['cat'] }}</p>
-                            <p class="mt-0.5 text-xs leading-relaxed text-zinc-600">{{ $topic['desc'] }}</p>
-                        </div>
-                    </button>
-                @endforeach
+            <div class="grid gap-8 lg:grid-cols-[240px_1fr] lg:gap-12">
+                <div class="lg:sticky lg:top-[156px] self-start">
+                    <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Browse by topic</h2>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">Jump straight to the answers for a specific area.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    @foreach ($topics as $topic)
+                        <button
+                            type="button"
+                            @click="pick(@js($topic['cat']))"
+                            class="group flex aspect-square flex-col items-center justify-center gap-4 rounded-[12px] border border-zinc-200 bg-white p-5 text-center transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-600/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                        >
+                            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="{{ $topic['path'] }}"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <p class="text-sm font-bold text-zinc-900">{{ $topic['cat'] }}</p>
+                                <p class="mt-1 text-xs leading-relaxed text-zinc-600">{{ $topic['desc'] }}</p>
+                                <p class="mt-2 text-[11px] font-semibold uppercase tracking-wide text-blue-600">{{ $topic['count'] }} {{ \Illuminate\Support\Str::plural('article', $topic['count']) }}</p>
+                            </div>
+                        </button>
+                    @endforeach
+                </div>
             </div>
         </section>
 
@@ -130,35 +140,43 @@
             </div>
         </section>
 
-        {{-- ── FAQ ───────────────────────────────────────────────── --}}
-        <section id="faq" class="mx-auto w-full max-w-[820px] px-4 py-12 sm:px-6 sm:py-16 scroll-mt-24">
-            <div class="flex items-center justify-between gap-4">
-                <h2 class="text-lg font-bold text-zinc-900">Frequently asked questions</h2>
-                <button type="button" x-show="q" x-cloak @click="q = ''" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Clear filter</button>
-            </div>
+        {{-- ── FAQ. Sticky heading on the left, the questions on the right.
+             Each row filters itself against the search via its data-faq
+             haystack (same pattern as the eSIM location list). ──────────── --}}
+        <section id="faq" class="mx-auto w-full max-w-[1140px] px-4 py-12 sm:px-6 sm:py-16 scroll-mt-24">
+            <div class="grid gap-8 lg:grid-cols-[240px_1fr] lg:gap-12">
+                <div class="lg:sticky lg:top-[156px] self-start">
+                    <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Frequently asked questions</h2>
+                    <button type="button" x-show="q" x-cloak @click="q = ''" class="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Clear filter</button>
+                </div>
 
-            <div class="mt-5 space-y-3">
-                <template x-for="f in filtered" :key="f.q">
-                    <div class="overflow-hidden rounded-[12px] border border-zinc-200 bg-white">
-                        <button
-                            type="button"
-                            @click="open === f.q ? open = null : open = f.q"
-                            class="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                <div class="space-y-3">
+                    @foreach ($faqs as $i => $faq)
+                        <div
+                            data-faq="{{ \Illuminate\Support\Str::lower($faq['q'].' '.$faq['a'].' '.$faq['cat']) }}"
+                            x-show="q.trim() === '' || $el.dataset.faq.includes(q.trim().toLowerCase())"
+                            class="overflow-hidden rounded-[12px] border border-zinc-200 bg-white"
                         >
-                            <span class="text-sm font-semibold text-zinc-900" x-text="f.q"></span>
-                            <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200" :class="open === f.q && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                        <div x-show="open === f.q" x-collapse x-cloak>
-                            <p class="px-5 pb-4 text-sm leading-relaxed text-zinc-600" x-text="f.a"></p>
+                            <button
+                                type="button"
+                                @click="open === {{ $i }} ? open = null : open = {{ $i }}"
+                                class="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                            >
+                                <span class="text-sm font-semibold text-zinc-900">{{ $faq['q'] }}</span>
+                                <svg class="h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200" :class="open === {{ $i }} && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                            <div x-show="open === {{ $i }}" x-collapse x-cloak>
+                                <p class="px-5 pb-4 text-sm leading-relaxed text-zinc-600">{{ $faq['a'] }}</p>
+                            </div>
                         </div>
-                    </div>
-                </template>
+                    @endforeach
 
-                <div x-show="filtered.length === 0" x-cloak class="rounded-[12px] border border-dashed border-zinc-300 bg-white px-5 py-10 text-center">
-                    <p class="text-sm font-semibold text-zinc-900">No answers matched your search.</p>
-                    <p class="mt-1 text-xs text-zinc-600">Try a different term, or reach out to our team below.</p>
+                    <div x-show="! hasResults()" x-cloak class="rounded-[12px] border border-dashed border-zinc-300 bg-white px-5 py-10 text-center">
+                        <p class="text-sm font-semibold text-zinc-900">No answers matched your search.</p>
+                        <p class="mt-1 text-xs text-zinc-600">Try a different term, or reach out to our team below.</p>
+                    </div>
                 </div>
             </div>
         </section>

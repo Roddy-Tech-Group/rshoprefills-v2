@@ -15,13 +15,18 @@
 ])
 @php
     $dg = \App\Http\Controllers\EsimStoreController::discoverGlobal();
+    $onDashboard = request()->is('dashboard*') && auth()->check();
     // Buy now lands on the right checkout for the surface we're on.
-    $checkoutUrl = (request()->is('dashboard*') && auth()->check())
+    $checkoutUrl = $onDashboard
         ? route('dashboard.shop.checkout')
         : route('shop.checkout');
 
     if ($dg) {
-        $esimUrl = route('shop.esim', $dg['product']->slug);
+        // See-more keeps dashboard users inside the in-dashboard eSIM store; storefront
+        // visitors go to the public eSIM page.
+        $esimUrl = $onDashboard
+            ? route('dashboard.shop.esims')
+            : route('shop.esim', $dg['product']->slug);
         $voicePlans = collect($dg['plans'])->where('is_voice', true)->values();
         $dataPlans = collect($dg['plans'])->where('is_voice', false)->values();
         // Tier badge cycles by card position (TRIP shows no badge) - same as the eSIM page.
@@ -66,7 +71,7 @@
             },
             async buyNow() {
                 if (! this.selectedId || this.$store.cart.loading) { return; }
-                const ok = await this.$store.cart.add(this.selectedId, 1);
+                const ok = await this.$store.cart.add(this.selectedId, 1, null, null, true);
                 if (ok) { window.location.href = this.checkoutUrl; }
             },
         }"
@@ -80,13 +85,13 @@
         @foreach ($groups as $group)
             @if ($group['plans']->isNotEmpty())
                 <div class="mt-6">
-                    <x-home.brand-row :title="$group['title']" :subtitle="$group['subtitle'] ?? null" :view-all-href="$esimUrl" :carousel="true" :cols="5" :bleed="! $contained">
+                    <x-home.brand-row :title="$group['title']" :subtitle="$group['subtitle'] ?? null" :view-all-href="$esimUrl" :view-all-variant="$onDashboard ? 'plus' : 'link'" :carousel="true" :cols="5" :bleed="! $contained">
                         @foreach ($group['plans'] as $idx => $plan)
                             <button
                                 type="button"
                                 @click="selectedId = {{ $plan['id'] }}"
                                 :class="selectedId === {{ $plan['id'] }} ? 'border-2 border-blue-600 dark:border-blue-500' : 'border-2 border-zinc-200 hover:border-blue-300 dark:border-[#24364f] dark:hover:border-blue-500/50'"
-                                class="flex h-full w-[70vw]! min-w-[70vw]! flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none sm:w-60! sm:min-w-60!"
+                                class="esim-tile flex h-full w-[70vw]! min-w-[70vw]! flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none sm:w-60! sm:min-w-60!"
                             >
                                 {{-- Badges: tier (cycles by position) + Data only / Voice --}}
                                 <div class="flex flex-wrap items-center gap-1.5">
@@ -195,7 +200,7 @@
         {{-- Package details modal - opened by "See more" on any plan card. --}}
         <div x-show="showDetails" x-cloak style="display:none;" class="fixed inset-0 z-[70] flex items-end justify-center px-3 pb-3 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="dg-details-title">
             <div x-show="showDetails" @click="showDetails = false" x-transition.opacity class="absolute inset-0 bg-zinc-900/40 dark:bg-black/60"></div>
-            <div x-show="showDetails" x-transition class="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-[#eff6ff] p-6 shadow-2xl sm:rounded-[14px] dark:bg-[#0c1a36] dark:ring-1 dark:ring-white/10">
+            <div x-show="showDetails" x-transition class="esim-tile relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-[#eff6ff] p-6 shadow-2xl sm:rounded-[14px] dark:bg-[#0c1a36] dark:ring-1 dark:ring-white/10">
                 <div class="flex items-start justify-between gap-4">
                     <h2 id="dg-details-title" class="flex items-center gap-2.5 text-lg font-bold text-zinc-900 dark:text-white">
                         <span class="flex h-7 w-7 items-center justify-center rounded-[8px] bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">

@@ -19,7 +19,7 @@
         <h1 class="text-[24px] font-bold leading-tight text-zinc-900 dark:text-white">Your Cart</h1>
 
         {{-- Loading state — shown until the store's first fetch resolves --}}
-        <div x-show="!$store.cart.hydrated" class="mt-8 flex items-center justify-center rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 py-24 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
+        <div x-show="!$store.cart.hydrated" class="pure-card mt-8 flex items-center justify-center rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 py-24 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
             <svg class="h-7 w-7 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -27,7 +27,7 @@
         </div>
 
         {{-- Empty state --}}
-        <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="mt-8 rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 px-6 py-16 text-center ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
+        <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="pure-card mt-8 rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 px-6 py-16 text-center ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
             <x-illo name="emptyCart" class="mx-auto w-full max-w-sm" />
             <p class="mt-4 text-base font-semibold text-zinc-900 dark:text-white">Your cart is empty</p>
             <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Browse the catalog and add a gift card to get started.</p>
@@ -41,7 +41,7 @@
 
             {{-- LEFT: line items --}}
             <div class="lg:col-span-2">
-                <div class="overflow-hidden rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
+                <div class="pure-card overflow-hidden rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
                     <div class="flex items-center justify-between px-5 py-4 sm:px-6">
                         <h2 class="text-base font-bold text-zinc-900 dark:text-white">Items</h2>
                         <span class="text-sm text-zinc-600 dark:text-zinc-400" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
@@ -115,7 +115,7 @@
 
             {{-- RIGHT: summary (sticky) --}}
             <aside class="lg:col-span-1">
-                <div class="lg:sticky lg:top-6 flex flex-col gap-4 rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
+                <div class="pure-card lg:sticky lg:top-6 flex flex-col gap-4 rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
                     <h2 class="text-base font-bold text-zinc-900 dark:text-white">Order summary</h2>
 
                     <div class="space-y-2.5 border-t border-zinc-100 dark:border-white/10 pt-4 text-sm">

@@ -302,7 +302,7 @@
                 $can = fn (string $routeName) => $adminUser?->canAccessAdminRoute($routeName) ?? false;
                 $navItemClass = fn (bool $active) => $active
                     ? 'group flex items-center gap-3 rounded-[12px] bg-zinc-200 px-3 py-3 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                    : 'group flex items-center gap-3 rounded-[12px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
+                    : 'group flex items-center gap-3 rounded-[12px] px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:hover:bg-[#26416b] dark:hover:text-blue-400 dark:hover:font-semibold';
                 $iconClass = fn (bool $active) => $active
                     ? 'h-5 w-5 shrink-0 text-black dark:text-white'
                     : 'h-5 w-5 shrink-0 text-zinc-600 transition-colors';
@@ -329,7 +329,7 @@
                     $productActive = $isCurrent(...$productPatterns);
                     $subItemClass = fn (bool $active) => $active
                         ? 'flex items-center rounded-[12px] bg-zinc-200 px-3 py-2.5 text-sm font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                        : 'flex items-center rounded-[12px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
+                        : 'flex items-center rounded-[12px] px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#26416b] dark:hover:text-blue-400 dark:hover:font-semibold';
                 @endphp
                 <div
                     x-data="{ expanded: {{ $productActive ? 'true' : 'false' }} }"
@@ -481,7 +481,7 @@
                         @php
                             $subItem = fn (bool $active) => $active
                                 ? 'block rounded-[12px] bg-zinc-200 px-3 py-2 text-xs font-semibold text-black dark:bg-black dark:text-white dark:ring-1 dark:ring-white/10 nav-item-active'
-                                : 'block rounded-[12px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#0a1729] dark:hover:text-blue-400 dark:hover:font-semibold';
+                                : 'block rounded-[12px] px-3 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-150 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-[#26416b] dark:hover:text-blue-400 dark:hover:font-semibold';
                         @endphp
                         <a href="{{ route('admin.content.blog') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.blog')) }}">Blog Posts</a>
                         <a href="{{ route('admin.content.press') }}" wire:navigate class="{{ $subItem($isCurrent('admin.content.press')) }}">Press Articles</a>

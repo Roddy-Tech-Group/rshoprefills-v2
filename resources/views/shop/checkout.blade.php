@@ -87,7 +87,7 @@
         <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false), @js($paymentFees))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
-            <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 py-24 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
+            <div x-show="!$store.cart.hydrated" class="pure-card flex items-center justify-center rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 py-24 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
                 <svg class="h-7 w-7 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -96,7 +96,7 @@
 
             {{-- Empty cart - same animated inline illustration as the cart
                  page and the nav/dashboard cart popups. --}}
-            <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 px-6 py-20 text-center ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
+            <div x-show="$store.cart.hydrated && $store.cart.count === 0" x-cloak class="pure-card rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 px-6 py-20 text-center ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
                 <x-illo name="emptyCart" class="mx-auto w-full max-w-[280px]" />
                 <p class="mt-4 text-base font-semibold text-zinc-900 dark:text-white">Your cart is empty</p>
                 <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Add a Product before heading to checkout.</p>
@@ -109,7 +109,7 @@
             <div x-show="$store.cart.hydrated && $store.cart.count > 0" x-cloak class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-6">
 
                 {{-- ─── LEFT: Order details ─── --}}
-                <section class="self-start rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
+                <section class="pure-card self-start rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
                     <h2 class="text-lg font-bold text-zinc-900 dark:text-white">Order details</h2>
 
                     <ul class="mt-4 divide-y divide-zinc-100">
@@ -289,7 +289,7 @@
                      `id="checkout-form"` so the Rcoin redemption checkbox in
                      the left column can post into this form via its
                      `form="checkout-form"` attribute. --}}
-                <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
+                <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="pure-card rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
@@ -1050,7 +1050,7 @@
 
                 allMethods: [
                     { key: 'card',          label: 'Card',          desc: 'Visa, Mastercard',           icon: '/assets/credit%20card%20payment.webp' },
-                    { key: 'mobile_money',  label: 'Mobile Money',  desc: 'MTN, Orange, Vodafone',      icon: '/assets/pay%20with%20crypto%20momo%20%2B.webp' },
+                    { key: 'mobile_money',  label: 'Mobile Money',  desc: 'MTN, Orange, Vodafone',      icon: '/assets/MOMO.svg' },
                     { key: 'bank_transfer', label: 'Bank Transfer', desc: 'Pay via virtual account',    icon: '/assets/Bank%20transfer.webp' },
                     // New: covers Flutterwave's "Pay With Bank" (internet banking
                     // redirect) for NGN / GBP / EUR.

@@ -956,6 +956,8 @@ select:focus[data-flux-control] {
 .dark img[src$=".svg"][src*="ETH"],
 .dark img[src$=".svg"][src*="SOLANA"],
 .dark img[src$=".svg"][src*="USDT"],
+.dark img[src$=".svg"][src*="BNB"],
+.dark img[src$=".svg"][src*="LTC"],
 .dark img[src$="/USD.svg"] {
     filter: none !important;
 }
@@ -1132,6 +1134,17 @@ select:focus[data-flux-control] {
 .dark.pure-dark .dark\:bg-\[\#162a4a\] { background-color: #0d0d0d; }
 .dark.pure-dark .dark\:bg-\[\#1d3252\] { background-color: #161616; }
 .dark.pure-dark .dark\:bg-\[\#26416b\] { background-color: #1f1f1f; }
+
+/* Card surfaces that are transparent or use navy / light tints / gradients /
+   frosted glass map to pure black in Extra Dark, so on the black page they barely
+   read. `.esim-tile` (eSIM tiles, how-to band, modals) and `.pure-card` (cart +
+   checkout glass cards, and any other page that opts in) both get the card tone in
+   Extra Dark only; light and normal dark are untouched. !important + image:none so
+   this wins over the navy `dark:bg-[#0c1a36]!`, the glass `/60` `/70` tints and the
+   gradient stops all defined later in this block, and so a tagged gradient section
+   flattens to the card tone instead of a lighter band. */
+.dark.pure-dark .esim-tile,
+.dark.pure-dark .pure-card { background-color: #0d0d0d !important; background-image: none !important; }
 .dark.pure-dark .dark\:bg-\[\#13294d\] { background-color: #121212; }
 .dark.pure-dark .dark\:hover\:bg-\[\#26416b\]:hover { background-color: #1f1f1f; }
 .dark.pure-dark .dark\:hover\:bg-\[\#34507a\]:hover { background-color: #262626; }

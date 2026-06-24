@@ -514,23 +514,24 @@ new #[Lazy] class extends Component
                         x-data="{
                             open: false,
                             theme: window.themeChoice ? window.themeChoice() : (localStorage.getItem('theme') || 'system'),
-                            extraDark: window.pureDarkOn ? window.pureDarkOn() : (localStorage.getItem('theme.pure_dark') === '1'),
+                            softDark: window.pureDarkOn ? ! window.pureDarkOn() : false,
                             choose(value) {
                                 this.theme = value;
                                 window.setTheme(value);
                                 this.open = false;
                             },
-                            toggleExtraDark() {
-                                this.extraDark = ! this.extraDark;
-                                window.setPureDark(this.extraDark);
-                                if (this.extraDark && ! window.themeIsDark()) {
+                            toggleSoftDark() {
+                                this.softDark = ! this.softDark;
+                                // Pure black is the default, so the stored pure-dark flag is the inverse.
+                                window.setPureDark(! this.softDark);
+                                if (this.softDark && ! window.themeIsDark()) {
                                     this.theme = 'dark';
                                     window.setTheme('dark');
                                 }
                             },
                         }"
                         x-on:theme-changed.window="theme = localStorage.getItem('theme') || 'system'"
-                        x-on:pure-dark-changed.window="extraDark = window.pureDarkOn()"
+                        x-on:pure-dark-changed.window="softDark = ! window.pureDarkOn()"
                         @click.outside="open = false"
                         @keydown.escape="open = false"
                         class="relative self-start"
@@ -629,28 +630,28 @@ new #[Lazy] class extends Component
                                 </button>
                             @endforeach
 
-                            {{-- Extra dark (true black) - pure-black variant of dark mode.
-                                 Flipping it on switches to dark immediately and swaps the
-                                 navy palette for black (window.setPureDark). --}}
+                            {{-- Soft dark (navy) - dark mode is pure black by default;
+                                 flipping this on switches to dark immediately and swaps
+                                 the pure black for the softer navy palette. --}}
                             <button
                                 type="button"
-                                @click="toggleExtraDark()"
+                                @click="toggleSoftDark()"
                                 class="flex w-full items-center justify-between gap-3 rounded-[12px] px-3 py-2 text-left text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
                                 role="menuitemcheckbox"
-                                :aria-checked="extraDark.toString()"
+                                :aria-checked="softDark.toString()"
                             >
                                 <span class="inline-flex items-center gap-2.5">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
                                     </svg>
-                                    Extra dark
+                                    Soft dark
                                 </span>
                                 <span
-                                    :class="extraDark ? 'bg-blue-600' : 'bg-zinc-200'"
+                                    :class="softDark ? 'bg-blue-600' : 'bg-zinc-200'"
                                     class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[12px] transition-colors"
                                 >
                                     <span
-                                        :class="extraDark ? 'translate-x-4' : 'translate-x-0.5'"
+                                        :class="softDark ? 'translate-x-4' : 'translate-x-0.5'"
                                         class="inline-block h-4 w-4 transform rounded-[12px] bg-white shadow transition-transform"
                                     ></span>
                                 </span>

@@ -53,6 +53,17 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(TraceRequestMiddleware::class);
 
+        // Theme hint cookies are written client-side (plain '0'/'1') by the theme
+        // engine so the server can paint the right dark / Extra Dark ramp on the
+        // first byte. They carry no sensitive data; exclude them from cookie
+        // encryption or they decrypt to null and the pre-paint frame flashes.
+        $middleware->encryptCookies(except: [
+            'theme_web_dark',
+            'theme_admin_dark',
+            'theme_web_puredark',
+            'theme_admin_puredark',
+        ]);
+
         // Locks the storefront catalog to the customer's chosen country/region.
         // CaptureReferralCookie persists `?ref=…` for 90 days so the referral
         // survives the visitor leaving and signing up later.

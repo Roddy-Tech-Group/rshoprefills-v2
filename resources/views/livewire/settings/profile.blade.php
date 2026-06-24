@@ -238,37 +238,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     </div>
 
     {{-- ─── Section 1: Personal Information ─── --}}
-    <section
-        x-data="{ navigating: false }"
-        x-on:livewire:navigate.window="navigating = true"
-        x-on:livewire:navigated.window="navigating = false"
-        class="relative"
-    >
-        {{-- Skeleton overlay shown during wire:navigate page transitions — cascading reveal --}}
-        <div x-show="navigating" x-cloak class="skeleton-stagger absolute inset-0 z-10 bg-[#eff6ff]" aria-hidden="true">
-            <x-skeleton class="h-6 w-44" style="--i: 0" />
-            <div class="mt-2.5 overflow-hidden rounded-[12px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none" style="--i: 1">
-                <div class="flex items-center gap-4 p-6">
-                    <x-skeleton shape="circle" class="h-20 w-20" />
-                    <div class="flex-1 space-y-2.5">
-                        <x-skeleton class="h-5 w-32" />
-                        <x-skeleton class="h-3.5 w-48" />
-                    </div>
-                </div>
-                <div class="skeleton-stagger-fast divide-inset">
-                    @for ($i = 0; $i < 4; $i++)
-                        <div class="flex items-center justify-between px-6 py-3.5" style="--i: {{ $i }}">
-                            <div class="space-y-2">
-                                <x-skeleton class="h-3 w-20" />
-                                <x-skeleton class="h-4 w-36" />
-                            </div>
-                            <x-skeleton class="h-5 w-12" />
-                        </div>
-                    @endfor
-                </div>
-            </div>
-        </div>
-
+    <section>
         <div class="hidden mb-2.5 items-center justify-between lg:flex">
             <h2 class="text-base font-bold text-zinc-900">Personal Information</h2>
         </div>

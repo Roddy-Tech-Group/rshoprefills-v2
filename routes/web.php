@@ -4,6 +4,7 @@ use App\Domain\Cart\Services\CartManager;
 use App\Domain\Cart\Services\CartPricingService;
 use App\Domain\Notification\Services\AdminNotificationService;
 use App\Http\Controllers\Admin\AdminCustomerController;
+use App\Http\Controllers\Api\PushSubscriptionController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartWebController;
 use App\Http\Controllers\CheckoutController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\ThemeController;
 use App\Models\BlogPost;
+use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\CurrencyRate;
 use App\Models\PressArticle;
@@ -87,6 +89,41 @@ Route::get('api/search/brands', function (Request $request) {
         ];
     });
 
+    // eSIMs are country / region products with no brand_key, so the brand query
+    // above skips them entirely. Search them separately by name and dedupe to one
+    // result per country (mirroring the eSIM catalog grouping) so a search for a
+    // country or region surfaces its eSIM.
+    $esimItems = collect();
+    if ($esimCat = Category::where('slug', 'esims')->first()) {
+        $esimItems = Product::query()
+            ->where('is_active', true)
+            ->where('category_id', $esimCat->id)
+            ->where('name', 'like', "%{$q}%")
+            ->orderBy('name')
+            ->get(['slug', 'name', 'country_code'])
+            ->groupBy(function ($p) {
+                $cc = strtoupper((string) $p->country_code);
+
+                return (strlen($cc) === 2 && $cc !== 'WW') ? $cc : 'slug:'.$p->slug;
+            })
+            ->map(function ($group) {
+                $p = $group->first();
+                $cc = strtoupper((string) $p->country_code);
+                $isLocal = strlen($cc) === 2 && $cc !== 'WW';
+
+                return [
+                    'type' => 'eSIM',
+                    'name' => EsimStoreController::regionMeta($p->country_code, $p->slug, $p->name)['name'],
+                    'logo' => $isLocal ? Product::flagUrl($cc) : EsimStoreController::globalFlag(),
+                    'url' => '/esims/'.$p->slug,
+                    'slug' => $p->slug,
+                    'country' => $p->country_code,
+                ];
+            })
+            ->take(6)
+            ->values();
+    }
+
     // Key pages, matched by title - so a global search also surfaces sections.
     $pages = collect([
         ['name' => 'Gift cards', 'url' => route('shop.gift-cards')],
@@ -100,7 +137,7 @@ Route::get('api/search/brands', function (Request $request) {
         ->take(4)
         ->values();
 
-    return response()->json($items->concat($pages)->values());
+    return response()->json($items->concat($esimItems)->concat($pages)->values());
 })->name('api.search.brands');
 
 // Brand-level detail page. The URL slug is a kebab-cased brand_key
@@ -719,8 +756,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Web Push subscriptions for web users
     Route::prefix('push')->name('push.')->group(function () {
-        Route::post('subscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'subscribe'])->name('subscribe');
-        Route::post('unsubscribe', [\App\Http\Controllers\Api\PushSubscriptionController::class, 'unsubscribe'])->name('unsubscribe');
+        Route::post('subscribe', [PushSubscriptionController::class, 'subscribe'])->name('subscribe');
+        Route::post('unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('unsubscribe');
     });
 });
 

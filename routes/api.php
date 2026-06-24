@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CheckoutApiController;
+use App\Http\Controllers\Api\InteractionTrackingController;
 use App\Http\Controllers\Api\NewsletterApiController;
 use App\Http\Controllers\Api\NotificationApiController;
 use App\Http\Controllers\Api\PaymentSessionController;
@@ -64,6 +65,14 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
 Route::post('newsletter/subscribe', [NewsletterApiController::class, 'subscribe'])->name('newsletter.subscribe');
 Route::get('newsletter/unsubscribe', [NewsletterApiController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
 
+// Push notification interaction tracking (Public + throttled). The service worker
+// fires this on `notificationclick`, which can happen with no active session and
+// from a context that carries no auth — so it must NOT sit behind auth or clicks
+// never record. Attribution is by campaign_id / notification_id in the body.
+Route::post('push/track', [InteractionTrackingController::class, 'record'])
+    ->middleware('throttle:120,1')
+    ->name('api.push.track');
+
 // Protected Dashboard & Wallet APIs
 Route::middleware('auth')->group(function () {
     Route::get('dashboard', [UserDashboardController::class, 'index'])->name('api.dashboard');
@@ -107,10 +116,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [NotificationApiController::class, 'getPreferences'])->name('get');
         Route::put('/', [NotificationApiController::class, 'updatePreferences'])->name('update');
     });
-
-
-    // Public interaction tracking (e.g. from service worker click)
-    Route::post('push/track', [\App\Http\Controllers\Api\InteractionTrackingController::class, 'record'])->name('api.push.track');
 
     Route::prefix('payment-sessions')->name('api.payment-sessions.')->group(function () {
         // status is polled by the checkout UI while awaiting confirmation, so it

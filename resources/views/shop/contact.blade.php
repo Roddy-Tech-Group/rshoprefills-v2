@@ -340,7 +340,7 @@
                 <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Reach out</h2>
                 <p class="mt-1 text-sm text-zinc-600">Explore collaboration possibilities</p>
 
-                <div class="mt-8 grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="mt-8 grid grid-cols-2 gap-x-10 gap-y-8 lg:grid-cols-3">
                     @foreach ($departments as $dept)
                         <div>
                             <p class="text-sm font-bold text-zinc-900">{{ $dept['label'] }}</p>

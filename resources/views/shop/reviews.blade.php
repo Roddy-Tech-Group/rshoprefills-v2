@@ -23,7 +23,7 @@
     <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
 
     {{-- Hero --}}
-    <section class="border-b border-zinc-100 bg-blue-50 dark:bg-[#0c1a36]!">
+    <section class="border-b border-zinc-100 bg-blue-50 dark:bg-[#0c1a36]">
         <div class="mx-auto w-full max-w-[1140px] px-4 py-14 text-center sm:px-6 sm:py-20">
             <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Customer reviews</span>
             <h1 class="mt-5 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">What our customers say</h1>
@@ -32,7 +32,7 @@
             </p>
 
             @if ($aggregate['count'] > 0)
-                <div class="mx-auto mt-6 inline-flex items-center gap-3 rounded-[12px] bg-white px-4 py-2.5 ring-1 ring-zinc-100 dark:bg-[#0c1a36]!">
+                <div class="mx-auto mt-6 inline-flex items-center gap-3 rounded-[12px] bg-white px-4 py-2.5 ring-1 ring-zinc-100">
                     <div class="flex items-center gap-0.5">
                         @for ($i = 1; $i <= 5; $i++)
                             @php $fillPct = max(0, min(100, ($aggregate['rating'] - ($i - 1)) * 100)); @endphp
@@ -52,9 +52,9 @@
     </section>
 
     {{-- Trustpilot Review Collector - lets visitors leave a review directly --}}
-    <section class="border-b border-zinc-100 bg-white dark:bg-[#0c1a36]!">
+    <section class="border-b border-zinc-100 bg-white dark:bg-[#0c1a36]">
         <div class="mx-auto w-full max-w-[1140px] px-4 py-10 sm:px-6">
-            <div class="rounded-[12px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8 dark:bg-[#0c1a36]!">
+            <div class="rounded-[12px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8">
                 <div class="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                     <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-emerald-100">
                         <svg class="h-6 w-6 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -127,7 +127,7 @@
             ->values();
     @endphp
 
-    <section class="w-full bg-zinc-50 py-14 sm:py-16 dark:bg-[#0c1a36]!">
+    <section class="w-full bg-zinc-50 py-14 sm:py-16 dark:bg-[#0c1a36]">
         <div class="mx-auto mb-8 w-full max-w-[1140px] px-4 sm:px-6">
             <div class="flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -170,9 +170,9 @@
 
     {{-- Leave a review - our own collector, posting straight into the wall
          above (after approval). These are general, non-product reviews. --}}
-    <section class="border-t border-zinc-100 bg-white dark:bg-[#0c1a36]!">
+    <section class="border-t border-zinc-100 bg-white dark:bg-[#0c1a36]">
         <div class="mx-auto w-full max-w-[640px] px-4 py-14 sm:px-6 sm:py-16">
-            <div class="rounded-[12px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8 dark:bg-[#0c1a36]!">
+            <div class="rounded-[12px] bg-zinc-50 p-6 ring-1 ring-zinc-100 sm:p-8">
                 @include('shop._review-form')
             </div>
         </div>
