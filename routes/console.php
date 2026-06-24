@@ -173,3 +173,10 @@ Schedule::command('payouts:check-stuck')
     ->everyFifteenMinutes()
     ->withoutOverlapping()
     ->name('payouts:check-stuck-15m');
+
+// Dispatch scheduled push notification campaigns
+Schedule::command('campaigns:dispatch')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->name('campaigns:dispatch-1m');
