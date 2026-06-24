@@ -167,3 +167,16 @@ Schedule::command('reconcile:orphaned-sessions')->hourly()->sentryMonitor('recon
 
 // Enterprise Provider Monitoring
 Schedule::command('zendit:check-balance --threshold=500')->hourly()->sentryMonitor('zendit-check-balance');
+
+// Check for stuck bank payouts and fallback to manual processing
+Schedule::command('payouts:check-stuck')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->name('payouts:check-stuck-15m');
+
+// Dispatch scheduled push notification campaigns
+Schedule::command('campaigns:dispatch')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->name('campaigns:dispatch-1m');

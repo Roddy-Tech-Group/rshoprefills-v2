@@ -16,13 +16,8 @@ class CampaignService
      */
     public function dispatchCampaign(NotificationCampaign $campaign): void
     {
-        if ($campaign->status !== 'active') {
-            return;
-        }
-
-        $template = $campaign->template;
-        if (!$template) {
-            Log::error("Campaign {$campaign->id} has no template.");
+        if ($campaign->status !== 'processing' && $campaign->status !== 'active') {
+            Log::warning("Campaign {$campaign->id} not in processing/active status (is {$campaign->status}).");
             return;
         }
 
@@ -32,32 +27,42 @@ class CampaignService
         if (!empty($campaign->audience_filters['country'])) {
             $query->where('country', $campaign->audience_filters['country']);
         }
+        
+        // Active 30 days filter example
+        if (!empty($campaign->audience_filters['active_last_30_days'])) {
+            $query->where('last_seen_at', '>=', now()->subDays(30));
+        }
 
-        $query->chunk(500, function ($users) use ($campaign, $template) {
+        $sentCount = 0;
+
+        $query->chunk(500, function ($users) use ($campaign, &$sentCount) {
             foreach ($users as $user) {
-                // In a real scenario, evaluate template variables here
-                $title = str_replace('{{name}}', $user->name, $template->title_template);
-                $body = str_replace('{{name}}', $user->name, $template->body_template);
-                $url = $template->action_url;
+                // Evaluate template variables
+                $title = str_replace('{{name}}', $user->name, $campaign->notification_title);
+                $body = str_replace('{{name}}', $user->name, $campaign->notification_message);
+                $url = $campaign->notification_url;
 
                 $this->dispatcher->dispatch(
                     user: $user,
                     title: $title,
                     message: $body,
-                    category: $campaign->category,
-                    mailable: null, // Depending on if channel includes email, we'd build a generic mailable
-                    metadata: array_merge($template->metadata ?? [], [
+                    category: $campaign->category ?? 'marketing',
+                    mailable: null,
+                    metadata: [
                         'campaign_id' => $campaign->id,
                         'url' => $url,
-                    ]),
+                    ],
                     idempotencyKey: 'campaign_'.$campaign->id.'_user_'.$user->id
                 );
+                
+                $sentCount++;
             }
         });
 
         $campaign->update([
-            'status' => 'completed',
-            'completed_at' => now(),
+            'status' => 'sent',
+            'sent_at' => now(),
+            'stats_sent' => $sentCount,
         ]);
     }
 }
