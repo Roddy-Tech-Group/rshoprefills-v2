@@ -24,9 +24,13 @@ class extends Component {
     public $payout_method = 'wallet';
     public $bank_account_id;
     public $code_pin;
-    
     // Media uploads
     public $card_image;
+    public $receipt_image;
+    
+    // Contact
+    public $whatsapp_country_code = '+234';
+    public $whatsapp_number;
 
     public $calculated_payout = 0;
     public $payout_currency_label = '';
@@ -221,6 +225,9 @@ class extends Component {
             ],
             'code_pin' => 'required|string',
             'card_image' => 'required|image|max:5120', // 5MB max
+            'receipt_image' => 'nullable|image|max:5120',
+            'whatsapp_country_code' => 'required|string',
+            'whatsapp_number' => 'required|string|max:20',
         ], [
             'rate_id.required' => 'Please select a valid gift card and payout currency.',
         ]);
@@ -231,6 +238,15 @@ class extends Component {
             ['file' => $this->card_image, 'type' => 'front'],
         ];
 
+        if ($this->receipt_image) {
+            $images[] = ['file' => $this->receipt_image, 'type' => 'receipt'];
+        }
+
+        $fullWhatsapp = null;
+        if ($this->whatsapp_number) {
+            $fullWhatsapp = $this->whatsapp_country_code . ' ' . $this->whatsapp_number;
+        }
+
         try {
             $trade = $service->submitTrade(
                 userId: auth()->id(),
@@ -239,11 +255,12 @@ class extends Component {
                 payoutMethod: $this->payout_method,
                 bankAccountId: $this->payout_method === 'bank' ? $this->bank_account_id : null,
                 codePin: $this->code_pin,
+                whatsappNumber: $fullWhatsapp,
                 images: $images
             );
 
             Flux::toast('Trade submitted successfully!', variant: 'success');
-            return $this->redirectRoute('dashboard.gift-cards.history', navigate: true);
+            return $this->redirectRoute('dashboard.gift-cards.trades.show', ['trade' => $trade->id], navigate: true);
 
         } catch (\Exception $e) {
             Flux::toast($e->getMessage(), variant: 'danger');
@@ -272,6 +289,17 @@ class extends Component {
             })->values();
         }
 
+        $dialOptions = [];
+        $countries = config('countries.codes') ?? [];
+        $dials = config('dial_codes.codes') ?? [];
+        foreach ($countries as $name => $code) {
+            if (isset($dials[$code])) {
+                $dial = $dials[$code];
+                $dialOptions[] = ['value' => $dial, 'label' => "$name ($dial)"];
+            }
+        }
+        usort($dialOptions, fn($a, $b) => strcmp($a['label'], $b['label']));
+
         return [
             'cards' => $cards,
             'availableCurrencies' => $availableCurrencies,
@@ -279,6 +307,7 @@ class extends Component {
             'cardOptions' => collect($cards)->map(fn($c) => ['value' => $c['id'], 'label' => $c['name']])->toArray(),
             'currencyOptions' => collect($availableCurrencies)->map(fn($c) => ['value' => $c['currency'], 'label' => $c['currency'] . ' (Rate: ' . number_format($c['rate'], 2) . ')'])->toArray(),
             'savedBankOptions' => BankAccount::where('user_id', auth()->id())->get()->map(fn($b) => ['value' => $b->id, 'label' => $b->bank_name . ' - ' . $b->account_number])->toArray(),
+            'dialOptions' => $dialOptions,
         ];
     }
 };
@@ -349,6 +378,7 @@ class extends Component {
             
             <flux:input type="file" wire:model.live="card_image" label="Card Image" accept="image/*" required />
             
+            
             @if($card_image)
                 <div class="mt-4 relative rounded-xl border border-zinc-200 overflow-hidden max-w-[200px] shadow-sm">
                     <img src="{{ $card_image->temporaryUrl() }}" class="w-full h-auto object-cover" alt="Card Preview">
@@ -359,6 +389,34 @@ class extends Component {
                     </button>
                 </div>
             @endif
+
+            <div class="mt-6">
+                <flux:input type="file" wire:model.live="receipt_image" label="Receipt Image (Optional)" accept="image/*" />
+                @if($receipt_image)
+                    <div class="mt-4 relative rounded-xl border border-zinc-200 overflow-hidden max-w-[200px] shadow-sm">
+                        <img src="{{ $receipt_image->temporaryUrl() }}" class="w-full h-auto object-cover" alt="Receipt Preview">
+                        <button type="button" wire:click="$set('receipt_image', null)" class="absolute top-2 right-2 p-1 bg-red-500/80 hover:bg-red-600 text-white rounded-full transition shadow-sm backdrop-blur-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="size-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                @endif
+            </div>
+            
+            <div class="mt-6 flex flex-col sm:flex-row gap-4 items-end">
+                <div class="w-full sm:w-1/3">
+                    <x-custom-select 
+                        wire:model="whatsapp_country_code" 
+                        label="Country Code" 
+                        :options="$dialOptions" 
+                        searchable="true" 
+                    />
+                </div>
+                <div class="w-full sm:w-2/3">
+                    <flux:input wire:model="whatsapp_number" label="Contact Details" required />
+                </div>
+            </div>
         </div>
 
         {{-- Payout Details --}}
