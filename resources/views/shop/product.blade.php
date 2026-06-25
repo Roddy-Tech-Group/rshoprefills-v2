@@ -227,6 +227,9 @@
                 'id' => $v->id,
                 'disp' => round($val * $displayRate, 2),
                 'price' => $conv($val),
+                // The offer name ("1GB/day + Call (30d)") carries nuance the GB total
+                // misses, so it headlines the card.
+                'name' => $m['notes'] ?? null,
                 'dataGB' => $m['dataGB'] ?? null,
                 'days' => $m['durationDays'] ?? null,
                 'voice' => $m['voiceMinutes'] ?? null,
@@ -239,13 +242,23 @@
         }
     }
 
+    // Switcher tabs: Credit / Data / Bundle (only those the network offers). Credit's
+    // panel is the amount selector; Data/Bundle panels are benefit cards.
     $topupTabMeta = ['credit' => 'Credit', 'data' => 'Data', 'bundle' => 'Bundles'];
-    // Only show tabs that have offers; Credit also appears when a variable
-    // (custom-amount) credit option exists even with no fixed credit denoms.
     $topupTabs = collect($topupTabMeta)
         ->filter(fn ($label, $key) => ! empty($topupGroups[$key]) || ($key === 'credit' && $variable))
         ->all();
-    $topupDefaultTab = array_key_first($topupTabs) ?: 'credit';
+    // The switcher only appears when there's an actual choice (data or bundle plans
+    // alongside credit). Credit-only networks just show the amount selector.
+    $topupHasPlans = ! empty($topupGroups['data']) || ! empty($topupGroups['bundle']);
+    // The listing's "Credit, Data & Calls" filter passes ?plan=bundles so the detail
+    // opens on a bundle/data tab; otherwise it opens on Credit (the amount selector).
+    $topupPlanScope = (string) request()->query('plan', '');
+    $topupDefaultTab = ($topupPlanScope === 'bundles' && $topupHasPlans)
+        ? (! empty($topupGroups['bundle']) ? 'bundle' : 'data')
+        : (array_key_first($topupTabs) ?: 'credit');
+    // Credit denominations feed the amount selector's dropdown.
+    $topupCreditPlans = collect($topupGroups['credit'] ?? []);
 
     // Similar brands in same subcategory + same country.
     $similarIds = Product::query()
@@ -550,14 +563,16 @@
                 </div>
 
                 @if ($hasStock)
-                    {{-- Mobile top-ups: offers grouped by what you actually get -
-                         Credit / Data / Bundle - each plan showing its benefits, all read
-                         from the synced Zendit metadata (no hardcoded type or amount). --}}
-                    @if ($isTopup)
-                        <div x-data="{ ttab: '{{ $topupDefaultTab }}' }" class="mb-5">
-                            <label class="mb-1.5 block text-xs font-semibold text-zinc-900 dark:text-white">Choose a plan</label>
+                    {{-- Mobile top-ups: a Credit / Data / Bundle switcher sharing one ttab
+                         scope. The Credit panel is the amount selector below; Data/Bundle
+                         panels are benefit cards. All read from synced Zendit metadata. --}}
+                    <div @if ($isTopup && $topupHasPlans) x-data="{ ttab: '{{ $topupDefaultTab }}' }" @endif>
 
-                            <div class="inline-flex items-center rounded-[12px] bg-zinc-100 p-1 dark:bg-[#0c1a36]" role="tablist" aria-label="Top-up type">
+                    @if ($isTopup && $topupHasPlans)
+                        <div class="mb-5">
+                            <label class="mb-1.5 block text-xs font-semibold text-zinc-900 dark:text-white">Choose how to top up</label>
+
+                            <div class="inline-flex items-center rounded-[12px] bg-zinc-100 p-1 dark:bg-[#0c1a36]" role="tablist" aria-label="Plan type">
                                 @foreach ($topupTabs as $key => $label)
                                     <button
                                         type="button"
@@ -571,57 +586,52 @@
                             </div>
 
                             @foreach ($topupTabs as $key => $label)
+                                @if ($key === 'credit') @continue @endif
                                 <div x-show="ttab === '{{ $key }}'" x-cloak class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                                     @foreach ($topupGroups[$key] as $plan)
                                         @php
-                                            $chips = [];
-                                            if ($plan['dataUnlimited']) { $chips[] = 'Unlimited data'; }
-                                            elseif (! empty($plan['dataGB'])) { $chips[] = rtrim(rtrim((string) $plan['dataGB'], '0'), '.').'GB data'; }
-                                            if ($plan['voiceUnlimited']) { $chips[] = 'Unlimited mins'; }
-                                            elseif (! empty($plan['voice'])) { $chips[] = $plan['voice'].' mins'; }
-                                            if ($plan['smsUnlimited']) { $chips[] = 'Unlimited SMS'; }
-                                            elseif (! empty($plan['sms'])) { $chips[] = $plan['sms'].' SMS'; }
-                                            if (! empty($plan['days'])) { $chips[] = $plan['days'].'-day validity'; }
+                                            // Data/Bundle render as eSIM-style cards: an icon feature list built
+                                            // from the offer's structured benefits. Unlimited flags win over a number.
+                                            $dataIcon = 'M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z';
+                                            $voiceIcon = 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z';
+                                            $smsIcon = 'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z';
+                                            $clockIcon = 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z';
+
+                                            $features = [];
+                                            if ($plan['dataUnlimited']) { $features[] = [$dataIcon, 'Unlimited data']; }
+                                            elseif (! empty($plan['dataGB'])) { $features[] = [$dataIcon, rtrim(rtrim(number_format((float) $plan['dataGB'], 2, '.', ''), '0'), '.').'GB data']; }
+                                            if ($plan['voiceUnlimited']) { $features[] = [$voiceIcon, 'Unlimited minutes']; }
+                                            elseif (! empty($plan['voice'])) { $features[] = [$voiceIcon, $plan['voice'].' minutes']; }
+                                            if ($plan['smsUnlimited']) { $features[] = [$smsIcon, 'Unlimited SMS']; }
+                                            elseif (! empty($plan['sms'])) { $features[] = [$smsIcon, $plan['sms'].' SMS']; }
+                                            if (! empty($plan['days'])) { $features[] = [$clockIcon, $plan['days'].'-day validity']; }
                                         @endphp
                                         <button
                                             type="button"
-                                            @click="amount = {{ $plan['disp'] }}; selectedVariantId = {{ $plan['id'] }}; customMode = false"
+                                            @click="amount = {{ $plan['disp'] }}; selectedVariantId = {{ $plan['id'] }}; customMode = false; window.innerWidth < 1024 && setTimeout(() => document.getElementById('topup-recipient')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 140)"
                                             :class="(! customMode && selectedVariantId === {{ $plan['id'] }}) ? 'border-blue-600 ring-1 ring-blue-600 dark:border-blue-500 dark:ring-blue-500' : 'border-zinc-200 hover:border-blue-300 dark:border-[#24364f] dark:hover:border-blue-400/50'"
-                                            class="esim-tile flex flex-col rounded-[12px] border bg-[#eff6ff] px-3.5 py-3 text-left transition-colors"
+                                            class="esim-tile flex h-full flex-col rounded-[14px] border bg-[#eff6ff] px-4 py-4 text-left transition-colors"
                                         >
-                                            <span class="flex items-center justify-between gap-2">
-                                                <span class="text-base font-bold tabular-nums text-zinc-900 dark:text-white">{{ $plan['price'] }}</span>
-                                                @if ($key !== 'credit')
-                                                    <span class="inline-flex shrink-0 items-center rounded-[8px] bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">{{ $key === 'data' ? 'Data' : 'Bundle' }}</span>
+                                            <span class="inline-flex w-fit items-center rounded-[8px] bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">{{ $key === 'data' ? 'Data' : 'Bundle' }}</span>
+                                                @if (! empty($plan['name']))
+                                                    <span class="mt-2 block text-sm font-bold leading-snug text-zinc-900 dark:text-white">{{ $plan['name'] }}</span>
                                                 @endif
-                                            </span>
-                                            @if (! empty($chips))
-                                                <span class="mt-2 flex flex-wrap gap-1.5">
-                                                    @foreach ($chips as $chip)
-                                                        <span class="inline-flex items-center rounded-[6px] bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700 dark:bg-white/10 dark:text-zinc-200">{{ $chip }}</span>
-                                                    @endforeach
-                                                </span>
-                                            @elseif (! empty($plan['summary']))
-                                                <span class="mt-1.5 block text-xs leading-snug text-zinc-600 dark:text-zinc-400">{{ $plan['summary'] }}</span>
-                                            @endif
+                                                @if (! empty($features))
+                                                    <span class="my-3 block h-px bg-zinc-200 dark:bg-zinc-700"></span>
+                                                    <span class="block space-y-2 text-sm text-zinc-900 dark:text-white">
+                                                        @foreach ($features as [$fIcon, $fLabel])
+                                                            <span class="flex items-center gap-2">
+                                                                <svg class="h-4 w-4 shrink-0 text-zinc-700 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $fIcon }}"/></svg>
+                                                                <span>{{ $fLabel }}</span>
+                                                            </span>
+                                                        @endforeach
+                                                    </span>
+                                                @elseif (! empty($plan['summary']))
+                                                    <span class="mt-2 block text-xs leading-snug text-zinc-600 dark:text-zinc-400">{{ $plan['summary'] }}</span>
+                                                @endif
+                                                <span class="mt-auto pt-3 text-right text-lg font-bold tabular-nums text-zinc-900 dark:text-white">{{ $plan['price'] }}</span>
                                         </button>
                                     @endforeach
-
-                                    @if ($key === 'credit' && $variable)
-                                        <button
-                                            type="button"
-                                            @click="customMode = true; selectedVariantId = {{ $variable->id }}; amount = ''"
-                                            :class="customMode ? 'border-blue-600 ring-1 ring-blue-600 dark:border-blue-500 dark:ring-blue-500' : 'border-zinc-200 hover:border-blue-300 dark:border-[#24364f] dark:hover:border-blue-400/50'"
-                                            class="esim-tile flex flex-col rounded-[12px] border bg-[#eff6ff] px-3.5 py-3 text-left transition-colors"
-                                        >
-                                            <span class="text-base font-bold text-zinc-900 dark:text-white">Custom amount</span>
-                                            <span class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ $customMoney($variable->min_amount) }} - {{ $customMoney($variable->max_amount) }}</span>
-                                        </button>
-                                    @endif
-
-                                    @if (empty($topupGroups[$key]) && ! ($key === 'credit' && $variable))
-                                        <p class="text-sm text-zinc-500 dark:text-zinc-400">No {{ strtolower($label) }} plans available right now.</p>
-                                    @endif
                                 </div>
                             @endforeach
                         </div>
@@ -629,12 +639,13 @@
 
                     {{-- Amount / Quantity / Estimated price. Mobile: Amount on its own full
                          row, Quantity + Estimated price share a 2-col row. sm+: one row. --}}
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_auto_auto]">
+                    <div class="grid gap-3 {{ ! ($isTopup && $topupHasPlans) ? 'grid-cols-2 sm:grid-cols-[1fr_auto_auto]' : '' }}"
+                        @if ($isTopup && $topupHasPlans) :class="ttab === 'credit' ? 'grid-cols-2 sm:grid-cols-[1fr_auto_auto]' : 'grid-cols-[auto_1fr]'" @endif>
 
                         {{-- Amount field — plain typeable input with $ prefix. Suggested denominations
                              render as small clickable chips below so users can one-tap a common value. --}}
-                        <div class="col-span-2 sm:col-span-1">
-                            <label class="mb-1.5 block text-xs font-semibold text-zinc-900">Amount</label>
+                        <div class="col-span-2 sm:col-span-1" @if ($isTopup && $topupHasPlans) x-show="ttab === 'credit'" x-cloak @endif>
+                            <label class="mb-1.5 block text-xs font-semibold text-zinc-900">{{ $isTopup ? 'Credit amount' : 'Amount' }}</label>
                             <div
                                 x-data="{ open: false, locked: false }"
                                 @mouseenter="if (window.matchMedia('(hover: hover)').matches) open = true"
@@ -683,7 +694,29 @@
                                     role="listbox"
                                 >
                                     @if ($isTopup)
-                                        <p class="px-3 py-2.5 text-sm text-zinc-500 dark:text-zinc-400">Pick a plan from the tabs above.</p>
+                                        {{-- Credit selector: airtime-credit denominations only (Data/Bundle
+                                             are chosen from their cards above). --}}
+                                        @foreach ($topupCreditPlans as $plan)
+                                            <button
+                                                type="button"
+                                                @click="amount = {{ $plan['disp'] }}; selectedVariantId = {{ $plan['id'] }}; customMode = false; open = false"
+                                                :class="(! customMode && Number(amount) === {{ $plan['disp'] }}) ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
+                                                class="flex w-full items-center justify-between rounded-[12px] px-3 py-2.5 text-left text-base font-medium tabular-nums transition-colors"
+                                            >
+                                                <span class="font-bold">{{ $plan['price'] }}</span>
+                                            </button>
+                                        @endforeach
+                                        @if ($variable)
+                                            <button
+                                                type="button"
+                                                @click="customMode = true; selectedVariantId = {{ $variable->id }}; amount = ''; open = false"
+                                                :class="customMode ? 'bg-blue-50 text-blue-700' : 'text-zinc-800 hover:bg-zinc-200'"
+                                                class="flex w-full items-center justify-between rounded-[12px] {{ $topupCreditPlans->isNotEmpty() ? 'border-t border-zinc-100' : '' }} px-3 py-2.5 text-left text-base font-medium transition-colors"
+                                            >
+                                                <span class="font-bold">Custom amount</span>
+                                                <span class="text-xs text-zinc-500">{{ $customMoney($variable->min_amount) }} - {{ $customMoney($variable->max_amount) }}</span>
+                                            </button>
+                                        @endif
                                     @else
                                     @foreach ($fixedDenoms as $i => $v)
                                         @php
@@ -914,7 +947,7 @@
                          enforces a valid number. Country flag + dial code are
                          locked to the product's country_code via dial_codes.php. --}}
                     @if ($isTopup)
-                        <div>
+                        <div id="topup-recipient">
                             <label class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
                                 @if (Product::flagUrl($product->country_code))
                                     <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-3.5 w-5 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">
@@ -1040,6 +1073,7 @@
                             </button>
                         </p>
                     </div>
+                    </div>{{-- /top-up switcher ttab scope --}}
                 @else
                     <div class="dash-shimmer pure-card rounded-[12px] bg-[#eff6ff] px-4 py-8 text-center border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
                         <p class="text-base font-semibold text-zinc-900">Out of stock</p>

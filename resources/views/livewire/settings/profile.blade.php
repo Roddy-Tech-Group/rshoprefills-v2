@@ -715,9 +715,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
                         aria-checked="{{ $on ? 'true' : 'false' }}"
                         aria-label="{{ $label }}"
                         wire:click="toggleNotification('{{ $key }}')"
-                        class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-[12px] transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $on ? 'bg-blue-600' : 'bg-zinc-200' }}"
+                        class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-[12px] transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 {{ $on ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-700' }}"
                     >
-                        <span class="pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-[12px] bg-white shadow ring-0 transition-transform duration-300 {{ $on ? 'translate-x-5' : 'translate-x-0.5' }}"></span>
+                        <span class="theme-static pointer-events-none absolute top-0.5 inline-block h-5 w-5 rounded-[12px] bg-white shadow ring-0 transition-transform duration-300 {{ $on ? 'translate-x-5' : 'translate-x-0.5' }}"></span>
                     </button>
                 </div>
             @endforeach
@@ -733,9 +733,9 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     <section class="mt-2">
         <h2 class="mb-2.5 text-base font-bold text-red-600">Danger zone</h2>
 
-        <div class="overflow-hidden rounded-[12px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
+        <div class="divide-inset overflow-hidden rounded-[12px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
             {{-- Logout --}}
-            <form method="POST" action="{{ route('logout') }}" class="border-b border-zinc-100">
+            <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button
                     type="submit"

@@ -185,7 +185,7 @@
 
 <x-shop.layout title="Gift Cards | RshopRefills">
 
-    <section class="min-h-full bg-zinc-100">
+    <section class="min-h-full rounded-[15px] bg-[#eff6ff]">
         <div class="mx-auto w-full max-w-[1550px] px-4 py-8 sm:px-6 lg:px-8">
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr] lg:gap-8">
@@ -223,7 +223,7 @@
 
                         {{-- Modern segmented sort selector. URL-driven so the choice survives reloads;
                              each pill is a real <a> that updates ?sort= while preserving other filters. --}}
-                        <div class="inline-flex shrink-0 items-center rounded-[12px] bg-zinc-100 p-1 sm:justify-self-end" role="tablist" aria-label="Sort gift cards">
+                        <div class="inline-flex shrink-0 items-center rounded-[12px] bg-zinc-200 p-1 sm:justify-self-end" role="tablist" aria-label="Sort gift cards">
                             @foreach ([
                                 ['value' => 'popular',   'label' => 'Popularity'],
                                 ['value' => 'name-asc',  'label' => 'A → Z'],

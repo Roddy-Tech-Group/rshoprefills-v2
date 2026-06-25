@@ -330,8 +330,8 @@
             <span class="font-semibold text-zinc-900 dark:text-white">{{ $regionLabel }}</span>
         </nav>
 
-        {{-- ── Country header (glass card, 900px centered) ──────────────────── --}}
-        {{-- z-20: backdrop-blur creates a stacking context — without lifting it
+        {{-- ── Country header (glass card, centered) ─────────────────────── --}}
+        {{-- z-20: backdrop-blur creates a stacking context - without lifting it
              above the plan selector (also a blur context, later in DOM), the
              region picker dropdown gets clipped behind the plans card. --}}
         <div class="esim-tile relative z-20 mx-auto mt-4 w-full max-w-[800px] rounded-[12px] bg-transparent p-6 ring-1 ring-zinc-200 sm:p-8 dark:ring-zinc-700/60">
@@ -531,7 +531,7 @@
                         x-transition:enter-start="opacity-0 translate-y-2"
                         x-transition:enter-end="opacity-100 translate-y-0"
                     >
-                        <x-home.brand-row title="Choose your package" :carousel="true" view-all-variant="none">
+                        <x-home.brand-row title="Choose your package" :carousel="true" :bleed="! $inDash" view-all-variant="none">
                             <template x-for="(p, idx) in sortedPlans()" :key="p.id">
                             <button
                                 type="button"
@@ -614,7 +614,7 @@
                         <p class="text-sm font-bold text-zinc-900 dark:text-white">Every voice plan includes</p>
                         <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                             @foreach ([
-                                ['title' => 'App verification', 'desc' => 'WhatsApp, Facebook, TikTok and many other apps that need a number.', 'icon' => 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+                                ['title' => 'App verification', 'desc' => 'WhatsApp, Telegram, TikTok and many other apps that need a number.', 'icon' => 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
                                 ['title' => 'Unlimited iMessage', 'desc' => 'Unlimited iMessage for the full validity period your plan carries.', 'icon' => 'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z'],
                                 ['title' => 'Renewable & top-up', 'desc' => 'Top up for local calls any time, with iMessage unlimited.', 'icon' => 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99'],
                             ] as $voiceCard)
@@ -637,6 +637,7 @@
                                 title="Need broader coverage?"
                                 subtitle="Explore our regional and global eSIMs. Packages start from the shown price and include coverage for the selected location."
                                 :carousel="true"
+                                :bleed="! $inDash"
                                 view-all-variant="none"
                             >
                                 @foreach ($broaderCoverage as $b)
@@ -733,10 +734,15 @@
                     ],
                 ];
             @endphp
-            {{-- Full-bleed bg: the negative-margin calc extends the section past the
-                 parent's max-w-[1320px] + horizontal padding so the surface fills the
-                 viewport, while the inner column stays constrained to 1450px. --}}
-            <section class="esim-tile mt-8 bg-gradient-to-r from-[#dfe5f1] via-[#dfe5f1] to-white py-10 sm:py-14 dark:from-[#1d3252] dark:via-[#1d3252] dark:to-[#34507a] [margin-left:calc(50%-50vw)] [margin-right:calc(50%-50vw)]">
+            {{-- How-to band. Full-bleed (edge-to-edge) on the storefront, where the
+                 page is centered in the viewport. In the dashboard the content column
+                 is offset by the sidebar, so calc(50%-50vw) breaks out under the rail
+                 and overflows - there we keep it contained as a rounded band instead. --}}
+            <section @class([
+                'esim-tile mt-8 bg-gradient-to-r from-[#dfe5f1] via-[#dfe5f1] to-white py-10 sm:py-14 dark:from-[#1d3252] dark:via-[#1d3252] dark:to-[#34507a]',
+                '[margin-left:calc(50%-50vw)] [margin-right:calc(50%-50vw)]' => ! $inDash,
+                'overflow-hidden rounded-[15px]' => $inDash,
+            ])>
                 <div class="mx-auto w-full max-w-[1450px] px-4 sm:px-6">
                 <div>
                     <h2 class="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">How to add your eSIM</h2>

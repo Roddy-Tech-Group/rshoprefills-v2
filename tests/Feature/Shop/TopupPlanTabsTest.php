@@ -47,13 +47,15 @@ class TopupPlanTabsTest extends TestCase
         $response = $this->get(route('shop.topup', 'testop'));
 
         $response->assertOk();
-        $response->assertSee('Choose a plan');
-        // Tabs
+        $response->assertSee('Choose how to top up');
+        // Switcher tabs (Credit panel is the amount selector)
         $response->assertSee('Bundles', false);
         // Benefit chips read from metadata, not hardcoded
         $response->assertSee('2GB data', false);
+        // Whole-number GB must not lose its trailing zero (10 must stay "10GB", not "1GB").
+        $response->assertSee('10GB data', false);
         $response->assertSee('30-day validity', false);
-        $response->assertSee('3000 mins', false);
+        $response->assertSee('3000 minutes', false);
         $response->assertSee('1500 SMS', false);
     }
 }
