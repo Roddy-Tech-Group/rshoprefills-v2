@@ -31,6 +31,8 @@ class InteractionTrackingController extends Controller
             'campaign_id' => $request->campaign_id,
             'interaction_type' => $typeEnum,
             'channel' => $request->channel,
+            'user_agent' => $request->userAgent(),
+            'ip_address' => $request->ip(),
             'metadata' => $request->metadata ?? [],
         ]);
 
