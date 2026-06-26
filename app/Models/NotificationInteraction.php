@@ -20,6 +20,7 @@ class NotificationInteraction extends Model
         'user_agent',
         'ip_address',
         'metadata',
+        'interacted_at',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class NotificationInteraction extends Model
         return [
             'interaction_type' => InteractionType::class,
             'metadata' => 'array',
+            'interacted_at' => 'datetime',
         ];
     }
 

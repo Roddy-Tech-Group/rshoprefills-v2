@@ -34,6 +34,7 @@ class InteractionTrackingController extends Controller
             'user_agent' => $request->userAgent(),
             'ip_address' => $request->ip(),
             'metadata' => $request->metadata ?? [],
+            'interacted_at' => now(),
         ]);
 
         // Roll a click up onto the campaign so the admin Campaigns list reflects

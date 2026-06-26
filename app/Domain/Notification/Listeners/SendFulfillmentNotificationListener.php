@@ -60,11 +60,16 @@ class SendFulfillmentNotificationListener
             ]
         );
 
+        // Fetch the exact API error from the fulfillment log
+        $log = \App\Models\FulfillmentLog::where('order_item_id', $item->id)->latest()->first();
+        $apiErrorLog = $log ? ($log->error_message ?? json_encode($log->response_payload, JSON_PRETTY_PRINT)) : 'No API log found.';
+
         $this->dispatcher->dispatch(
             user: $adminUser,
             title: 'CRITICAL: Refill Fulfillment Failed!',
             message: "Fulfillment failed for order #{$order->order_number}, item ID: {$item->id}. Reason: {$event->reason}. Urgent manual intervention required.",
-            category: 'security'
+            category: 'security',
+            mailable: new \App\Domain\Notification\Mail\AdminFulfillmentFailedMail($item, $event->reason, $apiErrorLog)
         );
     }
 
