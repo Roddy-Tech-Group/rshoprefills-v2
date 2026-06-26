@@ -61,7 +61,7 @@
     ];
 @endphp
 
-<x-layouts.app.header :title="'Checkout | RshopRefills'">
+<x-shop.layout :title="'Checkout | RshopRefills'">
 
     <script src="https://checkout.flutterwave.com/v3.js"></script>
 
@@ -1809,4 +1809,4 @@
         };
     </script>
 
-</x-layouts.app.header>
+</x-shop.layout>

@@ -524,7 +524,7 @@
             {{-- Plan section. Uses the same carousel component, alignment + scroll as the
                  storefront brand rows. Re-keyed per tab/mode so the whole row rebuilds,
                  re-aligns and resets its scroll when the buyer switches Voice / Data. --}}
-            <div class="mt-6">
+            <div class="mt-3">
                 <template x-for="frame in [activeTab + '-' + dataMode]" :key="frame">
                     <div
                         x-transition:enter="transition ease-out duration-300"

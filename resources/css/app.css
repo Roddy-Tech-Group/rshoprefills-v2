@@ -841,8 +841,37 @@ html.dark body.dark\:bg-\[\#0c1a36\],
 html.dark main.dark\:bg-\[\#0c1a36\],
 html.dark section.dark\:bg-\[\#0c1a36\],
 html.dark [data-page-content].dark\:bg-\[\#0c1a36\],
+html.dark [data-flux-main].dark\:bg-\[\#0c1a36\],
+html.dark footer.dark\:bg-\[\#0c1a36\],
 html.dark .min-h-screen.dark\:bg-\[\#0c1a36\],
 html.dark .min-h-full.dark\:bg-\[\#0c1a36\] { background-color: #0d0d0d !important; }
+
+/* ──────────────────────────────────────────────────────────────────────
+   SOFT DARK (.dark WITHOUT .pure-dark): the lighter, comfortable dark
+   palette. Every surface steps one notch UP from the pure / Extra-Dark
+   ramp so toggling "Soft dark" on visibly lightens the whole UI - cards
+   #303030 (vs pure #2a2a2a), page #1a1a1a (vs pure #000/#0d0d0d).
+   :not(.pure-dark) means pure dark is left completely untouched. */
+.dark:not(.pure-dark) .bg-white,
+.dark:not(.pure-dark) .bg-zinc-50,
+.dark:not(.pure-dark) .bg-zinc-200,
+.dark:not(.pure-dark) .bg-\[\#eff6ff\],
+.dark:not(.pure-dark) .dark\:bg-\[\#0c1a36\],
+.dark:not(.pure-dark) .dark\:bg-\[\#162a4a\],
+.dark:not(.pure-dark) .dark\:bg-\[\#13294d\],
+.dark:not(.pure-dark) .dark\:bg-\[\#1d3252\],
+.dark:not(.pure-dark) .dash-shimmer { background-color: #303030; }
+.dark:not(.pure-dark) .bg-zinc-100 { background-color: #1a1a1a; }
+html.dark:not(.pure-dark) body.dark\:bg-\[\#0c1a36\],
+html.dark:not(.pure-dark) main.dark\:bg-\[\#0c1a36\],
+html.dark:not(.pure-dark) section.dark\:bg-\[\#0c1a36\],
+html.dark:not(.pure-dark) [data-page-content].dark\:bg-\[\#0c1a36\],
+html.dark:not(.pure-dark) [data-flux-main].dark\:bg-\[\#0c1a36\],
+html.dark:not(.pure-dark) footer.dark\:bg-\[\#0c1a36\],
+html.dark:not(.pure-dark) .min-h-screen.dark\:bg-\[\#0c1a36\],
+html.dark:not(.pure-dark) .min-h-full.dark\:bg-\[\#0c1a36\] { background-color: #1a1a1a !important; }
+html.dark:not(.pure-dark) [data-flux-header] { background-color: #1a1a1a !important; }
+
 /* The Flux top bar (<header data-flux-header>) is a full-width, border-less chrome
    bar, so it takes the PAGE tone and blends seamlessly with the page behind it
    (the search field + icons inside float on top). The sidebar is a margined,

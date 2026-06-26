@@ -1,5 +1,5 @@
 {{-- Storefront footer. Used inside the <x-layouts.app.header> shell. --}}
-<footer class="border-t border-zinc-200 bg-[#eff6ff] dash-shimmer text-zinc-900">
+<footer class="bg-[#eff6ff] dark:bg-[#0c1a36] text-zinc-900">
     <div class="mx-auto max-w-[1550px] px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
 
         {{-- Top: brand + link columns --}}

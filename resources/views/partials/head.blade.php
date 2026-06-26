@@ -98,7 +98,7 @@
      correct rule wins from the first paint. --}}
 <style>
     html { background-color: #ffffff; }
-    html.dark { background-color: #0c1a36; }
+    html.dark { background-color: #1a1a1a; }
     /* Extra Dark is the default dark palette (customer side); paint the pre-CSS
        frame true black so the default never flashes navy first. */
     html.dark.pure-dark { background-color: #000000; }
