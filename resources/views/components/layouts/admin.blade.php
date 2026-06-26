@@ -887,7 +887,7 @@
              short pages — same footer renders on every admin page since it lives in this layout.
              The page bg lives on `<flux:main>` itself so the rounded-[12px] curve never "straightens" on scroll — the
              curve is a real edge between two same-colour panels, not an outline that can be clipped. --}}
-        <flux:main class="!p-0 bg-[#eff6ff]">
+        <flux:main class="!p-0 bg-[#eff6ff] dark:bg-[#0c1a36]">
             <div class="flex min-h-full flex-col rounded-tl-[15px] rounded-tr-[15px] bg-[#eff6ff] p-3 pb-2 sm:p-4 sm:pb-2 lg:rounded-tr-none lg:p-6 lg:pb-2 dark:bg-[#0c1a36]">
                 <div class="w-full flex-1">
                     {{-- Page heading — moved out of the top nav bar into the page itself. --}}

@@ -19,15 +19,13 @@ class ZenditTopupNormalizer implements CatalogNormalizerInterface
             ['name' => 'Mobile Airtime', 'type' => 'digital']
         );
 
-        // 2. Normalize subType -> Subcategory. Zendit returns subTypes as an array;
-        // pick the first one (or fall back to a generic "Airtime").
-        $subTypes = $rawItem['subTypes'] ?? [];
-        $subtypeName = is_array($subTypes) && ! empty($subTypes) ? $subTypes[0] : ($rawItem['subtype'] ?? 'Airtime');
-        $subcategorySlug = Str::slug($subtypeName);
-
+        // 2. Top-ups are no longer split into Data/Bundle subcategories - the storefront
+        // distinguishes them per-offer (network badges + the Credit/Data/Bundle switcher),
+        // reading each offer's subType from variant.metadata. Keep every operator under a
+        // single "Mobile Top Up" subcategory.
         $subcategory = Subcategory::firstOrCreate(
-            ['category_id' => $category->id, 'slug' => $subcategorySlug],
-            ['name' => $subtypeName, 'is_featured' => false]
+            ['category_id' => $category->id, 'slug' => 'mobile-top-up'],
+            ['name' => 'Mobile Top Up', 'is_featured' => false]
         );
 
         // 3. Brand = the mobile operator (e.g. "MTN", "Vodafone"). Zendit exposes a

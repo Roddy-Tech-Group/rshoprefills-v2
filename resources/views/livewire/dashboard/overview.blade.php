@@ -264,7 +264,7 @@ new #[Lazy] class extends Component
     <div class="flex flex-col gap-5 lg:hidden">
 
         {{-- Quick Actions - 4-col grid (2 rows of 4). --}}
-        <div class="rounded-[12px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
+        <div class="rounded-[15px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Quick Actions</h3>
                 <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate aria-label="See more categories" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-blue-700 border border-zinc-200 transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white">
@@ -298,7 +298,7 @@ new #[Lazy] class extends Component
              See-more "+" sends the user to the dashboard gift-cards page so they stay
              inside the dashboard chrome instead of bouncing out to the storefront. --}}
         @if ($popularProducts->isNotEmpty())
-            <div class="rounded-[12px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
+            <div class="rounded-[15px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                 <x-home.brand-row
                     title="Popular Gift Cards"
                     subtitle="Top-rated in your region"
@@ -331,7 +331,7 @@ new #[Lazy] class extends Component
         @endif
 
         {{-- Discover Global eSIM - tap a plan to Add to cart / Buy now inline --}}
-        <div class="rounded-[12px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+        <div class="rounded-[15px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
             <x-home.discover-global :contained="true" />
         </div>
 
@@ -355,7 +355,7 @@ new #[Lazy] class extends Component
 
         {{-- Recent Orders - mobile shows up to 5; sits directly above Recent
              Transactions so the latest spending activity reads as one block. --}}
-        <div class="relative overflow-hidden rounded-[12px] bg-green-100/50 p-5 border border-green-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-green-500/50 dark:bg-green-500/15 dark:shadow-none">
+        <div class="relative overflow-hidden rounded-[15px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-zinc-700 dark:shadow-none">
             <x-ui.floating-confetti />
             <div class="relative z-10 flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Orders</h3>
@@ -379,11 +379,6 @@ new #[Lazy] class extends Component
                         $extraVariants = max(0, $groupedItems->count() - 1);
                         $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                         [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
-                        // The green Recent Orders card would swallow the emerald "Completed"
-                        // pill, so back it with the neutral card surface (white / navy in dark).
-                        if (($order->order_status?->value) === 'completed') {
-                            $statusTone = 'bg-white text-emerald-700 ring-emerald-200 dark:text-emerald-300 dark:ring-emerald-500/30';
-                        }
                     @endphp
                     <li>
                         <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -421,7 +416,7 @@ new #[Lazy] class extends Component
              Shows top-ups (credits) and purchases (debits) interleaved since both
              write to wallet_transactions. Capped at 8 here, full history is on
              /dashboard/transactions via the See more "+" button. --}}
-        <div class="relative overflow-hidden rounded-[12px] bg-red-100/50 dash-shimmer p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+        <div class="relative overflow-hidden rounded-[15px] bg-[#eff6ff] dash-shimmer p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-zinc-700 dark:shadow-none">
             <x-ui.floating-confetti />
             <div class="relative z-10 flex items-center justify-between">
                 <h3 class="text-base font-bold text-zinc-900">Recent Transactions</h3>
@@ -604,7 +599,7 @@ new #[Lazy] class extends Component
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-1"
-                            class="absolute right-0 top-full z-30 mt-1.5 w-64 overflow-hidden rounded-[12px] bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/15 border border-zinc-200 dark:border-zinc-700"
+                            class="absolute right-0 top-full z-30 mt-1.5 w-64 overflow-hidden rounded-[15px] bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/15 border border-zinc-200 dark:border-zinc-700"
                             role="menu"
                         >
                             <p class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Appearance</p>
@@ -648,7 +643,7 @@ new #[Lazy] class extends Component
                                 </span>
                                 <span
                                     :class="softDark ? 'bg-blue-600' : 'bg-zinc-200'"
-                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[12px] transition-colors"
+                                    class="theme-static relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[12px] transition-colors"
                                 >
                                     <span
                                         :class="softDark ? 'translate-x-4' : 'translate-x-0.5'"
@@ -679,7 +674,7 @@ new #[Lazy] class extends Component
                                 </span>
                                 <span
                                     :class="$store.dashPrefs.hideBalance ? 'bg-blue-600' : 'bg-zinc-200'"
-                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[12px] transition-colors"
+                                    class="theme-static relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[12px] transition-colors"
                                 >
                                     <span
                                         :class="$store.dashPrefs.hideBalance ? 'translate-x-4' : 'translate-x-0.5'"
@@ -705,7 +700,7 @@ new #[Lazy] class extends Component
                                 </span>
                                 <span
                                     :class="$store.dashPrefs.compactMode ? 'bg-blue-600' : 'bg-zinc-200'"
-                                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[12px] transition-colors"
+                                    class="theme-static relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-[12px] transition-colors"
                                 >
                                     <span
                                         :class="$store.dashPrefs.compactMode ? 'translate-x-4' : 'translate-x-0.5'"
@@ -744,7 +739,7 @@ new #[Lazy] class extends Component
                             wallets: @js($walletsPayload),
                             get current() { return this.wallets[this.$store.wallet.active] ?? { code: 'USD', symbol: '$', label: 'US Dollar', formatted: '$0.00', type: 'fiat', color: 'bg-blue-800', icon: null }; }
                         }"
-                        class="wallet-glass flex flex-col justify-center gap-4 rounded-2xl p-5 text-left text-blue-950 dark:text-white"
+                        class="wallet-glass flex flex-col justify-center gap-4 rounded-[15px] p-5 text-left text-blue-950 dark:text-white"
                         :class="walletOpen && 'relative z-40'"
                     >
                         <div class="flex items-start justify-between">
@@ -822,7 +817,7 @@ new #[Lazy] class extends Component
                                     x-transition:leave="transition ease-in duration-100"
                                     x-transition:leave-start="opacity-100 translate-y-0"
                                     x-transition:leave-end="opacity-0 -translate-y-1"
-                                    class="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-[12px] bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/25 border border-zinc-200 dark:border-zinc-700"
+                                    class="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-72 overflow-y-auto rounded-[15px] bg-[#eff6ff] p-1 shadow-xl shadow-zinc-900/25 border border-zinc-200 dark:border-zinc-700"
                                     role="listbox"
                                 >
                                     <template x-for="(w, i) in wallets" :key="w.code">
@@ -853,7 +848,7 @@ new #[Lazy] class extends Component
 
                     {{-- Recent Order card. Capped at 3 on desktop's right-rail
                          even though the query fetches 5 (mobile renders all 5). --}}
-                    <div class="relative overflow-hidden rounded-[12px] bg-green-100/50 p-5 border border-green-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-green-500/50 dark:bg-green-500/15 dark:shadow-none">
+                    <div class="relative overflow-hidden rounded-[15px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-zinc-700 dark:shadow-none">
                         <x-ui.floating-confetti />
                         <div class="relative z-10 flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
@@ -873,11 +868,6 @@ new #[Lazy] class extends Component
                                     $extraVariants = max(0, $groupedItems->count() - 1);
                                     $logo = Product::brandLogoUrl($brandKey, $snap['logo_url'] ?? null);
                                     [$statusLabel, $statusTone] = $orderStatusUi[$order->order_status?->value] ?? ['Pending', 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/30'];
-                                    // The green Recent Orders card would swallow the emerald "Completed"
-                                    // pill, so back it with the neutral card surface (white / navy in dark).
-                                    if (($order->order_status?->value) === 'completed') {
-                                        $statusTone = 'bg-white text-emerald-700 ring-emerald-200 dark:text-emerald-300 dark:ring-emerald-500/30';
-                                    }
                                 @endphp
                                 <li>
                                     <a href="{{ route('dashboard.orders') }}" wire:navigate class="flex items-center gap-3">
@@ -926,7 +916,7 @@ new #[Lazy] class extends Component
                 </div>
 
                 {{-- Quick Actions + Recommended for you (combined card with divider) --}}
-                <div class="rounded-[12px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
+                <div class="rounded-[15px] bg-[#eff6ff] dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
 
                     {{-- Quick Actions section --}}
                     <div class="p-5 sm:p-6">
@@ -1003,11 +993,6 @@ new #[Lazy] class extends Component
                         @endif
                     </div>
                 </div>
-
-                {{-- Discover Global eSIM - tap a plan to Add to cart / Buy now inline --}}
-                <div class="mt-6 rounded-[12px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
-                    <x-home.discover-global :contained="true" />
-                </div>
             </div>
 
             {{-- RIGHT RAIL: points, gift promo, recent transactions --}}
@@ -1016,7 +1001,7 @@ new #[Lazy] class extends Component
                 {{-- RShop Rcoin card (desktop). Live balance + tier from the
                      wallet ledger (RewardEngine credits cashback + referral here,
                      CheckoutService debits redemptions, etc.). --}}
-                <div class="rounded-[12px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
+                <div class="rounded-[15px] bg-[#eff6ff] p-5 dash-shimmer border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors hover:border-green-200 dark:border-zinc-700 dark:hover:border-white dark:shadow-none">
                     <div class="flex items-start gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-blue-100">
                             <img src="{{ asset('assets/favicon.ico') }}" alt="" class="h-6 w-6 object-contain" loading="lazy">
@@ -1060,7 +1045,7 @@ new #[Lazy] class extends Component
                 </div>
 
                 {{-- Recent Transactions (stretches to match left column height) --}}
-                <div class="relative flex flex-1 flex-col overflow-hidden rounded-[12px] bg-red-100/50 dash-shimmer p-5 border border-red-300 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-red-500/50 dark:bg-red-500/15 dark:shadow-none">
+                <div class="relative flex flex-1 flex-col overflow-hidden rounded-[15px] bg-[#eff6ff] dash-shimmer p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] transition-colors dark:border-zinc-700 dark:shadow-none">
                     <x-ui.floating-confetti />
                     <div class="relative z-10 flex items-center justify-between">
                         <h3 class="text-base font-semibold text-zinc-900">Recent Transactions</h3>
@@ -1100,6 +1085,11 @@ new #[Lazy] class extends Component
                     </ul>
                 </div>
             </div>
+        </div>
+
+        {{-- Discover Global eSIM - full-width below the grid so the plan cards open out on desktop --}}
+        <div class="mt-6 rounded-[15px] bg-[#eff6ff] p-5 border border-zinc-200 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:shadow-none">
+            <x-home.discover-global :contained="true" />
         </div>
 
     </div>

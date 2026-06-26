@@ -8,6 +8,7 @@ use App\Models\GiftCardRate;
 use App\Domain\GiftCardTrading\Services\TradeSubmissionService;
 use App\Domain\GiftCardTrading\Services\RateEngine;
 use App\Models\BankAccount;
+use Illuminate\Validation\Rule;
 
 new
 #[Layout('components.layouts.dashboard')]
@@ -214,7 +215,14 @@ class extends Component {
             'rate_id' => 'required|exists:gift_card_rates,id',
             'declared_value' => 'required|numeric|min:1',
             'payout_method' => 'required|in:wallet,bank',
-            'bank_account_id' => 'required_if:payout_method,bank',
+            // For a bank payout the account must exist AND belong to this user - stops a
+            // tampered bank_account_id from redirecting the payout to someone else.
+            'bank_account_id' => [
+                'required_if:payout_method,bank',
+                Rule::when($this->payout_method === 'bank', [
+                    Rule::exists('bank_accounts', 'id')->where('user_id', auth()->id()),
+                ]),
+            ],
             'code_pin' => 'required|string',
             'card_image' => 'required|image|max:5120', // 5MB max
             'receipt_image' => 'nullable|image|max:5120',

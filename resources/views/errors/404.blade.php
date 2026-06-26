@@ -7,7 +7,7 @@
         <link rel="icon" href="{{ asset('assets/favicon.ico') }}">
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="min-h-screen bg-white text-zinc-900">
+    <body class="min-h-screen bg-white dark:bg-[#0c1a36] text-zinc-900">
 
         {{-- Self-contained 404 — no app layout, so it renders even when the
              request never reached the storefront middleware/region resolution. --}}

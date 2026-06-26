@@ -266,11 +266,17 @@ class extends Component {
                                         : null;
                                     $country  = $countryNames[strtoupper((string) ($snap['country_code'] ?? ''))] ?? ($snap['country_code'] ?? null);
                                     $payload  = (array) ($item->fulfillment_payload ?? []);
-                                    $cardPin  = (! empty($payload['pin']) && is_scalar($payload['pin'])) ? (string) $payload['pin'] : null;
+                                    // pin-redemptionURL cards (e.g. virtual prepaid Visa) deliver the PIN
+                                    // under `epin`, not `pin` - fall back to it so it shows as the PIN
+                                    // instead of leaking through the generic code-picker below.
+                                    $cardPin  = (! empty($payload['pin']) && is_scalar($payload['pin'])) ? (string) $payload['pin'] : ((! empty($payload['epin']) && is_scalar($payload['epin'])) ? (string) $payload['epin'] : null);
                                     $cardCode = null;
                                     foreach (['code', 'voucher_code', 'redeem_code', 'card_number', 'serial'] as $credKey) {
                                         if (! empty($payload[$credKey]) && is_scalar($payload[$credKey])) { $cardCode = (string) $payload[$credKey]; break; }
                                     }
+                                    // The registration/redemption link is the customer's only entry point
+                                    // for pin-redemptionURL cards - surface it as a button below.
+                                    $redemptionUrl = (! empty($payload['redemption_url']) && is_scalar($payload['redemption_url'])) ? (string) $payload['redemption_url'] : null;
                                     // eSIM delivery is shaped completely differently from a gift card:
                                     // a QR image (qrcode_url) plus the SM-DP+ address (lpa) and an
                                     // activation code (matching_id) for manual entry. The presence of
@@ -452,7 +458,7 @@ class extends Component {
                                                 </button>
                                             @endif
                                         </div>
-                                    @elseif ($cardCode || $cardPin)
+                                    @elseif ($cardCode || $cardPin || $redemptionUrl)
                                         {{-- Gift card — code + PIN, each independently copyable. --}}
                                         <div class="space-y-2">
                                             @foreach (array_filter(['Code' => $cardCode, 'Pin' => $cardPin]) as $credLabel => $credValue)
@@ -473,6 +479,14 @@ class extends Component {
                                                     </button>
                                                 </div>
                                             @endforeach
+
+                                            @if ($redemptionUrl)
+                                                {{-- pin-redemptionURL cards: the registration link is the
+                                                     customer's entry point - without it they cannot redeem. --}}
+                                                <a href="{{ $redemptionUrl }}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 rounded-[12px] bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                                                    Redeem your card
+                                                </a>
+                                            @endif
 
                                             @if ($appleRedeemUrl)
                                                 {{-- Apple deep link: on iPhone/iPad the App Store opens with the
