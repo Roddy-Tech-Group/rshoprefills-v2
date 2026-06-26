@@ -266,4 +266,12 @@ class Admin extends Authenticatable
     {
         return !is_null($this->two_factor_secret) && !is_null($this->two_factor_confirmed_at);
     }
+
+    /**
+     * Get the admin's push subscriptions.
+     */
+    public function pushSubscriptions()
+    {
+        return $this->morphMany(\App\Models\PushSubscription::class, 'subscribable');
+    }
 }

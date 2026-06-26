@@ -25,6 +25,7 @@ class NotificationInteraction extends Model
         'channel',
         'interaction_type',
         'metadata',
+        'interacted_at',
     ];
 
     protected function casts(): array
@@ -32,6 +33,7 @@ class NotificationInteraction extends Model
         return [
             'interaction_type' => InteractionType::class,
             'metadata' => 'array',
+            'interacted_at' => 'datetime',
         ];
     }
 

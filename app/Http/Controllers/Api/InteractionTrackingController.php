@@ -32,6 +32,7 @@ class InteractionTrackingController extends Controller
             'interaction_type' => $typeEnum,
             'channel' => $request->channel,
             'metadata' => $request->metadata ?? [],
+            'interacted_at' => now(),
         ]);
 
         // Roll a click up onto the campaign so the admin Campaigns list reflects
