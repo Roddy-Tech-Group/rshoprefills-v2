@@ -908,6 +908,7 @@
                         'duration' => data_get($meta, 'duration'),
                         'dataSpeed' => data_get($meta, 'dataSpeed'),
                         'isAvailable' => (bool) $variant->is_available,
+                        'isActive' => (bool) ($product?->is_active ?? false),
                         'isFeatured' => (bool) ($product?->is_featured ?? false),
                         'isPopular' => (bool) ($product?->is_popular ?? false),
                         'valueLabel' => $valueLabel,
@@ -1057,10 +1058,24 @@
                                 </button>
                             </div>
                         </div>
+                        {{-- Live on website: flips products.is_active. Off pulls the
+                             WHOLE product (every variant) from storefront listings and
+                             its detail page - this is the "turn a product off" switch. --}}
                         <div>
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Status</p>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Live on website</p>
                             <div class="mt-1 inline-flex items-center gap-0.5 rounded-[12px] bg-zinc-100 p-0.5 dark:bg-[#26416b]">
-                                <button type="button" @click="setAvailable(true)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="data.isAvailable ? 'bg-red-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">Enabled</button>
+                                <button type="button" @click="setActive(true)" :disabled="savingActive" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="data.isActive ? 'bg-emerald-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">On</button>
+                                <button type="button" @click="setActive(false)" :disabled="savingActive" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="! data.isActive ? 'bg-zinc-700 text-white' : 'text-zinc-600 dark:text-zinc-300'">Off</button>
+                            </div>
+                            <p class="mt-1 text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">Off removes the whole product from the website.</p>
+                        </div>
+
+                        {{-- Availability: flips THIS variant's is_available, so only this
+                             one denomination/amount disappears from the product page. --}}
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Availability (this variant)</p>
+                            <div class="mt-1 inline-flex items-center gap-0.5 rounded-[12px] bg-zinc-100 p-0.5 dark:bg-[#26416b]">
+                                <button type="button" @click="setAvailable(true)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="data.isAvailable ? 'bg-emerald-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">Enabled</button>
                                 <button type="button" @click="setAvailable(false)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="! data.isAvailable ? 'bg-zinc-700 text-white' : 'text-zinc-600 dark:text-zinc-300'">Disabled</button>
                             </div>
                         </div>
@@ -1527,6 +1542,9 @@
                     // Variant availability toggle
                     savingAvailable: false,
 
+                    // Product on/off (is_active) toggle
+                    savingActive: false,
+
                     // Per-product markup rule form
                     markupType: 'percentage',
                     markupValue: '',
@@ -1701,6 +1719,25 @@
                             alert(e.message);
                         } finally {
                             this.savingAvailable = false;
+                        }
+                    },
+
+                    async setActive(value) {
+                        if (!this.data.productId || this.savingActive || this.data.isActive === value) { return; }
+                        const previous = this.data.isActive;
+                        this.data.isActive = value;
+                        this.savingActive = true;
+                        try {
+                            // toggle-active flips is_active; we only get here when the
+                            // current state differs from `value`, so the flip lands on it.
+                            const json = await this._send('PATCH',
+                                `/admin/api/catalog/products/${this.data.productId}/toggle-active`);
+                            this.data.isActive = json.is_active;
+                        } catch (e) {
+                            this.data.isActive = previous;
+                            alert(e.message);
+                        } finally {
+                            this.savingActive = false;
                         }
                     },
 
