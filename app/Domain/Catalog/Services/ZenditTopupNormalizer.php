@@ -69,8 +69,11 @@ class ZenditTopupNormalizer implements CatalogNormalizerInterface
                 'country_code' => $existing?->country_code ?? $countryCode,
                 'currency_code' => $currencyCode,
                 'name' => $existing?->name ?? "{$brandLabel} ({$countryCode})",
-                'description' => $existing?->description
-                    ?: ($rawItem['shortNotes'] ?? $rawItem['notes'] ?? $rawItem['description'] ?? "{$brandLabel} mobile top-up for {$countryCode}"),
+                // A top-up product groups every operator offer, so a single offer's
+                // per-bundle shortNotes ("3GB + Call (30d)") must never stand in for
+                // the brand-level description. Leave it unset on sync so the storefront
+                // renders its own top-up tagline; preserve any admin-edited copy.
+                'description' => $existing?->description,
                 'redeem_instructions' => $existing?->redeem_instructions ?: ($rawItem['redeem_instructions'] ?? null),
                 'terms_and_conditions' => $existing?->terms_and_conditions ?: ($rawItem['terms'] ?? null),
                 'logo_url' => $existing?->logo_url ?: ($rawItem['logoUrl'] ?? null),
