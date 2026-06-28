@@ -160,8 +160,11 @@
             x-ref="track"
             @scroll.passive="refresh()"
             @resize.window.debounce.200ms="setup()"
+            {{-- No container-level `scroll-behavior: smooth`: on touch it overrides the
+                 native -webkit-overflow-scrolling momentum and makes the swipe feel
+                 sluggish/catchy. The arrow buttons still animate via nudge()'s explicit
+                 scrollBy({ behavior: 'smooth' }), so only the finger swipe glides freely. --}}
             class="{{ $bleed ? 'mx-[calc(50%-50vw)] w-screen' : 'w-full' }} overflow-x-auto overflow-y-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] scroll-pl-4 sm:scroll-pl-6 lg:scroll-pl-8"
-            style="scroll-behavior: smooth;"
         >
             {{-- pl-* / --card-w fallbacks: setup() overrides paddingLeft and sets
                  --card-w inline at runtime; these keep a sane layout pre-JS. --}}
@@ -178,8 +181,10 @@
             </ul>
         </div>
     @else
-        {{-- Grid mode (default): horizontal scroll on mobile, responsive grid on tablet+. --}}
-        <div class="-mx-4 overflow-x-auto px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0 sm:py-0">
+        {{-- Grid mode (default): horizontal scroll on mobile, responsive grid on tablet+.
+             -webkit-overflow-scrolling:touch gives the mobile swipe the same native
+             momentum glide as the testimonial carousel (otherwise it scrolls flat). --}}
+        <div class="-mx-4 overflow-x-auto px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] sm:mx-0 sm:overflow-visible sm:px-0 sm:py-0">
             @if ($loading)
                 <ul class="skeleton-stagger-fast flex w-max gap-4 sm:grid sm:w-full sm:grid-cols-3 sm:gap-5 {{ $gridCols }}">
                     @for ($i = 0; $i < (int) $cols; $i++)
