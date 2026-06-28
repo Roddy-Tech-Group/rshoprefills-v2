@@ -7,6 +7,13 @@
      * that POSTs to checkout.process; the backend resolves the cart server-side.
      */
 
+    // Post to the dashboard mirror when rendered under /dashboard/shop/* so the
+    // server keeps the whole cart -> checkout -> order flow (and the order page's
+    // redirect_url) inside the dashboard chrome instead of the public storefront.
+    $checkoutProcessUrl = request()->routeIs('dashboard.*')
+        ? route('dashboard.shop.checkout.process')
+        : route('checkout.process');
+
     // Crypto coins for the crypto payment option — admin-managed currency rates.
     $cryptoCoins = CurrencyRate::query()->where('is_active', true)->where('type', 'crypto')
         ->orderBy('sort_order')->orderBy('code')
@@ -274,7 +281,7 @@
                      `id="checkout-form"` so the Rcoin redemption checkbox in
                      the left column can post into this form via its
                      `form="checkout-form"` attribute. --}}
-                <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="pure-card rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
+                <form id="checkout-form" method="POST" action="{{ $checkoutProcessUrl }}" @submit.prevent="submitCheckout($event)" class="pure-card rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
@@ -1348,7 +1355,7 @@
                     this.errorMessage = '';
                     try {
                         const formData = new FormData(e.target);
-                        const response = await fetch('/checkout', {
+                        const response = await fetch('{{ $checkoutProcessUrl }}', {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
