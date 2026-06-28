@@ -988,7 +988,7 @@
                     @endif
 
                     {{-- Points you earn - calculated via backend rates (USD spent x cashback % / Rcoin USD rate). Coin icon is the site favicon. Hidden when the Rcoin engine is off. --}}
-                    <p x-show="rcoinConfig.enabled" class="flex items-center gap-1.5 text-sm font-semibold text-zinc-700">
+                    <p x-show="rcoinConfig.enabled" class="my-3 flex items-center gap-1.5 text-sm font-semibold text-zinc-700">
                         Points you earn
                         <img src="{{ asset('assets/favicon.ico') }}" alt="coins" class="h-6 w-6 object-contain" loading="lazy">
                         <span x-data="valueFlip()" x-effect="selectedVariantId; quantity; flash()" class="inline-block text-zinc-900" x-text="pointsEarned()">0</span>
@@ -1059,7 +1059,7 @@
 
                     {{-- Country availability — the redeemable country for this
                          variant, plus a link to switch country via the locale modal. --}}
-                    <div>
+                    <div class="mt-4 mb-2">
                         <p class="flex items-center gap-2 text-sm text-zinc-700">
                             @if (Product::flagUrl($product->country_code))
                                 <img src="{{ Product::flagUrl($product->country_code) }}" alt="" class="h-4 w-6 shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200" loading="lazy">

@@ -182,21 +182,6 @@
                         </template>
                     </ul>
 
-                    {{-- Region notice — only meaningful when the cart contains
-                         gift cards (top-ups + eSIMs aren't region-locked the
-                         same way). Hidden as soon as the cart is pure top-up /
-                         eSIM so the buyer doesn't see misleading copy. --}}
-                    <div
-                        x-show="$store.cart.items.some((i) => ! ['mobile-airtime', 'esims', 'bill-payments'].includes(i.category_slug))"
-                        x-cloak
-                        class="mt-3 flex items-start gap-2.5 rounded-[12px] bg-amber-50 px-4 py-3.5 dark:bg-amber-500/10"
-                    >
-                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-                        </svg>
-                        <p class="text-sm text-amber-800 dark:text-amber-200">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
-                    </div>
-
                     {{-- eSIM coverage notice — eSIMs only have service inside
                          their coverage area, and "US Data eSIM" bought from home
                          is the classic blind-buy mistake. Shown whenever the
