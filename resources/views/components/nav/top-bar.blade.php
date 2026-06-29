@@ -65,7 +65,7 @@
                 @click="localeModalOpen = true"
                 class="flex items-center gap-1.5 px-2.5 py-1 rounded-[12px] text-[13px] font-medium text-zinc-900 hover:bg-zinc-200 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             >
-                <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-3 w-[18px] shrink-0 rounded-[2px] object-cover ring-1 ring-zinc-200">
+                <img :src="'https://flagcdn.com/w40/' + (countryCode || 'us').toLowerCase() + '.png'" alt="" class="h-4 w-6 shrink-0 rounded-[3px] object-cover ring-1 ring-zinc-200">
                 <span x-text="country">United States</span>
             </button>
 
