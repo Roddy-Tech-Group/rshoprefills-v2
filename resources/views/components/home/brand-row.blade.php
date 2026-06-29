@@ -117,7 +117,7 @@
                     </svg>
                 </a>
             @elseif ($viewAllVariant !== 'none')
-                <a href="{{ $viewAllHref }}" class="shrink-0 text-base font-medium text-zinc-700 underline underline-offset-4 transition-colors hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white">
+                <a href="{{ $viewAllHref }}" class="inline-flex shrink-0 items-center rounded-[8px] bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-600 ring-1 ring-inset ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30 dark:hover:bg-blue-500/25">
                     See all
                 </a>
             @endif
@@ -160,11 +160,12 @@
             x-ref="track"
             @scroll.passive="refresh()"
             @resize.window.debounce.200ms="setup()"
-            {{-- No container-level `scroll-behavior: smooth`: on touch it overrides the
-                 native -webkit-overflow-scrolling momentum and makes the swipe feel
-                 sluggish/catchy. The arrow buttons still animate via nudge()'s explicit
-                 scrollBy({ behavior: 'smooth' }), so only the finger swipe glides freely. --}}
-            class="{{ $bleed ? 'mx-[calc(50%-50vw)] w-screen' : 'w-full' }} overflow-x-auto overflow-y-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch] [scroll-snap-type:x_proximity] scroll-pl-4 sm:scroll-pl-6 lg:scroll-pl-8"
+            {{-- Free native horizontal scroll, matching the "How it works" row: no
+                 scroll-snap and no container-level `scroll-behavior: smooth`. Both fight
+                 the -webkit-overflow-scrolling momentum and make the swipe feel
+                 catchy/sluggish instead of gliding freely. The arrow buttons still
+                 animate via nudge()'s explicit scrollBy({ behavior: 'smooth' }). --}}
+            class="{{ $bleed ? 'mx-[calc(50%-50vw)] w-screen' : 'w-full' }} overflow-x-auto overflow-y-hidden py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch]"
         >
             {{-- pl-* / --card-w fallbacks: setup() overrides paddingLeft and sets
                  --card-w inline at runtime; these keep a sane layout pre-JS. --}}
@@ -175,7 +176,7 @@
                 x-ref="list"
                 data-reveal-group
                 style="--card-w: 160px;"
-                class="carousel-list flex w-max gap-4 pl-4 pr-4 sm:gap-5 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 [&>*]:shrink-0 [&>*]:snap-start"
+                class="carousel-list flex w-max gap-4 pl-4 pr-4 sm:gap-5 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8 [&>*]:shrink-0"
             >
                 {{ $slot }}
             </ul>

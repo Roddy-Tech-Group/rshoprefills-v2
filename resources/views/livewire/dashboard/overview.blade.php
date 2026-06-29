@@ -852,7 +852,7 @@ new #[Lazy] class extends Component
                         <x-ui.floating-confetti />
                         <div class="relative z-10 flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Recent Orders</h3>
-                            <a href="{{ route('dashboard.orders') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                            <a href="{{ route('dashboard.orders') }}" wire:navigate class="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 ring-1 ring-inset ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30 dark:hover:bg-blue-500/25">View all</a>
                         </div>
 
                         <ul class="relative z-10 mt-4 space-y-3">
@@ -922,7 +922,7 @@ new #[Lazy] class extends Component
                     <div class="p-5 sm:p-6">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-semibold text-zinc-900">Quick Actions</h3>
-                            <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                            <a href="{{ route('dashboard.shop.gift-cards') }}" wire:navigate class="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 ring-1 ring-inset ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30 dark:hover:bg-blue-500/25">View all</a>
                         </div>
 
                         <div class="mt-4 grid grid-cols-4 gap-3 sm:grid-cols-8">
@@ -1049,7 +1049,7 @@ new #[Lazy] class extends Component
                     <x-ui.floating-confetti />
                     <div class="relative z-10 flex items-center justify-between">
                         <h3 class="text-base font-semibold text-zinc-900">Recent Transactions</h3>
-                        <a href="{{ route('dashboard.transactions') }}" wire:navigate class="text-xs font-semibold text-blue-600 hover:text-blue-700">View all</a>
+                        <a href="{{ route('dashboard.transactions') }}" wire:navigate class="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 ring-1 ring-inset ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30 dark:hover:bg-blue-500/25">View all</a>
                     </div>
 
                     <ul class="relative z-10 mt-4 flex-1 space-y-3">
