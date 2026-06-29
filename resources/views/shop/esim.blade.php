@@ -539,14 +539,18 @@
                                 :class="selectedId === p.id ? 'border-2 border-blue-600 dark:border-blue-500' : 'border border-white hover:border-green-200 dark:border-[#24364f] dark:hover:border-white'"
                                 class="esim-tile flex h-full w-[70vw]! min-w-[70vw]! flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none sm:w-60! sm:min-w-60!"
                             >
-                                {{-- Badges: tier (TRIP/EXPLORER/ADVENTURER/NOMAD, cycles by
-                                     position) + a Data only / Voice type badge. --}}
-                                <div class="flex flex-wrap items-center gap-1.5">
-                                    <span x-show="tiers[idx % 4] !== 'TRIP'" class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
+                                {{-- Type badge ("Data only" / "Voice") plus an optional tier
+                                     chip. The tier (TRIP/EXPLORER/ADVENTURER/NOMAD) is shown
+                                     ONLY on voice plans: on data plans it was a variable-length
+                                     chip that wrapped to a 2nd line on long names (ADVENTURER)
+                                     and made those cards taller, so data plans now carry the
+                                     single "Data only" badge - every data card is one height. --}}
+                                <div class="flex flex-nowrap items-center gap-1">
+                                    <span x-show="p.is_voice && tiers[idx % 4] !== 'TRIP'" class="inline-flex min-w-0 items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
                                         <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="tierDotClasses[idx % 4]"></span>
-                                        <span x-text="tiers[idx % 4]"></span>
+                                        <span class="truncate" x-text="tiers[idx % 4]"></span>
                                     </span>
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
+                                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
                                         <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="p.is_voice ? 'bg-blue-500' : 'bg-zinc-400'"></span>
                                         <span x-text="p.is_voice ? 'Voice' : 'Data only'"></span>
                                     </span>
@@ -597,10 +601,12 @@
                                     <p class="mt-3 text-xs text-zinc-700 dark:text-white" x-text="p.note"></p>
                                 </template>
 
-                                {{-- See more: selects this plan and opens its full package details. --}}
-                                <span @click.stop="detailsId = p.id; showDetails = true" @keydown.enter.stop="detailsId = p.id; showDetails = true" role="button" tabindex="0" class="mt-auto self-start cursor-pointer pt-3 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">See more</span>
-
-                                <p class="mt-2 text-right text-lg font-bold tabular-nums text-zinc-900 dark:text-white" x-text="rowPrice(p)"></p>
+                                {{-- See more (left) + price (right) share one row, pinned to the
+                                     card bottom so every card lines up regardless of feature count. --}}
+                                <div class="mt-auto flex items-center justify-between gap-2 pt-3">
+                                    <span @click.stop="detailsId = p.id; showDetails = true" @keydown.enter.stop="detailsId = p.id; showDetails = true" role="button" tabindex="0" class="inline-flex cursor-pointer items-center {{ $inDash ? 'rounded-md px-1.5 text-[10px]' : 'rounded-[8px] px-2 text-[11px]' }} bg-blue-50 py-0.5 font-semibold text-blue-600 ring-1 ring-inset ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30 dark:hover:bg-blue-500/25">See more</span>
+                                    <p class="text-lg font-bold tabular-nums text-zinc-900 dark:text-white" x-text="rowPrice(p)"></p>
+                                </div>
                             </button>
                         </template>
                         </x-home.brand-row>
