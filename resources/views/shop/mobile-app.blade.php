@@ -1,12 +1,12 @@
 {{-- Mobile app "in development" page. Dark-mode safe (bg-blue-50 -> navy). --}}
 
-<x-layouts.app.header :title="'Mobile App | RshopRefills'">
+<x-layouts.app.header :title="'Mobile App | '.$siteName">
 
     <section class="mx-auto w-full max-w-[880px] px-4 py-16 text-center sm:px-6 sm:py-24">
         <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">In development</span>
         <h1 class="mt-5 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">Our mobile app is on the way</h1>
         <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base">
-            The RshopRefills app for the App Store and Play Store is coming soon. In the meantime, our Web App is already
+            The {{ $siteName }} app for the App Store and Play Store is coming soon. In the meantime, our Web App is already
             active: use the website for all your transactions, including your wallet, orders and rewards.
         </p>
 
@@ -74,7 +74,7 @@
                         </span>
                         <div class="min-w-0">
                             <p class="text-sm font-bold text-zinc-900 dark:text-white">Install the web app now</p>
-                            <p class="text-xs text-zinc-600 dark:text-zinc-300">Add RshopRefills to your home screen for an app-like experience - no store needed.</p>
+                            <p class="text-xs text-zinc-600 dark:text-zinc-300">Add {{ $siteName }} to your home screen for an app-like experience - no store needed.</p>
                         </div>
                     </div>
 
@@ -134,7 +134,7 @@
                 <div class="rounded-[12px] border border-zinc-200 bg-white p-5 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:bg-[#13294d] dark:shadow-none">
                     <span class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-blue-600 text-sm font-bold text-white">1</span>
                     <p class="mt-3 text-sm font-bold text-zinc-900 dark:text-white">Step 1</p>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Visit RshopRefills in Safari, then tap the ••• (More) button in the top-right corner of the address bar.</p>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Visit {{ $siteName }} in Safari, then tap the ••• (More) button in the top-right corner of the address bar.</p>
                 </div>
                 <div class="rounded-[12px] border border-zinc-200 bg-white p-5 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:bg-[#13294d] dark:shadow-none">
                     <span class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-blue-600 text-sm font-bold text-white">2</span>
@@ -144,7 +144,7 @@
                 <div class="rounded-[12px] border border-zinc-200 bg-white p-5 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:bg-[#13294d] dark:shadow-none">
                     <span class="flex h-9 w-9 items-center justify-center rounded-[12px] bg-blue-600 text-sm font-bold text-white">3</span>
                     <p class="mt-3 text-sm font-bold text-zinc-900 dark:text-white">Step 3</p>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Tap Add in the top-right corner. That's it! 🎉 The RshopRefills app is now installed on your Home Screen and ready to use.</p>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Tap Add in the top-right corner. That's it! 🎉 The {{ $siteName }} app is now installed on your Home Screen and ready to use.</p>
                 </div>
                 {{-- Android: one-tap direct install via the browser prompt. --}}
                 <div class="flex flex-col rounded-[12px] border border-zinc-200 bg-white p-5 shadow-md shadow-zinc-900/[0.06] dark:border-zinc-700 dark:bg-[#13294d] dark:shadow-none">
@@ -152,7 +152,7 @@
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0 4-4m-4 4-4-4M4 20h16"/></svg>
                     </span>
                     <p class="mt-3 text-sm font-bold text-zinc-900 dark:text-white">On Android</p>
-                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Tap Install to add RshopRefills straight to your device, no store needed.</p>
+                    <p class="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">Tap Install to add {{ $siteName }} straight to your device, no store needed.</p>
                     <button
                         type="button"
                         @click="install()"

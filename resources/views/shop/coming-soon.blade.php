@@ -7,7 +7,7 @@
         'stays' => [
             'name'     => 'Stays',
             'tagline'  => 'Book stays anywhere. Pay your way.',
-            'blurb'    => "Hotels, apartments and getaways are coming to RshopRefills. Soon you'll book a place to stay anywhere in the world and settle with your wallet, card or crypto, all from one account.",
+            'blurb'    => "Hotels, apartments and getaways are coming to ".$siteName.". Soon you'll book a place to stay anywhere in the world and settle with your wallet, card or crypto, all from one account.",
             'image'    => 'stay2.webp',
             'icon'     => 'stay 2.svg',
             'accent'   => 'bg-orange-500',
@@ -20,7 +20,7 @@
         default => [
             'name'     => 'Flights',
             'tagline'  => 'Book flights. Pay with crypto or wallet.',
-            'blurb'    => "Flight booking is landing on RshopRefills soon. Search routes worldwide and pay with your wallet, card or crypto, all from one place, no card borders, no stress.",
+            'blurb'    => "Flight booking is landing on ".$siteName." soon. Search routes worldwide and pay with your wallet, card or crypto, all from one place, no card borders, no stress.",
             'image'    => 'flight2.webp',
             'icon'     => 'flight 2.svg',
             'accent'   => 'bg-indigo-500',
@@ -38,7 +38,7 @@
     $shopRoute = fn (string $name, $params = []) => route(($inDash ? 'dashboard.shop.' : 'shop.').$name, $params);
 @endphp
 
-<x-shop.layout :title="$m['name'] . ' - Coming Soon | RshopRefills'">
+<x-shop.layout :title="$m['name'] . ' - Coming Soon | '.$siteName">
 
     {{-- Mobile category picker (dark pill + slide-up sheet) so customers can
          hop to a live category from the coming-soon page. `$service` matches
@@ -102,7 +102,7 @@
                 <div class="overflow-hidden rounded-[24px] shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200">
                     <img
                         src="{{ asset('assets/' . rawurlencode($m['image'])) }}"
-                        alt="{{ $m['name'] }} on RshopRefills"
+                        alt="{{ $m['name'] }} on {{ $siteName }}"
                         class="aspect-[4/3] h-full w-full object-cover"
                         loading="lazy"
                     >

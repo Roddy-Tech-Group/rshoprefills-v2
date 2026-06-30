@@ -298,7 +298,7 @@
         ->values();
 @endphp
 
-<x-shop.layout :title="$regionLabel . ' eSIM | RshopRefills'" :og-image="asset('assets/'.rawurlencode('Esim.webp'))">
+<x-shop.layout :title="$regionLabel . ' eSIM | '.$siteName" :og-image="asset('assets/'.rawurlencode('Esim.webp'))">
 
     {{-- translate="no": the page translator (Google) rewrites text nodes, which
          corrupts Alpine's reactive <template x-for> package list (it renders then
@@ -667,7 +667,7 @@
 
             {{-- ── Why choose us (1000px centered) ───────────────────────────── --}}
             <section class="mx-auto mt-8 w-full max-w-[1000px] rounded-[40px] bg-blue-100 p-6 sm:p-10 dark:bg-[#1d3252]">
-                <h2 class="text-center text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Why travelers choose RshopRefills eSIMs</h2>
+                <h2 class="text-center text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Why travelers choose {{ $siteName }} eSIMs</h2>
                 <div class="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
                     @foreach ([
                         ['t' => 'Local, regional & global coverage for 200+ destinations', 'd' => 'M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8'],
@@ -795,7 +795,7 @@
                         <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>
                     </span>
                     <h2 class="mt-4 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Anonymous eSIM with MOMO, Cards, Crypto and more. No KYC required.</h2>
-                    <p class="mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">Unlike traditional SIM cards that ask for a passport and personal details, your RshopRefills eSIM can be bought with mobile money, cards, crypto and more. No identity verification, no personal data collected.</p>
+                    <p class="mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">Unlike traditional SIM cards that ask for a passport and personal details, your {{ $siteName }} eSIM can be bought with mobile money, cards, crypto and more. No identity verification, no personal data collected.</p>
                 </div>
 
                 <ul class="space-y-5">

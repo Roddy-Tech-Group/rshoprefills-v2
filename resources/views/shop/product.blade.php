@@ -354,7 +354,7 @@
         '@context' => 'https://schema.org',
         '@type' => 'Product',
         'name' => $brandName.' '.$kindTitle,
-        'description' => 'Buy a '.$brandName.' '.strtolower($kindTitle).' on RshopRefills with instant digital delivery, great prices and 24/7 support.',
+        'description' => 'Buy a '.$brandName.' '.strtolower($kindTitle).' on '.$siteName.' with instant digital delivery, great prices and 24/7 support.',
         'brand' => ['@type' => 'Brand', 'name' => $brandName],
         'category' => $kindTitle,
         'url' => url()->current(),
@@ -424,9 +424,9 @@
 @endphp
 
 <x-shop.layout
-    :title="$brandName . ' ' . $kindTitle . ' | RshopRefills'"
-    :description="'Buy a ' . $brandName . ' ' . strtolower($kindTitle) . ' on RshopRefills - instant delivery, great prices and 24/7 support. Pay with cards, mobile money, crypto and more.'"
-    :keywords="$brandName . ', ' . $brandName . ' ' . strtolower($kindTitle) . ', buy ' . $brandName . ' ' . strtolower($kindTitle) . ' online, RshopRefills'"
+    :title="$brandName . ' ' . $kindTitle . ' | '.$siteName"
+    :description="'Buy a ' . $brandName . ' ' . strtolower($kindTitle) . ' on '.$siteName.' - instant delivery, great prices and 24/7 support. Pay with cards, mobile money, crypto and more.'"
+    :keywords="$brandName . ', ' . $brandName . ' ' . strtolower($kindTitle) . ', buy ' . $brandName . ' ' . strtolower($kindTitle) . ' online, '.$siteName"
     :og-image="$logoSrc ?: asset('assets/og-image.png')"
     og-type="product"
     :json-ld="$pageJsonLd"

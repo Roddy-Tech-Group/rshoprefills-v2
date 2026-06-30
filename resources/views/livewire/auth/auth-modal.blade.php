@@ -370,7 +370,7 @@ new class extends Component {
                     x-show="mode === 'register'"
                     x-cloak
                     class="mt-1 text-xs leading-none text-white/65 sm:text-sm"
-                >Join RshopRefills and start spending instantly</p>
+                >Join {{ $siteName }} and start spending instantly</p>
             </div>
             <button
                 type="button"
@@ -395,7 +395,7 @@ new class extends Component {
             {{-- ── LOGIN VIEW ───────────────────────────────────────────── --}}
             <div x-show="mode === 'login'" x-cloak>
                 <h3 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Welcome back</h3>
-                <p class="mt-1.5 text-sm text-white/65">Sign in to your RshopRefills account</p>
+                <p class="mt-1.5 text-sm text-white/65">Sign in to your {{ $siteName }} account</p>
 
                 {{-- Google OAuth --}}
                 <a

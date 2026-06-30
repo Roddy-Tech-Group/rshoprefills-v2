@@ -68,7 +68,7 @@
     ];
 @endphp
 
-<x-shop.layout :title="'Checkout | RshopRefills'">
+<x-shop.layout :title="'Checkout | '.$siteName">
 
     <script src="https://checkout.flutterwave.com/v3.js"></script>
 

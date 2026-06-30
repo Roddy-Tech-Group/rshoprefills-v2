@@ -9,7 +9,7 @@
     $lastUpdated = 'May 23, 2026';
 @endphp
 
-<x-layouts.app.header :title="'Refund and Cancellation Policy | RshopRefills'">
+<x-layouts.app.header :title="'Refund and Cancellation Policy | '.$siteName">
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -24,7 +24,7 @@
 
         {{-- Intro --}}
         <p class="text-sm leading-relaxed text-zinc-600 sm:text-base">
-            This policy explains how refunds and cancellations work across every service on RshopRefills. We sell digital
+            This policy explains how refunds and cancellations work across every service on {{ $siteName }}. We sell digital
             products that are delivered instantly, so please read this page before you buy. By making a purchase you agree
             to the terms below. This policy is part of our Terms of Service.
         </p>
@@ -62,7 +62,7 @@
         <section id="wallet-first" class="mt-12 scroll-mt-24">
             <h2 class="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">1. Global wallet-first refund policy</h2>
             <p class="mt-3 text-sm leading-relaxed text-zinc-600 sm:text-base">
-                When a refund is approved, we issue it as store credit to your RshopRefills App Wallet. This is our default
+                When a refund is approved, we issue it as store credit to your {{ $siteName }} App Wallet. This is our default
                 method for every approved refund, on every service.
             </p>
 
@@ -208,7 +208,7 @@
             <h2 class="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">3. Automated failed-transaction protection</h2>
             <p class="mt-3 text-sm leading-relaxed text-zinc-600 sm:text-base">
                 We built protection directly into the platform so that a failed delivery never costs you money. You never lose
-                money on RshopRefills: every payment is either delivered or refunded to your wallet, and our support team is
+                money on {{ $siteName }}: every payment is either delivered or refunded to your wallet, and our support team is
                 available 24/7 if you ever need a human.
             </p>
 

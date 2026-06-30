@@ -130,7 +130,7 @@
     );
 @endphp
 
-<x-shop.layout :title="'Bill Payments | RshopRefills'">
+<x-shop.layout :title="'Bill Payments | '.$siteName">
 
     <section class="min-h-full bg-zinc-100">
         <div class="mx-auto w-full max-w-[1550px] px-4 py-8 sm:px-6 lg:px-8">

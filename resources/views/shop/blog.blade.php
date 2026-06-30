@@ -4,7 +4,7 @@
     $img = fn (string $file) => asset('assets/'.rawurlencode($file));
 @endphp
 
-<x-layouts.app.header :title="'Blog | RshopRefills'">
+<x-layouts.app.header :title="'Blog | '.$siteName">
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -12,7 +12,7 @@
             <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Blog</span>
             <h1 class="mt-5 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">Guides, tips and stories</h1>
             <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base">
-                Practical advice on getting the most out of RshopRefills, from crypto and eSIMs to security and savings.
+                Practical advice on getting the most out of {{ $siteName }}, from crypto and eSIMs to security and savings.
             </p>
         </div>
     </section>

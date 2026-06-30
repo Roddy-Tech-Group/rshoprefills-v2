@@ -47,7 +47,7 @@
                         <span class="flex h-10 items-center">
                             <img
                                 src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                                alt="RshopRefills"
+                                alt="{{ $siteName }}"
                                 class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                             />
                         </span>

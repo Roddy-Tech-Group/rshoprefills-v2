@@ -9,7 +9,7 @@
     ];
 @endphp
 
-<x-layouts.app.header :title="'Earn Points | RshopRefills'">
+<x-layouts.app.header :title="'Earn Points | '.$siteName">
 
     @unless ($rcoinEnabled)
         {{-- Engine is off. Show a single hero explaining the programme is

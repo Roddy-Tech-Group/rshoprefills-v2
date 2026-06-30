@@ -92,7 +92,7 @@
             </span>
 
             <div class="min-w-0 flex-1">
-                <p class="text-sm font-bold text-zinc-900 dark:text-white">Install RshopRefills</p>
+                <p class="text-sm font-bold text-zinc-900 dark:text-white">Install {{ $siteName }}</p>
                 <p class="truncate text-xs text-zinc-600 dark:text-zinc-300">Add it to your home screen for an app-like experience.</p>
             </div>
 
@@ -150,7 +150,7 @@
                 <img src="{{ asset('assets/icon-192.png') }}" alt="" class="h-full w-full object-contain no-dark-invert" width="44" height="44">
             </span>
             <div>
-                <p class="text-base font-bold text-zinc-900 dark:text-white">Install RshopRefills</p>
+                <p class="text-base font-bold text-zinc-900 dark:text-white">Install {{ $siteName }}</p>
                 <p class="text-xs text-zinc-600 dark:text-zinc-300">Two taps in Safari and it lives on your home screen.</p>
             </div>
         </div>

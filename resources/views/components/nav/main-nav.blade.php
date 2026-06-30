@@ -56,12 +56,12 @@
                 href="{{ route('home') }}"
                 wire:navigate
                 class="col-start-1 justify-self-start -ml-3 relative flex items-center rounded-[12px] group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                aria-label="RshopRefills — Home"
+                aria-label="{{ $siteName }} - Home"
             >
                 <span class="flex items-center h-10 md:h-12">
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                        alt="RshopRefills"
+                        alt="{{ $siteName }}"
                         fetchpriority="high"
                         class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                     />

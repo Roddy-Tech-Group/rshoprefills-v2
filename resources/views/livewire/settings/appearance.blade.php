@@ -11,7 +11,7 @@ new #[Layout('components.layouts.dashboard')] class extends Component {
     {{-- Page heading --}}
     <div class="text-center sm:text-left">
         <h1 class="text-2xl font-bold tracking-tight text-black sm:text-3xl">Appearance</h1>
-        <p class="mt-1 text-sm text-zinc-600">Choose how RshopRefills looks for you. System matches your device setting.</p>
+        <p class="mt-1 text-sm text-zinc-600">Choose how {{ $siteName }} looks for you. System matches your device setting.</p>
     </div>
 
     {{-- Theme picker. Hand-rolled segmented control instead of flux:radio.group

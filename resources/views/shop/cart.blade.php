@@ -11,7 +11,7 @@
     $shopRoute = fn (string $name, $params = []) => route(($inDashboard ? 'dashboard.shop.' : 'shop.').$name, $params);
 @endphp
 
-<x-shop.layout :title="'Your Cart | RshopRefills'">
+<x-shop.layout :title="'Your Cart | '.$siteName">
 
     <div class="min-h-full bg-zinc-100 dark:bg-[#0c1a36]">
     <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">

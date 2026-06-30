@@ -312,14 +312,14 @@
                 <span class="brand-full flex h-10 items-center">
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                        alt="RshopRefills"
+                        alt="{{ $siteName }}"
                         class="h-full w-auto object-contain"
                     />
                 </span>
                 <span class="brand-mark hidden w-14 flex-col items-center justify-center">
                     <img
                         src="{{ asset('assets/favicon.ico') }}"
-                        alt="RshopRefills"
+                        alt="{{ $siteName }}"
                         class="h-12 w-12 rounded-full object-contain"
                     />
                     <span class="mt-0.5 text-[9px] font-medium italic leading-none text-zinc-600 dark:text-zinc-400">Est. 2024</span>
@@ -1366,7 +1366,7 @@
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
                     <span>version 2.0.0</span>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
-                    <span>©RshopRefills {{ date('Y') }}</span>
+                    <span>©{{ $siteName }} {{ date('Y') }}</span>
                 </footer>
             </div>
         </flux:main>
@@ -1714,7 +1714,7 @@
                     <div class="mb-5 flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <h2 id="connect-title" class="text-lg font-bold text-zinc-900">Connect with us</h2>
-                            <p class="mt-0.5 text-xs text-zinc-600">Reach RshopRefills on your favourite channel.</p>
+                            <p class="mt-0.5 text-xs text-zinc-600">Reach {{ $siteName }} on your favourite channel.</p>
                         </div>
                         {{-- Glass grey close button — same recipe as the admin sidebar's
                              collapse toggle. Translucent fill + backdrop blur picks up the

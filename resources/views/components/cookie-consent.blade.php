@@ -20,7 +20,7 @@
 >
     <div class="mx-auto flex w-full max-w-[1550px] flex-col items-start gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <p class="text-sm leading-relaxed text-zinc-600">
-            We use cookies to keep you signed in, secure your payments and improve RshopRefills.
+            We use cookies to keep you signed in, secure your payments and improve {{ $siteName }}.
             See our <a href="{{ route('shop.cookie-policy') }}" wire:navigate class="font-medium text-blue-600 hover:underline">Cookie Policy</a>.
         </p>
         <div class="flex w-full shrink-0 items-center gap-3 sm:w-auto">

@@ -5,9 +5,9 @@
 @endphp
 
 <x-layouts.app.header
-    :title="$post->title.' | RshopRefills'"
+    :title="$post->title.' | '.$siteName"
     :description="$post->excerpt"
-    :keywords="$post->title.', RshopRefills press, RshopRefills newsroom, Roddy Technologies'"
+    :keywords="$post->title.', '.$siteName.' press, '.$siteName.' newsroom, Roddy Technologies'"
     :og-image="$post->image ? asset('assets/'.rawurlencode($post->image)) : asset('assets/og-image.png')"
     og-type="article"
 >

@@ -102,7 +102,7 @@
     $shopRoute = fn (string $name, $params = []) => route(($inDashboard ? 'dashboard.shop.' : 'shop.').$name, $params);
 @endphp
 
-<x-shop.layout :title="'Order ' . $order->order_number . ' | RshopRefills'">
+<x-shop.layout :title="'Order ' . $order->order_number . ' | '.$siteName">
 
 @if ($status->value === 'completed')
     {{-- ── Clean success view for completed orders ──────────────────────
@@ -291,7 +291,7 @@
 
                 <div x-show="open === 'terms'" x-collapse x-cloak class="mt-3 overflow-hidden rounded-[12px] bg-white px-4 py-3 text-xs leading-relaxed text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-300 dark:ring-zinc-700/60">
                     <ul class="ml-4 list-disc space-y-1">
-                        <li>Codes are equivalent to cash. RshopRefills cannot reissue codes that have been viewed, shared or used.</li>
+                        <li>Codes are equivalent to cash. {{ $siteName }} cannot reissue codes that have been viewed, shared or used.</li>
                         @if ($orderHasEsims)
                             <li>eSIM data plans activate on first network connection. The validity period (where applicable) starts from that point.</li>
                         @endif

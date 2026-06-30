@@ -39,7 +39,7 @@
             </span>
             <div class="min-w-0">
                 <p class="text-sm font-bold text-zinc-900">Your cards are kept safe</p>
-                <p class="mt-0.5 text-xs text-zinc-600">Card details are tokenised by our secure payment processor. RshopRefills never stores your full card number.</p>
+                <p class="mt-0.5 text-xs text-zinc-600">Card details are tokenised by our secure payment processor. {{ $siteName }} never stores your full card number.</p>
             </div>
         </div>
 

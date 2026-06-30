@@ -53,7 +53,7 @@
     ];
 @endphp
 
-<x-layouts.app.header :title="'Contact Us | RshopRefills'">
+<x-layouts.app.header :title="'Contact Us | '.$siteName">
 
     {{-- TrustBox bootstrap. Loaded once; the widget below the form renders into it. --}}
     <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
@@ -280,7 +280,7 @@
                         </div>
                         <iframe
                             src="https://discord.com/widget?id=1450688930746990737&theme=dark"
-                            title="RshopRefills Discord community"
+                            title="{{ $siteName }} Discord community"
                             height="500"
                             class="block w-full rounded-[12px]"
                             style="height: 500px;"

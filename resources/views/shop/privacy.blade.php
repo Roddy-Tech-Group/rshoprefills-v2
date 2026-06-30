@@ -8,7 +8,7 @@
     $lastUpdated = 'May 23, 2026';
 @endphp
 
-<x-layouts.app.header :title="'Privacy Policy | RshopRefills'">
+<x-layouts.app.header :title="'Privacy Policy | '.$siteName">
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -23,10 +23,10 @@
 
         {{-- Intro --}}
         <p class="text-sm leading-relaxed text-zinc-600 sm:text-base">
-            Your privacy matters to us. This policy explains, in plain language, what information RshopRefills collects, how we
+            Your privacy matters to us. This policy explains, in plain language, what information {{ $siteName }} collects, how we
             use it, who we share it with, and the rights you have over your data. We serve customers across Africa and
             internationally, and we work to comply with applicable data-protection laws, including the EU GDPR, the California
-            CCPA, the Nigeria Data Protection Act (NDPA) and the Kenya Data Protection Act. By using RshopRefills, you agree to
+            CCPA, the Nigeria Data Protection Act (NDPA) and the Kenya Data Protection Act. By using {{ $siteName }}, you agree to
             this policy.
         </p>
 

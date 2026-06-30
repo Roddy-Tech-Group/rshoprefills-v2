@@ -7,7 +7,7 @@
     $lastUpdated = 'May 23, 2026';
 @endphp
 
-<x-layouts.app.header :title="'Compliance and Regulatory Framework | RshopRefills'">
+<x-layouts.app.header :title="'Compliance and Regulatory Framework | '.$siteName">
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -22,7 +22,7 @@
 
         {{-- Intro --}}
         <p class="text-sm leading-relaxed text-zinc-600 sm:text-base">
-            RshopRefills operates a multi-vertical digital commerce and payments platform serving customers across Africa,
+            {{ $siteName }} operates a multi-vertical digital commerce and payments platform serving customers across Africa,
             Europe and North America. This framework sets out the governance, controls and standards we apply to meet our
             regulatory obligations, protect our customers and partners, and safeguard the integrity of the financial system.
             Our program is risk-based, independently reviewed, and continuously updated to reflect evolving law and
@@ -47,7 +47,7 @@
         <section id="statement" class="mt-12 scroll-mt-24">
             <h2 class="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">1. Compliance statement and commitment</h2>
             <p class="mt-3 text-sm leading-relaxed text-zinc-600 sm:text-base">
-                RshopRefills maintains a zero-tolerance policy toward financial crime in all its forms, including money
+                {{ $siteName }} maintains a zero-tolerance policy toward financial crime in all its forms, including money
                 laundering, terrorist financing, fraud, bribery, corruption and sanctions evasion. We are committed to
                 conducting business lawfully and ethically, and to upholding the highest standards of regulatory integrity in
                 every jurisdiction we serve across Africa and globally.

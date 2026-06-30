@@ -38,7 +38,7 @@
     ];
 @endphp
 
-<x-layouts.app.header :title="'How It Works | RshopRefills'">
+<x-layouts.app.header :title="'How It Works | '.$siteName">
 
     <style>
         @keyframes hiwMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -54,7 +54,7 @@
             <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">How it works</span>
             <h1 class="mt-5 text-3xl font-bold tracking-tight text-blue-600 sm:text-4xl lg:text-5xl">Shopping made simple</h1>
             <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base">
-                From gift cards to eSIMs, buying digital products on RshopRefills takes just a few taps. Here is how it all comes together.
+                From gift cards to eSIMs, buying digital products on {{ $siteName }} takes just a few taps. Here is how it all comes together.
             </p>
         </div>
     </section>
@@ -84,7 +84,7 @@
             </div>
             <div class="relative mx-auto w-full max-w-md lg:max-w-none">
                 <div class="overflow-hidden rounded-[24px] ring-1 ring-zinc-100">
-                    <img src="{{ $img('How it work 11.webp') }}" alt="How shopping works on RshopRefills" class="h-full w-full object-cover" loading="lazy">
+                    <img src="{{ $img('How it work 11.webp') }}" alt="How shopping works on {{ $siteName }}" class="h-full w-full object-cover" loading="lazy">
                 </div>
             </div>
         </div>
