@@ -86,6 +86,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'ipn_callback_url' => route('api.webhooks.nowpayments'),
                 'order_id' => $attempt->order->id,
                 'order_description' => "Order #{$attempt->order->order_number}",
+                'is_fee_paid_by_user' => true,
             ]);
 
             if ($response->failed()) {
@@ -132,10 +133,17 @@ class NowPaymentsProvider implements PaymentProviderInterface
         return match (strtolower($currency)) {
             'btc' => 'bitcoin',
             'eth' => 'ethereum',
-            'usdt' => 'tron',
-            'usdttrc20' => 'tron',
+            'usdt', 'usdttrc20' => 'tron',
+            'usdterc20' => 'ethereum',
+            'usdtbsc', 'usdtbep20' => 'bnb',
+            'usdtmatic', 'usdtpolygon' => 'polygon',
+            'usdtsol' => 'solana',
             'ltc' => 'litecoin',
-            default => 'bitcoin',
+            'bnb', 'bnbbsc' => 'bnb',
+            'matic' => 'polygon',
+            'sol' => 'solana',
+            'trx' => 'tron',
+            default => strtolower($currency),
         };
     }
 
@@ -199,6 +207,7 @@ class NowPaymentsProvider implements PaymentProviderInterface
                 'pay_currency' => $payCurrency,
                 'ipn_callback_url' => route('api.webhooks.nowpayments'),
                 'order_description' => $description,
+                'is_fee_paid_by_user' => true,
             ];
             if ($orderId) {
                 $payload['order_id'] = $orderId;
@@ -328,5 +337,64 @@ class NowPaymentsProvider implements PaymentProviderInterface
             'transaction_id' => $payload['payment_id'] ?? null,
             'reference' => $payload['invoice_id'] ?? null,
         ];
+    }
+
+    /**
+     * Query NOWPayments /estimate endpoint for the approximate crypto amount
+     * the customer would pay for a given fiat value. Used by the checkout
+     * fee breakdown to show estimated costs BEFORE invoice creation.
+     *
+     * @return array{estimated_amount: float, rate: float}|null
+     */
+    public function estimatePayment(float $priceAmount, string $priceCurrency, string $payCurrency): ?array
+    {
+        if (str_contains($this->apiKey, 'MOCK')) {
+            $mockRate = match (strtolower($payCurrency)) {
+                'btc' => 0.000015,
+                'eth' => 0.0003,
+                'usdt', 'usdttrc20', 'usdterc20', 'usdtbsc', 'usdtmatic', 'usdtsol' => 1.0,
+                'ltc' => 0.012,
+                'bnb', 'bnbbsc' => 0.0016,
+                'matic' => 1.25,
+                'sol' => 0.006,
+                'trx' => 7.5,
+                default => 1.0,
+            };
+
+            return [
+                'estimated_amount' => round($priceAmount * $mockRate, 8),
+                'rate' => $mockRate,
+            ];
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'x-api-key' => $this->apiKey,
+            ])->get("{$this->baseUrl}/estimate", [
+                'amount' => $priceAmount,
+                'currency_from' => strtolower($priceCurrency),
+                'currency_to' => strtolower($payCurrency),
+            ]);
+
+            if ($response->failed()) {
+                Log::warning('NowPayments estimate failed', [
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                ]);
+
+                return null;
+            }
+
+            $body = $response->json();
+
+            return [
+                'estimated_amount' => (float) ($body['estimated_amount'] ?? 0),
+                'rate' => $priceAmount > 0 ? ((float) ($body['estimated_amount'] ?? 0)) / $priceAmount : 0,
+            ];
+        } catch (\Exception $e) {
+            Log::warning('NowPayments estimate error: '.$e->getMessage());
+
+            return null;
+        }
     }
 }

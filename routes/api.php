@@ -49,6 +49,8 @@ Route::prefix('storefront')->name('api.storefront.')->group(function () {
     Route::get('esims/countries', [EsimCatalogController::class, 'countries'])->name('esims.countries');
     Route::get('esims/{slug}', [EsimCatalogController::class, 'show'])->name('esims.show');
 
+    Route::get('crypto/fee-estimate', [\App\Http\Controllers\Api\Storefront\CryptoFeeController::class, 'estimate'])->name('crypto.fee-estimate');
+
     // Cart Flow. `not-suspended` is a no-op for guests (cart access is open);
     // it only blocks an authenticated suspended user from writing to the cart.
     Route::prefix('cart')->name('cart.')->group(function () {

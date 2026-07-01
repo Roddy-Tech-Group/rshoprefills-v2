@@ -30,7 +30,7 @@ return [
     'vat_percent' => 7.5,
 
     // Methods that do not route through Flutterwave carry no processing fee.
-    'fee_free_methods' => ['wallet', 'crypto'],
+    'fee_free_methods' => ['wallet'],
 
     // Per-method rates, in percent of the transaction amount.
     'methods' => [
