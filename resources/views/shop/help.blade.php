@@ -45,7 +45,7 @@
     ])->values()->all();
 @endphp
 
-<x-layouts.app.header :title="'Help Center | RshopRefills'">
+<x-layouts.app.header :title="'Help Center | '.$siteName">
 
     <div
         x-data="{

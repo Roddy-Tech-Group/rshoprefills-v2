@@ -5,7 +5,7 @@
     $lastUpdated = 'May 23, 2026';
 @endphp
 
-<x-layouts.app.header :title="'Accessibility Statement | RshopRefills'">
+<x-layouts.app.header :title="'Accessibility Statement | '.$siteName">
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -20,7 +20,7 @@
 
         {{-- Intro --}}
         <p class="text-sm leading-relaxed text-zinc-600 sm:text-base">
-            RshopRefills is committed to making our platform usable by as many people as possible, including people with
+            {{ $siteName }} is committed to making our platform usable by as many people as possible, including people with
             disabilities. We aim to meet the Web Content Accessibility Guidelines (WCAG) 2.1 at Level AA, and we keep working
             to improve the experience for everyone.
         </p>

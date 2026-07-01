@@ -7,6 +7,13 @@
      * that POSTs to checkout.process; the backend resolves the cart server-side.
      */
 
+    // Post to the dashboard mirror when rendered under /dashboard/shop/* so the
+    // server keeps the whole cart -> checkout -> order flow (and the order page's
+    // redirect_url) inside the dashboard chrome instead of the public storefront.
+    $checkoutProcessUrl = request()->routeIs('dashboard.*')
+        ? route('dashboard.shop.checkout.process')
+        : route('checkout.process');
+
     // Crypto coins for the crypto payment option — admin-managed currency rates.
     $cryptoCoins = CurrencyRate::query()->where('is_active', true)->where('type', 'crypto')
         ->orderBy('sort_order')->orderBy('code')
@@ -87,7 +94,7 @@
     ];
 @endphp
 
-<x-layouts.app.header :title="'Checkout | RshopRefills'">
+<x-shop.layout :title="'Checkout | '.$siteName">
 
     <script src="https://checkout.flutterwave.com/v3.js"></script>
 
@@ -208,21 +215,6 @@
                         </template>
                     </ul>
 
-                    {{-- Region notice — only meaningful when the cart contains
-                         gift cards (top-ups + eSIMs aren't region-locked the
-                         same way). Hidden as soon as the cart is pure top-up /
-                         eSIM so the buyer doesn't see misleading copy. --}}
-                    <div
-                        x-show="$store.cart.items.some((i) => ! ['mobile-airtime', 'esims', 'bill-payments'].includes(i.category_slug))"
-                        x-cloak
-                        class="mt-3 flex items-start gap-2.5 rounded-[12px] bg-amber-50 px-4 py-3.5 dark:bg-amber-500/10"
-                    >
-                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-                        </svg>
-                        <p class="text-sm text-amber-800 dark:text-amber-200">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
-                    </div>
-
                     {{-- eSIM coverage notice — eSIMs only have service inside
                          their coverage area, and "US Data eSIM" bought from home
                          is the classic blind-buy mistake. Shown whenever the
@@ -315,7 +307,7 @@
                      `id="checkout-form"` so the Rcoin redemption checkbox in
                      the left column can post into this form via its
                      `form="checkout-form"` attribute. --}}
-                <form id="checkout-form" method="POST" action="{{ route('checkout.process') }}" @submit.prevent="submitCheckout($event)" class="pure-card rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
+                <form id="checkout-form" method="POST" action="{{ $checkoutProcessUrl }}" @submit.prevent="submitCheckout($event)" class="pure-card rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 p-5 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10 sm:p-6">
                     @csrf
                     <input type="hidden" name="payment_method" :value="method">
                     <input type="hidden" name="crypto_coin" :value="crypto">
@@ -1466,7 +1458,7 @@
                     this.errorMessage = '';
                     try {
                         const formData = new FormData(e.target);
-                        const response = await fetch('/checkout', {
+                        const response = await fetch('{{ $checkoutProcessUrl }}', {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
@@ -1912,4 +1904,4 @@
         };
     </script>
 
-</x-layouts.app.header>
+</x-shop.layout>

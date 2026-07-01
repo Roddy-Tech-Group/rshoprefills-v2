@@ -27,7 +27,7 @@
 
             {{-- Heading --}}
             <h1 class="mt-2 text-center text-2xl font-bold tracking-tight text-zinc-900">Admin Access</h1>
-            <p class="mt-1 text-center text-sm text-zinc-600">Sign in to the RshopRefills administration panel.</p>
+            <p class="mt-1 text-center text-sm text-zinc-600">Sign in to the {{ $siteName }} administration panel.</p>
 
             {{-- Status flash --}}
             <x-auth-session-status class="mt-4 text-center" :status="session('status')" />

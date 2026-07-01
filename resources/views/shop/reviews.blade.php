@@ -17,7 +17,7 @@
     ];
 @endphp
 
-<x-layouts.app.header :title="'Customer Reviews | RshopRefills'">
+<x-layouts.app.header :title="'Customer Reviews | '.$siteName">
 
     {{-- TrustBox bootstrap. Loaded once; the widget div below renders into it. --}}
     <script type="text/javascript" src="//widget.trustpilot.com/bootstrap/v5/tp.widget.bootstrap.min.js" async></script>
@@ -181,7 +181,7 @@
     {{-- Final CTA - contained rounded banner rather than a full-bleed strip. --}}
     <section class="px-4 py-12 sm:px-6">
         <div class="mx-auto w-full max-w-[1140px] rounded-[12px] bg-blue-600 px-4 py-14 text-center sm:px-6">
-            <h2 class="text-2xl font-bold text-white sm:text-3xl">Loved using RshopRefills?</h2>
+            <h2 class="text-2xl font-bold text-white sm:text-3xl">Loved using {{ $siteName }}?</h2>
             <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-blue-100">Drop us a review on {{ $aggregate['source'] }} - it takes less than a minute and helps other customers find us.</p>
             <a href="{{ $tp['profile_url'] }}" target="_blank" rel="noopener" class="mt-6 inline-flex items-center justify-center gap-2 rounded-[12px] bg-white px-6 py-3 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50">
                 Review us on {{ $aggregate['source'] }}

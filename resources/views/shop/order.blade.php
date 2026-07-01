@@ -102,7 +102,7 @@
     $shopRoute = fn (string $name, $params = []) => route(($inDashboard ? 'dashboard.shop.' : 'shop.').$name, $params);
 @endphp
 
-<x-shop.layout :title="'Order ' . $order->order_number . ' | RshopRefills'">
+<x-shop.layout :title="'Order ' . $order->order_number . ' | '.$siteName">
 
 @if ($status->value === 'completed')
     {{-- ── Clean success view for completed orders ──────────────────────
@@ -291,10 +291,7 @@
 
                 <div x-show="open === 'terms'" x-collapse x-cloak class="mt-3 overflow-hidden rounded-[12px] bg-white px-4 py-3 text-xs leading-relaxed text-zinc-600 ring-1 ring-zinc-100 dark:bg-[#1d3252] dark:text-zinc-300 dark:ring-zinc-700/60">
                     <ul class="ml-4 list-disc space-y-1">
-                        <li>Codes are equivalent to cash. RshopRefills cannot reissue codes that have been viewed, shared or used.</li>
-                        @if ($orderHasGiftCards)
-                            <li>Gift cards are region-locked. They can only be redeemed by accounts registered in the matching country.</li>
-                        @endif
+                        <li>Codes are equivalent to cash. {{ $siteName }} cannot reissue codes that have been viewed, shared or used.</li>
                         @if ($orderHasEsims)
                             <li>eSIM data plans activate on first network connection. The validity period (where applicable) starts from that point.</li>
                         @endif
@@ -1016,18 +1013,6 @@
                 @endforeach
             </ol>
         </section>
-    @endif
-
-    {{-- Region notice — only meaningful for gift-card orders. Top-up + eSIM
-         orders aren't region-locked in the same way, so the notice would only
-         confuse the buyer. --}}
-    @if ($orderHasGiftCards)
-        <div class="mt-6 flex items-start gap-2.5 rounded-[12px] bg-amber-50 px-4 py-3.5">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-            </svg>
-            <p class="text-sm text-amber-800">Gift cards are region-locked. Make sure to update the region of the device you want to redeem the gift card with. For more information visit our learning page.</p>
-        </div>
     @endif
 
     {{-- Actions --}}

@@ -98,7 +98,7 @@
      correct rule wins from the first paint. --}}
 <style>
     html { background-color: #ffffff; }
-    html.dark { background-color: #0c1a36; }
+    html.dark { background-color: #1a1a1a; }
     /* Extra Dark is the default dark palette (customer side); paint the pre-CSS
        frame true black so the default never flashes navy first. */
     html.dark.pure-dark { background-color: #000000; }
@@ -115,16 +115,19 @@
      layout (see x-shop.layout + x-layouts.app.header), e.g. product pages set
      the brand name + logo so a shared link previews as that product. --}}
 @php
-    $siteName = 'RshopRefills';
+    // Public-facing brand name. Shared globally by SiteIdentityComposer from the
+    // admin "Site -> name" setting; the ?? keeps a literal fallback for the rare
+    // view that renders outside the composer (defensive, should not happen).
+    $siteName = $siteName ?? \App\Models\SiteSetting::get('site.name', 'RshopRefills');
 
     // Admin-controlled SEO defaults (System Settings -> SEO). Each falls back to
     // the built-in default when the admin field is blank, so the panel is the
     // live source of truth without ever rendering an empty tag. Per-page props
     // ($title / $description / ...) still win over both.
     $defaultDescription = \App\Models\SiteSetting::get('seo.default_description')
-        ?: 'Buy gift cards, eSIMs, mobile top-ups and bill payments worldwide - instantly. RshopRefills removes the friction of regional restrictions, slow delivery and limited payment options, with instant digital delivery, great prices, crypto and mobile-money checkout, and 24/7 support.';
+        ?: 'Buy gift cards, eSIMs, mobile top-ups and bill payments worldwide - instantly. '.$siteName.' removes the friction of regional restrictions, slow delivery and limited payment options, with instant digital delivery, great prices, crypto and mobile-money checkout, and 24/7 support.';
     $defaultKeywords = \App\Models\SiteSetting::get('seo.default_keywords')
-        ?: 'RshopRefills, gift cards, buy gift cards online, eSIM, travel eSIM, mobile top up, airtime recharge, bill payments, crypto gift cards, Amazon gift card, Apple gift card, Google Play, Steam, Netflix, PlayStation, Xbox, Cameroon, Africa fintech, Divine Ofeh, Johnpaul';
+        ?: $siteName.', gift cards, buy gift cards online, eSIM, travel eSIM, mobile top up, airtime recharge, bill payments, crypto gift cards, Amazon gift card, Apple gift card, Google Play, Steam, Netflix, PlayStation, Xbox, Cameroon, Africa fintech, Divine Ofeh, Johnpaul';
     $defaultTitle = \App\Models\SiteSetting::get('seo.default_title')
         ?: $siteName.' - Gift Cards, eSIMs, Top-ups & Bill Payments';
 
@@ -165,7 +168,7 @@
         'url' => url('/'),
         'logo' => asset('assets/icon-512.png'),
         'image' => asset('assets/og-image.png'),
-        'description' => 'RshopRefills is the first product of Roddy Technologies. It makes gift cards, eSIMs, mobile top-ups and bill payments instant and affordable. Founded and built in Cameroon by CEO Divine Ofeh and CTO Johnpaul, the team keeps shipping updates and solving problems for the community while building an Africa-to-international digital ecosystem - from Cameroon to the world.',
+        'description' => $siteName.' is the first product of Roddy Technologies. It makes gift cards, eSIMs, mobile top-ups and bill payments instant and affordable. Founded and built in Cameroon by CEO Divine Ofeh and CTO Johnpaul, the team keeps shipping updates and solving problems for the community while building an Africa-to-international digital ecosystem - from Cameroon to the world.',
         'slogan' => 'From Cameroon to the world.',
         'foundingLocation' => [
             '@type' => 'Place',
@@ -192,7 +195,7 @@
 <title>{{ $seoTitle }}</title>
 <meta name="description" content="{{ $seoDescription }}">
 <meta name="keywords" content="{{ $seoKeywords }}">
-<meta name="author" content="Divine Ofeh (CEO) and Johnpaul (CTO) - RshopRefills">
+<meta name="author" content="Divine Ofeh (CEO) and Johnpaul (CTO) - {{ $siteName }}">
 {{-- index,follow is the default; the max-* directives explicitly let Google
      show large image previews and full text snippets, which lifts click-through
      on results. Admin can override the default (System Settings -> SEO); a
@@ -244,8 +247,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="RshopRefills">
-<meta name="application-name" content="RshopRefills">
+<meta name="apple-mobile-web-app-title" content="{{ $siteName }}">
+<meta name="application-name" content="{{ $siteName }}">
 <script>
     // Capture the install prompt as early as possible (it fires before Alpine
     // boots) and stash it so the floating Install button can replay it on tap.

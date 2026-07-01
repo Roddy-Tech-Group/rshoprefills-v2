@@ -15,7 +15,7 @@
         ->all();
 @endphp
 
-<x-layouts.app.header :title="'FAQ | RshopRefills'">
+<x-layouts.app.header :title="'FAQ | '.$siteName">
 
     <div class="mx-auto w-full max-w-[1140px] px-4 py-14 sm:px-6 sm:py-20">
         <div class="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-14">

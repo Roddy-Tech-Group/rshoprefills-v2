@@ -111,7 +111,7 @@ class AdminCommerceController extends Controller
 
     public function listFulfillmentLogs(Request $request)
     {
-        return response()->json(FulfillmentLog::latest()->paginate(15));
+        return response()->json(FulfillmentLog::latest('processed_at')->paginate(15));
     }
 
     public function retryFulfillment(string $itemId)

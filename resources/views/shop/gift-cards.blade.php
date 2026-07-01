@@ -183,7 +183,7 @@
 
 @endphp
 
-<x-shop.layout title="Gift Cards | RshopRefills">
+<x-shop.layout title="Gift Cards | {{ $siteName }}">
 
     <section class="min-h-full rounded-[15px] bg-[#eff6ff]">
         <div class="mx-auto w-full max-w-[1550px] px-4 py-8 sm:px-6 lg:px-8">

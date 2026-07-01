@@ -908,6 +908,7 @@
                         'duration' => data_get($meta, 'duration'),
                         'dataSpeed' => data_get($meta, 'dataSpeed'),
                         'isAvailable' => (bool) $variant->is_available,
+                        'isActive' => (bool) ($product?->is_active ?? false),
                         'isFeatured' => (bool) ($product?->is_featured ?? false),
                         'isPopular' => (bool) ($product?->is_popular ?? false),
                         'valueLabel' => $valueLabel,
@@ -1057,10 +1058,24 @@
                                 </button>
                             </div>
                         </div>
+                        {{-- Live on website: flips products.is_active. Off pulls the
+                             WHOLE product (every variant) from storefront listings and
+                             its detail page - this is the "turn a product off" switch. --}}
                         <div>
-                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Status</p>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Live on website</p>
                             <div class="mt-1 inline-flex items-center gap-0.5 rounded-[12px] bg-zinc-100 p-0.5 dark:bg-[#26416b]">
-                                <button type="button" @click="setAvailable(true)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="data.isAvailable ? 'bg-red-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">Enabled</button>
+                                <button type="button" @click="setActive(true)" :disabled="savingActive" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="data.isActive ? 'bg-emerald-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">On</button>
+                                <button type="button" @click="setActive(false)" :disabled="savingActive" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="! data.isActive ? 'bg-zinc-700 text-white' : 'text-zinc-600 dark:text-zinc-300'">Off</button>
+                            </div>
+                            <p class="mt-1 text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">Off removes the whole product from the website.</p>
+                        </div>
+
+                        {{-- Availability: flips THIS variant's is_available, so only this
+                             one denomination/amount disappears from the product page. --}}
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">Availability (this variant)</p>
+                            <div class="mt-1 inline-flex items-center gap-0.5 rounded-[12px] bg-zinc-100 p-0.5 dark:bg-[#26416b]">
+                                <button type="button" @click="setAvailable(true)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="data.isAvailable ? 'bg-emerald-500 text-white' : 'text-zinc-600 dark:text-zinc-300'">Enabled</button>
                                 <button type="button" @click="setAvailable(false)" :disabled="savingAvailable" class="rounded-[8px] px-3 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60" :class="! data.isAvailable ? 'bg-zinc-700 text-white' : 'text-zinc-600 dark:text-zinc-300'">Disabled</button>
                             </div>
                         </div>
@@ -1320,7 +1335,7 @@
                                  OR (once set) a red X button to remove it -
                                  same "click here to switch off" affordance the
                                  admin asked for, no extra round-trip needed. --}}
-                            <label class="flex items-center justify-between gap-3 rounded-[12px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60" :class="data.isFeatured && 'ring-1 ring-inset ring-amber-300/60 bg-amber-50/40 dark:bg-amber-500/[0.07] dark:ring-amber-400/30'">
+                            <div class="flex items-center justify-between gap-3 rounded-[12px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60" :class="data.isFeatured && 'ring-1 ring-inset ring-amber-300/60 bg-amber-50/40 dark:bg-amber-500/[0.07] dark:ring-amber-400/30'">
                                 <span class="flex items-center gap-2.5">
                                     <span class="inline-flex items-center gap-1 rounded-[12px] bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-pink-500/40">
                                         <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.39 7.36H22l-6.18 4.49L18.18 21 12 16.51 5.82 21l2.36-7.15L2 9.36h7.61z"/></svg>
@@ -1328,33 +1343,31 @@
                                     </span>
                                     <span class="text-[12px] text-zinc-700 dark:text-zinc-200">Glowing gradient badge</span>
                                 </span>
-                                {{-- Off state: checkbox to enable. --}}
-                                <input
-                                    x-show="!data.isFeatured"
-                                    type="checkbox"
-                                    x-model="data.isFeatured"
-                                    @change="toggleFeatured()"
-                                    :disabled="togglingFeatured"
-                                    class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
-                                >
-                                {{-- On state: explicit Remove X button. --}}
+                                {{-- One persistent control. ON: a red X that stays put so the
+                                     drawer shows at a glance the product is featured - click it
+                                     to remove. OFF: a + to add it. toggleFeatured() flips the
+                                     server flag and syncs data.isFeatured from the response. --}}
                                 <button
                                     type="button"
-                                    x-show="data.isFeatured"
-                                    x-cloak
-                                    @click.prevent="data.isFeatured = false; toggleFeatured()"
+                                    @click="toggleFeatured()"
                                     :disabled="togglingFeatured"
-                                    aria-label="Remove Featured badge"
-                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-red-50 text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                                    :aria-label="data.isFeatured ? 'Remove Featured badge' : 'Mark as Featured'"
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                    :class="data.isFeatured
+                                        ? 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25'
+                                        : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-700 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15'"
                                 >
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <svg x-show="data.isFeatured" x-cloak class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
+                                    <svg x-show="!data.isFeatured" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                    </svg>
                                 </button>
-                            </label>
+                            </div>
 
                             {{-- Popular toggle. Same pattern. --}}
-                            <label class="flex items-center justify-between gap-3 rounded-[12px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60" :class="data.isPopular && 'ring-1 ring-inset ring-blue-300/60 bg-blue-50/40 dark:bg-blue-500/[0.07] dark:ring-blue-400/30'">
+                            <div class="flex items-center justify-between gap-3 rounded-[12px] border border-zinc-200 px-3 py-2.5 dark:border-zinc-700/60" :class="data.isPopular && 'ring-1 ring-inset ring-blue-300/60 bg-blue-50/40 dark:bg-blue-500/[0.07] dark:ring-blue-400/30'">
                                 <span class="flex items-center gap-2.5">
                                     <span class="inline-flex items-center gap-1 rounded-[12px] bg-blue-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                                         <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.5a9.5 9.5 0 100 19 9.5 9.5 0 000-19zm1 14h-2v-2h2v2zm0-4h-2V6h2v6.5z"/></svg>
@@ -1362,28 +1375,26 @@
                                     </span>
                                     <span class="text-[12px] text-zinc-700 dark:text-zinc-200">Customer-favourite tag</span>
                                 </span>
-                                <input
-                                    x-show="!data.isPopular"
-                                    type="checkbox"
-                                    x-model="data.isPopular"
-                                    @change="togglePopular()"
-                                    :disabled="togglingPopular"
-                                    class="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
-                                >
+                                {{-- Same persistent control as Featured: X stays while ON
+                                     (visible "this is popular" marker + remove), + to add. --}}
                                 <button
                                     type="button"
-                                    x-show="data.isPopular"
-                                    x-cloak
-                                    @click.prevent="data.isPopular = false; togglePopular()"
+                                    @click="togglePopular()"
                                     :disabled="togglingPopular"
-                                    aria-label="Remove Popular badge"
-                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-red-50 text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25"
+                                    :aria-label="data.isPopular ? 'Remove Popular badge' : 'Mark as Popular'"
+                                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                    :class="data.isPopular
+                                        ? 'bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 dark:bg-red-500/15 dark:text-red-300 dark:hover:bg-red-500/25'
+                                        : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-700 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15'"
                                 >
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                    <svg x-show="data.isPopular" x-cloak class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
+                                    <svg x-show="!data.isPopular" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                    </svg>
                                 </button>
-                            </label>
+                            </div>
                         </div>
                     </div>
 
@@ -1526,6 +1537,9 @@
 
                     // Variant availability toggle
                     savingAvailable: false,
+
+                    // Product on/off (is_active) toggle
+                    savingActive: false,
 
                     // Per-product markup rule form
                     markupType: 'percentage',
@@ -1704,6 +1718,25 @@
                         }
                     },
 
+                    async setActive(value) {
+                        if (!this.data.productId || this.savingActive || this.data.isActive === value) { return; }
+                        const previous = this.data.isActive;
+                        this.data.isActive = value;
+                        this.savingActive = true;
+                        try {
+                            // toggle-active flips is_active; we only get here when the
+                            // current state differs from `value`, so the flip lands on it.
+                            const json = await this._send('PATCH',
+                                `/admin/api/catalog/products/${this.data.productId}/toggle-active`);
+                            this.data.isActive = json.is_active;
+                        } catch (e) {
+                            this.data.isActive = previous;
+                            alert(e.message);
+                        } finally {
+                            this.savingActive = false;
+                        }
+                    },
+
                     async toggleFeatured() {
                         if (!this.data.productId) { return; }
                         this.togglingFeatured = true;
@@ -1712,7 +1745,9 @@
                                 `/admin/api/catalog/products/${this.data.productId}/toggle-featured`);
                             this.data.isFeatured = json.is_featured;
                         } catch (e) {
-                            this.data.isFeatured = !this.data.isFeatured; // revert
+                            // data.isFeatured is only ever set from the server response,
+                            // so a failed flip (e.g. the 10-badge cap) leaves it correct -
+                            // just surface why.
                             alert(e.message);
                         } finally {
                             this.togglingFeatured = false;
@@ -1727,7 +1762,8 @@
                                 `/admin/api/catalog/products/${this.data.productId}/toggle-popular`);
                             this.data.isPopular = json.is_popular;
                         } catch (e) {
-                            this.data.isPopular = !this.data.isPopular;
+                            // Same as Featured: state mirrors the server, so no revert -
+                            // a rejected flip (cap reached) just alerts.
                             alert(e.message);
                         } finally {
                             this.togglingPopular = false;

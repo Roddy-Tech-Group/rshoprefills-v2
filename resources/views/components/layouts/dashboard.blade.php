@@ -312,14 +312,14 @@
                 <span class="brand-full flex h-10 items-center">
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                        alt="RshopRefills"
+                        alt="{{ $siteName }}"
                         class="h-full w-auto object-contain"
                     />
                 </span>
                 <span class="brand-mark hidden w-14 flex-col items-center justify-center">
                     <img
                         src="{{ asset('assets/favicon.ico') }}"
-                        alt="RshopRefills"
+                        alt="{{ $siteName }}"
                         class="h-12 w-12 rounded-full object-contain"
                     />
                     <span class="mt-0.5 text-[9px] font-medium italic leading-none text-zinc-600 dark:text-zinc-400">Est. 2024</span>
@@ -1032,7 +1032,7 @@
         {{-- Blue hero — overview only. Scrolls away with the page; the floating
              wallet chip + Top Up button inside <x-slot:mobileHero> take over once
              the hero leaves the viewport. --}}
-        <header class="relative z-10 px-5 pb-6 lg:hidden" style="padding-top: max(1rem, env(safe-area-inset-top));">
+        <header class="relative z-10 bg-transparent px-5 pb-6 lg:hidden" style="padding-top: max(1rem, env(safe-area-inset-top));">
             {{-- Compact identity strip - avatar + small online dot on the left,
                  notification bell on the right. Replaces the old "Hello /
                  Welcome back" greeting so the wallet card sits closer to the
@@ -1119,6 +1119,88 @@
             @endisset
         </header>
         @endunless
+
+        {{-- Mobile cart sheet. The desktop cart popup lives in the lg:flex header
+             (hidden on phones), so on mobile the shared $store.cart.open state needs
+             its own surface. Teleported to <body> and pinned above the mobile bottom
+             nav, it drops open the moment an item is added - mirroring the storefront
+             nav so adding to cart on a phone gives the same feedback. --}}
+        <div x-data>
+            <template x-teleport="body">
+                <div class="lg:hidden">
+                    <div
+                        x-show="$store.cart.open"
+                        x-transition.opacity.duration.150ms
+                        @click="$store.cart.open = false"
+                        style="display:none;"
+                        class="fixed inset-0 z-[80]"
+                    ></div>
+                    <div
+                        x-show="$store.cart.open"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 translate-y-2"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-2"
+                        style="display:none;"
+                        class="fixed inset-x-3 bottom-20 z-[80] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[14px] bg-white/80 px-3 py-2 backdrop-blur-2xl backdrop-saturate-150 shadow-xl shadow-zinc-900/15 ring-1 ring-zinc-200 dark:bg-[#0c1a36]/80 dark:ring-white/10"
+                        role="menu"
+                    >
+                        {{-- Empty state --}}
+                        <div x-show="$store.cart.count === 0" class="flex flex-col items-center px-3 py-5 text-center">
+                            <h3 class="text-xl font-bold text-zinc-900 dark:text-white">Your cart is empty</h3>
+                            <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Your cart needs items</p>
+                        </div>
+
+                        {{-- Populated state --}}
+                        <div x-show="$store.cart.count > 0" x-cloak>
+                            <div class="flex items-center justify-between px-3 pt-3">
+                                <h3 class="text-lg font-bold text-zinc-900 dark:text-white">Your cart</h3>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400" x-text="$store.cart.count + ' item' + ($store.cart.count === 1 ? '' : 's')"></span>
+                            </div>
+
+                            <ul class="mt-3 max-h-72 space-y-1 overflow-y-auto px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                <template x-for="item in $store.cart.items" :key="item.id">
+                                    <li class="flex items-center gap-3 rounded-[12px] px-3 py-2.5">
+                                        <span class="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-white shadow-sm ring-1 ring-zinc-200">
+                                            <template x-if="item.logo">
+                                                <img :src="item.logo" alt="" class="h-full w-full object-cover">
+                                            </template>
+                                            <template x-if="!item.logo">
+                                                <span class="text-sm font-black uppercase text-zinc-700" x-text="item.name.substring(0,2).toUpperCase()"></span>
+                                            </template>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-sm font-bold text-zinc-900 dark:text-white" x-text="item.name"></span>
+                                            <span class="mt-0.5 block text-xs font-semibold text-zinc-700 dark:text-zinc-300" x-text="$store.cart.pay(item.unit_price)"></span>
+                                        </span>
+                                        <span class="flex shrink-0 items-center gap-1.5">
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity - 1)" class="flex h-7 w-7 items-center justify-center rounded-[12px] text-zinc-600 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-white/15 transition-colors hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white" aria-label="Decrease">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M5 12h14"/></svg>
+                                            </button>
+                                            <span class="w-5 text-center text-sm font-bold tabular-nums text-zinc-900 dark:text-white" x-text="item.quantity"></span>
+                                            <button type="button" @click="$store.cart.setQty(item.id, item.quantity + 1)" class="flex h-7 w-7 items-center justify-center rounded-[12px] text-zinc-600 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-white/15 transition-colors hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white" aria-label="Increase">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>
+                                            </button>
+                                        </span>
+                                    </li>
+                                </template>
+                            </ul>
+
+                            <div class="mt-3 flex gap-2 rounded-[12px] bg-zinc-50 dark:bg-white/5 px-3 py-3">
+                                <a href="{{ route('dashboard.shop.cart') }}" wire:navigate.hover @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[12px] bg-white dark:bg-white/10 px-4 py-3.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 ring-1 ring-zinc-200 dark:ring-white/15 transition-colors hover:bg-zinc-100 dark:hover:bg-white/15">
+                                    View cart
+                                </a>
+                                <a :href="'{{ route('dashboard.shop.checkout') }}' + ($store.cart.showUsd ? '?currency=' + $store.cart.currency : '')" wire:navigate.hover @click="$store.cart.open = false" class="flex-1 inline-flex items-center justify-center rounded-[12px] bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700">
+                                    Checkout
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
 
         {{-- Sticky mobile top bar for inner pages (settings, password, appearance).
              Acts as the single mobile chrome on those pages — title derived from the route
@@ -1284,7 +1366,7 @@
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
                     <span>version 2.0.0</span>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
-                    <span>©RshopRefills {{ date('Y') }}</span>
+                    <span>©{{ $siteName }} {{ date('Y') }}</span>
                 </footer>
             </div>
         </flux:main>
@@ -1450,7 +1532,7 @@
                 ['label' => 'Notifications', 'href' => route('dashboard.notifications'), 'icon' => 'notification 2.svg', 'tone' => 'bg-amber-500',    'nav' => true],
                 // Saved Cards hidden until the card-vault backend ships (see routes/web.php).
                 // ['label' => 'Saved Cards',   'href' => route('dashboard.saved-cards'),   'icon' => 'savedcard.svg',      'tone' => 'bg-rose-500',     'nav' => true],
-                ['label' => 'Gift Cards',    'href' => route('dashboard.gift-cards.history'), 'icon' => 'gift cards.svg', 'tone' => 'bg-orange-500', 'nav' => true],
+                ['label' => 'Trade Card',    'href' => route('dashboard.gift-cards.history'), 'icon' => 'gift cards.svg', 'tone' => 'bg-orange-500', 'nav' => true],
                 ['label' => 'Referrals',     'href' => route('dashboard.rewards'),    'icon' => 'referals.webp',       'tone' => 'bg-yellow-500',   'nav' => true],
                 ['label' => 'Support',       'href' => 'https://wa.me/19402386229?text=Hello%20Rshoprefill%20can%20i%20get%20help%3F', 'icon' => 'support.svg', 'tone' => 'bg-cyan-500', 'nav' => false],
             ];
@@ -1632,7 +1714,7 @@
                     <div class="mb-5 flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <h2 id="connect-title" class="text-lg font-bold text-zinc-900">Connect with us</h2>
-                            <p class="mt-0.5 text-xs text-zinc-600">Reach RshopRefills on your favourite channel.</p>
+                            <p class="mt-0.5 text-xs text-zinc-600">Reach {{ $siteName }} on your favourite channel.</p>
                         </div>
                         {{-- Glass grey close button — same recipe as the admin sidebar's
                              collapse toggle. Translucent fill + backdrop blur picks up the

@@ -48,7 +48,7 @@
                     <span class="flex h-12 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                            alt="RshopRefills"
+                            alt="{{ $siteName }}"
                             fetchpriority="high"
                             class="h-full w-auto object-contain brightness-0 invert transition-opacity duration-200 group-hover:opacity-90"
                         />
@@ -147,7 +147,7 @@
                 {{-- Footer. Year auto-updates; legal + help links route to the
                      real storefront pages instead of dead anchors. --}}
                 <div class="relative z-10 mt-6 flex flex-wrap items-center justify-between gap-4 text-[12px] text-blue-200/70">
-                    <p>&copy; {{ date('Y') }} RshopRefills. All rights reserved.</p>
+                    <p>&copy; {{ date('Y') }} {{ $siteName }}. All rights reserved.</p>
                     <div class="flex flex-wrap gap-6">
                         <a href="{{ route('shop.privacy') }}" wire:navigate class="transition-colors hover:text-white">Privacy Policy</a>
                         <a href="{{ route('shop.terms') }}" wire:navigate class="transition-colors hover:text-white">Terms of Service</a>
@@ -182,7 +182,7 @@
                     <span class="flex h-10 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                            alt="RshopRefills"
+                            alt="{{ $siteName }}"
                             class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>

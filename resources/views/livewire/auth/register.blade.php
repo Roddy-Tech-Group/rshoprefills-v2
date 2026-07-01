@@ -151,7 +151,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     {{-- Centered form --}}
     <div class="mx-auto flex w-full max-w-sm flex-col py-3 sm:flex-1 sm:justify-center sm:py-6">
 
-        <p class="text-center text-base text-zinc-600">Join RshopRefills and start shopping today</p>
+        <p class="text-center text-base text-zinc-600">Join {{ $siteName }} and start shopping today</p>
 
         <x-auth-session-status class="mt-4 text-center" :status="session('status')" />
 

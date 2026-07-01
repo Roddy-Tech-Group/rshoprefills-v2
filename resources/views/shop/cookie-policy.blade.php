@@ -6,7 +6,7 @@
     $lastUpdated = 'May 23, 2026';
 @endphp
 
-<x-layouts.app.header :title="'Cookie Policy | RshopRefills'">
+<x-layouts.app.header :title="'Cookie Policy | '.$siteName">
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -21,10 +21,10 @@
 
         {{-- Intro --}}
         <p class="text-sm leading-relaxed text-zinc-600 sm:text-base">
-            This Cookie Policy explains how RshopRefills uses cookies and similar technologies when you use our website and
+            This Cookie Policy explains how {{ $siteName }} uses cookies and similar technologies when you use our website and
             app. It should be read together with our
             <a href="{{ route('shop.privacy') }}" wire:navigate class="font-medium text-blue-600 hover:underline">Privacy Policy</a>.
-            By using RshopRefills, you agree to our use of cookies as described here.
+            By using {{ $siteName }}, you agree to our use of cookies as described here.
         </p>
 
         {{-- On this page --}}

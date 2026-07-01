@@ -15,7 +15,7 @@
         ->values();
 @endphp
 
-<x-layouts.app.header :title="'Top up your eSIM | RshopRefills'">
+<x-layouts.app.header :title="'Top up your eSIM | '.$siteName">
 
     <div class="mx-auto w-full max-w-[820px] px-4 pb-32 pt-6 sm:px-6 lg:pt-10">
 

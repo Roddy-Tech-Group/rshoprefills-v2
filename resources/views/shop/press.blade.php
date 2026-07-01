@@ -5,7 +5,7 @@
     $pressEmail = 'info@rshoprefill.com';
 @endphp
 
-<x-layouts.app.header :title="'Press and Media | RshopRefills'">
+<x-layouts.app.header :title="'Press and Media | '.$siteName">
 
     {{-- ── Hero ──────────────────────────────────────────────── --}}
     <section class="border-b border-zinc-100 bg-blue-50">
@@ -13,7 +13,7 @@
             <span class="inline-flex items-center gap-2 rounded-[5px] bg-blue-100 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-blue-700">Press &amp; Media</span>
             <h1 class="mt-5 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">Newsroom</h1>
             <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base">
-                The latest news, announcements and milestones from RshopRefills.
+                The latest news, announcements and milestones from {{ $siteName }}.
             </p>
         </div>
     </section>
@@ -62,7 +62,7 @@
 
                 {{-- Boilerplate --}}
                 <div class="rounded-[12px] bg-white p-6 ring-1 ring-zinc-100">
-                    <h3 class="text-base font-bold text-zinc-900">About RshopRefills</h3>
+                    <h3 class="text-base font-bold text-zinc-900">About {{ $siteName }}</h3>
                     <p class="mt-2 text-sm leading-relaxed text-zinc-600">A global digital marketplace for gift cards, eSIMs, top-ups, bills and travel, with an in-app wallet and crypto support. Founded in 2024, a wholly-owned product of Roddy Technologies LTD.</p>
                 </div>
             </div>

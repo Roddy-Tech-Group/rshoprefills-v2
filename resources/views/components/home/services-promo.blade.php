@@ -75,7 +75,7 @@
                 Access <span class="font-semibold text-blue-400">23+ digital services</span> in one powerful ecosystem including gift cards, eSIMs, mobile top-ups, bill payments, flights, and global stays.
             </p>
             <p class="mt-3 text-base leading-relaxed text-zinc-300 sm:text-lg">
-                RShopRefill brings everything together under one roof, making international shopping, connectivity, travel, and everyday digital payments fast, seamless, and stress-free.
+                {{ $siteName }} brings everything together under one roof, making international shopping, connectivity, travel, and everyday digital payments fast, seamless, and stress-free.
             </p>
             <p class="mt-4 text-base font-semibold text-white sm:text-lg">
                 One platform. Endless possibilities.<br>

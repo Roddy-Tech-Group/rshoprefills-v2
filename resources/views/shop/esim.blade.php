@@ -298,7 +298,7 @@
         ->values();
 @endphp
 
-<x-shop.layout :title="$regionLabel . ' eSIM | RshopRefills'" :og-image="asset('assets/'.rawurlencode('Esim.webp'))">
+<x-shop.layout :title="$regionLabel . ' eSIM | '.$siteName" :og-image="asset('assets/'.rawurlencode('Esim.webp'))">
 
     {{-- translate="no": the page translator (Google) rewrites text nodes, which
          corrupts Alpine's reactive <template x-for> package list (it renders then
@@ -524,7 +524,7 @@
             {{-- Plan section. Uses the same carousel component, alignment + scroll as the
                  storefront brand rows. Re-keyed per tab/mode so the whole row rebuilds,
                  re-aligns and resets its scroll when the buyer switches Voice / Data. --}}
-            <div class="mt-6">
+            <div class="mt-3">
                 <template x-for="frame in [activeTab + '-' + dataMode]" :key="frame">
                     <div
                         x-transition:enter="transition ease-out duration-300"
@@ -539,14 +539,18 @@
                                 :class="selectedId === p.id ? 'border-2 border-blue-600 dark:border-blue-500' : 'border border-white hover:border-green-200 dark:border-[#24364f] dark:hover:border-white'"
                                 class="esim-tile flex h-full w-[70vw]! min-w-[70vw]! flex-col rounded-[14px] bg-transparent px-4 py-4 text-left transition-colors focus:outline-none sm:w-60! sm:min-w-60!"
                             >
-                                {{-- Badges: tier (TRIP/EXPLORER/ADVENTURER/NOMAD, cycles by
-                                     position) + a Data only / Voice type badge. --}}
-                                <div class="flex flex-wrap items-center gap-1.5">
-                                    <span x-show="tiers[idx % 4] !== 'TRIP'" class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
+                                {{-- Type badge ("Data only" / "Voice") plus an optional tier
+                                     chip. The tier (TRIP/EXPLORER/ADVENTURER/NOMAD) is shown
+                                     ONLY on voice plans: on data plans it was a variable-length
+                                     chip that wrapped to a 2nd line on long names (ADVENTURER)
+                                     and made those cards taller, so data plans now carry the
+                                     single "Data only" badge - every data card is one height. --}}
+                                <div class="flex flex-nowrap items-center gap-1">
+                                    <span x-show="p.is_voice && tiers[idx % 4] !== 'TRIP'" class="inline-flex min-w-0 items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
                                         <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="tierDotClasses[idx % 4]"></span>
-                                        <span x-text="tiers[idx % 4]"></span>
+                                        <span class="truncate" x-text="tiers[idx % 4]"></span>
                                     </span>
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
+                                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider leading-none text-zinc-700 ring-1 ring-zinc-200 dark:text-zinc-200 dark:ring-[#24364f]">
                                         <span class="h-1.5 w-1.5 shrink-0 rounded-full" :class="p.is_voice ? 'bg-blue-500' : 'bg-zinc-400'"></span>
                                         <span x-text="p.is_voice ? 'Voice' : 'Data only'"></span>
                                     </span>
@@ -597,10 +601,12 @@
                                     <p class="mt-3 text-xs text-zinc-700 dark:text-white" x-text="p.note"></p>
                                 </template>
 
-                                {{-- See more: selects this plan and opens its full package details. --}}
-                                <span @click.stop="detailsId = p.id; showDetails = true" @keydown.enter.stop="detailsId = p.id; showDetails = true" role="button" tabindex="0" class="mt-auto self-start cursor-pointer pt-3 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">See more</span>
-
-                                <p class="mt-2 text-right text-lg font-bold tabular-nums text-zinc-900 dark:text-white" x-text="rowPrice(p)"></p>
+                                {{-- See more (left) + price (right) share one row, pinned to the
+                                     card bottom so every card lines up regardless of feature count. --}}
+                                <div class="mt-auto flex items-center justify-between gap-2 pt-3">
+                                    <span @click.stop="detailsId = p.id; showDetails = true" @keydown.enter.stop="detailsId = p.id; showDetails = true" role="button" tabindex="0" class="inline-flex cursor-pointer items-center {{ $inDash ? 'rounded-md px-1.5 text-[10px]' : 'rounded-[8px] px-2 text-[11px]' }} bg-blue-50 py-0.5 font-semibold text-blue-600 ring-1 ring-inset ring-blue-200 transition-colors hover:bg-blue-100 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/30 dark:hover:bg-blue-500/25">See more</span>
+                                    <p class="text-lg font-bold tabular-nums text-zinc-900 dark:text-white" x-text="rowPrice(p)"></p>
+                                </div>
                             </button>
                         </template>
                         </x-home.brand-row>
@@ -661,7 +667,7 @@
 
             {{-- ── Why choose us (1000px centered) ───────────────────────────── --}}
             <section class="mx-auto mt-8 w-full max-w-[1000px] rounded-[40px] bg-blue-100 p-6 sm:p-10 dark:bg-[#1d3252]">
-                <h2 class="text-center text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Why travelers choose RshopRefills eSIMs</h2>
+                <h2 class="text-center text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Why travelers choose {{ $siteName }} eSIMs</h2>
                 <div class="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
                     @foreach ([
                         ['t' => 'Local, regional & global coverage for 200+ destinations', 'd' => 'M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.5 0 4.5-4.03 4.5-9S14.5 3 12 3 7.5 7.03 7.5 12s2 9 4.5 9zM3.6 9h16.8M3.6 15h16.8'],
@@ -789,7 +795,7 @@
                         <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>
                     </span>
                     <h2 class="mt-4 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white">Anonymous eSIM with MOMO, Cards, Crypto and more. No KYC required.</h2>
-                    <p class="mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">Unlike traditional SIM cards that ask for a passport and personal details, your RshopRefills eSIM can be bought with mobile money, cards, crypto and more. No identity verification, no personal data collected.</p>
+                    <p class="mt-3 max-w-xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300">Unlike traditional SIM cards that ask for a passport and personal details, your {{ $siteName }} eSIM can be bought with mobile money, cards, crypto and more. No identity verification, no personal data collected.</p>
                 </div>
 
                 <ul class="space-y-5">

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Cart;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,5 +21,20 @@ class CartPopupMobileTest extends TestCase
             ->assertOk()
             ->assertSee('inset-x-3 bottom-3', false)   // mobile: bottom sheet
             ->assertSee('sm:top-[84px]', false);       // sm+: restores desktop top-right
+    }
+
+    /**
+     * The dashboard desktop cart popup lives in the lg:flex header, hidden on
+     * phones - so the dashboard layout ships its own teleported bottom sheet,
+     * pinned above the mobile bottom nav, that opens on the same $store.cart.open.
+     */
+    public function test_dashboard_has_a_mobile_cart_bottom_sheet(): void
+    {
+        $this->withoutVite();
+
+        $this->actingAs(User::factory()->create())
+            ->get('/dashboard/shop/checkout')
+            ->assertOk()
+            ->assertSee('inset-x-3 bottom-20 z-[80]', false); // mobile sheet above the bottom nav
     }
 }

@@ -396,7 +396,7 @@ class extends Component {
                         <input
                             wire:model="subject"
                             type="text"
-                            placeholder="e.g. February updates from RshopRefills"
+                            placeholder="e.g. February updates from {{ $siteName }}"
                             class="mt-1.5 w-full rounded-[12px] border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-zinc-700/60 dark:bg-[#0c1a36] dark:text-white"
                         >
                         @error('subject') <p class="mt-1 text-[11px] font-medium text-red-600">{{ $message }}</p> @enderror

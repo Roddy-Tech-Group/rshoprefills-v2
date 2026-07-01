@@ -1,5 +1,5 @@
 {{-- Storefront footer. Used inside the <x-layouts.app.header> shell. --}}
-<footer class="border-t border-zinc-200 bg-[#eff6ff] dash-shimmer text-zinc-900">
+<footer class="bg-[#eff6ff] dark:bg-[#0c1a36] text-zinc-900">
     <div class="mx-auto max-w-[1550px] px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
 
         {{-- Top: brand + link columns --}}
@@ -11,7 +11,7 @@
                     <span class="flex h-12 items-center">
                         <img
                             src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                            alt="RshopRefills"
+                            alt="{{ $siteName }}"
                             class="h-full w-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
                         />
                     </span>
@@ -146,7 +146,7 @@
 
         {{-- Bottom bar --}}
         <div class="flex flex-col gap-4 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
-            <p class="max-w-xl">&copy; 2026 RshopRefill All rights reserved. RshopRefill is a wholly-owned product of Roddy Technologies LTD, RC - 9385422 <a href="https://icrp.cac.gov.ng/public-search" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline dark:text-blue-400">Verify</a>.</p>
+            <p class="max-w-xl">&copy; {{ date('Y') }} {{ $siteName }} All rights reserved. {{ $siteName }} is a wholly-owned product of Roddy Technologies LTD, RC - 9385422 <a href="https://icrp.cac.gov.ng/public-search" target="_blank" rel="noopener noreferrer" class="font-medium text-blue-600 hover:underline dark:text-blue-400">Verify</a>.</p>
 
             <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
                 {{-- Locale chip: opens the same modal the nav uses. `.stop` is

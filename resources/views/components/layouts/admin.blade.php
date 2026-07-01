@@ -268,14 +268,14 @@
                 <span class="brand-full flex h-10 items-center">
                     <img
                         src="{{ asset('assets/Rshoprefillslogo.webp') }}"
-                        alt="RshopRefills"
+                        alt="{{ $siteName }}"
                         class="h-full w-auto object-contain"
                     />
                 </span>
                 <span class="brand-mark hidden w-14 flex-col items-center justify-center">
                     <img
                         src="{{ asset('assets/favicon.ico') }}"
-                        alt="RshopRefills"
+                        alt="{{ $siteName }}"
                         class="h-12 w-12 rounded-[12px] object-contain"
                     />
                     <span class="mt-0.5 text-[9px] font-medium italic leading-none text-zinc-600 dark:text-zinc-400">Est. 2024</span>
@@ -919,7 +919,7 @@
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
                     <span>version 2.0.0</span>
                     <span class="text-zinc-300 dark:text-zinc-600">·</span>
-                    <span>©RshopRefills {{ date('Y') }}</span>
+                    <span>©{{ $siteName }} {{ date('Y') }}</span>
                 </footer>
             </div>
         </flux:main>

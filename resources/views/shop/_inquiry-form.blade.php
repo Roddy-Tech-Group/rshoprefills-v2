@@ -10,7 +10,7 @@
        $postRoute   : route name for POST
        $categories  : array<string> of options for the category select
 --}}
-<x-layouts.app.header :title="$title.' | RshopRefills'">
+<x-layouts.app.header :title="$title.' | '.$siteName">
 
     @php
         $field = 'w-full rounded-[12px] border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15';
