@@ -237,7 +237,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Volt::route('campaigns/create', 'admin.campaign-editor')->name('campaign-editor');
         Volt::route('campaigns/{id}/edit', 'admin.campaign-editor')->name('campaign-editor.edit');
         Volt::route('settings', 'admin.system-settings')->name('settings');
+
+        // API & Integrations
         Volt::route('api-settings', 'admin.api-settings')->name('api-settings');
+
+        // Crypto Fees
+        Volt::route('crypto-fees', 'admin.crypto-fees')->name('crypto-fees');
+
         Volt::route('account-activity', 'admin.account-activity')->name('account-activity');
 
         // Content (CMS) - stub Volt pages that list what's in the DB today.

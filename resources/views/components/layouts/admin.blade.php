@@ -591,6 +591,14 @@
                     <img src="{{ asset('assets/' . rawurlencode('system setting.svg')) }}" alt="" class="{{ $imgIconClass($active) }}" loading="lazy">
                     API & Integrations
                 </a>
+
+                @php $active = $isCurrent('admin.crypto-fees*'); @endphp
+                <a href="{{ route('admin.crypto-fees') }}" wire:navigate data-tip="Crypto Fees" class="{{ $navItemClass($active) }}">
+                    <svg class="{{ $iconClass($active) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>
+                    </svg>
+                    Crypto Fees
+                </a>
                 @endif
             </nav>
 

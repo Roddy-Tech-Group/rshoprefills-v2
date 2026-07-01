@@ -59,6 +59,32 @@
         'methods'  => (array) config('payment_fees.methods', []),
         'default'  => (array) config('payment_fees.default', ['transaction' => 0.0, 'international' => 0.0]),
     ];
+
+    // Crypto fee config — baked into the page so the fee breakdown renders
+    // instantly when a coin is selected (no API round-trip needed).
+    $cryptoFeeConfig = [
+        'service_fee_pct' => (float) \App\Models\Setting::get('crypto_service_fee_pct', 0.5),
+        'network_fees' => [
+            'tron'     => (float) \App\Models\Setting::get('crypto_network_fee_tron', 1.00),
+            'ethereum' => (float) \App\Models\Setting::get('crypto_network_fee_ethereum', 5.00),
+            'bnb'      => (float) \App\Models\Setting::get('crypto_network_fee_bnb', 0.50),
+            'polygon'  => (float) \App\Models\Setting::get('crypto_network_fee_polygon', 0.10),
+            'solana'   => (float) \App\Models\Setting::get('crypto_network_fee_solana', 0.05),
+            'bitcoin'  => (float) \App\Models\Setting::get('crypto_network_fee_bitcoin', 3.00),
+            'litecoin' => (float) \App\Models\Setting::get('crypto_network_fee_litecoin', 0.10),
+        ],
+        'network_map' => [
+            'btc' => 'bitcoin', 'eth' => 'ethereum',
+            'usdt' => 'tron', 'usdttrc20' => 'tron',
+            'usdterc20' => 'ethereum',
+            'usdtbsc' => 'bnb', 'usdtbep20' => 'bnb',
+            'usdtmatic' => 'polygon', 'usdtpolygon' => 'polygon',
+            'usdtsol' => 'solana',
+            'ltc' => 'litecoin',
+            'bnb' => 'bnb', 'bnbbsc' => 'bnb',
+            'matic' => 'polygon', 'sol' => 'solana', 'trx' => 'tron',
+        ],
+    ];
 @endphp
 
 <x-layouts.app.header :title="'Checkout | RshopRefills'">
@@ -84,7 +110,7 @@
             class="mt-4"
         />
 
-        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false), @js($paymentFees))">
+        <div x-data="checkoutPage(@js($cryptoRatesForJs), @js($walletBalances), @js(auth()->check()), @js($rcoinConfig), @js(auth()->user()?->hasTransactionPin() ?? false), @js($paymentFees), @js($cryptoFeeConfig))">
 
             {{-- Loading — until the cart store's first fetch resolves --}}
             <div x-show="!$store.cart.hydrated" class="flex items-center justify-center rounded-[20px] bg-white/70 dark:bg-[#0c1a36]/60 py-24 ring-1 ring-zinc-200 backdrop-blur-xl dark:ring-white/10">
@@ -630,8 +656,8 @@
 
                     {{-- Fee breakdown - rendered only when the selected method
                          carries a gateway processing fee, so fee-free methods
-                         (wallet, crypto) keep the simple single-line total. --}}
-                    <div x-show="processingFee() > 0" x-cloak class="mt-5 border-t border-zinc-100 dark:border-white/10 pt-5">
+                         (wallet) keep the simple single-line total. --}}
+                    <div x-show="processingFee() > 0 && method !== 'crypto'" x-cloak class="mt-5 border-t border-zinc-100 dark:border-white/10 pt-5">
                         <div class="flex items-center justify-between text-sm">
                             <span class="font-medium text-zinc-600 dark:text-zinc-400">Subtotal</span>
                             <span class="font-semibold tabular-nums text-zinc-900 dark:text-white" x-text="$store.cart.pay($store.cart.subtotal)"></span>
@@ -646,25 +672,54 @@
                         </div>
                     </div>
 
-                    {{-- Discount line when there is no processing fee (wallet/crypto)
-                         so the customer still sees the coupon reduction. --}}
-                    <div x-show="couponApplied && processingFee() <= 0" x-cloak class="mt-4 flex items-center justify-between border-t border-zinc-100 dark:border-white/10 pt-4 text-sm">
+                    {{-- Crypto Fee Breakdown --}}
+                    <div x-show="method === 'crypto' && cryptoFeeBreakdown && coinMeta()" x-cloak class="mt-5 border-t border-zinc-100 dark:border-white/10 pt-5">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="font-medium text-zinc-600 dark:text-zinc-400">Subtotal</span>
+                            <span class="font-semibold tabular-nums text-zinc-900 dark:text-white" x-text="cryptoFeeBreakdown?.product_price_crypto?.toFixed(coinMeta()?.decimals || 6) + ' ' + coinMeta()?.code.toUpperCase()"></span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between text-sm">
+                            <span class="font-medium text-zinc-600 dark:text-zinc-400">Network Fee (<span class="capitalize" x-text="cryptoFeeBreakdown?.network"></span>, est.)</span>
+                            <span class="font-semibold tabular-nums text-zinc-900 dark:text-white" x-text="cryptoFeeBreakdown?.network_fee_crypto?.toFixed(coinMeta()?.decimals || 6) + ' ' + coinMeta()?.code.toUpperCase()"></span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between text-sm">
+                            <span class="font-medium text-zinc-600 dark:text-zinc-400">Crypto Processing Fee</span>
+                            <span class="font-semibold tabular-nums text-zinc-900 dark:text-white" x-text="cryptoFeeBreakdown?.service_fee_crypto?.toFixed(coinMeta()?.decimals || 6) + ' ' + coinMeta()?.code.toUpperCase()"></span>
+                        </div>
+                        <div x-show="couponApplied" x-cloak class="mt-2 flex items-center justify-between text-sm">
+                            <span class="font-medium text-emerald-600" x-text="'Discount (' + couponApplied + ')'"></span>
+                            <span class="font-semibold tabular-nums text-emerald-600" x-text="'-' + $store.cart.pay(couponDiscountDisplay)"></span>
+                        </div>
+                    </div>
+
+                    {{-- Discount line when there is no processing fee (wallet/crypto without breakdown yet) --}}
+                    <div x-show="couponApplied && processingFee() <= 0 && (!cryptoFeeBreakdown || method !== 'crypto')" x-cloak class="mt-4 flex items-center justify-between border-t border-zinc-100 dark:border-white/10 pt-4 text-sm">
                         <span class="font-medium text-emerald-600" x-text="'Discount (' + couponApplied + ')'"></span>
                         <span class="font-semibold tabular-nums text-emerald-600" x-text="'-' + $store.cart.pay(couponDiscountDisplay)"></span>
                     </div>
 
                     {{-- Total --}}
-                    <div class="mt-5 flex items-center justify-between border-t border-zinc-100 dark:border-white/10 pt-5" :class="processingFee() > 0 && 'mt-3 border-t-0 pt-0'">
-                        <span class="text-base font-bold text-zinc-900 dark:text-white">Total amount to pay</span>
+                    <div class="mt-5 flex items-center justify-between border-t border-zinc-100 dark:border-white/10 pt-5" :class="(processingFee() > 0 || (method === 'crypto' && cryptoFeeBreakdown)) && 'mt-3 border-t-0 pt-0'">
+                        <span class="text-base font-bold text-zinc-900 dark:text-white" x-text="method === 'crypto' ? 'Estimated amount to pay' : 'Total amount to pay'"></span>
                         <span x-data="valueFlip()" x-effect="totalLabel(); flash()" class="inline-block text-lg font-extrabold tabular-nums text-zinc-900 dark:text-white" x-text="totalLabel()">0.00</span>
                     </div>
 
-                    {{-- Crypto safety warning --}}
-                    <div x-show="method === 'crypto'" x-cloak class="mt-3 flex items-start gap-2 rounded-[10px] bg-red-50 px-3.5 py-3">
-                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    {{-- Crypto estimated fee notice --}}
+                    <div x-show="method === 'crypto'" x-cloak class="mt-3 flex items-start gap-2 rounded-[10px] bg-amber-50 px-3.5 py-3 dark:bg-amber-900/20">
+                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
                         </svg>
-                        <p class="text-xs text-red-700">
+                        <p class="text-xs text-amber-700 dark:text-amber-300">
+                            The network fee shown above is an <span class="font-bold">estimate</span>. The final amount on the payment page may be slightly higher or lower depending on current blockchain conditions.
+                        </p>
+                    </div>
+
+                    {{-- Crypto safety warning --}}
+                    <div x-show="method === 'crypto'" x-cloak class="mt-2 flex items-start gap-2 rounded-[10px] bg-red-50 px-3.5 py-3 dark:bg-red-900/20">
+                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                        </svg>
+                        <p class="text-xs text-red-700 dark:text-red-300">
                             Send the exact amount shown to the address provided on the next step. Sending a
                             <span class="font-bold">different coin</span> or on a
                             <span class="font-bold">different network</span> will result in
@@ -978,7 +1033,7 @@
     </div>
 
     <script>
-        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin, paymentFees) {
+        window.checkoutPage = function (cryptoRates, walletBalances, isLoggedIn, rcoinConfig, hasTransactionPin, paymentFees, cryptoFeeConfig) {
             return {
                 method: 'card',
                 crypto: '',
@@ -988,6 +1043,7 @@
                 isLoggedIn: isLoggedIn || false,
                 hasTransactionPin: hasTransactionPin || false,
                 paymentFees: paymentFees || { fee_free: [], methods: {}, default: { transaction: 0, international: 0 } },
+                cryptoFeeConfig: cryptoFeeConfig || { service_fee_pct: 0.5, network_fees: {}, network_map: {} },
 
                 // Coupon live-preview state. couponApplied holds the validated
                 // code once Apply succeeds; the discount is shown on the total
@@ -998,6 +1054,10 @@
                 couponDiscountDisplay: 0,
                 couponError: '',
                 couponLoading: false,
+
+                // Crypto fee breakdown state
+                cryptoFeeBreakdown: null,
+                cryptoFeeLoading: false,
 
                 async applyCoupon() {
                     const code = (this.couponCode || '').trim();
@@ -1159,6 +1219,46 @@
                             this.method = methods[0].key;
                         }
                     });
+
+                    this.$watch('crypto', () => this.fetchCryptoFees());
+                    this.$watch('method', (newVal) => {
+                        if (newVal === 'crypto') this.fetchCryptoFees();
+                    });
+                },
+
+                async fetchCryptoFees() {
+                    if (this.method !== 'crypto' || !this.crypto) {
+                        this.cryptoFeeBreakdown = null;
+                        return;
+                    }
+
+                    const coin = this.coinMeta();
+                    if (!coin) { this.cryptoFeeBreakdown = null; return; }
+
+                    const usdAmount = Math.max(0, Number(this.$store.cart.subtotalUsd || 0) - Number(this.couponDiscountUsd || 0));
+                    if (usdAmount <= 0) { this.cryptoFeeBreakdown = null; return; }
+
+                    // --- Instant client-side breakdown (no API wait) ---
+                    const cfg = this.cryptoFeeConfig;
+                    const network = cfg.network_map[this.crypto.toLowerCase()] || this.crypto.toLowerCase();
+                    const networkFeeUsd = cfg.network_fees[network] ?? 1.00;
+                    const serviceFeeUsd = Math.round(usdAmount * (cfg.service_fee_pct / 100) * 100) / 100;
+                    const totalDueUsd = usdAmount + networkFeeUsd + serviceFeeUsd;
+                    const rate = coin.perUsd;
+
+                    this.cryptoFeeBreakdown = {
+                        product_price_usd: usdAmount,
+                        network_fee_usd: networkFeeUsd,
+                        service_fee_usd: serviceFeeUsd,
+                        total_due_usd: totalDueUsd,
+                        product_price_crypto: usdAmount * rate,
+                        network_fee_crypto: networkFeeUsd * rate,
+                        service_fee_crypto: serviceFeeUsd * rate,
+                        pay_currency: this.crypto.toLowerCase(),
+                        network: network,
+                        estimated_pay_amount: parseFloat((totalDueUsd * rate).toFixed(coin.decimals)),
+                        exchange_rate: rate,
+                    };
                 },
 
                 /**
@@ -1300,7 +1400,7 @@
                 // checkout currency is not NGN (the account's home market).
                 processingFee() {
                     const method = this.method;
-                    if ((this.paymentFees.fee_free || []).includes(method)) {
+                    if (method === 'crypto' || (this.paymentFees.fee_free || []).includes(method)) {
                         return 0;
                     }
                     const amount = Number(this.$store.cart.subtotal || 0);
@@ -1321,7 +1421,10 @@
                         if (! coin) {
                             return 'Select a coin';
                         }
-                        return (usd * coin.perUsd).toFixed(coin.decimals) + ' ' + coin.code;
+                        if (this.cryptoFeeBreakdown) {
+                            return this.cryptoFeeBreakdown.estimated_pay_amount + ' ' + coin.code.toUpperCase();
+                        }
+                        return (usd * coin.perUsd).toFixed(coin.decimals) + ' ' + coin.code.toUpperCase();
                     }
                     const display = Math.max(0, Number(this.$store.cart.subtotal || 0) + this.processingFee() - Number(this.couponDiscountDisplay || 0));
                     return this.$store.cart.pay(display);
